@@ -6,9 +6,11 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from elite_system.db import init_db
+from elite_system.db import connect, init_db
 from elite_system.mappings import excel_date, normalize_table_row, number, text
 from elite_system.reconciliation import reconciliation_status, run_value_reconciliations
+from elite_system.services.security import authenticate_user, create_user, log_action, verify_password
+from elite_system.settings import AppSettings
 
 
 class CoreTests(unittest.TestCase):
@@ -30,12 +32,24 @@ class CoreTests(unittest.TestCase):
             self.assertIn("value_reconciliations", tables)
             self.assertIn("reconciliation_details", tables)
             self.assertIn("pedidos_linhas", tables)
+            self.assertIn("users", tables)
+            self.assertIn("user_sessions", tables)
+            self.assertIn("action_logs", tables)
 
     def test_value_normalizers(self) -> None:
         self.assertEqual(text("  Cliente X  "), "Cliente X")
         self.assertIsNone(text("#REF!"))
         self.assertEqual(number("1.234,56"), 1234.56)
         self.assertEqual(excel_date(44562), "2022-01-01")
+
+    def test_database_settings_identify_cloud_backend(self) -> None:
+        local = AppSettings.from_env({})
+        cloud = AppSettings.from_env({"ELITE_DATABASE_URL": "postgresql://user:pass@example.com/elite"})
+        self.assertEqual(local.database_backend, "sqlite")
+        self.assertFalse(local.is_cloud_database)
+        self.assertEqual(local.sqlite_path, Path("data/elite.sqlite"))
+        self.assertEqual(cloud.database_backend, "postgresql")
+        self.assertTrue(cloud.is_cloud_database)
 
     def test_cliente_mapping(self) -> None:
         result = normalize_table_row(
@@ -62,6 +76,67 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(reconciliation_status(100.0, 100.004, 0.01), ("ok", 0.0040000000000048885))
         self.assertEqual(reconciliation_status(100.0, 101.0, 0.01)[0], "attention")
         self.assertEqual(reconciliation_status(None, 100.0, 0.01), ("missing", None))
+
+    def test_security_login_and_action_hash_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "elite.sqlite"
+            init_db(db_path)
+            with connect(db_path) as conn:
+                user = create_user(
+                    conn,
+                    username="Admin",
+                    password="StrongPass123!",
+                    display_name="Admin",
+                    role="admin",
+                )
+                stored_hash = conn.execute("SELECT password_hash FROM users WHERE id = ?", (user.id,)).fetchone()[0]
+                self.assertNotIn("StrongPass123!", stored_hash)
+                self.assertTrue(verify_password("StrongPass123!", stored_hash))
+
+                denied = authenticate_user(conn, username="admin", password="wrong-password")
+                accepted = authenticate_user(conn, username="admin", password="StrongPass123!")
+                log_action(
+                    conn,
+                    actor_user_id=user.id,
+                    action="cadastros.cliente_updated",
+                    entity_type="clientes",
+                    entity_id="1",
+                    before={"status": "inactive"},
+                    after={"status": "active"},
+                )
+                conn.commit()
+
+                rows = [
+                    dict(row)
+                    for row in conn.execute(
+                        """
+                        SELECT id, action, status, previous_hash, entry_hash
+                        FROM action_logs
+                        ORDER BY id
+                        """
+                    )
+                ]
+                with self.assertRaises(sqlite3.IntegrityError):
+                    conn.execute("UPDATE action_logs SET action = 'tampered' WHERE id = ?", (rows[0]["id"],))
+
+            self.assertFalse(denied.ok)
+            self.assertEqual(denied.reason, "bad_password")
+            self.assertTrue(accepted.ok)
+            self.assertEqual(accepted.user.id, user.id)
+            self.assertEqual(
+                [row["action"] for row in rows],
+                [
+                    "security.user_created",
+                    "auth.login.failed",
+                    "auth.login.success",
+                    "cadastros.cliente_updated",
+                ],
+            )
+            self.assertEqual(rows[1]["status"], "denied")
+            self.assertIsNone(rows[0]["previous_hash"])
+            self.assertEqual(rows[1]["previous_hash"], rows[0]["entry_hash"])
+            self.assertEqual(rows[2]["previous_hash"], rows[1]["entry_hash"])
+            self.assertEqual(rows[3]["previous_hash"], rows[2]["entry_hash"])
 
     def test_stock_detail_reconciliation_by_batch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

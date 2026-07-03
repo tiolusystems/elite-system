@@ -15,6 +15,7 @@ O sistema deve nascer com separacao clara de responsabilidades para permitir aud
 5. Parsers leem fontes externas, mas nao decidem regra operacional.
 6. Apps/views so chamam services.
 7. Cada modulo deve ter teste e auditoria antes de virar tela principal.
+8. Toda acao operacional deve ter usuario, permissao e log de auditoria.
 
 ## Hierarquia de codigo
 
@@ -27,6 +28,8 @@ elite_system/
   parsers/           # leitura de Excel, CSV, PDFs e fontes externas
   validators/        # validacoes de entrada, migracao e consistencia
   maintenance/       # ferramentas de reparo, auditoria e manutencao
+  services/security.py       # login, senha e log de acoes
+  repositories/security_repository.py
   db.py              # conexao SQLite atual, futuro adaptador PostgreSQL
   schema.sql         # schema inicial auditavel
   migration.py       # importacao de workbook e normalizacao inicial
@@ -136,6 +139,7 @@ Fase atual:
 - SQLite local para desenvolvimento e auditoria.
 - Todos os imports preservam camada bruta.
 - Todas as entidades normalizadas guardam `source_row_id`.
+- Usuarios, senha e `action_logs` ja existem no schema local.
 
 Fase cloud:
 
@@ -143,6 +147,7 @@ Fase cloud:
 - Backups automatizados.
 - Migrações versionadas.
 - Controle de acesso por perfil.
+- Banco online com multiplos usuarios e trilha de auditoria.
 
 ## Perfis de usuario previstos
 
@@ -152,6 +157,18 @@ Fase cloud:
 - Estoque
 - Expedicao
 - Auditoria/gestao
+
+## Segurança e auditoria operacional
+
+Regras obrigatorias:
+
+- senha nunca fica em texto puro;
+- login bem-sucedido e login negado ficam em `action_logs`;
+- toda escrita futura deve chamar `log_action()` na mesma transacao;
+- `action_logs` e append-only;
+- telas nao recebem permissao para alterar log de auditoria.
+
+Detalhamento: `docs/arquitetura_online_multiusuario.md`.
 
 ## Regra de homologacao
 

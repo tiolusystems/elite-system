@@ -9,9 +9,10 @@ from .db import connect, init_db
 from .excel_reader import ExcelTable, extract_tables
 from .mappings import ENTITY_BY_TABLE, NORMALIZED_TABLES, normalize_table_row, number, text
 from .reconciliation import run_value_reconciliations
+from .services.security import log_action
 
 
-def import_workbook(workbook_path: str | Path, db_path: str | Path) -> dict[str, object]:
+def import_workbook(workbook_path: str | Path, db_path: str | Path, actor_user_id: int | None = None) -> dict[str, object]:
     workbook = Path(workbook_path).resolve()
     db = Path(db_path)
     init_db(db)
@@ -29,6 +30,14 @@ def import_workbook(workbook_path: str | Path, db_path: str | Path) -> dict[str,
             "normalized": {},
             "issues": 0,
         }
+        log_action(
+            conn,
+            actor_user_id=actor_user_id,
+            action="migration.import_started",
+            entity_type="migration_batches",
+            entity_id=str(batch_id),
+            metadata={"workbook_id": workbook_id},
+        )
         try:
             tables = extract_tables(workbook)
             summary["raw_tables"] = len(tables)
@@ -68,12 +77,34 @@ def import_workbook(workbook_path: str | Path, db_path: str | Path) -> dict[str,
             summary["issues"] = conn.execute(
                 "SELECT COUNT(*) FROM migration_issues WHERE batch_id = ?", (batch_id,)
             ).fetchone()[0]
+            log_action(
+                conn,
+                actor_user_id=actor_user_id,
+                action="migration.import_completed",
+                entity_type="migration_batches",
+                entity_id=str(batch_id),
+                after={
+                    "raw_tables": summary["raw_tables"],
+                    "raw_rows": summary["raw_rows"],
+                    "issues": summary["issues"],
+                    "value_reconciliations": summary["value_reconciliations"],
+                },
+            )
             conn.commit()
             return summary
         except Exception as exc:
             conn.execute(
                 "UPDATE migration_batches SET status = 'failed', finished_at = CURRENT_TIMESTAMP, notes = ? WHERE id = ?",
                 (str(exc), batch_id),
+            )
+            log_action(
+                conn,
+                actor_user_id=actor_user_id,
+                action="migration.import_failed",
+                entity_type="migration_batches",
+                entity_id=str(batch_id),
+                status="error",
+                metadata={"error_type": type(exc).__name__},
             )
             conn.commit()
             raise

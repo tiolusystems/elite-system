@@ -6,6 +6,60 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('001_initial');
+INSERT OR IGNORE INTO schema_migrations(version) VALUES ('002_security_audit');
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    must_change_password INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    token_hash TEXT NOT NULL UNIQUE,
+    issued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TEXT NOT NULL,
+    revoked_at TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS action_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_user_id INTEGER REFERENCES users(id),
+    occurred_at TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id TEXT,
+    status TEXT NOT NULL DEFAULT 'success',
+    request_id TEXT,
+    source_ip TEXT,
+    user_agent TEXT,
+    before_json TEXT NOT NULL DEFAULT '{}',
+    after_json TEXT NOT NULL DEFAULT '{}',
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    previous_hash TEXT,
+    entry_hash TEXT NOT NULL UNIQUE
+);
+
+CREATE TRIGGER IF NOT EXISTS trg_action_logs_no_update
+BEFORE UPDATE ON action_logs
+BEGIN
+    SELECT RAISE(ABORT, 'action_logs are append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_action_logs_no_delete
+BEFORE DELETE ON action_logs
+BEGIN
+    SELECT RAISE(ABORT, 'action_logs are append-only');
+END;
 
 CREATE TABLE IF NOT EXISTS source_workbooks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -288,6 +342,10 @@ CREATE INDEX IF NOT EXISTS idx_source_rows_table ON source_rows(table_id);
 CREATE INDEX IF NOT EXISTS idx_source_tables_name ON source_tables(table_name);
 CREATE INDEX IF NOT EXISTS idx_imported_records_entity ON imported_records(entity_name);
 CREATE INDEX IF NOT EXISTS idx_reconciliation_details_batch ON reconciliation_details(batch_id, metric_name, status);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, revoked_at);
+CREATE INDEX IF NOT EXISTS idx_action_logs_actor ON action_logs(actor_user_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_action_logs_entity ON action_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_linhas_id_pedido ON pedidos_linhas(id_pedido);
 CREATE INDEX IF NOT EXISTS idx_entradas_mp_materia ON entradas_mp(materia_prima);
 CREATE INDEX IF NOT EXISTS idx_lotes_producao_lote ON lotes_producao(lote);

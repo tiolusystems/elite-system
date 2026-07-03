@@ -33,9 +33,31 @@ python -m elite_system.cli audit --db .\data\elite.sqlite
 
 A auditoria inclui reconciliacoes de valores para pedidos, faturamento, entradas MP, saidas MP, saidas PA, producao e saldos de estoque.
 
+Criar usuario local:
+
+```powershell
+python -m elite_system.cli create-user --db .\data\elite.sqlite --username admin --role admin
+```
+
+Testar login:
+
+```powershell
+python -m elite_system.cli login --db .\data\elite.sqlite --username admin
+```
+
+Ver trilha de auditoria:
+
+```powershell
+python -m elite_system.cli audit-log --db .\data\elite.sqlite --limit 20
+```
+
 ## Observacao
 
 SQLite e usado agora para desenvolvimento local e auditoria. O desenho evita SQL proprietario e prepara a migracao posterior para PostgreSQL/cloud.
+
+O sistema ja possui base de usuarios, hash de senha e `action_logs` append-only. Em producao, o banco alvo sera online, com multiplos usuarios e permissoes por perfil.
+
+Para ambientes futuros, o banco sera configurado por `ELITE_DATABASE_URL`. Exemplo local: `sqlite:///data/elite.sqlite`. Exemplo producao: `postgresql://...`.
 
 ## Politica de dados
 

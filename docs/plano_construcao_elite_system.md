@@ -11,7 +11,7 @@ Entregas:
 - Branch principal protegida.
 - Commits pequenos por bloco.
 - CI rodando testes em cada push.
-- Regra: nao publicar repositorio publico com dados comerciais.
+- Regra: nao publicar dados comerciais no Git.
 
 Status atual:
 
@@ -35,6 +35,7 @@ Status atual:
 - Auditoria de contagem implementada.
 - Auditoria de valores implementada.
 - Auditoria de saldo por materia-prima e produto implementada em tabela de detalhes.
+- Tabelas de usuarios, login por senha e log de acoes implementadas.
 - Pendencia conhecida: classificar automaticamente a causa de cada diferenca.
 
 ## Bloco 2 - Cadastros mestres
@@ -162,6 +163,8 @@ Entregas:
 - Backup automatizado.
 - Credenciais por ambiente.
 - Restore testado.
+- Login multiusuario validado contra ambiente cloud.
+- `action_logs` protegido por permissao e backup.
 
 ## Bloco 9 - App operacional
 
@@ -179,7 +182,8 @@ Entregas:
 ## Sequencia imediata
 
 1. Configurar GitHub privado somente com codigo.
-2. Classificar causas das diferencas de reconciliacao.
-3. Criar modelos de dominio para cadastros.
-4. Criar repositories para cadastros.
-5. Criar primeira app/tela administrativa.
+2. Criar camada de permissao por acao.
+3. Classificar causas das diferencas de reconciliacao.
+4. Criar modelos de dominio para cadastros.
+5. Criar repositories para cadastros com `actor_user_id`.
+6. Criar primeira app/tela administrativa com login obrigatorio.

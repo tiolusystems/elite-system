@@ -5,6 +5,9 @@ description = "Elite System - sistema comercial, industrial e auditavel"
 requires-python = ">=3.11"
 dependencies = []
 
+[project.optional-dependencies]
+cloud = ["psycopg[binary]>=3.2"]
+
 [project.scripts]
 elite = "elite_system.cli:main"
 

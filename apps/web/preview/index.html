@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Elite System - Preview Visual</title>
+    <title>Elite System - Painel Operacional</title>
     <link rel="stylesheet" href="../app/globals.css" />
   </head>
   <body>
@@ -11,7 +11,7 @@
       <header class="topbar">
         <div class="brand">
           <strong>Elite System</strong>
-          <span>Preview visual</span>
+          <span>Painel operacional</span>
         </div>
         <nav class="topnav" aria-label="Modulos principais">
           <a href="#" aria-current="page">Inicio</a>
@@ -26,100 +26,168 @@
         <span class="pill">visual</span>
       </aside>
 
-      <section class="workspace">
-        <div class="toolbar">
+      <section class="workspace dashboard-workspace">
+        <div class="dashboard-header">
           <div>
-            <h1>Validacao visual</h1>
+            <span class="eyebrow">operacao auditavel</span>
+            <h1>Centro de controle</h1>
             <p class="muted">
-              Telas navegaveis para revisar layout, fluxo, nomes de campos e ordem operacional antes da integracao final.
+              Visao inicial para acompanhar construcao, banco conectado, cadastros, pedidos, recebimentos e proximos
+              blocos do Elite System.
             </p>
           </div>
-          <div class="toolbar-actions" aria-label="Acoes de preview">
+          <div class="toolbar-actions" aria-label="Acoes principais">
             <a class="secondary-button" href="cadastros.html">Cadastros</a>
             <a class="primary-button" href="pedidos.html">Pedidos</a>
           </div>
         </div>
 
-        <section class="summary-grid" aria-label="Resumo do preview">
-          <div class="summary-card">
-            <span>Telas disponiveis</span>
-            <strong>2</strong>
-          </div>
-          <div class="summary-card">
-            <span>Status</span>
-            <strong>Em construcao</strong>
-          </div>
-          <div class="summary-card">
-            <span>Banco</span>
-            <strong>Nao grava</strong>
-          </div>
-          <div class="summary-card">
-            <span>Mobile</span>
-            <strong>Responsivo</strong>
-          </div>
+        <section class="kpi-grid" aria-label="Resumo operacional">
+          <article class="kpi-card accent-blue">
+            <span>Cadastros prontos</span>
+            <strong>8/8</strong>
+            <p>Base mestre com funcoes auditaveis e validacoes iniciais.</p>
+          </article>
+          <article class="kpi-card accent-green">
+            <span>Pedidos abertos</span>
+            <strong>6</strong>
+            <p>Pedidos aptos a seguir para credito, romaneio e faturamento.</p>
+          </article>
+          <article class="kpi-card accent-amber">
+            <span>Recebido</span>
+            <strong>R$ 72.500,00</strong>
+            <p>Base para liberacao proporcional de comissoes.</p>
+          </article>
+          <article class="kpi-card accent-red">
+            <span>Alertas</span>
+            <strong>3</strong>
+            <p>Pendencias de validacao de cadastro carregadas do banco.</p>
+          </article>
         </section>
 
-        <section class="two-column">
-          <article class="panel">
+        <section class="dashboard-grid">
+          <article class="panel command-panel">
             <div class="panel-header">
-              <h2>Cadastros mestres</h2>
-              <span class="pill">base do sistema</span>
+              <h2>Fluxo de implantacao</h2>
+              <span class="pill">passo a passo</span>
             </div>
-            <div class="module-list">
-              <a class="module-card" href="cadastros.html">
-                <div class="module-card-main">
-                  <h3>Clientes, pessoas comerciais, MP, produtos e embalagens</h3>
-                  <span>Campos mestres, validacao, credito e vinculos operacionais.</span>
+            <div class="flow-board">
+              <div class="flow-step">
+                <div class="flow-marker">1</div>
+                <div>
+                  <div class="flow-title">
+                    <strong>Cadastros</strong>
+                    <span>em uso</span>
+                  </div>
+                  <p>Clientes, pessoas comerciais, MP, produtos, embalagens, credito e conversoes.</p>
                 </div>
-                <div class="module-card-meta">
-                  <span>abrir</span>
-                  <strong>Cadastros</strong>
+              </div>
+              <div class="flow-step">
+                <div class="flow-marker">2</div>
+                <div>
+                  <div class="flow-title">
+                    <strong>Pedidos</strong>
+                    <span>codando</span>
+                  </div>
+                  <p>Rascunho, credito, recebimento parcial e comissao proporcional.</p>
                 </div>
-                <p>Use esta tela para validar nomes de campos, ordem dos blocos e cadastros que faltam.</p>
-              </a>
+              </div>
+              <div class="flow-step">
+                <div class="flow-marker">3</div>
+                <div>
+                  <div class="flow-title">
+                    <strong>Romaneio</strong>
+                    <span>proximo</span>
+                  </div>
+                  <p>Separacao parcial ou total, reserva de lote e confirmacao para baixa de PA.</p>
+                </div>
+              </div>
+              <div class="flow-step">
+                <div class="flow-marker">4</div>
+                <div>
+                  <div class="flow-title">
+                    <strong>Estoque</strong>
+                    <span>fila</span>
+                  </div>
+                  <p>Entradas MP, saidas MP, producao, PI/PA e saldos auditaveis.</p>
+                </div>
+              </div>
             </div>
           </article>
 
           <article class="panel">
             <div class="panel-header">
-              <h2>Pedidos</h2>
-              <span class="pill">comercial</span>
+              <h2>Fila critica</h2>
+              <span class="pill">decisao</span>
             </div>
-            <div class="module-list">
-              <a class="module-card" href="pedidos.html">
-                <div class="module-card-main">
-                  <h3>Pedido, credito, recebimento e comissao</h3>
-                  <span>Fluxo inicial com rascunho, decisao de credito e recebimento parcial.</span>
+            <div class="queue-list">
+              <div class="queue-row">
+                <span class="queue-status warning"></span>
+                <div>
+                  <strong>Romaneio</strong>
+                  <p>Construir tela de separacao com reserva e baixa apenas na confirmacao.</p>
                 </div>
-                <div class="module-card-meta">
-                  <span>abrir</span>
-                  <strong>Pedidos</strong>
+              </div>
+              <div class="queue-row">
+                <span class="queue-status ok"></span>
+                <div>
+                  <strong>Comissao por recebimento</strong>
+                  <p>Primeira versao codada com proporcionalidade e snapshot.</p>
                 </div>
-                <p>Use esta tela para validar a rotina comercial antes de avancarmos para romaneio e estoque.</p>
-              </a>
+              </div>
+              <div class="queue-row">
+                <span class="queue-status danger"></span>
+                <div>
+                  <strong>Devolucao e abatimento</strong>
+                  <p>Proximo ajuste financeiro: estorno auditado e compensacao futura.</p>
+                </div>
+              </div>
             </div>
           </article>
         </section>
 
-        <section class="panel" aria-labelledby="proximas-telas-title">
-          <div class="panel-header">
-            <h2 id="proximas-telas-title">Proximas telas</h2>
-            <span class="pill">fila tecnica</span>
-          </div>
-          <dl class="status-list">
-            <div class="status-row">
-              <dt>Romaneio</dt>
-              <dd>Selecao parcial ou total do pedido, reserva de lote e confirmacao para baixa de PA.</dd>
+        <section class="dashboard-grid compact">
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Modulos ativos</h2>
+              <span class="pill">preview</span>
             </div>
-            <div class="status-row">
-              <dt>Estoque</dt>
-              <dd>Entradas MP, saidas MP, producao, transformacao PI/PA e saldos auditaveis.</dd>
+            <div class="module-radar">
+              <a class="module-tile" href="cadastros.html">
+                <strong>Cadastros</strong>
+                <span>8 blocos prontos</span>
+                <div class="progress-rail"><span style="width: 100%"></span></div>
+              </a>
+              <a class="module-tile" href="pedidos.html">
+                <strong>Pedidos</strong>
+                <span>R$ 184.250,00 previsto</span>
+                <div class="progress-rail"><span style="width: 42%"></span></div>
+              </a>
+              <div class="module-tile muted-tile">
+                <strong>Romaneio</strong>
+                <span>tela e migration na proxima etapa</span>
+                <div class="progress-rail"><span style="width: 12%"></span></div>
+              </div>
+              <div class="module-tile muted-tile">
+                <strong>Auditorias</strong>
+                <span>reconciliacao por valor e quantidade</span>
+                <div class="progress-rail"><span style="width: 18%"></span></div>
+              </div>
             </div>
-            <div class="status-row">
-              <dt>Auditorias</dt>
-              <dd>Conferencia por valores e quantidades contra Excel: pedidos, faturamento, MP, PA, producao e saldos.</dd>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Trilha de auditoria</h2>
+              <span class="pill">controle</span>
             </div>
-          </dl>
+            <ol class="audit-list">
+              <li>Cada gravacao critica passa por funcao SQL auditavel.</li>
+              <li>Banco operacional, teste e homologacao aparecem no topo da tela.</li>
+              <li>Recebimentos e comissoes guardam snapshot proporcional.</li>
+              <li>Proxima etapa: reconciliacao de valores contra Excel.</li>
+            </ol>
+          </article>
         </section>
       </section>
     </main>

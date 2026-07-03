@@ -22,11 +22,13 @@ Abra `http://localhost:3000`.
 
 ## Telas
 
-- `/` e `/cadastros`: tela operacional de cadastros mestres.
+- `/`: painel operacional inicial com status do banco, KPIs, fila critica e atalhos dos modulos.
+- `/cadastros`: tela operacional de cadastros mestres.
 - `/pedidos`: primeira tela operacional de pedidos, com rascunho auditavel, item vendavel, comissao prevista, decisao de credito, recebimento parcial e liberacao proporcional de comissao.
 - A tela mostra a condicao visual/analitica do banco conforme `ELITE_DATABASE_MODE`.
 - Quando Supabase estiver configurado, a tela tenta carregar contagens das tabelas `cad_*` e alertas pendentes de `cadastro_validation_issues`.
-- Preview sem Node.js: abra `apps/web/preview/cadastros.html` diretamente no navegador.
+- Preview sem Node.js: abra `apps/web/preview/index.html` diretamente no navegador.
+- Preview de cadastros sem Node.js: abra `apps/web/preview/cadastros.html` diretamente no navegador.
 - Preview de pedidos sem Node.js: abra `apps/web/preview/pedidos.html` diretamente no navegador.
 - Os formularios de cliente, pessoa comercial, materia-prima, produto-base, embalagem, item vendavel e conversao de MP usam Server Actions e funcoes PostgreSQL auditaveis; nao gravar diretamente em tabelas `cad_*` pela UI.
 - Vendedores responsaveis, MPs, produtos e embalagens usam seletores pesquisaveis com ID embutido para reduzir erro de digitacao em vinculos.

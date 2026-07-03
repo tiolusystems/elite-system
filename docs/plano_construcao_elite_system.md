@@ -158,6 +158,12 @@ Fora do escopo inicial:
 - fiscal completo;
 - outras planilhas chamadas romaneio sem mapeamento aprovado.
 
+Status atual:
+
+- Modelos de dominio do romaneio criados em `elite_system/domain/romaneio.py`.
+- Servico puro de romaneio criado em `elite_system/services/romaneio.py`.
+- Fluxos cobertos por teste: separacao parcial, reserva, cancelamento, confirmacao com baixa de PA e estorno.
+
 ## Bloco 7 - Relatorios e dashboards
 
 Objetivo: recriar analises do Excel com consultas rastreaveis.

@@ -8,8 +8,23 @@ import unittest
 
 from elite_system.apps.admin_server import classify_database_condition
 from elite_system.db import connect, init_db
+from elite_system.domain.romaneio import (
+    LotePADisponivel,
+    MovimentoPATipo,
+    PedidoItemPendente,
+    RomaneioStatus,
+    SeparacaoTipo,
+)
 from elite_system.mappings import excel_date, normalize_table_row, number, text
 from elite_system.reconciliation import reconciliation_status, run_value_reconciliations
+from elite_system.services.romaneio import (
+    cancelar_romaneio,
+    confirmar_romaneio,
+    criar_romaneio_rascunho,
+    estornar_romaneio,
+    iniciar_separacao,
+    saldo_pendente_pedido,
+)
 from elite_system.services.security import (
     authenticate_user,
     can_perform_action,
@@ -260,6 +275,83 @@ class CoreTests(unittest.TestCase):
             self.assertIsNone(revoked)
             self.assertNotEqual(stored, token)
             self.assertEqual(logged_actions, ["auth.session_created", "auth.session_revoked"])
+
+    def test_romaneio_partial_confirmation_generates_pa_low_only_for_selected_quantity(self) -> None:
+        pedido = PedidoItemPendente(
+            id_pedido="PED001",
+            produto="Produto A",
+            quantidade_pendente=100.0,
+            cliente="Cliente A",
+        )
+        lotes = [
+            LotePADisponivel(produto="Produto A", lote="L1", quantidade_disponivel=30.0, prioridade=1),
+            LotePADisponivel(produto="Produto A", lote="L2", quantidade_disponivel=80.0, prioridade=2),
+        ]
+
+        rascunho = criar_romaneio_rascunho(
+            numero="ROM001",
+            pedido_item=pedido,
+            lotes_disponiveis=lotes,
+            quantidade_solicitada=60.0,
+        )
+        confirmado = confirmar_romaneio(rascunho.romaneio)
+
+        self.assertEqual(rascunho.romaneio.status, RomaneioStatus.RASCUNHO)
+        self.assertEqual(rascunho.movimentos_pa, ())
+        self.assertEqual([item.quantidade for item in rascunho.romaneio.itens], [30.0, 30.0])
+        self.assertTrue(all(item.tipo_separacao == SeparacaoTipo.PARCIAL for item in rascunho.romaneio.itens))
+        self.assertEqual(confirmado.romaneio.status, RomaneioStatus.CONFIRMADO)
+        self.assertEqual(sum(mov.quantidade for mov in confirmado.movimentos_pa), 60.0)
+        self.assertTrue(all(mov.tipo == MovimentoPATipo.BAIXA for mov in confirmado.movimentos_pa))
+        self.assertEqual(saldo_pendente_pedido(pedido, confirmado.romaneio), 40.0)
+
+    def test_romaneio_separation_can_reserve_then_cancel_releases_lots(self) -> None:
+        pedido = PedidoItemPendente(id_pedido="PED002", produto="Produto B", quantidade_pendente=12.0)
+        lotes = [LotePADisponivel(produto="Produto B", lote="LB", quantidade_disponivel=12.0)]
+        rascunho = criar_romaneio_rascunho(numero="ROM002", pedido_item=pedido, lotes_disponiveis=lotes)
+
+        separacao = iniciar_separacao(rascunho.romaneio, reservar_lotes=True)
+        cancelado = cancelar_romaneio(separacao.romaneio)
+
+        self.assertEqual(separacao.romaneio.status, RomaneioStatus.EM_SEPARACAO)
+        self.assertTrue(separacao.romaneio.reserva_lotes)
+        self.assertEqual([mov.tipo for mov in separacao.movimentos_pa], [MovimentoPATipo.RESERVA])
+        self.assertEqual(cancelado.romaneio.status, RomaneioStatus.CANCELADO)
+        self.assertEqual([mov.tipo for mov in cancelado.movimentos_pa], [MovimentoPATipo.LIBERACAO_RESERVA])
+
+    def test_romaneio_rejects_quantity_above_pending_or_available_lots(self) -> None:
+        pedido = PedidoItemPendente(id_pedido="PED003", produto="Produto C", quantidade_pendente=10.0)
+        lotes = [LotePADisponivel(produto="Produto C", lote="LC", quantidade_disponivel=6.0)]
+
+        with self.assertRaisesRegex(ValueError, "cannot exceed"):
+            criar_romaneio_rascunho(
+                numero="ROM003",
+                pedido_item=pedido,
+                lotes_disponiveis=lotes,
+                quantidade_solicitada=11.0,
+            )
+        with self.assertRaisesRegex(ValueError, "do not cover"):
+            criar_romaneio_rascunho(
+                numero="ROM004",
+                pedido_item=pedido,
+                lotes_disponiveis=lotes,
+                quantidade_solicitada=8.0,
+            )
+
+    def test_romaneio_reversal_only_after_confirmation_generates_audited_reversal(self) -> None:
+        pedido = PedidoItemPendente(id_pedido="PED004", produto="Produto D", quantidade_pendente=5.0)
+        lotes = [LotePADisponivel(produto="Produto D", lote="LD", quantidade_disponivel=5.0)]
+        rascunho = criar_romaneio_rascunho(numero="ROM005", pedido_item=pedido, lotes_disponiveis=lotes)
+
+        with self.assertRaisesRegex(ValueError, "cannot estornar"):
+            estornar_romaneio(rascunho.romaneio)
+
+        confirmado = confirmar_romaneio(rascunho.romaneio)
+        estornado = estornar_romaneio(confirmado.romaneio)
+
+        self.assertEqual(estornado.romaneio.status, RomaneioStatus.ESTORNADO)
+        self.assertEqual([mov.tipo for mov in estornado.movimentos_pa], [MovimentoPATipo.REVERSAO_BAIXA])
+        self.assertEqual(estornado.eventos[0].action, "romaneio.reversed")
 
     def test_stock_detail_reconciliation_by_batch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -72,7 +72,11 @@ Status atual:
 - Regras de comissao, recebimento, devolucao, credito e pedido por vendedor documentadas em `docs/escopo_comissoes_recebimentos_credito.md`.
 - Modelos de dominio de cadastros criados em `elite_system/domain/cadastros.py`.
 - Validators puros de cadastros criados em `elite_system/validators/cadastros.py`.
-- Pendencia: revisar campos e perguntas em aberto com o usuario antes de criar migrations definitivas, repositories ou telas.
+- Schema SQLite operacional de cadastros criado com tabelas `cad_*`, preservando as tabelas historicas importadas do Excel.
+- Migration Supabase/PostgreSQL de cadastros criada em `supabase/migrations/0002_master_data_foundation.sql`.
+- Repositories e services auditaveis de cadastros criados em `elite_system/repositories/cadastros_repository.py` e `elite_system/services/cadastros.py`.
+- Testes de cadastros preparados para rodar em banco temporario descartavel.
+- Pendencia: validar migrations em runtime Python/PostgreSQL disponivel antes de usar em qualquer dado real.
 
 ## Bloco 3 - Comercial
 
@@ -230,9 +234,9 @@ Entregas:
 
 1. Configurar GitHub privado somente com codigo.
 2. Revisar e aprovar `docs/dicionario_cadastros_mestres.md` v0.3.
-3. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.
-4. Instalar dependencias do `apps/web` e validar Next.js local.
-5. Ligar login Supabase no Next.js.
-6. Criar repositories para cadastros com `actor_user_id`.
+3. Validar migrations de cadastros em banco descartavel/local quando houver runtime Python disponivel.
+4. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.
+5. Instalar dependencias do `apps/web` e validar Next.js local.
+6. Ligar login Supabase no Next.js.
 7. Criar primeira tela de cadastros mestres.
 8. Classificar causas das diferencas de reconciliacao.

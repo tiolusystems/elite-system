@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('001_initial');
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('002_security_audit');
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('003_default_allow_permissions');
+INSERT OR IGNORE INTO schema_migrations(version) VALUES ('004_cadastros_mestres');
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +71,8 @@ INSERT OR IGNORE INTO permission_actions(action_key, module, description, defaul
     ('migration.import', 'migracao', 'Importar historico local para o banco auditavel', 1, 40),
     ('audit.view', 'auditoria', 'Visualizar auditorias, logs e reconciliacoes', 1, 50),
     ('cadastros.manage', 'cadastros', 'Criar e editar cadastros mestres', 1, 60),
+    ('cadastros.validate', 'cadastros', 'Executar validacoes e filas de revisao de cadastros', 1, 61),
+    ('cadastros.credit.manage', 'cadastros', 'Definir limite de credito e bloqueios de clientes', 1, 62),
     ('comercial.manage', 'comercial', 'Criar e editar pedidos e rotinas comerciais', 1, 70),
     ('estoque.manage', 'estoque', 'Criar e editar movimentos e saldos de estoque', 1, 80),
     ('producao.manage', 'producao', 'Criar e editar ordens e rotinas de producao', 1, 90),
@@ -383,6 +386,337 @@ CREATE TABLE IF NOT EXISTS saidas_pa (
     payload_json TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS cad_clientes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo_legado TEXT,
+    nome TEXT NOT NULL,
+    nome_norm TEXT NOT NULL,
+    cidade TEXT NOT NULL,
+    uf TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    apelidos_json TEXT NOT NULL DEFAULT '[]',
+    valor_total_compras REAL,
+    source_row_id INTEGER REFERENCES source_rows(id),
+    source_batch_id INTEGER REFERENCES migration_batches(id),
+    payload_origem_json TEXT NOT NULL DEFAULT '{}',
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    CHECK(length(uf) = 2)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cad_clientes_codigo_legado
+    ON cad_clientes(codigo_legado)
+    WHERE codigo_legado IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS cad_cliente_propriedades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL REFERENCES cad_clientes(id),
+    nome TEXT NOT NULL,
+    cnpj TEXT,
+    cnpj_norm TEXT,
+    cidade TEXT,
+    uf TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cad_cliente_propriedades_cnpj
+    ON cad_cliente_propriedades(cnpj_norm)
+    WHERE cnpj_norm IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS cad_cliente_documentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL REFERENCES cad_clientes(id),
+    propriedade_id INTEGER REFERENCES cad_cliente_propriedades(id),
+    tipo TEXT NOT NULL,
+    numero TEXT NOT NULL,
+    numero_norm TEXT NOT NULL,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(tipo IN ('cpf', 'cnpj', 'ie', 'outro'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cad_cliente_documentos_tipo_numero
+    ON cad_cliente_documentos(tipo, numero_norm);
+
+CREATE TABLE IF NOT EXISTS cad_cliente_contatos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL REFERENCES cad_clientes(id),
+    propriedade_id INTEGER REFERENCES cad_cliente_propriedades(id),
+    nome TEXT NOT NULL,
+    papel TEXT NOT NULL,
+    telefone TEXT,
+    email TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    CHECK(telefone IS NOT NULL OR email IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS cad_pessoas_comerciais (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo_legado TEXT,
+    nome TEXT NOT NULL,
+    nome_norm TEXT NOT NULL,
+    tipo_comercial TEXT,
+    papeis_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    vendedor_responsavel_id INTEGER REFERENCES cad_pessoas_comerciais(id),
+    apelidos_json TEXT NOT NULL DEFAULT '[]',
+    grafias_incorretas_json TEXT NOT NULL DEFAULT '[]',
+    source_row_id INTEGER REFERENCES source_rows(id),
+    source_batch_id INTEGER REFERENCES migration_batches(id),
+    payload_origem_json TEXT NOT NULL DEFAULT '{}',
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    CHECK(tipo_comercial IS NULL OR tipo_comercial IN (
+        'funcionario_elite',
+        'agente_vinculado',
+        'agente_direto_elite',
+        'vendedor_direto_elite',
+        'tecnico_campo',
+        'entregador',
+        'gerente',
+        'vendedor_gerente'
+    ))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cad_pessoas_codigo_legado
+    ON cad_pessoas_comerciais(codigo_legado)
+    WHERE codigo_legado IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS cad_pessoa_aliases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pessoa_id INTEGER NOT NULL REFERENCES cad_pessoas_comerciais(id),
+    alias TEXT NOT NULL,
+    alias_norm TEXT NOT NULL UNIQUE,
+    tipo TEXT NOT NULL DEFAULT 'apelido',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(tipo IN ('nome', 'apelido', 'grafia_incorreta'))
+);
+
+CREATE TABLE IF NOT EXISTS cad_cliente_vendedores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL REFERENCES cad_clientes(id),
+    pessoa_id INTEGER NOT NULL REFERENCES cad_pessoas_comerciais(id),
+    status TEXT NOT NULL DEFAULT 'active',
+    vigencia_inicio TEXT,
+    vigencia_fim TEXT,
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    UNIQUE(cliente_id, pessoa_id, vigencia_inicio)
+);
+
+CREATE TABLE IF NOT EXISTS cad_materias_primas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo_legado TEXT,
+    sku_corrigido TEXT NOT NULL UNIQUE,
+    nome TEXT NOT NULL,
+    nome_norm TEXT NOT NULL,
+    unidade_base_estoque TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    tipo TEXT,
+    densidade REAL,
+    estoque_minimo REAL,
+    ncm TEXT,
+    ibama TEXT,
+    codigo_ads TEXT,
+    source_row_id INTEGER REFERENCES source_rows(id),
+    source_batch_id INTEGER REFERENCES migration_batches(id),
+    payload_origem_json TEXT NOT NULL DEFAULT '{}',
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    CHECK(densidade IS NULL OR densidade > 0),
+    CHECK(estoque_minimo IS NULL OR estoque_minimo >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS cad_conversoes_unidade_mp (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    materia_prima_id INTEGER NOT NULL REFERENCES cad_materias_primas(id),
+    unidade_origem TEXT NOT NULL,
+    unidade_destino TEXT NOT NULL,
+    fator REAL NOT NULL,
+    vigencia_inicio TEXT,
+    vigencia_fim TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(fator > 0),
+    UNIQUE(materia_prima_id, unidade_origem, unidade_destino, vigencia_inicio)
+);
+
+CREATE TABLE IF NOT EXISTS cad_produtos_base (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo_produto TEXT NOT NULL UNIQUE,
+    nome TEXT NOT NULL,
+    nome_norm TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    grupo TEXT,
+    densidade_kg_l REAL,
+    reg_mapa TEXT,
+    ncm TEXT,
+    ibama TEXT,
+    ads TEXT,
+    source_row_id INTEGER REFERENCES source_rows(id),
+    source_batch_id INTEGER REFERENCES migration_batches(id),
+    payload_origem_json TEXT NOT NULL DEFAULT '{}',
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    CHECK(densidade_kg_l IS NULL OR densidade_kg_l > 0)
+);
+
+CREATE TABLE IF NOT EXISTS cad_embalagens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo_legado TEXT,
+    descricao TEXT NOT NULL,
+    descricao_norm TEXT NOT NULL,
+    unidade TEXT NOT NULL,
+    volume_litros REAL,
+    controla_estoque INTEGER NOT NULL DEFAULT 0,
+    materia_prima_id INTEGER REFERENCES cad_materias_primas(id),
+    status TEXT NOT NULL DEFAULT 'active',
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    CHECK(volume_litros IS NULL OR volume_litros > 0),
+    CHECK(controla_estoque IN (0, 1)),
+    CHECK(controla_estoque = 0 OR materia_prima_id IS NOT NULL)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cad_embalagens_descricao_norm
+    ON cad_embalagens(descricao_norm);
+
+CREATE TABLE IF NOT EXISTS cad_produto_embalagens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    produto_id INTEGER NOT NULL REFERENCES cad_produtos_base(id),
+    embalagem_id INTEGER NOT NULL REFERENCES cad_embalagens(id),
+    codigo_item TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    UNIQUE(produto_id, embalagem_id)
+);
+
+CREATE TABLE IF NOT EXISTS cad_veiculos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo_legado TEXT,
+    descricao TEXT NOT NULL,
+    descricao_norm TEXT NOT NULL,
+    placa TEXT,
+    placa_norm TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    capacidade REAL,
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'inactive', 'pending_review')),
+    CHECK(capacidade IS NULL OR capacidade > 0)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cad_veiculos_placa_norm
+    ON cad_veiculos(placa_norm)
+    WHERE placa_norm IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS cad_garantias_produto_mapa (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    produto_id INTEGER NOT NULL REFERENCES cad_produtos_base(id),
+    nutriente TEXT NOT NULL,
+    tipo_limite TEXT NOT NULL,
+    valor REAL NOT NULL,
+    unidade TEXT NOT NULL,
+    fonte TEXT NOT NULL DEFAULT 'mapa',
+    vigencia_inicio TEXT,
+    vigencia_fim TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(tipo_limite IN ('minimo', 'maximo', 'faixa', 'declarado')),
+    CHECK(fonte IN ('mapa', 'manual', 'laboratorio', 'fornecedor', 'calculado')),
+    CHECK(valor >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS cad_garantias_lote_mp (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    materia_prima_id INTEGER NOT NULL REFERENCES cad_materias_primas(id),
+    lote_mp_id TEXT NOT NULL,
+    nutriente TEXT NOT NULL,
+    valor REAL NOT NULL,
+    unidade TEXT NOT NULL,
+    fonte TEXT NOT NULL,
+    documento_referencia TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(fonte IN ('mapa', 'manual', 'laboratorio', 'fornecedor', 'calculado')),
+    CHECK(valor >= 0),
+    CHECK(fonte NOT IN ('manual', 'laboratorio') OR created_by IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS cad_limites_credito_cliente (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL REFERENCES cad_clientes(id),
+    limite_manual REAL,
+    limite_calculado REAL,
+    limite_disponivel REAL NOT NULL,
+    status_credito TEXT NOT NULL,
+    motivo TEXT,
+    updated_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(limite_manual IS NULL OR limite_manual >= 0),
+    CHECK(limite_calculado IS NULL OR limite_calculado >= 0),
+    CHECK(limite_disponivel >= 0),
+    CHECK(status_credito IN ('liberado', 'reduzido', 'bloqueado', 'pendente_aprovacao')),
+    CHECK(status_credito = 'liberado' OR motivo IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cad_limites_credito_cliente
+    ON cad_limites_credito_cliente(cliente_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS cadastro_validation_issues (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity TEXT NOT NULL,
+    entity_key TEXT,
+    severity TEXT NOT NULL,
+    code TEXT NOT NULL,
+    message TEXT NOT NULL,
+    field TEXT,
+    payload_json TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'pending',
+    source_batch_id INTEGER REFERENCES migration_batches(id),
+    created_by INTEGER REFERENCES users(id),
+    resolved_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TEXT,
+    CHECK(severity IN ('error', 'warning')),
+    CHECK(status IN ('pending', 'accepted', 'resolved', 'dismissed'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_source_rows_table ON source_rows(table_id);
 CREATE INDEX IF NOT EXISTS idx_source_tables_name ON source_tables(table_name);
 CREATE INDEX IF NOT EXISTS idx_imported_records_entity ON imported_records(entity_name);
@@ -399,3 +733,8 @@ CREATE INDEX IF NOT EXISTS idx_entradas_mp_materia ON entradas_mp(materia_prima)
 CREATE INDEX IF NOT EXISTS idx_lotes_producao_lote ON lotes_producao(lote);
 CREATE INDEX IF NOT EXISTS idx_saidas_mp_lote_op ON saidas_mp(lote_op);
 CREATE INDEX IF NOT EXISTS idx_saidas_pa_id_pedido ON saidas_pa(id_pedido);
+CREATE INDEX IF NOT EXISTS idx_cad_clientes_nome_norm ON cad_clientes(nome_norm);
+CREATE INDEX IF NOT EXISTS idx_cad_pessoas_nome_norm ON cad_pessoas_comerciais(nome_norm);
+CREATE INDEX IF NOT EXISTS idx_cad_materias_nome_norm ON cad_materias_primas(nome_norm);
+CREATE INDEX IF NOT EXISTS idx_cad_produtos_nome_norm ON cad_produtos_base(nome_norm);
+CREATE INDEX IF NOT EXISTS idx_cadastro_validation_issues_status ON cadastro_validation_issues(status, severity);

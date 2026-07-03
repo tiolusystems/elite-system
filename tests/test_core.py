@@ -65,6 +65,13 @@ class CoreTests(unittest.TestCase):
             self.assertIn("permission_actions", tables)
             self.assertIn("role_permission_overrides", tables)
             self.assertIn("user_permission_overrides", tables)
+            self.assertIn("cad_clientes", tables)
+            self.assertIn("cad_pessoas_comerciais", tables)
+            self.assertIn("cad_materias_primas", tables)
+            self.assertIn("cad_produtos_base", tables)
+            self.assertIn("cad_embalagens", tables)
+            self.assertIn("cad_limites_credito_cliente", tables)
+            self.assertIn("cadastro_validation_issues", tables)
 
     def test_value_normalizers(self) -> None:
         self.assertEqual(text("  Cliente X  "), "Cliente X")

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite System - Preview Visual</title>
+    <link rel="stylesheet" href="../app/globals.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <strong>Elite System</strong>
+          <span>Preview visual</span>
+        </div>
+        <nav class="topnav" aria-label="Modulos principais">
+          <a href="#" aria-current="page">Inicio</a>
+          <a href="cadastros.html">Cadastros</a>
+          <a href="pedidos.html">Pedidos</a>
+        </nav>
+      </header>
+
+      <aside class="db-banner">
+        <strong>BANCO DE TESTE/DESCARTAVEL</strong>
+        <span>Preview local para validar telas. As acoes desta pasta nao alteram dados reais.</span>
+        <span class="pill">visual</span>
+      </aside>
+
+      <section class="workspace">
+        <div class="toolbar">
+          <div>
+            <h1>Validacao visual</h1>
+            <p class="muted">
+              Telas navegaveis para revisar layout, fluxo, nomes de campos e ordem operacional antes da integracao final.
+            </p>
+          </div>
+          <div class="toolbar-actions" aria-label="Acoes de preview">
+            <a class="secondary-button" href="cadastros.html">Cadastros</a>
+            <a class="primary-button" href="pedidos.html">Pedidos</a>
+          </div>
+        </div>
+
+        <section class="summary-grid" aria-label="Resumo do preview">
+          <div class="summary-card">
+            <span>Telas disponiveis</span>
+            <strong>2</strong>
+          </div>
+          <div class="summary-card">
+            <span>Status</span>
+            <strong>Em construcao</strong>
+          </div>
+          <div class="summary-card">
+            <span>Banco</span>
+            <strong>Nao grava</strong>
+          </div>
+          <div class="summary-card">
+            <span>Mobile</span>
+            <strong>Responsivo</strong>
+          </div>
+        </section>
+
+        <section class="two-column">
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Cadastros mestres</h2>
+              <span class="pill">base do sistema</span>
+            </div>
+            <div class="module-list">
+              <a class="module-card" href="cadastros.html">
+                <div class="module-card-main">
+                  <h3>Clientes, pessoas comerciais, MP, produtos e embalagens</h3>
+                  <span>Campos mestres, validacao, credito e vinculos operacionais.</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>abrir</span>
+                  <strong>Cadastros</strong>
+                </div>
+                <p>Use esta tela para validar nomes de campos, ordem dos blocos e cadastros que faltam.</p>
+              </a>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <h2>Pedidos</h2>
+              <span class="pill">comercial</span>
+            </div>
+            <div class="module-list">
+              <a class="module-card" href="pedidos.html">
+                <div class="module-card-main">
+                  <h3>Pedido, credito, recebimento e comissao</h3>
+                  <span>Fluxo inicial com rascunho, decisao de credito e recebimento parcial.</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>abrir</span>
+                  <strong>Pedidos</strong>
+                </div>
+                <p>Use esta tela para validar a rotina comercial antes de avancarmos para romaneio e estoque.</p>
+              </a>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel" aria-labelledby="proximas-telas-title">
+          <div class="panel-header">
+            <h2 id="proximas-telas-title">Proximas telas</h2>
+            <span class="pill">fila tecnica</span>
+          </div>
+          <dl class="status-list">
+            <div class="status-row">
+              <dt>Romaneio</dt>
+              <dd>Selecao parcial ou total do pedido, reserva de lote e confirmacao para baixa de PA.</dd>
+            </div>
+            <div class="status-row">
+              <dt>Estoque</dt>
+              <dd>Entradas MP, saidas MP, producao, transformacao PI/PA e saldos auditaveis.</dd>
+            </div>
+            <div class="status-row">
+              <dt>Auditorias</dt>
+              <dd>Conferencia por valores e quantidades contra Excel: pedidos, faturamento, MP, PA, producao e saldos.</dd>
+            </div>
+          </dl>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

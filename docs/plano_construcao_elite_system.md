@@ -70,7 +70,9 @@ Status atual:
 - Dicionario inicial de cadastros criado em `docs/dicionario_cadastros_mestres.md`.
 - Dicionario evoluido para incluir papeis de vendedor/agente/tecnico/entregador, multiplos comissionados por pedido, cliente unico com propriedades/CNPJs, saneamento de SKU de MP, conversoes XML/NF, produto + embalagem, PA/PI, formulas versionadas e garantias MAPA.
 - Regras de comissao, recebimento, devolucao, credito e pedido por vendedor documentadas em `docs/escopo_comissoes_recebimentos_credito.md`.
-- Pendencia: revisar campos e perguntas em aberto com o usuario antes de criar migrations, repositories ou telas.
+- Modelos de dominio de cadastros criados em `elite_system/domain/cadastros.py`.
+- Validators puros de cadastros criados em `elite_system/validators/cadastros.py`.
+- Pendencia: revisar campos e perguntas em aberto com o usuario antes de criar migrations definitivas, repositories ou telas.
 
 ## Bloco 3 - Comercial
 
@@ -228,11 +230,9 @@ Entregas:
 
 1. Configurar GitHub privado somente com codigo.
 2. Revisar e aprovar `docs/dicionario_cadastros_mestres.md` v0.3.
-3. Criar modelos de dominio para cadastros.
-4. Criar validators puros para cadastros.
-5. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.
-6. Instalar dependencias do `apps/web` e validar Next.js local.
-7. Ligar login Supabase no Next.js.
-8. Criar repositories para cadastros com `actor_user_id`.
-9. Criar primeira tela de cadastros mestres.
-10. Classificar causas das diferencas de reconciliacao.
+3. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.
+4. Instalar dependencias do `apps/web` e validar Next.js local.
+5. Ligar login Supabase no Next.js.
+6. Criar repositories para cadastros com `actor_user_id`.
+7. Criar primeira tela de cadastros mestres.
+8. Classificar causas das diferencas de reconciliacao.

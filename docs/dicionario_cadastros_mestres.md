@@ -1,6 +1,6 @@
 # Dicionario de cadastros mestres
 
-Versao: 0.2
+Versao: 0.3
 Data: 2026-07-03
 
 ## Objetivo
@@ -111,7 +111,7 @@ Perguntas para revisao:
 
 Fonte historica principal: tabela `Tabela153241`.
 
-Objetos de dominio previstos: `PessoaComercial`, `PapelPessoa`, `VinculoAgente`, `Comissionado`.
+Objetos de dominio previstos: `PessoaComercial`, `PapelPessoa`, `VinculoAgente`, `Comissionado`, `GerenteComercial`, `RegiaoAtuacao`.
 
 Finalidade: controlar vendedores, agentes, tecnicos de campo, funcionarios, comissionados e entregadores quando a mesma pessoa puder exercer mais de uma funcao.
 
@@ -127,6 +127,8 @@ Tipos comerciais previstos:
 | `vendedor_direto_elite` | Vendedor de venda direta Elite. | Sim |
 | `tecnico_campo` | Tecnico que faz aplicacoes e pode receber comissao por aplicacao, produto desenvolvido ou parcela de receita. | Sim |
 | `entregador` | Pessoa que faz entrega. Nao e vendedor por ser entregador. | Nao por entrega, salvo se tambem tiver papel comercial aprovado. |
+| `gerente` | Pessoa que gerencia vendedores, clientes, regioes ou campanhas. | Sim |
+| `vendedor_gerente` | Pessoa que vende diretamente e tambem recebe regra gerencial. | Sim |
 
 | Campo operacional | Origem atual no Excel | Obrigatorio | Observacao |
 |---|---|---:|---|
@@ -154,12 +156,14 @@ Regras iniciais:
 - entregador pode ou nao ser funcionario Elite.
 - agente vinculado deve apontar para um vendedor responsavel do time Elite.
 - tecnico de campo pode receber comissao por aplicacao, desenvolvimento de produto ou parcela da receita.
+- gerente pode receber comissao sobre vendedores especificos, regioes de atuacao, clientes sob gestao ou campanhas.
+- vendedor/gerente pode acumular comissao propria de venda e comissao gerencial, conforme regra aprovada.
 
 ## Comissionamento
 
-Objeto de dominio previsto: `ComissaoPedido`, `RegraComissao`, `CampanhaComercial`, `MetaComissao`, `PremioCampanha`.
+Objeto de dominio previsto: `ComissaoPedido`, `RegraComissao`, `CampanhaComercial`, `MetaComissao`, `PremioCampanha`, `ContaCorrenteComissao`, `ComissaoRecebimento`.
 
-Decisao: em um pedido podem existir varios comissionados, cada um com comissao distinta. A comissao e informada na insercao do pedido e paga quando o pedido for recebido parcial ou integralmente.
+Decisao: em um pedido podem existir varios comissionados, cada um com comissao distinta. A comissao e informada na insercao do pedido, mas a liberacao/pagamento depende do recebimento parcial ou integral do cliente.
 
 Campos previstos em `ComissaoPedido`:
 
@@ -174,17 +178,24 @@ Campos previstos em `ComissaoPedido`:
 | `condicao_pagamento` | Sim | Recebimento parcial, recebimento integral ou regra aprovada. |
 | `status` | Sim | Prevista, liberada, paga, estornada. |
 | `campanha_id` | Nao | Campanha vigente aplicada, quando houver. |
+| `origem_regra` | Sim | Pedido, gerente, campanha, tecnico, ajuste etc. |
 
 Regras iniciais:
 
 - pedido pode ter multiplas comissoes.
 - comissao nao deve ser paga apenas por pedido emitido; depende de recebimento parcial ou integral.
 - recebimento parcial libera apenas a parcela proporcional ou regra aprovada.
+- ferramenta de recebimento deve calcular comissao ao lancar valores recebidos de cada cliente.
+- bonificacao nao gera comissao.
+- devolucao abate comissao.
+- se a comissao ja foi paga e houver devolucao, o valor deve ser abatido de comissoes futuras.
 - comissao pode ser variavel por pessoa.
 - podem existir travas individuais por meta, periodo e campanha.
 - pode haver mais de uma campanha vigente.
 - campanhas podem gerar aumento de percentual, premio, voucher de viagem ou outro beneficio.
 - toda alteracao de comissao deve ser auditada com antes/depois, autor e motivo.
+
+Detalhamento: `docs/escopo_comissoes_recebimentos_credito.md`.
 
 Perguntas para revisao:
 
@@ -192,6 +203,40 @@ Perguntas para revisao:
 - Tecnico de campo recebe por produto desenvolvido, por aplicacao, por receita ou por combinacao?
 - Campanhas podem acumular entre si ou ha prioridade?
 - Voucher de viagem deve ser tratado como valor financeiro, premio nao financeiro ou ambos?
+- Recebimento sera lancado por pedido, NF/parcela ou cliente?
+- Como compensar comissao negativa quando houver devolucao depois de pagamento?
+
+## Credito do cliente e pedido por vendedor
+
+Objetos de dominio previstos: `LimiteCreditoCliente`, `AnaliseCreditoPedido`, `PedidoRascunhoVendedor`, `AprovacaoPedido`.
+
+Finalidade: permitir que vendedores preencham pedidos diretamente pelo sistema, com alcadas, consulta de limite de credito, inadimplencia e bloqueios operacionais.
+
+Decisao: vendedor pode ter acesso ao sistema para preencher pedido, mas com permissao limitada. Ele nao deve alterar limite de credito, regra de comissao ou aprovar bloqueios sem alcada.
+
+Campos previstos em `LimiteCreditoCliente`:
+
+| Campo | Obrigatorio | Uso |
+|---|---:|---|
+| `cliente_id` | Sim | Cliente analisado. |
+| `limite_manual` | Nao | Limite definido por usuario autorizado. |
+| `limite_calculado` | Nao | Limite sugerido por regra de credito/inadimplencia. |
+| `limite_disponivel` | Sim | Limite disponivel no momento do pedido. |
+| `status_credito` | Sim | Liberado, reduzido, bloqueado, pendente aprovacao. |
+| `motivo` | Nao | Motivo de reducao/bloqueio. |
+| `updated_by` | Sim | Usuario responsavel pela ultima decisao. |
+
+Regras iniciais:
+
+- vendedor so ve clientes autorizados para ele.
+- vendedor pode criar pedido em rascunho e enviar para aprovacao.
+- ao inserir pedido, o sistema deve mostrar limite de credito e alerta de inadimplencia conforme alcada.
+- inadimplencia pode reduzir limite ou bloquear pedido.
+- pedido acima do limite nao deve ser aprovado automaticamente.
+- gerente/financeiro/comercial autorizado pode aprovar excecao conforme alcada.
+- a analise de credito usada no pedido deve ficar gravada como snapshot auditavel.
+
+Detalhamento: `docs/escopo_comissoes_recebimentos_credito.md`.
 
 ## Materia-prima
 

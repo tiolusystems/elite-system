@@ -69,6 +69,7 @@ Status atual:
 
 - Dicionario inicial de cadastros criado em `docs/dicionario_cadastros_mestres.md`.
 - Dicionario evoluido para incluir papeis de vendedor/agente/tecnico/entregador, multiplos comissionados por pedido, cliente unico com propriedades/CNPJs, saneamento de SKU de MP, conversoes XML/NF, produto + embalagem, PA/PI, formulas versionadas e garantias MAPA.
+- Regras de comissao, recebimento, devolucao, credito e pedido por vendedor documentadas em `docs/escopo_comissoes_recebimentos_credito.md`.
 - Pendencia: revisar campos e perguntas em aberto com o usuario antes de criar migrations, repositories ou telas.
 
 ## Bloco 3 - Comercial
@@ -83,6 +84,10 @@ Entregas:
 - Status de entrega.
 - Vendedores e comissoes.
 - Faturamento.
+- Lancamento de recebimentos.
+- Calculo de comissoes por recebimento.
+- Pedido preenchido por vendedor com alcadas.
+- Analise de credito e inadimplencia no pedido.
 
 Auditorias:
 
@@ -91,6 +96,10 @@ Auditorias:
 - Faturamento vendas.
 - Pedidos em aberto.
 - Entregue x a entregar.
+- Comissao prevista x liberada x paga.
+- Devolucao abatendo comissao.
+- Comissao negativa compensada em futuras.
+- Pedido bloqueado por credito/inadimplencia.
 
 ## Bloco 4 - Estoque MP e PA
 
@@ -218,7 +227,7 @@ Entregas:
 ## Sequencia imediata
 
 1. Configurar GitHub privado somente com codigo.
-2. Revisar e aprovar `docs/dicionario_cadastros_mestres.md` v0.2.
+2. Revisar e aprovar `docs/dicionario_cadastros_mestres.md` v0.3.
 3. Criar modelos de dominio para cadastros.
 4. Criar validators puros para cadastros.
 5. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.

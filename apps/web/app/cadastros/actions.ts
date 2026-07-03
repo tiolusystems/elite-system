@@ -19,6 +19,7 @@ const ALLOWED_TIPO_COMERCIAL = new Set([
   "vendedor_gerente"
 ]);
 const ALLOWED_PAPEIS = new Set(["funcionario", "vendedor", "agente", "tecnico_campo", "entregador", "gerente", "comissionado"]);
+const DECIMAL_SEPARATOR = /,/g;
 
 export async function createClienteAction(formData: FormData) {
   const runtime = getRuntimeStatus();
@@ -126,6 +127,160 @@ export async function createPessoaComercialAction(formData: FormData) {
   redirect("/cadastros?result=pessoa_created#nova-pessoa");
 }
 
+export async function createMateriaPrimaAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-mp");
+  }
+
+  const nome = field(formData, "nome");
+  const skuCorrigido = field(formData, "sku_corrigido");
+  const unidadeBaseEstoque = field(formData, "unidade_base_estoque");
+  const status = field(formData, "status") || "active";
+  const densidade = optionalNumber(formData, "densidade");
+  const estoqueMinimo = optionalNumber(formData, "estoque_minimo");
+
+  if (!nome || !skuCorrigido || !unidadeBaseEstoque) {
+    redirect("/cadastros?result=missing_mp_required#nova-mp");
+  }
+  if (!ALLOWED_STATUS.has(status)) {
+    redirect("/cadastros?result=invalid_status#nova-mp");
+  }
+  if (densidade !== null && (!Number.isFinite(densidade) || densidade <= 0)) {
+    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+  }
+  if (estoqueMinimo !== null && (!Number.isFinite(estoqueMinimo) || estoqueMinimo < 0)) {
+    redirect("/cadastros?result=invalid_non_negative_number#nova-mp");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("create_cad_materia_prima", {
+    p_codigo_ads: optionalField(formData, "codigo_ads"),
+    p_codigo_legado: optionalField(formData, "codigo_legado"),
+    p_densidade: densidade,
+    p_estoque_minimo: estoqueMinimo,
+    p_ibama: optionalField(formData, "ibama"),
+    p_ncm: optionalField(formData, "ncm"),
+    p_nome: nome,
+    p_nome_norm: normalizeKey(nome),
+    p_payload_origem_json: {
+      source: "apps/web/app/cadastros",
+      form: "materia_prima"
+    },
+    p_sku_corrigido: skuCorrigido.toUpperCase(),
+    p_status: status,
+    p_tipo: optionalField(formData, "tipo"),
+    p_unidade_base_estoque: unidadeBaseEstoque.toUpperCase()
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=mp_created#nova-mp");
+}
+
+export async function createProdutoBaseAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#novo-produto");
+  }
+
+  const codigoProduto = field(formData, "codigo_produto");
+  const nome = field(formData, "nome");
+  const status = field(formData, "status") || "active";
+  const densidadeKgL = optionalNumber(formData, "densidade_kg_l");
+
+  if (!codigoProduto || !nome) {
+    redirect("/cadastros?result=missing_product_required#novo-produto");
+  }
+  if (!ALLOWED_STATUS.has(status)) {
+    redirect("/cadastros?result=invalid_status#novo-produto");
+  }
+  if (densidadeKgL !== null && (!Number.isFinite(densidadeKgL) || densidadeKgL <= 0)) {
+    redirect("/cadastros?result=invalid_positive_number#novo-produto");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("create_cad_produto_base", {
+    p_ads: optionalField(formData, "ads"),
+    p_codigo_produto: codigoProduto.toUpperCase(),
+    p_densidade_kg_l: densidadeKgL,
+    p_grupo: optionalField(formData, "grupo"),
+    p_ibama: optionalField(formData, "ibama"),
+    p_ncm: optionalField(formData, "ncm"),
+    p_nome: nome,
+    p_nome_norm: normalizeKey(nome),
+    p_payload_origem_json: {
+      source: "apps/web/app/cadastros",
+      form: "produto_base"
+    },
+    p_reg_mapa: optionalField(formData, "reg_mapa"),
+    p_status: status
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-produto`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=produto_created#novo-produto");
+}
+
+export async function createEmbalagemAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-embalagem");
+  }
+
+  const descricao = field(formData, "descricao");
+  const unidade = field(formData, "unidade");
+  const status = field(formData, "status") || "active";
+  const volumeLitros = optionalNumber(formData, "volume_litros");
+  const controlaEstoque = formData.get("controla_estoque") === "1";
+  const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
+
+  if (!descricao || !unidade) {
+    redirect("/cadastros?result=missing_package_required#nova-embalagem");
+  }
+  if (!ALLOWED_STATUS.has(status)) {
+    redirect("/cadastros?result=invalid_status#nova-embalagem");
+  }
+  if (volumeLitros !== null && (!Number.isFinite(volumeLitros) || volumeLitros <= 0)) {
+    redirect("/cadastros?result=invalid_positive_number#nova-embalagem");
+  }
+  if (materiaPrimaId !== null && (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0)) {
+    redirect("/cadastros?result=invalid_positive_number#nova-embalagem");
+  }
+  if (controlaEstoque && materiaPrimaId === null) {
+    redirect("/cadastros?result=missing_package_stock_item#nova-embalagem");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("create_cad_embalagem", {
+    p_codigo_legado: optionalField(formData, "codigo_legado"),
+    p_controla_estoque: controlaEstoque,
+    p_descricao: descricao,
+    p_descricao_norm: normalizeKey(descricao),
+    p_materia_prima_id: materiaPrimaId,
+    p_payload_origem_json: {
+      source: "apps/web/app/cadastros",
+      form: "embalagem"
+    },
+    p_status: status,
+    p_unidade: unidade.toUpperCase(),
+    p_volume_litros: volumeLitros
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-embalagem`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=embalagem_created#nova-embalagem");
+}
+
 function field(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }
@@ -133,6 +288,22 @@ function field(formData: FormData, name: string): string {
 function optionalField(formData: FormData, name: string): string | null {
   const value = field(formData, name);
   return value || null;
+}
+
+function optionalNumber(formData: FormData, name: string): number | null {
+  const value = optionalField(formData, name);
+  if (value === null) {
+    return null;
+  }
+  return Number(value.replace(DECIMAL_SEPARATOR, "."));
+}
+
+function optionalInteger(formData: FormData, name: string): number | null {
+  const value = optionalField(formData, name);
+  if (value === null) {
+    return null;
+  }
+  return Number(value);
 }
 
 function splitLines(value: string | null): string[] {

@@ -417,6 +417,20 @@ h1 {
   font-weight: 700;
 }
 
+.form-grid .checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  align-self: end;
+}
+
+.form-grid .checkbox-line input {
+  width: 16px;
+  min-height: 16px;
+  height: 16px;
+}
+
 .wide-field {
   grid-column: span 2;
 }

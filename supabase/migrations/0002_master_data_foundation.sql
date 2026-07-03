@@ -629,3 +629,301 @@ $$;
 
 revoke all on function public.create_cad_pessoa_comercial(text, text, jsonb, text, text, text, bigint, jsonb, jsonb, jsonb) from public;
 grant execute on function public.create_cad_pessoa_comercial(text, text, jsonb, text, text, text, bigint, jsonb, jsonb, jsonb) to authenticated;
+
+create or replace function public.create_cad_materia_prima(
+  p_nome text,
+  p_nome_norm text,
+  p_sku_corrigido text,
+  p_unidade_base_estoque text,
+  p_status text default 'active',
+  p_codigo_legado text default null,
+  p_tipo text default null,
+  p_densidade numeric default null,
+  p_estoque_minimo numeric default null,
+  p_ncm text default null,
+  p_ibama text default null,
+  p_codigo_ads text default null,
+  p_payload_origem_json jsonb default '{}'::jsonb
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid;
+  v_materia_prima_id bigint;
+begin
+  if nullif(trim(p_nome), '') is null then
+    raise exception 'nome is required';
+  end if;
+  if nullif(trim(p_sku_corrigido), '') is null then
+    raise exception 'sku_corrigido is required';
+  end if;
+  if nullif(trim(p_unidade_base_estoque), '') is null then
+    raise exception 'unidade_base_estoque is required';
+  end if;
+  if p_status not in ('active', 'inactive', 'pending_review') then
+    raise exception 'invalid status';
+  end if;
+  if p_densidade is not null and p_densidade <= 0 then
+    raise exception 'densidade must be greater than zero';
+  end if;
+  if p_estoque_minimo is not null and p_estoque_minimo < 0 then
+    raise exception 'estoque_minimo must be greater than or equal to zero';
+  end if;
+
+  v_actor := auth.uid();
+  if v_actor is not null and not exists (
+    select 1 from public.user_profiles where id = v_actor
+  ) then
+    v_actor := null;
+  end if;
+
+  insert into public.cad_materias_primas(
+    codigo_legado,
+    sku_corrigido,
+    nome,
+    nome_norm,
+    unidade_base_estoque,
+    status,
+    tipo,
+    densidade,
+    estoque_minimo,
+    ncm,
+    ibama,
+    codigo_ads,
+    payload_origem_json,
+    created_by,
+    updated_by
+  )
+  values (
+    nullif(trim(p_codigo_legado), ''),
+    upper(trim(p_sku_corrigido)),
+    trim(p_nome),
+    trim(p_nome_norm),
+    upper(trim(p_unidade_base_estoque)),
+    p_status,
+    nullif(trim(p_tipo), ''),
+    p_densidade,
+    p_estoque_minimo,
+    nullif(trim(p_ncm), ''),
+    nullif(trim(p_ibama), ''),
+    nullif(trim(p_codigo_ads), ''),
+    coalesce(p_payload_origem_json, '{}'::jsonb),
+    v_actor,
+    v_actor
+  )
+  returning id into v_materia_prima_id;
+
+  perform public.log_action(
+    'cadastros.materia_prima_created',
+    'cad_materias_primas',
+    v_materia_prima_id::text,
+    'success',
+    null,
+    jsonb_build_object(
+      'nome', trim(p_nome),
+      'sku_corrigido', upper(trim(p_sku_corrigido)),
+      'unidade_base_estoque', upper(trim(p_unidade_base_estoque)),
+      'status', p_status
+    ),
+    jsonb_build_object('source', 'create_cad_materia_prima')
+  );
+
+  return v_materia_prima_id;
+end;
+$$;
+
+revoke all on function public.create_cad_materia_prima(text, text, text, text, text, text, text, numeric, numeric, text, text, text, jsonb) from public;
+grant execute on function public.create_cad_materia_prima(text, text, text, text, text, text, text, numeric, numeric, text, text, text, jsonb) to authenticated;
+
+create or replace function public.create_cad_produto_base(
+  p_codigo_produto text,
+  p_nome text,
+  p_nome_norm text,
+  p_status text default 'active',
+  p_grupo text default null,
+  p_densidade_kg_l numeric default null,
+  p_reg_mapa text default null,
+  p_ncm text default null,
+  p_ibama text default null,
+  p_ads text default null,
+  p_payload_origem_json jsonb default '{}'::jsonb
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid;
+  v_produto_id bigint;
+begin
+  if nullif(trim(p_codigo_produto), '') is null then
+    raise exception 'codigo_produto is required';
+  end if;
+  if nullif(trim(p_nome), '') is null then
+    raise exception 'nome is required';
+  end if;
+  if p_status not in ('active', 'inactive', 'pending_review') then
+    raise exception 'invalid status';
+  end if;
+  if p_densidade_kg_l is not null and p_densidade_kg_l <= 0 then
+    raise exception 'densidade_kg_l must be greater than zero';
+  end if;
+
+  v_actor := auth.uid();
+  if v_actor is not null and not exists (
+    select 1 from public.user_profiles where id = v_actor
+  ) then
+    v_actor := null;
+  end if;
+
+  insert into public.cad_produtos_base(
+    codigo_produto,
+    nome,
+    nome_norm,
+    status,
+    grupo,
+    densidade_kg_l,
+    reg_mapa,
+    ncm,
+    ibama,
+    ads,
+    payload_origem_json,
+    created_by,
+    updated_by
+  )
+  values (
+    upper(trim(p_codigo_produto)),
+    trim(p_nome),
+    trim(p_nome_norm),
+    p_status,
+    nullif(trim(p_grupo), ''),
+    p_densidade_kg_l,
+    nullif(trim(p_reg_mapa), ''),
+    nullif(trim(p_ncm), ''),
+    nullif(trim(p_ibama), ''),
+    nullif(trim(p_ads), ''),
+    coalesce(p_payload_origem_json, '{}'::jsonb),
+    v_actor,
+    v_actor
+  )
+  returning id into v_produto_id;
+
+  perform public.log_action(
+    'cadastros.produto_base_created',
+    'cad_produtos_base',
+    v_produto_id::text,
+    'success',
+    null,
+    jsonb_build_object(
+      'codigo_produto', upper(trim(p_codigo_produto)),
+      'nome', trim(p_nome),
+      'status', p_status
+    ),
+    jsonb_build_object('source', 'create_cad_produto_base')
+  );
+
+  return v_produto_id;
+end;
+$$;
+
+revoke all on function public.create_cad_produto_base(text, text, text, text, text, numeric, text, text, text, text, jsonb) from public;
+grant execute on function public.create_cad_produto_base(text, text, text, text, text, numeric, text, text, text, text, jsonb) to authenticated;
+
+create or replace function public.create_cad_embalagem(
+  p_descricao text,
+  p_descricao_norm text,
+  p_unidade text,
+  p_status text default 'active',
+  p_codigo_legado text default null,
+  p_volume_litros numeric default null,
+  p_controla_estoque boolean default false,
+  p_materia_prima_id bigint default null,
+  p_payload_origem_json jsonb default '{}'::jsonb
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid;
+  v_embalagem_id bigint;
+begin
+  if nullif(trim(p_descricao), '') is null then
+    raise exception 'descricao is required';
+  end if;
+  if nullif(trim(p_unidade), '') is null then
+    raise exception 'unidade is required';
+  end if;
+  if p_status not in ('active', 'inactive', 'pending_review') then
+    raise exception 'invalid status';
+  end if;
+  if p_volume_litros is not null and p_volume_litros <= 0 then
+    raise exception 'volume_litros must be greater than zero';
+  end if;
+  if coalesce(p_controla_estoque, false) and p_materia_prima_id is null then
+    raise exception 'materia_prima_id is required when controla_estoque is true';
+  end if;
+
+  v_actor := auth.uid();
+  if v_actor is not null and not exists (
+    select 1 from public.user_profiles where id = v_actor
+  ) then
+    v_actor := null;
+  end if;
+
+  insert into public.cad_embalagens(
+    codigo_legado,
+    descricao,
+    descricao_norm,
+    unidade,
+    volume_litros,
+    controla_estoque,
+    materia_prima_id,
+    status,
+    created_by,
+    updated_by
+  )
+  values (
+    nullif(trim(p_codigo_legado), ''),
+    trim(p_descricao),
+    trim(p_descricao_norm),
+    upper(trim(p_unidade)),
+    p_volume_litros,
+    coalesce(p_controla_estoque, false),
+    p_materia_prima_id,
+    p_status,
+    v_actor,
+    v_actor
+  )
+  returning id into v_embalagem_id;
+
+  perform public.log_action(
+    'cadastros.embalagem_created',
+    'cad_embalagens',
+    v_embalagem_id::text,
+    'success',
+    null,
+    jsonb_build_object(
+      'descricao', trim(p_descricao),
+      'unidade', upper(trim(p_unidade)),
+      'controla_estoque', coalesce(p_controla_estoque, false),
+      'materia_prima_id', p_materia_prima_id,
+      'status', p_status
+    ),
+    jsonb_build_object(
+      'source', 'create_cad_embalagem',
+      'payload_origem', coalesce(p_payload_origem_json, '{}'::jsonb)
+    )
+  );
+
+  return v_embalagem_id;
+end;
+$$;
+
+revoke all on function public.create_cad_embalagem(text, text, text, text, text, numeric, boolean, bigint, jsonb) from public;
+grant execute on function public.create_cad_embalagem(text, text, text, text, text, numeric, boolean, bigint, jsonb) to authenticated;

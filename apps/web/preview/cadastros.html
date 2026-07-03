@@ -281,24 +281,169 @@
           </form>
         </section>
 
-        <section class="panel form-panel" aria-labelledby="proximos-formularios-title">
+        <section class="panel form-panel" id="nova-mp" aria-labelledby="nova-mp-title">
           <div class="panel-header">
-            <h2 id="proximos-formularios-title">Proximos formularios</h2>
-            <span class="pill">MP / produto / embalagem</span>
+            <h2 id="nova-mp-title">Nova materia-prima</h2>
+            <span class="pill">gravacao preparada</span>
           </div>
-          <div class="module-list">
-            <article class="module-card">
-              <div class="module-card-main">
-                <h3>MP, produto e embalagem</h3>
-                <span>SKU corrigido, produto + embalagem e estoque de insumo</span>
-              </div>
-              <div class="module-card-meta">
-                <span>Service pronto</span>
-                <strong>cad_*</strong>
-              </div>
-              <p>Esses formularios entram na proxima etapa com conversoes, garantias e bloqueios de duplicidade.</p>
-            </article>
+          <form onsubmit="return false">
+            <div class="form-grid">
+              <label>
+                Nome
+                <input value="Materia-prima exemplo" />
+              </label>
+              <label>
+                SKU corrigido
+                <input value="MP-0001" />
+              </label>
+              <label>
+                Codigo legado
+                <input value="LEG-MP-01" />
+              </label>
+              <label>
+                Unidade base
+                <input value="KG" />
+              </label>
+              <label>
+                Status
+                <select>
+                  <option>active</option>
+                  <option>pending_review</option>
+                  <option>inactive</option>
+                </select>
+              </label>
+              <label>
+                Tipo
+                <input value="Liquido" />
+              </label>
+              <label>
+                Densidade
+                <input value="1,20" />
+              </label>
+              <label>
+                Estoque minimo
+                <input value="0" />
+              </label>
+              <label>
+                NCM
+                <input />
+              </label>
+              <label>
+                IBAMA
+                <input />
+              </label>
+              <label>
+                Codigo ADS
+                <input />
+              </label>
+            </div>
+            <div class="form-footer">
+              <span>SKU corrigido passa a ser a chave unica operacional da materia-prima.</span>
+              <button class="primary-button" type="submit">Salvar MP</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel form-panel" id="novo-produto" aria-labelledby="novo-produto-title">
+          <div class="panel-header">
+            <h2 id="novo-produto-title">Novo produto-base</h2>
+            <span class="pill">gravacao preparada</span>
           </div>
+          <form onsubmit="return false">
+            <div class="form-grid">
+              <label>
+                Codigo produto
+                <input value="0001" />
+              </label>
+              <label>
+                Nome
+                <input value="Produto exemplo" />
+              </label>
+              <label>
+                Status
+                <select>
+                  <option>active</option>
+                  <option>pending_review</option>
+                  <option>inactive</option>
+                </select>
+              </label>
+              <label>
+                Grupo
+                <input value="Linha exemplo" />
+              </label>
+              <label>
+                Densidade kg/L
+                <input value="1,20" />
+              </label>
+              <label>
+                Registro MAPA
+                <input />
+              </label>
+              <label>
+                NCM
+                <input />
+              </label>
+              <label>
+                IBAMA
+                <input />
+              </label>
+              <label>
+                ADS
+                <input />
+              </label>
+            </div>
+            <div class="form-footer">
+              <span>Produto-base fica separado das embalagens; o item vendavel sera produto + embalagem.</span>
+              <button class="primary-button" type="submit">Salvar produto</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel form-panel" id="nova-embalagem" aria-labelledby="nova-embalagem-title">
+          <div class="panel-header">
+            <h2 id="nova-embalagem-title">Nova embalagem</h2>
+            <span class="pill">gravacao preparada</span>
+          </div>
+          <form onsubmit="return false">
+            <div class="form-grid">
+              <label>
+                Descricao
+                <input value="Balde 20L" />
+              </label>
+              <label>
+                Unidade
+                <input value="UN" />
+              </label>
+              <label>
+                Volume litros
+                <input value="20" />
+              </label>
+              <label>
+                Codigo legado
+                <input />
+              </label>
+              <label>
+                Status
+                <select>
+                  <option>active</option>
+                  <option>pending_review</option>
+                  <option>inactive</option>
+                </select>
+              </label>
+              <label>
+                ID da MP vinculada
+                <input placeholder="Obrigatorio se controlar estoque" />
+              </label>
+              <label class="checkbox-line">
+                <input type="checkbox" />
+                Controla estoque como insumo
+              </label>
+            </div>
+            <div class="form-footer">
+              <span>Embalagem pode ser insumo de MP e depois compor PA/PI.</span>
+              <button class="primary-button" type="submit">Salvar embalagem</button>
+            </div>
+          </form>
         </section>
 
         <section class="panel" id="credito" aria-labelledby="credito-title">

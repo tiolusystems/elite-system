@@ -1,4 +1,10 @@
-import { createClienteAction, createPessoaComercialAction } from "@/app/cadastros/actions";
+import {
+  createClienteAction,
+  createEmbalagemAction,
+  createMateriaPrimaAction,
+  createPessoaComercialAction,
+  createProdutoBaseAction
+} from "@/app/cadastros/actions";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -285,24 +291,175 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           </form>
         </section>
 
-        <section className="panel form-panel" aria-labelledby="proximos-formularios-title">
+        <section className="panel form-panel" id="nova-mp" aria-labelledby="nova-mp-title">
           <div className="panel-header">
-            <h2 id="proximos-formularios-title">Proximos formularios</h2>
-            <span className="pill">MP / produto / embalagem</span>
+            <h2 id="nova-mp-title">Nova materia-prima</h2>
+            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
           </div>
-          <div className="module-list">
-            <article className="module-card">
-              <div className="module-card-main">
-                <h3>MP, produto e embalagem</h3>
-                <span>SKU corrigido, produto + embalagem e estoque de insumo</span>
-              </div>
-              <div className="module-card-meta">
-                <span>Service pronto</span>
-                <strong>cad_*</strong>
-              </div>
-              <p>Esses formularios entram na proxima etapa com conversoes, garantias e bloqueios de duplicidade.</p>
-            </article>
+          <form action={createMateriaPrimaAction}>
+            <div className="form-grid">
+              <label>
+                Nome
+                <input name="nome" placeholder="Nome da MP" required />
+              </label>
+              <label>
+                SKU corrigido
+                <input name="sku_corrigido" placeholder="Codigo unico" required />
+              </label>
+              <label>
+                Codigo legado
+                <input name="codigo_legado" placeholder="Codigo antigo, se houver" />
+              </label>
+              <label>
+                Unidade base
+                <input name="unidade_base_estoque" placeholder="KG" required />
+              </label>
+              <label>
+                Status
+                <select name="status" defaultValue="active">
+                  <option value="active">active</option>
+                  <option value="pending_review">pending_review</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </label>
+              <label>
+                Tipo
+                <input name="tipo" placeholder="Liquido, solido, embalagem..." />
+              </label>
+              <label>
+                Densidade
+                <input name="densidade" placeholder="1,20" inputMode="decimal" />
+              </label>
+              <label>
+                Estoque minimo
+                <input name="estoque_minimo" placeholder="0" inputMode="decimal" />
+              </label>
+              <label>
+                NCM
+                <input name="ncm" />
+              </label>
+              <label>
+                IBAMA
+                <input name="ibama" />
+              </label>
+              <label>
+                Codigo ADS
+                <input name="codigo_ads" />
+              </label>
+            </div>
+            <div className="form-footer">
+              <span>SKU corrigido passa a ser a chave unica operacional da materia-prima.</span>
+              <button className="primary-button" type="submit">
+                Salvar MP
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section className="panel form-panel" id="novo-produto" aria-labelledby="novo-produto-title">
+          <div className="panel-header">
+            <h2 id="novo-produto-title">Novo produto-base</h2>
+            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
           </div>
+          <form action={createProdutoBaseAction}>
+            <div className="form-grid">
+              <label>
+                Codigo produto
+                <input name="codigo_produto" placeholder="0001" required />
+              </label>
+              <label>
+                Nome
+                <input name="nome" placeholder="Nome do produto" required />
+              </label>
+              <label>
+                Status
+                <select name="status" defaultValue="active">
+                  <option value="active">active</option>
+                  <option value="pending_review">pending_review</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </label>
+              <label>
+                Grupo
+                <input name="grupo" placeholder="Linha ou familia" />
+              </label>
+              <label>
+                Densidade kg/L
+                <input name="densidade_kg_l" placeholder="1,20" inputMode="decimal" />
+              </label>
+              <label>
+                Registro MAPA
+                <input name="reg_mapa" />
+              </label>
+              <label>
+                NCM
+                <input name="ncm" />
+              </label>
+              <label>
+                IBAMA
+                <input name="ibama" />
+              </label>
+              <label>
+                ADS
+                <input name="ads" />
+              </label>
+            </div>
+            <div className="form-footer">
+              <span>Produto-base fica separado das embalagens; o item vendavel sera produto + embalagem.</span>
+              <button className="primary-button" type="submit">
+                Salvar produto
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section className="panel form-panel" id="nova-embalagem" aria-labelledby="nova-embalagem-title">
+          <div className="panel-header">
+            <h2 id="nova-embalagem-title">Nova embalagem</h2>
+            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
+          </div>
+          <form action={createEmbalagemAction}>
+            <div className="form-grid">
+              <label>
+                Descricao
+                <input name="descricao" placeholder="Balde 20L" required />
+              </label>
+              <label>
+                Unidade
+                <input name="unidade" placeholder="UN" required />
+              </label>
+              <label>
+                Volume litros
+                <input name="volume_litros" placeholder="20" inputMode="decimal" />
+              </label>
+              <label>
+                Codigo legado
+                <input name="codigo_legado" />
+              </label>
+              <label>
+                Status
+                <select name="status" defaultValue="active">
+                  <option value="active">active</option>
+                  <option value="pending_review">pending_review</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </label>
+              <label>
+                ID da MP vinculada
+                <input name="materia_prima_id" placeholder="Obrigatorio se controlar estoque" type="number" />
+              </label>
+              <label className="checkbox-line">
+                <input name="controla_estoque" type="checkbox" value="1" />
+                Controla estoque como insumo
+              </label>
+            </div>
+            <div className="form-footer">
+              <span>Embalagem pode ser insumo de MP e depois compor PA/PI.</span>
+              <button className="primary-button" type="submit">
+                Salvar embalagem
+              </button>
+            </div>
+          </form>
         </section>
 
         <section className="panel" id="credito" aria-labelledby="credito-title">
@@ -353,6 +510,21 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Pessoa comercial salva",
       detail: "Cadastro criado via funcao auditavel com papeis separados para venda, entrega, gerencia e comissao."
     },
+    mp_created: {
+      kind: "ok",
+      title: "Materia-prima salva",
+      detail: "Cadastro criado com SKU corrigido e validacao de unidade base."
+    },
+    produto_created: {
+      kind: "ok",
+      title: "Produto salvo",
+      detail: "Produto-base criado para depois ser combinado com embalagens e receitas."
+    },
+    embalagem_created: {
+      kind: "ok",
+      title: "Embalagem salva",
+      detail: "Embalagem criada com controle opcional de estoque como insumo."
+    },
     duplicated: {
       kind: "warning",
       title: "Cadastro duplicado",
@@ -377,6 +549,36 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Campos obrigatorios",
       detail: "Nome e ao menos um papel sao obrigatorios para pessoa comercial."
+    },
+    missing_mp_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Nome, SKU corrigido e unidade base sao obrigatorios para materia-prima."
+    },
+    missing_product_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Codigo do produto e nome sao obrigatorios para produto-base."
+    },
+    missing_package_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Descricao e unidade sao obrigatorias para embalagem."
+    },
+    invalid_positive_number: {
+      kind: "warning",
+      title: "Numero invalido",
+      detail: "Informe um numero maior que zero."
+    },
+    invalid_non_negative_number: {
+      kind: "warning",
+      title: "Numero invalido",
+      detail: "Informe zero ou um numero positivo."
+    },
+    missing_package_stock_item: {
+      kind: "warning",
+      title: "MP vinculada obrigatoria",
+      detail: "Embalagem com controle de estoque precisa apontar para uma materia-prima cadastrada."
     },
     invalid_commercial_type: {
       kind: "warning",

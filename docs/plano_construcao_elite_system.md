@@ -65,6 +65,11 @@ Auditorias:
 - Duplicidade de codigos.
 - Itens usados em pedidos/producao sem cadastro.
 
+Status atual:
+
+- Dicionario inicial de cadastros criado em `docs/dicionario_cadastros_mestres.md`.
+- Pendencia: revisar campos e perguntas em aberto com o usuario antes de criar migrations, repositories ou telas.
+
 ## Bloco 3 - Comercial
 
 Objetivo: substituir `GESTÃO_PEDIDOS` por modulo operacional.
@@ -212,10 +217,12 @@ Entregas:
 ## Sequencia imediata
 
 1. Configurar GitHub privado somente com codigo.
-2. Criar projeto Supabase de teste e aplicar migration inicial.
-3. Instalar dependencias do `apps/web` e validar Next.js local.
-4. Ligar login Supabase no Next.js.
-5. Classificar causas das diferencas de reconciliacao.
-6. Criar modelos de dominio para cadastros.
-7. Criar repositories para cadastros com `actor_user_id`.
-8. Criar primeira tela de cadastros mestres.
+2. Revisar e aprovar `docs/dicionario_cadastros_mestres.md`.
+3. Criar modelos de dominio para cadastros.
+4. Criar validators puros para cadastros.
+5. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.
+6. Instalar dependencias do `apps/web` e validar Next.js local.
+7. Ligar login Supabase no Next.js.
+8. Criar repositories para cadastros com `actor_user_id`.
+9. Criar primeira tela de cadastros mestres.
+10. Classificar causas das diferencas de reconciliacao.

@@ -76,6 +76,7 @@ Status atual:
 - Migration Supabase/PostgreSQL de cadastros criada em `supabase/migrations/0002_master_data_foundation.sql`.
 - Repositories e services auditaveis de cadastros criados em `elite_system/repositories/cadastros_repository.py` e `elite_system/services/cadastros.py`.
 - Testes de cadastros preparados para rodar em banco temporario descartavel.
+- Primeira tela de cadastros mestres criada em `apps/web/app/cadastros/page.tsx`, com condicao visual/analitica do banco, modulos `cad_*`, contagens Supabase quando configurado e fila de validacao.
 - Pendencia: validar migrations em runtime Python/PostgreSQL disponivel antes de usar em qualquer dado real.
 
 ## Bloco 3 - Comercial
@@ -238,5 +239,5 @@ Entregas:
 4. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.
 5. Instalar dependencias do `apps/web` e validar Next.js local.
 6. Ligar login Supabase no Next.js.
-7. Criar primeira tela de cadastros mestres.
+7. Ativar gravacao segura dos formularios de cadastros mestres.
 8. Classificar causas das diferencas de reconciliacao.

@@ -78,6 +78,14 @@
             <span>Faturamento previsto</span>
             <strong>R$ 184.250,00</strong>
           </div>
+          <div class="summary-card">
+            <span>Total recebido</span>
+            <strong>R$ 72.500,00</strong>
+          </div>
+          <div class="summary-card">
+            <span>Comissao liberada</span>
+            <strong>R$ 2.175,00</strong>
+          </div>
         </section>
 
         <section class="two-column">
@@ -252,6 +260,105 @@
               </article>
             </div>
           </section>
+        </section>
+
+        <section class="two-column">
+          <section class="panel form-panel" id="recebimento-pedido" aria-labelledby="recebimento-pedido-title">
+            <div class="panel-header">
+              <h2 id="recebimento-pedido-title">Recebimento do pedido</h2>
+              <span class="pill">gravacao preparada</span>
+            </div>
+            <form onsubmit="return false">
+              <div class="form-grid">
+                <label class="wide-field">
+                  Pedido
+                  <input list="pedidos-options" value="1 | PED-20260703190000123-ABCD | cliente 1 / venda / open / 12500.00" />
+                </label>
+                <label>
+                  Valor recebido
+                  <input value="6250,00" />
+                </label>
+                <label>
+                  Data
+                  <input type="date" value="2026-07-03" />
+                </label>
+                <label>
+                  Forma
+                  <input value="PIX" />
+                </label>
+                <label class="wide-field">
+                  Observacao
+                  <input value="Recebimento parcial de 50%" />
+                </label>
+              </div>
+              <div class="form-footer">
+                <span>Recebimento parcial libera comissao proporcional. Bonificacao nao entra nesse fluxo.</span>
+                <button class="primary-button" type="submit">Registrar recebimento</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel" aria-labelledby="recebimentos-recentes-title">
+            <div class="panel-header">
+              <h2 id="recebimentos-recentes-title">Recebimentos recentes</h2>
+              <span class="pill">2 registro(s)</span>
+            </div>
+            <div class="module-list">
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Pedido #1</h3>
+                  <span>2026-07-03</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>PIX</span>
+                  <strong>R$ 6.250,00</strong>
+                </div>
+                <p>Recebimento #1</p>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Pedido #4</h3>
+                  <span>2026-07-03</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>boleto</span>
+                  <strong>R$ 18.000,00</strong>
+                </div>
+                <p>Recebimento #2</p>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel" aria-labelledby="comissoes-liberadas-title">
+          <div class="panel-header">
+            <h2 id="comissoes-liberadas-title">Comissoes liberadas</h2>
+            <span class="pill">2 registro(s)</span>
+          </div>
+          <div class="module-list">
+            <article class="module-card">
+              <div class="module-card-main">
+                <h3>Pessoa #1</h3>
+                <span>Pedido #1 / Recebimento #1</span>
+              </div>
+              <div class="module-card-meta">
+                <span>liberada</span>
+                <strong>R$ 187,50</strong>
+              </div>
+              <p>50% do pedido recebido no snapshot.</p>
+            </article>
+            <article class="module-card">
+              <div class="module-card-main">
+                <h3>Pessoa #2</h3>
+                <span>Pedido #4 / Recebimento #2</span>
+              </div>
+              <div class="module-card-meta">
+                <span>liberada</span>
+                <strong>R$ 540,00</strong>
+              </div>
+              <p>100% do pedido recebido no snapshot.</p>
+            </article>
+          </div>
         </section>
 
         <section class="panel" aria-labelledby="recentes-title">

@@ -123,6 +123,43 @@ export async function registrarCreditoPedidoAction(formData: FormData) {
   redirect("/pedidos?result=credit_decision_registered#credito-pedido");
 }
 
+export async function registrarRecebimentoPedidoAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/pedidos?result=not_configured#recebimento-pedido");
+  }
+
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const valorRecebido = optionalNumber(formData, "valor_recebido");
+  const dataRecebimento = field(formData, "data_recebimento");
+
+  if (!pedidoId || valorRecebido === null || !dataRecebimento) {
+    redirect("/pedidos?result=missing_receipt_required#recebimento-pedido");
+  }
+  if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+    redirect("/pedidos?result=invalid_positive_number#recebimento-pedido");
+  }
+  if (!Number.isFinite(valorRecebido) || valorRecebido <= 0) {
+    redirect("/pedidos?result=invalid_positive_number#recebimento-pedido");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("registrar_com_recebimento", {
+    p_data_recebimento: dataRecebimento,
+    p_forma_recebimento: optionalField(formData, "forma_recebimento"),
+    p_observacao: optionalField(formData, "observacao_recebimento"),
+    p_pedido_id: pedidoId,
+    p_valor_recebido: valorRecebido
+  });
+
+  if (error) {
+    redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#recebimento-pedido`);
+  }
+
+  revalidatePath("/pedidos");
+  redirect("/pedidos?result=receipt_registered#recebimento-pedido");
+}
+
 function field(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }
@@ -168,6 +205,12 @@ function mapSupabaseError(message: string): string {
   }
   if (normalized.includes("pedido not found")) {
     return "missing_related_record";
+  }
+  if (normalized.includes("does not allow receipt")) {
+    return "invalid_receipt_order";
+  }
+  if (normalized.includes("receipt exceeds order balance")) {
+    return "receipt_exceeds_balance";
   }
   if (normalized.includes("permission") || normalized.includes("row-level security")) {
     return "permission_denied";

@@ -121,6 +121,8 @@ Status atual:
 - Regra preservada: pedido em rascunho nao baixa estoque; bonificacao nao gera comissao; devolucao gera valor negativo auditado.
 - Gate de credito criado em `supabase/migrations/0004_order_credit_gate.sql`, com tabela `com_pedido_credito_decisoes` e funcao auditavel `public.registrar_com_pedido_decisao_credito`.
 - Tela `/pedidos` evoluida para registrar liberacao, bloqueio ou aprovacao pendente antes de faturamento.
+- Recebimentos parciais e liberacao proporcional de comissao criados em `supabase/migrations/0005_order_receipts_commissions.sql`, com tabelas `com_recebimentos` e `com_comissao_liberacoes`.
+- Tela `/pedidos` evoluida para registrar recebimento de pedido aberto e listar comissoes liberadas por recebimento.
 
 ## Bloco 4 - Estoque MP e PA
 
@@ -254,5 +256,5 @@ Entregas:
 5. Instalar dependencias do `apps/web` e validar Next.js local.
 6. Ligar login Supabase no Next.js.
 7. Classificar causas das diferencas de reconciliacao.
-8. Criar recebimentos parciais e liberacao proporcional de comissao.
-9. Criar auditoria pedido x credito x recebimento x comissao.
+8. Criar auditoria pedido x credito x recebimento x comissao.
+9. Iniciar devolucao/abatimento de comissao em recebimentos futuros.

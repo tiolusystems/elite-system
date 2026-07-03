@@ -1,4 +1,8 @@
-import { createPedidoRascunhoAction, registrarCreditoPedidoAction } from "@/app/pedidos/actions";
+import {
+  createPedidoRascunhoAction,
+  registrarCreditoPedidoAction,
+  registrarRecebimentoPedidoAction
+} from "@/app/pedidos/actions";
 import { getOrdersDashboard, type OrderLookupOption, type OrderLookups } from "@/lib/orders";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -74,6 +78,14 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           <div className="summary-card">
             <span>Faturamento previsto</span>
             <strong>{moneyOrDash(dashboard.metrics.faturamentoPrevisto)}</strong>
+          </div>
+          <div className="summary-card">
+            <span>Total recebido</span>
+            <strong>{moneyOrDash(dashboard.metrics.totalRecebido)}</strong>
+          </div>
+          <div className="summary-card">
+            <span>Comissao liberada</span>
+            <strong>{moneyOrDash(dashboard.metrics.comissaoLiberada)}</strong>
           </div>
         </section>
 
@@ -263,6 +275,103 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           </section>
         </section>
 
+        <section className="two-column">
+          <section className="panel form-panel" id="recebimento-pedido" aria-labelledby="recebimento-pedido-title">
+            <div className="panel-header">
+              <h2 id="recebimento-pedido-title">Recebimento do pedido</h2>
+              <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
+            </div>
+            <form action={registrarRecebimentoPedidoAction}>
+              <div className="form-grid">
+                <label className="wide-field">
+                  Pedido
+                  <input name="pedido_id" list="pedidos-options" placeholder="Buscar pedido aberto" required />
+                </label>
+                <label>
+                  Valor recebido
+                  <input name="valor_recebido" placeholder="0,00" inputMode="decimal" required />
+                </label>
+                <label>
+                  Data
+                  <input name="data_recebimento" type="date" defaultValue={today} required />
+                </label>
+                <label>
+                  Forma
+                  <input name="forma_recebimento" placeholder="PIX, boleto, TED..." />
+                </label>
+                <label className="wide-field">
+                  Observacao
+                  <input name="observacao_recebimento" placeholder="Historico do recebimento" />
+                </label>
+              </div>
+              <div className="form-footer">
+                <span>Recebimento parcial libera comissao proporcional. Bonificacao nao entra nesse fluxo.</span>
+                <button className="primary-button" type="submit">
+                  Registrar recebimento
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="panel" aria-labelledby="recebimentos-recentes-title">
+            <div className="panel-header">
+              <h2 id="recebimentos-recentes-title">Recebimentos recentes</h2>
+              <span className="pill">{dashboard.recentReceipts.length} registro(s)</span>
+            </div>
+            {dashboard.recentReceipts.length > 0 ? (
+              <div className="module-list">
+                {dashboard.recentReceipts.map((receipt) => (
+                  <article className="module-card" key={receipt.id}>
+                    <div className="module-card-main">
+                      <h3>Pedido #{receipt.pedidoId}</h3>
+                      <span>{receipt.dataRecebimento}</span>
+                    </div>
+                    <div className="module-card-meta">
+                      <span>{receipt.formaRecebimento ?? "sem forma"}</span>
+                      <strong>{moneyOrDash(receipt.valorRecebido)}</strong>
+                    </div>
+                    <p>Recebimento #{receipt.id}</p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <strong>Nenhum recebimento carregado</strong>
+                <span>Quando Supabase estiver configurado, esta lista mostrara os ultimos recebimentos.</span>
+              </div>
+            )}
+          </section>
+        </section>
+
+        <section className="panel" aria-labelledby="comissoes-liberadas-title">
+          <div className="panel-header">
+            <h2 id="comissoes-liberadas-title">Comissoes liberadas</h2>
+            <span className="pill">{dashboard.recentCommissionReleases.length} registro(s)</span>
+          </div>
+          {dashboard.recentCommissionReleases.length > 0 ? (
+            <div className="module-list">
+              {dashboard.recentCommissionReleases.map((release) => (
+                <article className="module-card" key={release.id}>
+                  <div className="module-card-main">
+                    <h3>Pessoa #{release.pessoaId}</h3>
+                    <span>Pedido #{release.pedidoId} / Recebimento #{release.recebimentoId}</span>
+                  </div>
+                  <div className="module-card-meta">
+                    <span>{release.status}</span>
+                    <strong>{moneyOrDash(release.valorLiberado)}</strong>
+                  </div>
+                  <p>{percentOrDash(release.percentualRecebidoSnapshot)} do pedido recebido no snapshot.</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <strong>Nenhuma comissao liberada</strong>
+              <span>Recebimentos de venda com comissao prevista geram liberacao proporcional aqui.</span>
+            </div>
+          )}
+        </section>
+
         <section className="panel" aria-labelledby="recentes-title">
           <div className="panel-header">
             <h2 id="recentes-title">Pedidos recentes</h2>
@@ -346,6 +455,16 @@ function moneyOrDash(value: number | null): string {
   }).format(value);
 }
 
+function percentOrDash(value: number | null): string {
+  if (value === null) {
+    return "sem conexao";
+  }
+  return new Intl.NumberFormat("pt-BR", {
+    style: "percent",
+    maximumFractionDigits: 2
+  }).format(value);
+}
+
 function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {
   if (!result) {
     return null;
@@ -361,6 +480,11 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Credito registrado",
       detail: "Decisao de credito gravada com snapshot e status do pedido atualizado."
     },
+    receipt_registered: {
+      kind: "ok",
+      title: "Recebimento registrado",
+      detail: "Recebimento gravado e comissao proporcional liberada quando aplicavel."
+    },
     missing_order_required: {
       kind: "warning",
       title: "Campos obrigatorios",
@@ -375,6 +499,11 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Motivo obrigatorio",
       detail: "Bloqueio ou aprovacao pendente precisa de motivo auditavel."
+    },
+    missing_receipt_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Pedido, valor recebido e data do recebimento sao obrigatorios."
     },
     invalid_positive_number: {
       kind: "warning",
@@ -405,6 +534,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Status do pedido invalido",
       detail: "Pedidos cancelados ou concluidos nao aceitam nova decisao de credito."
+    },
+    invalid_receipt_order: {
+      kind: "warning",
+      title: "Recebimento nao permitido",
+      detail: "Apenas pedidos de venda abertos podem receber baixa financeira neste fluxo."
+    },
+    receipt_exceeds_balance: {
+      kind: "warning",
+      title: "Recebimento acima do saldo",
+      detail: "O valor informado ultrapassa o saldo pendente do pedido."
     },
     missing_related_record: {
       kind: "warning",

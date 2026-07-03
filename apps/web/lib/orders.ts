@@ -37,6 +37,26 @@ export type RecentCreditDecision = {
   createdAt: string;
 };
 
+export type RecentReceipt = {
+  id: number;
+  pedidoId: number;
+  valorRecebido: number;
+  dataRecebimento: string;
+  formaRecebimento: string | null;
+  createdAt: string;
+};
+
+export type RecentCommissionRelease = {
+  id: number;
+  recebimentoId: number;
+  pedidoId: number;
+  pessoaId: number;
+  valorLiberado: number;
+  percentualRecebidoSnapshot: number;
+  status: string;
+  createdAt: string;
+};
+
 export type OrdersDashboard = {
   metrics: {
     totalPedidos: number | null;
@@ -44,10 +64,14 @@ export type OrdersDashboard = {
     abertos: number | null;
     bloqueados: number | null;
     faturamentoPrevisto: number | null;
+    totalRecebido: number | null;
+    comissaoLiberada: number | null;
   };
   lookups: OrderLookups;
   recentOrders: RecentOrder[];
   recentCreditDecisions: RecentCreditDecision[];
+  recentReceipts: RecentReceipt[];
+  recentCommissionReleases: RecentCommissionRelease[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -67,12 +91,27 @@ export async function getOrdersDashboard(): Promise<OrdersDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [totalPedidos, rascunhos, abertos, bloqueados, totals, recentOrders, creditDecisions, lookups] = await Promise.all([
+    const [
+      totalPedidos,
+      rascunhos,
+      abertos,
+      bloqueados,
+      totals,
+      receivedTotals,
+      commissionTotals,
+      recentOrders,
+      creditDecisions,
+      recentReceipts,
+      commissionReleases,
+      lookups
+    ] = await Promise.all([
       supabase.from("com_pedidos").select("*", { count: "exact", head: true }),
       supabase.from("com_pedidos").select("*", { count: "exact", head: true }).eq("status", "draft"),
       supabase.from("com_pedidos").select("*", { count: "exact", head: true }).eq("status", "open"),
       supabase.from("com_pedidos").select("*", { count: "exact", head: true }).eq("status", "blocked"),
       supabase.from("com_pedidos").select("valor_total,status").limit(1000),
+      supabase.from("com_recebimentos").select("valor_recebido").limit(1000),
+      supabase.from("com_comissao_liberacoes").select("valor_liberado,status").limit(1000),
       supabase
         .from("com_pedidos")
         .select("id,codigo_pedido,cliente_id,tipo_pedido,status,data_pedido,valor_total,created_at")
@@ -83,10 +122,24 @@ export async function getOrdersDashboard(): Promise<OrdersDashboard> {
         .select("id,pedido_id,decisao,status_anterior,status_resultante,motivo,limite_disponivel_snapshot,inadimplencia_snapshot,created_at")
         .order("created_at", { ascending: false })
         .limit(8),
+      supabase
+        .from("com_recebimentos")
+        .select("id,pedido_id,valor_recebido,data_recebimento,forma_recebimento,created_at")
+        .order("created_at", { ascending: false })
+        .limit(8),
+      supabase
+        .from("com_comissao_liberacoes")
+        .select("id,recebimento_id,pedido_id,pessoa_id,valor_liberado,percentual_recebido_snapshot,status,created_at")
+        .order("created_at", { ascending: false })
+        .limit(8),
       getOrderLookups(supabase)
     ]);
 
     const totalRows = totals.error ? [] : ((totals.data ?? []) as Array<{ valor_total: number | string | null; status: string }>);
+    const receivedRows = receivedTotals.error ? [] : ((receivedTotals.data ?? []) as Array<{ valor_recebido: number | string | null }>);
+    const commissionRows = commissionTotals.error
+      ? []
+      : ((commissionTotals.data ?? []) as Array<{ valor_liberado: number | string | null; status: string }>);
 
     return {
       metrics: {
@@ -96,7 +149,11 @@ export async function getOrdersDashboard(): Promise<OrdersDashboard> {
         bloqueados: bloqueados.count ?? null,
         faturamentoPrevisto: totalRows
           .filter((row) => row.status !== "cancelled")
-          .reduce((sum, row) => sum + Number(row.valor_total ?? 0), 0)
+          .reduce((sum, row) => sum + Number(row.valor_total ?? 0), 0),
+        totalRecebido: receivedRows.reduce((sum, row) => sum + Number(row.valor_recebido ?? 0), 0),
+        comissaoLiberada: commissionRows
+          .filter((row) => row.status === "liberada")
+          .reduce((sum, row) => sum + Number(row.valor_liberado ?? 0), 0)
       },
       lookups,
       recentOrders: recentOrders.error
@@ -125,6 +182,28 @@ export async function getOrdersDashboard(): Promise<OrdersDashboard> {
             inadimplenciaSnapshot: row.inadimplencia_snapshot === null ? null : Number(row.inadimplencia_snapshot),
             createdAt: String(row.created_at)
           })),
+      recentReceipts: recentReceipts.error
+        ? []
+        : ((recentReceipts.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+            id: Number(row.id),
+            pedidoId: Number(row.pedido_id),
+            valorRecebido: Number(row.valor_recebido ?? 0),
+            dataRecebimento: String(row.data_recebimento),
+            formaRecebimento: row.forma_recebimento === null ? null : String(row.forma_recebimento),
+            createdAt: String(row.created_at)
+          })),
+      recentCommissionReleases: commissionReleases.error
+        ? []
+        : ((commissionReleases.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+            id: Number(row.id),
+            recebimentoId: Number(row.recebimento_id),
+            pedidoId: Number(row.pedido_id),
+            pessoaId: Number(row.pessoa_id),
+            valorLiberado: Number(row.valor_liberado ?? 0),
+            percentualRecebidoSnapshot: Number(row.percentual_recebido_snapshot ?? 0),
+            status: String(row.status),
+            createdAt: String(row.created_at)
+          })),
       source: "supabase",
       error:
         totalPedidos.error?.message ??
@@ -132,8 +211,12 @@ export async function getOrdersDashboard(): Promise<OrdersDashboard> {
         abertos.error?.message ??
         bloqueados.error?.message ??
         totals.error?.message ??
+        receivedTotals.error?.message ??
+        commissionTotals.error?.message ??
         recentOrders.error?.message ??
         creditDecisions.error?.message ??
+        recentReceipts.error?.message ??
+        commissionReleases.error?.message ??
         null
     };
   } catch (error) {
@@ -227,11 +310,15 @@ function emptyDashboard(source: OrdersDashboard["source"], error: string | null)
       rascunhos: null,
       abertos: null,
       bloqueados: null,
-      faturamentoPrevisto: null
+      faturamentoPrevisto: null,
+      totalRecebido: null,
+      comissaoLiberada: null
     },
     lookups: EMPTY_LOOKUPS,
     recentOrders: [],
     recentCreditDecisions: [],
+    recentReceipts: [],
+    recentCommissionReleases: [],
     source,
     error
   };

@@ -1,9 +1,11 @@
 import {
   createClienteAction,
+  createConversaoUnidadeMpAction,
   createEmbalagemAction,
   createMateriaPrimaAction,
   createPessoaComercialAction,
-  createProdutoBaseAction
+  createProdutoBaseAction,
+  createProdutoEmbalagemAction
 } from "@/app/cadastros/actions";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
@@ -46,7 +48,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
             <h1>Cadastros mestres</h1>
             <p className="muted">
               Operacao inicial para revisar, cadastrar e auditar clientes, pessoas comerciais, MP, produtos,
-              embalagens e credito.
+              embalagens, itens vendaveis, conversoes e credito.
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de cadastro">
@@ -462,6 +464,84 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           </form>
         </section>
 
+        <section className="panel form-panel" id="novo-item-vendavel" aria-labelledby="novo-item-vendavel-title">
+          <div className="panel-header">
+            <h2 id="novo-item-vendavel-title">Novo item vendavel</h2>
+            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
+          </div>
+          <form action={createProdutoEmbalagemAction}>
+            <div className="form-grid">
+              <label>
+                ID do produto
+                <input name="produto_id" placeholder="Produto-base" required type="number" />
+              </label>
+              <label>
+                ID da embalagem
+                <input name="embalagem_id" placeholder="Embalagem" required type="number" />
+              </label>
+              <label>
+                Codigo do item
+                <input name="codigo_item" placeholder="0001-20L" required />
+              </label>
+              <label>
+                Status
+                <select name="status" defaultValue="active">
+                  <option value="active">active</option>
+                  <option value="pending_review">pending_review</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </label>
+            </div>
+            <div className="form-footer">
+              <span>Produto + embalagem passa a ser o item usado em pedido, faturamento e estoque PA.</span>
+              <button className="primary-button" type="submit">
+                Salvar item
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section className="panel form-panel" id="nova-conversao-mp" aria-labelledby="nova-conversao-mp-title">
+          <div className="panel-header">
+            <h2 id="nova-conversao-mp-title">Nova conversao de MP</h2>
+            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
+          </div>
+          <form action={createConversaoUnidadeMpAction}>
+            <div className="form-grid">
+              <label>
+                ID da materia-prima
+                <input name="materia_prima_id" placeholder="MP cadastrada" required type="number" />
+              </label>
+              <label>
+                Unidade origem
+                <input name="unidade_origem" placeholder="SC" required />
+              </label>
+              <label>
+                Unidade destino
+                <input name="unidade_destino" placeholder="KG" required />
+              </label>
+              <label>
+                Fator
+                <input name="fator" placeholder="50" required inputMode="decimal" />
+              </label>
+              <label>
+                Vigencia inicio
+                <input name="vigencia_inicio" type="date" />
+              </label>
+              <label>
+                Vigencia fim
+                <input name="vigencia_fim" type="date" />
+              </label>
+            </div>
+            <div className="form-footer">
+              <span>Conversao define como XML/NF em outra unidade entra no estoque base da MP.</span>
+              <button className="primary-button" type="submit">
+                Salvar conversao
+              </button>
+            </div>
+          </form>
+        </section>
+
         <section className="panel" id="credito" aria-labelledby="credito-title">
           <div className="panel-header">
             <h2 id="credito-title">Credito e alcadas</h2>
@@ -525,6 +605,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Embalagem salva",
       detail: "Embalagem criada com controle opcional de estoque como insumo."
     },
+    item_vendavel_created: {
+      kind: "ok",
+      title: "Item vendavel salvo",
+      detail: "Produto + embalagem criado como item operacional para pedido e estoque PA."
+    },
+    conversion_created: {
+      kind: "ok",
+      title: "Conversao salva",
+      detail: "Conversao de unidade criada para entrada de MP em XML/NF e estoque base."
+    },
     duplicated: {
       kind: "warning",
       title: "Cadastro duplicado",
@@ -565,6 +655,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Campos obrigatorios",
       detail: "Descricao e unidade sao obrigatorias para embalagem."
     },
+    missing_sale_item_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Produto, embalagem e codigo do item sao obrigatorios."
+    },
+    missing_conversion_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Materia-prima, unidades de origem/destino e fator sao obrigatorios."
+    },
     invalid_positive_number: {
       kind: "warning",
       title: "Numero invalido",
@@ -579,6 +679,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "MP vinculada obrigatoria",
       detail: "Embalagem com controle de estoque precisa apontar para uma materia-prima cadastrada."
+    },
+    invalid_unit_conversion: {
+      kind: "warning",
+      title: "Conversao invalida",
+      detail: "Unidade de origem e unidade de destino precisam ser diferentes."
+    },
+    invalid_date_range: {
+      kind: "warning",
+      title: "Vigencia invalida",
+      detail: "A data final nao pode ser anterior a data inicial."
     },
     invalid_commercial_type: {
       kind: "warning",

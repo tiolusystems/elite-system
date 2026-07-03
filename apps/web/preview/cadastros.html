@@ -32,7 +32,7 @@
             <h1>Cadastros mestres</h1>
             <p class="muted">
               Tela operacional para revisar, cadastrar e auditar clientes, pessoas comerciais, MP, produtos,
-              embalagens e credito.
+              embalagens, itens vendaveis, conversoes e credito.
             </p>
           </div>
           <div class="toolbar-actions" aria-label="Acoes de cadastro">
@@ -44,7 +44,7 @@
         <section class="summary-grid" aria-label="Resumo dos cadastros">
           <div class="summary-card">
             <span>Modulos prontos</span>
-            <strong>6</strong>
+            <strong>8</strong>
           </div>
           <div class="summary-card">
             <span>Alertas pendentes</span>
@@ -130,6 +130,70 @@
                   <span class="tag">codigo_produto</span>
                   <span class="tag">nome</span>
                   <span class="tag">status</span>
+                </div>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Embalagens</h3>
+                  <span>cad_embalagens</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>Estoque</span>
+                  <strong>18</strong>
+                </div>
+                <p>Volume, estoque de insumo e transformacoes.</p>
+                <div class="tag-row">
+                  <span class="tag">descricao</span>
+                  <span class="tag">unidade</span>
+                  <span class="tag">status</span>
+                </div>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Itens vendaveis</h3>
+                  <span>cad_produto_embalagens</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>Comercial</span>
+                  <strong>64</strong>
+                </div>
+                <p>Produto + embalagem usado no pedido, estoque PA e faturamento.</p>
+                <div class="tag-row">
+                  <span class="tag">produto_id</span>
+                  <span class="tag">embalagem_id</span>
+                  <span class="tag">codigo_item</span>
+                </div>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Conversoes de MP</h3>
+                  <span>cad_conversoes_unidade_mp</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>Estoque</span>
+                  <strong>11</strong>
+                </div>
+                <p>XML/NF em saca, ton, t ou unidade convertida para estoque base.</p>
+                <div class="tag-row">
+                  <span class="tag">materia_prima_id</span>
+                  <span class="tag">unidade_origem</span>
+                  <span class="tag">fator</span>
+                </div>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Credito do cliente</h3>
+                  <span>cad_limites_credito_cliente</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>Financeiro</span>
+                  <strong>22</strong>
+                </div>
+                <p>Snapshot de limite, inadimplencia e aprovacao.</p>
+                <div class="tag-row">
+                  <span class="tag">cliente_id</span>
+                  <span class="tag">limite_disponivel</span>
+                  <span class="tag">status_credito</span>
                 </div>
               </article>
             </div>
@@ -442,6 +506,80 @@
             <div class="form-footer">
               <span>Embalagem pode ser insumo de MP e depois compor PA/PI.</span>
               <button class="primary-button" type="submit">Salvar embalagem</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel form-panel" id="novo-item-vendavel" aria-labelledby="novo-item-vendavel-title">
+          <div class="panel-header">
+            <h2 id="novo-item-vendavel-title">Novo item vendavel</h2>
+            <span class="pill">gravacao preparada</span>
+          </div>
+          <form onsubmit="return false">
+            <div class="form-grid">
+              <label>
+                ID do produto
+                <input value="1" />
+              </label>
+              <label>
+                ID da embalagem
+                <input value="1" />
+              </label>
+              <label>
+                Codigo do item
+                <input value="0001-20L" />
+              </label>
+              <label>
+                Status
+                <select>
+                  <option>active</option>
+                  <option>pending_review</option>
+                  <option>inactive</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-footer">
+              <span>Produto + embalagem passa a ser o item usado em pedido, faturamento e estoque PA.</span>
+              <button class="primary-button" type="submit">Salvar item</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel form-panel" id="nova-conversao-mp" aria-labelledby="nova-conversao-mp-title">
+          <div class="panel-header">
+            <h2 id="nova-conversao-mp-title">Nova conversao de MP</h2>
+            <span class="pill">gravacao preparada</span>
+          </div>
+          <form onsubmit="return false">
+            <div class="form-grid">
+              <label>
+                ID da materia-prima
+                <input value="1" />
+              </label>
+              <label>
+                Unidade origem
+                <input value="SC" />
+              </label>
+              <label>
+                Unidade destino
+                <input value="KG" />
+              </label>
+              <label>
+                Fator
+                <input value="50" />
+              </label>
+              <label>
+                Vigencia inicio
+                <input type="date" />
+              </label>
+              <label>
+                Vigencia fim
+                <input type="date" />
+              </label>
+            </div>
+            <div class="form-footer">
+              <span>Conversao define como XML/NF em outra unidade entra no estoque base da MP.</span>
+              <button class="primary-button" type="submit">Salvar conversao</button>
             </div>
           </form>
         </section>

@@ -84,6 +84,24 @@ export const MASTER_DATA_MODULES: MasterDataModule[] = [
     status: "ready"
   },
   {
+    key: "produto-embalagens",
+    title: "Itens vendaveis",
+    table: "cad_produto_embalagens",
+    owner: "Comercial",
+    requiredFields: ["produto_id", "embalagem_id", "codigo_item"],
+    audit: "Produto + embalagem usado no pedido, estoque PA e faturamento",
+    status: "ready"
+  },
+  {
+    key: "conversoes-mp",
+    title: "Conversoes de MP",
+    table: "cad_conversoes_unidade_mp",
+    owner: "Estoque",
+    requiredFields: ["materia_prima_id", "unidade_origem", "unidade_destino", "fator"],
+    audit: "XML/NF em saca, ton, t ou unidade convertida para estoque base",
+    status: "ready"
+  },
+  {
     key: "credito",
     title: "Credito do cliente",
     table: "cad_limites_credito_cliente",

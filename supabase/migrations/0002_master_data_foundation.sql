@@ -927,3 +927,173 @@ $$;
 
 revoke all on function public.create_cad_embalagem(text, text, text, text, text, numeric, boolean, bigint, jsonb) from public;
 grant execute on function public.create_cad_embalagem(text, text, text, text, text, numeric, boolean, bigint, jsonb) to authenticated;
+
+create unique index if not exists idx_cad_conversoes_unidade_mp_key_nullsafe
+on public.cad_conversoes_unidade_mp (
+  materia_prima_id,
+  unidade_origem,
+  unidade_destino,
+  coalesce(vigencia_inicio, date '1900-01-01')
+);
+
+create or replace function public.create_cad_produto_embalagem(
+  p_produto_id bigint,
+  p_embalagem_id bigint,
+  p_codigo_item text,
+  p_status text default 'active'
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid;
+  v_produto_embalagem_id bigint;
+begin
+  if p_produto_id is null or p_produto_id <= 0 then
+    raise exception 'produto_id is required';
+  end if;
+  if p_embalagem_id is null or p_embalagem_id <= 0 then
+    raise exception 'embalagem_id is required';
+  end if;
+  if nullif(trim(p_codigo_item), '') is null then
+    raise exception 'codigo_item is required';
+  end if;
+  if p_status not in ('active', 'inactive', 'pending_review') then
+    raise exception 'invalid status';
+  end if;
+
+  v_actor := auth.uid();
+  if v_actor is not null and not exists (
+    select 1 from public.user_profiles where id = v_actor
+  ) then
+    v_actor := null;
+  end if;
+
+  insert into public.cad_produto_embalagens(
+    produto_id,
+    embalagem_id,
+    codigo_item,
+    status,
+    created_by,
+    updated_by
+  )
+  values (
+    p_produto_id,
+    p_embalagem_id,
+    upper(trim(p_codigo_item)),
+    p_status,
+    v_actor,
+    v_actor
+  )
+  returning id into v_produto_embalagem_id;
+
+  perform public.log_action(
+    'cadastros.produto_embalagem_created',
+    'cad_produto_embalagens',
+    v_produto_embalagem_id::text,
+    'success',
+    null,
+    jsonb_build_object(
+      'produto_id', p_produto_id,
+      'embalagem_id', p_embalagem_id,
+      'codigo_item', upper(trim(p_codigo_item)),
+      'status', p_status
+    ),
+    jsonb_build_object('source', 'create_cad_produto_embalagem')
+  );
+
+  return v_produto_embalagem_id;
+end;
+$$;
+
+revoke all on function public.create_cad_produto_embalagem(bigint, bigint, text, text) from public;
+grant execute on function public.create_cad_produto_embalagem(bigint, bigint, text, text) to authenticated;
+
+create or replace function public.create_cad_conversao_unidade_mp(
+  p_materia_prima_id bigint,
+  p_unidade_origem text,
+  p_unidade_destino text,
+  p_fator numeric,
+  p_vigencia_inicio date default null,
+  p_vigencia_fim date default null
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid;
+  v_conversao_id bigint;
+begin
+  if p_materia_prima_id is null or p_materia_prima_id <= 0 then
+    raise exception 'materia_prima_id is required';
+  end if;
+  if nullif(trim(p_unidade_origem), '') is null then
+    raise exception 'unidade_origem is required';
+  end if;
+  if nullif(trim(p_unidade_destino), '') is null then
+    raise exception 'unidade_destino is required';
+  end if;
+  if upper(trim(p_unidade_origem)) = upper(trim(p_unidade_destino)) then
+    raise exception 'unidade_origem and unidade_destino must be different';
+  end if;
+  if p_fator is null or p_fator <= 0 then
+    raise exception 'fator must be greater than zero';
+  end if;
+  if p_vigencia_inicio is not null and p_vigencia_fim is not null and p_vigencia_fim < p_vigencia_inicio then
+    raise exception 'vigencia_fim must be greater than or equal to vigencia_inicio';
+  end if;
+
+  v_actor := auth.uid();
+  if v_actor is not null and not exists (
+    select 1 from public.user_profiles where id = v_actor
+  ) then
+    v_actor := null;
+  end if;
+
+  insert into public.cad_conversoes_unidade_mp(
+    materia_prima_id,
+    unidade_origem,
+    unidade_destino,
+    fator,
+    vigencia_inicio,
+    vigencia_fim,
+    created_by
+  )
+  values (
+    p_materia_prima_id,
+    upper(trim(p_unidade_origem)),
+    upper(trim(p_unidade_destino)),
+    p_fator,
+    p_vigencia_inicio,
+    p_vigencia_fim,
+    v_actor
+  )
+  returning id into v_conversao_id;
+
+  perform public.log_action(
+    'cadastros.conversao_unidade_mp_created',
+    'cad_conversoes_unidade_mp',
+    v_conversao_id::text,
+    'success',
+    null,
+    jsonb_build_object(
+      'materia_prima_id', p_materia_prima_id,
+      'unidade_origem', upper(trim(p_unidade_origem)),
+      'unidade_destino', upper(trim(p_unidade_destino)),
+      'fator', p_fator,
+      'vigencia_inicio', p_vigencia_inicio,
+      'vigencia_fim', p_vigencia_fim
+    ),
+    jsonb_build_object('source', 'create_cad_conversao_unidade_mp')
+  );
+
+  return v_conversao_id;
+end;
+$$;
+
+revoke all on function public.create_cad_conversao_unidade_mp(bigint, text, text, numeric, date, date) from public;
+grant execute on function public.create_cad_conversao_unidade_mp(bigint, text, text, numeric, date, date) to authenticated;

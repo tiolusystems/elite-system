@@ -281,6 +281,90 @@ export async function createEmbalagemAction(formData: FormData) {
   redirect("/cadastros?result=embalagem_created#nova-embalagem");
 }
 
+export async function createProdutoEmbalagemAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#novo-item-vendavel");
+  }
+
+  const produtoId = optionalInteger(formData, "produto_id");
+  const embalagemId = optionalInteger(formData, "embalagem_id");
+  const codigoItem = field(formData, "codigo_item");
+  const status = field(formData, "status") || "active";
+
+  if (!produtoId || !embalagemId || !codigoItem) {
+    redirect("/cadastros?result=missing_sale_item_required#novo-item-vendavel");
+  }
+  if (!Number.isInteger(produtoId) || produtoId <= 0 || !Number.isInteger(embalagemId) || embalagemId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#novo-item-vendavel");
+  }
+  if (!ALLOWED_STATUS.has(status)) {
+    redirect("/cadastros?result=invalid_status#novo-item-vendavel");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("create_cad_produto_embalagem", {
+    p_codigo_item: codigoItem.toUpperCase(),
+    p_embalagem_id: embalagemId,
+    p_produto_id: produtoId,
+    p_status: status
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-item-vendavel`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=item_vendavel_created#novo-item-vendavel");
+}
+
+export async function createConversaoUnidadeMpAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-conversao-mp");
+  }
+
+  const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
+  const unidadeOrigem = field(formData, "unidade_origem").toUpperCase();
+  const unidadeDestino = field(formData, "unidade_destino").toUpperCase();
+  const fator = optionalNumber(formData, "fator");
+  const vigenciaInicio = optionalField(formData, "vigencia_inicio");
+  const vigenciaFim = optionalField(formData, "vigencia_fim");
+
+  if (!materiaPrimaId || !unidadeOrigem || !unidadeDestino || fator === null) {
+    redirect("/cadastros?result=missing_conversion_required#nova-conversao-mp");
+  }
+  if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#nova-conversao-mp");
+  }
+  if (!Number.isFinite(fator) || fator <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#nova-conversao-mp");
+  }
+  if (unidadeOrigem === unidadeDestino) {
+    redirect("/cadastros?result=invalid_unit_conversion#nova-conversao-mp");
+  }
+  if (vigenciaInicio && vigenciaFim && vigenciaFim < vigenciaInicio) {
+    redirect("/cadastros?result=invalid_date_range#nova-conversao-mp");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("create_cad_conversao_unidade_mp", {
+    p_fator: fator,
+    p_materia_prima_id: materiaPrimaId,
+    p_unidade_destino: unidadeDestino,
+    p_unidade_origem: unidadeOrigem,
+    p_vigencia_fim: vigenciaFim,
+    p_vigencia_inicio: vigenciaInicio
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-conversao-mp`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=conversion_created#nova-conversao-mp");
+}
+
 function field(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }

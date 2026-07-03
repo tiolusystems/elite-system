@@ -78,7 +78,7 @@ Status atual:
 - Testes de cadastros preparados para rodar em banco temporario descartavel.
 - Primeira tela de cadastros mestres criada em `apps/web/app/cadastros/page.tsx`, com condicao visual/analitica do banco, modulos `cad_*`, contagens Supabase quando configurado e fila de validacao.
 - Preview HTML estatico criado em `apps/web/preview/cadastros.html` para validacao visual sem depender de Node.js.
-- Formularios ativos preparados para cliente, pessoa comercial, materia-prima, produto-base e embalagem, chamando Server Actions em `apps/web/app/cadastros/actions.ts` e funcoes PostgreSQL auditaveis `public.create_cad_cliente`, `public.create_cad_pessoa_comercial`, `public.create_cad_materia_prima`, `public.create_cad_produto_base` e `public.create_cad_embalagem`.
+- Formularios ativos preparados para cliente, pessoa comercial, materia-prima, produto-base, embalagem, item vendavel e conversao de MP, chamando Server Actions em `apps/web/app/cadastros/actions.ts` e funcoes PostgreSQL auditaveis `public.create_cad_cliente`, `public.create_cad_pessoa_comercial`, `public.create_cad_materia_prima`, `public.create_cad_produto_base`, `public.create_cad_embalagem`, `public.create_cad_produto_embalagem` e `public.create_cad_conversao_unidade_mp`.
 - Pendencia: validar migrations em runtime Python/PostgreSQL disponivel antes de usar em qualquer dado real.
 
 ## Bloco 3 - Comercial
@@ -242,4 +242,5 @@ Entregas:
 5. Instalar dependencias do `apps/web` e validar Next.js local.
 6. Ligar login Supabase no Next.js.
 7. Classificar causas das diferencas de reconciliacao.
-8. Ligar criacao de produto + embalagem e conversoes de unidade.
+8. Criar seletores pesquisaveis para vinculos entre cliente, pessoa comercial, MP, produto e embalagem.
+9. Iniciar tabelas e fluxo auditavel de pedidos.

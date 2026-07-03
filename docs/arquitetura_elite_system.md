@@ -127,16 +127,28 @@ Entidades principais:
 - `LoteProducao`
 - `SimulacaoProducao`
 
-### Expedicao
+### Romaneio e expedicao
 
-Responsavel por romaneio, carregamento, veiculos, volumes, pesos, lotes e entrega.
+Responsavel pelo romaneio canonico: escolher pedido a separar, definir separacao total ou parcial, buscar lotes disponiveis, informar faturamento/expedicao e gerar a base auditavel da baixa de produto acabado.
+
+O escopo inicial nao deve transformar toda planilha com nome parecido em codigo. O modulo parte da planilha/tabela `ROMANEIO` aprovada. Montagem completa de carga, roteirizacao, frota e fiscal ficam fora do escopo inicial, salvo se forem regra direta dessa planilha canonica.
 
 Entidades principais:
 
 - `Romaneio`
 - `RomaneioItem`
-- `Entrega`
-- `Carga`
+- `ReservaLotePA`
+- `BaixaPA`
+
+Regra central:
+
+- pedido aberto nao baixa estoque;
+- romaneio em rascunho nao baixa estoque;
+- romaneio em separacao pode reservar lote;
+- romaneio confirmado gera baixa de PA;
+- separacao parcial baixa apenas a quantidade romaneada e mantem saldo pendente no pedido.
+
+Detalhamento: `docs/escopo_romaneio.md`.
 
 ### Auditoria e Migracao
 

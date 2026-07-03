@@ -127,23 +127,36 @@ Auditorias:
 - Consumo teorico x consumo baixado.
 - Produtos sem formula valida.
 
-## Bloco 6 - Expedicao e romaneio
+## Bloco 6 - Romaneio
 
-Objetivo: substituir romaneio Excel por fluxo operacional.
+Objetivo: substituir a planilha `ROMANEIO` canonica por fluxo operacional, sem transformar outras planilhas com nome parecido em codigo desnecessario.
 
 Entregas:
 
-- Montagem de carga.
-- Romaneio.
-- Lotes por entrega.
-- Peso liquido, peso bruto, volumes e m3.
-- Veiculo e entregador.
+- Escolha de pedido a separar.
+- Separacao total ou parcial.
+- Busca de lotes disponiveis de PA.
+- Reserva de lote quando aplicavel.
+- Confirmacao de romaneio.
+- Baixa de PA gerada por romaneio confirmado.
+- Comunicacao do romaneio para faturamento.
+- Comunicacao do romaneio para expedicao.
 
 Auditorias:
 
-- Pedido x saida PA.
+- Pedido x romaneio x saida PA.
 - Lote x produto.
-- Quantidade embarcada.
+- Quantidade romaneada.
+- Quantidade pendente por pedido.
+- Baixa de estoque PA por romaneio confirmado.
+
+Fora do escopo inicial:
+
+- montagem completa de carga;
+- roteirizacao;
+- frota;
+- fiscal completo;
+- outras planilhas chamadas romaneio sem mapeamento aprovado.
 
 ## Bloco 7 - Relatorios e dashboards
 

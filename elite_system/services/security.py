@@ -9,7 +9,7 @@ import os
 import sqlite3
 from typing import Any
 
-from elite_system.domain.security import ACTIVE_STATUS, VALID_ROLES, AuthResult, User
+from elite_system.domain.security import ACTIVE_STATUS, VALID_ROLES, AuthResult, PermissionDecision, User
 from elite_system.repositories import security_repository
 
 
@@ -133,6 +133,93 @@ def authenticate_user(
     return AuthResult(ok=True, user=user)
 
 
+def can_perform_action(conn: sqlite3.Connection, *, user_id: int, action_key: str) -> PermissionDecision:
+    action_key = _normalize_action_key(action_key)
+    try:
+        user = security_repository.get_user_by_id(conn, user_id)
+    except LookupError:
+        return PermissionDecision(False, action_key, "user", "user_not_found")
+
+    if user.status != ACTIVE_STATUS:
+        return PermissionDecision(False, action_key, "user", "inactive_user")
+
+    user_override = security_repository.get_user_permission_override(conn, user.id, action_key)
+    if user_override is not None:
+        allowed = bool(user_override["allowed"])
+        return PermissionDecision(allowed, action_key, "user_override", "explicit_user_setting")
+
+    role_override = security_repository.get_role_permission_override(conn, user.role, action_key)
+    if role_override is not None:
+        allowed = bool(role_override["allowed"])
+        return PermissionDecision(allowed, action_key, "role_override", "explicit_role_setting")
+
+    action = security_repository.get_permission_action(conn, action_key)
+    if action is not None:
+        allowed = bool(action["default_allowed"])
+        return PermissionDecision(allowed, action_key, "default", "default_action_setting")
+
+    return PermissionDecision(True, action_key, "implicit_default", "full_access_until_restricted")
+
+
+def set_role_permission(
+    conn: sqlite3.Connection,
+    *,
+    actor_user_id: int | None,
+    role: str,
+    action_key: str,
+    allowed: bool,
+) -> None:
+    role = _normalize_role(role)
+    action_key = _ensure_permission_action(conn, action_key)
+    before = _permission_override_payload(security_repository.get_role_permission_override(conn, role, action_key))
+    security_repository.upsert_role_permission_override(conn, role, action_key, allowed)
+    log_action(
+        conn,
+        actor_user_id=actor_user_id,
+        action="security.role_permission_updated",
+        entity_type="role_permission_overrides",
+        entity_id=f"{role}:{action_key}",
+        before=before,
+        after={"role": role, "action_key": action_key, "allowed": allowed},
+    )
+
+
+def set_user_permission(
+    conn: sqlite3.Connection,
+    *,
+    actor_user_id: int | None,
+    user_id: int,
+    action_key: str,
+    allowed: bool,
+) -> None:
+    user = security_repository.get_user_by_id(conn, user_id)
+    action_key = _ensure_permission_action(conn, action_key)
+    before = _permission_override_payload(security_repository.get_user_permission_override(conn, user.id, action_key))
+    security_repository.upsert_user_permission_override(conn, user.id, action_key, allowed)
+    log_action(
+        conn,
+        actor_user_id=actor_user_id,
+        action="security.user_permission_updated",
+        entity_type="user_permission_overrides",
+        entity_id=f"{user.id}:{action_key}",
+        before=before,
+        after={"user_id": user.id, "action_key": action_key, "allowed": allowed},
+    )
+
+
+def list_permission_matrix(conn: sqlite3.Connection, *, user_id: int | None = None) -> list[dict[str, object]]:
+    rows = []
+    for action in security_repository.list_permission_actions(conn):
+        item = dict(action)
+        if user_id is not None:
+            decision = can_perform_action(conn, user_id=user_id, action_key=str(action["action_key"]))
+            item["allowed_for_user"] = decision.allowed
+            item["decision_source"] = decision.source
+            item["decision_reason"] = decision.reason
+        rows.append(item)
+    return rows
+
+
 def log_action(
     conn: sqlite3.Connection,
     *,
@@ -223,6 +310,33 @@ def _normalize_role(role: str) -> str:
 def _validate_password(password: str) -> None:
     if len(password) < 8:
         raise ValueError("password must have at least 8 characters")
+
+
+def _ensure_permission_action(conn: sqlite3.Connection, action_key: str) -> str:
+    action_key = _normalize_action_key(action_key)
+    if security_repository.get_permission_action(conn, action_key) is None:
+        module = action_key.split(".", 1)[0] if "." in action_key else "custom"
+        security_repository.upsert_permission_action(
+            conn,
+            action_key=action_key,
+            module=module,
+            description=f"Permissao operacional: {action_key}",
+            default_allowed=True,
+        )
+    return action_key
+
+
+def _normalize_action_key(action_key: str) -> str:
+    value = action_key.strip().casefold()
+    if not value:
+        raise ValueError("action_key is required")
+    return value
+
+
+def _permission_override_payload(row: sqlite3.Row | None) -> dict[str, Any]:
+    if row is None:
+        return {}
+    return {"allowed": bool(row["allowed"])}
 
 
 def _utc_now() -> str:

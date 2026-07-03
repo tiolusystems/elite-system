@@ -9,7 +9,15 @@ import unittest
 from elite_system.db import connect, init_db
 from elite_system.mappings import excel_date, normalize_table_row, number, text
 from elite_system.reconciliation import reconciliation_status, run_value_reconciliations
-from elite_system.services.security import authenticate_user, create_user, log_action, verify_password
+from elite_system.services.security import (
+    authenticate_user,
+    can_perform_action,
+    create_user,
+    log_action,
+    set_role_permission,
+    set_user_permission,
+    verify_password,
+)
 from elite_system.settings import AppSettings
 
 
@@ -35,6 +43,9 @@ class CoreTests(unittest.TestCase):
             self.assertIn("users", tables)
             self.assertIn("user_sessions", tables)
             self.assertIn("action_logs", tables)
+            self.assertIn("permission_actions", tables)
+            self.assertIn("role_permission_overrides", tables)
+            self.assertIn("user_permission_overrides", tables)
 
     def test_value_normalizers(self) -> None:
         self.assertEqual(text("  Cliente X  "), "Cliente X")
@@ -137,6 +148,62 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(rows[1]["previous_hash"], rows[0]["entry_hash"])
             self.assertEqual(rows[2]["previous_hash"], rows[1]["entry_hash"])
             self.assertEqual(rows[3]["previous_hash"], rows[2]["entry_hash"])
+
+    def test_permissions_start_with_full_access_then_allow_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "elite.sqlite"
+            init_db(db_path)
+            with connect(db_path) as conn:
+                user = create_user(
+                    conn,
+                    username="operador",
+                    password="StrongPass123!",
+                    display_name="Operador",
+                    role="comercial",
+                )
+
+                default_decision = can_perform_action(conn, user_id=user.id, action_key="comercial.manage")
+                unknown_decision = can_perform_action(conn, user_id=user.id, action_key="nova.acao_futura")
+                set_role_permission(
+                    conn,
+                    actor_user_id=user.id,
+                    role="comercial",
+                    action_key="comercial.manage",
+                    allowed=False,
+                )
+                role_denied = can_perform_action(conn, user_id=user.id, action_key="comercial.manage")
+                set_user_permission(
+                    conn,
+                    actor_user_id=user.id,
+                    user_id=user.id,
+                    action_key="comercial.manage",
+                    allowed=True,
+                )
+                user_allowed = can_perform_action(conn, user_id=user.id, action_key="comercial.manage")
+                logged_actions = [
+                    row[0]
+                    for row in conn.execute(
+                        """
+                        SELECT action
+                        FROM action_logs
+                        WHERE action IN ('security.role_permission_updated', 'security.user_permission_updated')
+                        ORDER BY id
+                        """
+                    )
+                ]
+
+            self.assertTrue(default_decision.allowed)
+            self.assertEqual(default_decision.source, "default")
+            self.assertTrue(unknown_decision.allowed)
+            self.assertEqual(unknown_decision.source, "implicit_default")
+            self.assertFalse(role_denied.allowed)
+            self.assertEqual(role_denied.source, "role_override")
+            self.assertTrue(user_allowed.allowed)
+            self.assertEqual(user_allowed.source, "user_override")
+            self.assertEqual(
+                logged_actions,
+                ["security.role_permission_updated", "security.user_permission_updated"],
+            )
 
     def test_stock_detail_reconciliation_by_batch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -9,7 +9,14 @@ from pathlib import Path
 from .audit import run_audit
 from .db import connect, init_db
 from .migration import import_workbook
-from .services.security import authenticate_user, create_user
+from .services.security import (
+    authenticate_user,
+    can_perform_action,
+    create_user,
+    list_permission_matrix,
+    set_role_permission,
+    set_user_permission,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -44,6 +51,33 @@ def main(argv: list[str] | None = None) -> int:
     audit_log_parser = sub.add_parser("audit-log", help="Lista ultimas acoes registradas")
     audit_log_parser.add_argument("--db", required=True, type=Path)
     audit_log_parser.add_argument("--limit", type=int, default=20)
+
+    permissions_parser = sub.add_parser("permissions", help="Lista permissoes disponiveis")
+    permissions_parser.add_argument("--db", required=True, type=Path)
+    permissions_parser.add_argument("--user-id", type=int)
+
+    can_parser = sub.add_parser("can", help="Verifica se um usuario pode executar uma acao")
+    can_parser.add_argument("--db", required=True, type=Path)
+    can_parser.add_argument("--user-id", required=True, type=int)
+    can_parser.add_argument("--action", required=True)
+
+    user_permission_parser = sub.add_parser("set-user-permission", help="Define permissao por usuario")
+    user_permission_parser.add_argument("--db", required=True, type=Path)
+    user_permission_parser.add_argument("--actor-user-id", type=int)
+    user_permission_parser.add_argument("--user-id", required=True, type=int)
+    user_permission_parser.add_argument("--action", required=True)
+    user_permission_choice = user_permission_parser.add_mutually_exclusive_group(required=True)
+    user_permission_choice.add_argument("--allow", action="store_true")
+    user_permission_choice.add_argument("--deny", action="store_true")
+
+    role_permission_parser = sub.add_parser("set-role-permission", help="Define permissao por perfil")
+    role_permission_parser.add_argument("--db", required=True, type=Path)
+    role_permission_parser.add_argument("--actor-user-id", type=int)
+    role_permission_parser.add_argument("--role", required=True)
+    role_permission_parser.add_argument("--action", required=True)
+    role_permission_choice = role_permission_parser.add_mutually_exclusive_group(required=True)
+    role_permission_choice.add_argument("--allow", action="store_true")
+    role_permission_choice.add_argument("--deny", action="store_true")
 
     args = parser.parse_args(argv)
     if args.command == "init":
@@ -95,6 +129,44 @@ def main(argv: list[str] | None = None) -> int:
                 )
             ]
         _print({"status": "ok", "actions": rows})
+        return 0
+    if args.command == "permissions":
+        init_db(args.db)
+        with connect(args.db) as conn:
+            permissions = list_permission_matrix(conn, user_id=args.user_id)
+        _print({"status": "ok", "permissions": permissions})
+        return 0
+    if args.command == "can":
+        init_db(args.db)
+        with connect(args.db) as conn:
+            decision = can_perform_action(conn, user_id=args.user_id, action_key=args.action)
+        _print({"status": "ok", "decision": decision})
+        return 0 if decision.allowed else 1
+    if args.command == "set-user-permission":
+        init_db(args.db)
+        with connect(args.db) as conn:
+            set_user_permission(
+                conn,
+                actor_user_id=args.actor_user_id,
+                user_id=args.user_id,
+                action_key=args.action,
+                allowed=bool(args.allow),
+            )
+            conn.commit()
+        _print({"status": "ok", "scope": "user", "user_id": args.user_id, "action": args.action, "allowed": bool(args.allow)})
+        return 0
+    if args.command == "set-role-permission":
+        init_db(args.db)
+        with connect(args.db) as conn:
+            set_role_permission(
+                conn,
+                actor_user_id=args.actor_user_id,
+                role=args.role,
+                action_key=args.action,
+                allowed=bool(args.allow),
+            )
+            conn.commit()
+        _print({"status": "ok", "scope": "role", "role": args.role, "action": args.action, "allowed": bool(args.allow)})
         return 0
     parser.error("Comando invalido")
     return 2

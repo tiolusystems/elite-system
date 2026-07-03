@@ -51,11 +51,17 @@ Ver trilha de auditoria:
 python -m elite_system.cli audit-log --db .\data\elite.sqlite --limit 20
 ```
 
+Listar permissoes/checks:
+
+```powershell
+python -m elite_system.cli permissions --db .\data\elite.sqlite --user-id 1
+```
+
 ## Observacao
 
 SQLite e usado agora para desenvolvimento local e auditoria. O desenho evita SQL proprietario e prepara a migracao posterior para PostgreSQL/cloud.
 
-O sistema ja possui base de usuarios, hash de senha e `action_logs` append-only. Em producao, o banco alvo sera online, com multiplos usuarios e permissoes por perfil.
+O sistema ja possui base de usuarios, hash de senha, `action_logs` append-only e permissoes por checks. A regra inicial e autonomia total para usuarios ativos; depois as alçadas podem ser reduzidas por perfil ou usuario.
 
 Para ambientes futuros, o banco sera configurado por `ELITE_DATABASE_URL`. Exemplo local: `sqlite:///data/elite.sqlite`. Exemplo producao: `postgresql://...`.
 

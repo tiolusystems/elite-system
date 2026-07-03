@@ -32,6 +32,9 @@ Tabelas-base:
 
 - `users`: cadastro de usuarios, perfil, status e hash de senha.
 - `user_sessions`: sessoes futuras do app web.
+- `permission_actions`: catalogo de acoes que aparecerao na tela de checks.
+- `role_permission_overrides`: excecoes por perfil.
+- `user_permission_overrides`: excecoes por usuario.
 - `action_logs`: trilha de auditoria das acoes.
 
 Senha:
@@ -65,6 +68,22 @@ Toda acao operacional deve registrar:
 
 `action_logs` e append-only: o banco bloqueia `UPDATE` e `DELETE` nessa tabela. Isso nao substitui backup nem permissao correta no banco cloud, mas reduz risco de adulteracao local e cria trilha verificavel.
 
+## Alçadas e checks
+
+Regra inicial: todo usuario ativo com login valido tem autonomia total.
+
+A tela de alçadas sera construida com checkboxes. Cada checkbox representa uma `permission_action`.
+
+Modelo de decisao:
+
+1. usuario inativo nao acessa;
+2. override por usuario decide primeiro;
+3. se nao houver override por usuario, override por perfil decide;
+4. se nao houver override, vale o padrao da acao;
+5. acoes novas ou ainda nao cadastradas ficam liberadas ate serem restringidas.
+
+Isso permite iniciar a operacao sem travar usuarios e, depois, reduzir acessos por modulo, perfil ou pessoa.
+
 ## Regra para novos modulos
 
 Nenhuma tela deve escrever direto no banco.
@@ -97,10 +116,28 @@ Listar ultimas acoes:
 python -m elite_system.cli audit-log --db .\data\elite.sqlite --limit 20
 ```
 
+Listar checks/permissoes:
+
+```powershell
+python -m elite_system.cli permissions --db .\data\elite.sqlite --user-id 1
+```
+
+Retirar uma permissao de um perfil:
+
+```powershell
+python -m elite_system.cli set-role-permission --db .\data\elite.sqlite --actor-user-id 1 --role comercial --action estoque.manage --deny
+```
+
+Liberar uma permissao especifica para um usuario:
+
+```powershell
+python -m elite_system.cli set-user-permission --db .\data\elite.sqlite --actor-user-id 1 --user-id 2 --action estoque.manage --allow
+```
+
 ## Pendencias tecnicas
 
 - Implementar sessoes reais para app web.
-- Criar camada de permissao por acao.
+- Criar tela de checks para alçadas por perfil e usuario.
 - Criar migracoes PostgreSQL equivalentes ao schema SQLite.
 - Adicionar usuario em cada modulo operacional novo.
 - Criar tela de auditoria com filtros por usuario, periodo, modulo e entidade.

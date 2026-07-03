@@ -22,3 +22,11 @@ class AuthResult:
     ok: bool
     user: User | None = None
     reason: str | None = None
+
+
+@dataclass(frozen=True)
+class PermissionDecision:
+    allowed: bool
+    action_key: str
+    source: str
+    reason: str

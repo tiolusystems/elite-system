@@ -36,6 +36,7 @@ Status atual:
 - Auditoria de valores implementada.
 - Auditoria de saldo por materia-prima e produto implementada em tabela de detalhes.
 - Tabelas de usuarios, login por senha e log de acoes implementadas.
+- Permissoes implementadas com autonomia total inicial e overrides por perfil/usuario.
 - Pendencia conhecida: classificar automaticamente a causa de cada diferenca.
 
 ## Bloco 2 - Cadastros mestres
@@ -182,7 +183,7 @@ Entregas:
 ## Sequencia imediata
 
 1. Configurar GitHub privado somente com codigo.
-2. Criar camada de permissao por acao.
+2. Criar tela de checks para alçadas.
 3. Classificar causas das diferencas de reconciliacao.
 4. Criar modelos de dominio para cadastros.
 5. Criar repositories para cadastros com `actor_user_id`.

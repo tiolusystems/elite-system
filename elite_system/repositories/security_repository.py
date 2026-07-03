@@ -62,6 +62,104 @@ def touch_last_login(conn: sqlite3.Connection, user_id: int, occurred_at: str) -
     )
 
 
+def get_permission_action(conn: sqlite3.Connection, action_key: str) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT action_key, module, description, default_allowed, active, sort_order
+        FROM permission_actions
+        WHERE action_key = ?
+        """,
+        (action_key,),
+    ).fetchone()
+
+
+def list_permission_actions(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return list(
+        conn.execute(
+            """
+            SELECT action_key, module, description, default_allowed, active, sort_order
+            FROM permission_actions
+            WHERE active = 1
+            ORDER BY sort_order, module, action_key
+            """
+        )
+    )
+
+
+def upsert_permission_action(
+    conn: sqlite3.Connection,
+    *,
+    action_key: str,
+    module: str,
+    description: str,
+    default_allowed: bool = True,
+    active: bool = True,
+    sort_order: int = 0,
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO permission_actions(action_key, module, description, default_allowed, active, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(action_key) DO UPDATE SET
+            module = excluded.module,
+            description = excluded.description,
+            default_allowed = excluded.default_allowed,
+            active = excluded.active,
+            sort_order = excluded.sort_order,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (action_key, module, description, int(default_allowed), int(active), sort_order),
+    )
+
+
+def get_role_permission_override(conn: sqlite3.Connection, role: str, action_key: str) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT allowed
+        FROM role_permission_overrides
+        WHERE role = ? AND action_key = ?
+        """,
+        (role, action_key),
+    ).fetchone()
+
+
+def get_user_permission_override(conn: sqlite3.Connection, user_id: int, action_key: str) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT allowed
+        FROM user_permission_overrides
+        WHERE user_id = ? AND action_key = ?
+        """,
+        (user_id, action_key),
+    ).fetchone()
+
+
+def upsert_role_permission_override(conn: sqlite3.Connection, role: str, action_key: str, allowed: bool) -> None:
+    conn.execute(
+        """
+        INSERT INTO role_permission_overrides(role, action_key, allowed)
+        VALUES (?, ?, ?)
+        ON CONFLICT(role, action_key) DO UPDATE SET
+            allowed = excluded.allowed,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (role, action_key, int(allowed)),
+    )
+
+
+def upsert_user_permission_override(conn: sqlite3.Connection, user_id: int, action_key: str, allowed: bool) -> None:
+    conn.execute(
+        """
+        INSERT INTO user_permission_overrides(user_id, action_key, allowed)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id, action_key) DO UPDATE SET
+            allowed = excluded.allowed,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (user_id, action_key, int(allowed)),
+    )
+
+
 def latest_action_hash(conn: sqlite3.Connection) -> str | None:
     row = conn.execute("SELECT entry_hash FROM action_logs ORDER BY id DESC LIMIT 1").fetchone()
     return None if row is None else str(row["entry_hash"])

@@ -164,6 +164,8 @@ Regras obrigatorias:
 
 - senha nunca fica em texto puro;
 - login bem-sucedido e login negado ficam em `action_logs`;
+- todo usuario ativo com login valido comeca com autonomia total;
+- alçadas futuras serao retiradas por checkboxes em permissoes por perfil ou usuario;
 - toda escrita futura deve chamar `log_action()` na mesma transacao;
 - `action_logs` e append-only;
 - telas nao recebem permissao para alterar log de auditoria.

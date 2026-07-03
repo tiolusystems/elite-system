@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('001_initial');
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('002_security_audit');
+INSERT OR IGNORE INTO schema_migrations(version) VALUES ('003_default_allow_permissions');
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,6 +31,50 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     revoked_at TEXT,
     metadata_json TEXT NOT NULL DEFAULT '{}'
 );
+
+CREATE TABLE IF NOT EXISTS permission_actions (
+    action_key TEXT PRIMARY KEY,
+    module TEXT NOT NULL,
+    description TEXT NOT NULL,
+    default_allowed INTEGER NOT NULL DEFAULT 1,
+    active INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS role_permission_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role TEXT NOT NULL,
+    action_key TEXT NOT NULL REFERENCES permission_actions(action_key),
+    allowed INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(role, action_key)
+);
+
+CREATE TABLE IF NOT EXISTS user_permission_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    action_key TEXT NOT NULL REFERENCES permission_actions(action_key),
+    allowed INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, action_key)
+);
+
+INSERT OR IGNORE INTO permission_actions(action_key, module, description, default_allowed, sort_order) VALUES
+    ('system.admin', 'sistema', 'Administrar configuracoes gerais do sistema', 1, 10),
+    ('security.manage_users', 'seguranca', 'Criar e editar usuarios', 1, 20),
+    ('security.manage_permissions', 'seguranca', 'Definir alcadas e permissoes', 1, 30),
+    ('migration.import', 'migracao', 'Importar historico local para o banco auditavel', 1, 40),
+    ('audit.view', 'auditoria', 'Visualizar auditorias, logs e reconciliacoes', 1, 50),
+    ('cadastros.manage', 'cadastros', 'Criar e editar cadastros mestres', 1, 60),
+    ('comercial.manage', 'comercial', 'Criar e editar pedidos e rotinas comerciais', 1, 70),
+    ('estoque.manage', 'estoque', 'Criar e editar movimentos e saldos de estoque', 1, 80),
+    ('producao.manage', 'producao', 'Criar e editar ordens e rotinas de producao', 1, 90),
+    ('expedicao.manage', 'expedicao', 'Criar e editar romaneios e expedicao', 1, 100),
+    ('reports.view', 'relatorios', 'Visualizar relatorios e dashboards', 1, 110);
 
 CREATE TABLE IF NOT EXISTS action_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -344,6 +389,9 @@ CREATE INDEX IF NOT EXISTS idx_imported_records_entity ON imported_records(entit
 CREATE INDEX IF NOT EXISTS idx_reconciliation_details_batch ON reconciliation_details(batch_id, metric_name, status);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, revoked_at);
+CREATE INDEX IF NOT EXISTS idx_permission_actions_module ON permission_actions(module, sort_order);
+CREATE INDEX IF NOT EXISTS idx_role_permission_overrides_action ON role_permission_overrides(action_key, role);
+CREATE INDEX IF NOT EXISTS idx_user_permission_overrides_user ON user_permission_overrides(user_id, action_key);
 CREATE INDEX IF NOT EXISTS idx_action_logs_actor ON action_logs(actor_user_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_action_logs_entity ON action_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_linhas_id_pedido ON pedidos_linhas(id_pedido);

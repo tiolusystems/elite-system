@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
+from elite_system.apps.admin_server import classify_database_condition
 from elite_system.db import connect, init_db
 from elite_system.mappings import excel_date, normalize_table_row, number, text
 from elite_system.reconciliation import reconciliation_status, run_value_reconciliations
@@ -64,6 +65,21 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(local.sqlite_path, Path("data/elite.sqlite"))
         self.assertEqual(cloud.database_backend, "postgresql")
         self.assertTrue(cloud.is_cloud_database)
+
+    def test_database_condition_flags_disposable_and_local_databases(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            disposable = classify_database_condition(Path(tmp) / "etapa2_checks.sqlite")
+
+        local = classify_database_condition(Path("data") / "elite.sqlite")
+        operational = classify_database_condition(Path("elite_operacional.sqlite"))
+
+        self.assertTrue(disposable["is_test"])
+        self.assertEqual(disposable["mode"], "descartavel")
+        self.assertIn("TESTE", str(disposable["label"]))
+        self.assertTrue(local["is_test"])
+        self.assertEqual(local["mode"], "local")
+        self.assertFalse(operational["is_test"])
+        self.assertEqual(operational["mode"], "operacional")
 
     def test_cliente_mapping(self) -> None:
         result = normalize_table_row(

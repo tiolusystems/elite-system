@@ -37,7 +37,8 @@ Status atual:
 - Auditoria de saldo por materia-prima e produto implementada em tabela de detalhes.
 - Tabelas de usuarios, login por senha e log de acoes implementadas.
 - Permissoes implementadas com autonomia total inicial e overrides por perfil/usuario.
-- Tela administrativa local de usuarios/alçadas implementada com login e checks.
+- Tela administrativa local de usuarios/alcadas implementada com login, checks e aviso visual/analitico de banco local ou descartavel.
+- Etapa 2 validada em banco descartavel, com evidencia em `docs/validacao_etapa_2_checks_db_descartavel.md`.
 - Pendencia conhecida: classificar automaticamente a causa de cada diferenca.
 
 ## Bloco 2 - Cadastros mestres
@@ -184,8 +185,7 @@ Entregas:
 ## Sequencia imediata
 
 1. Configurar GitHub privado somente com codigo.
-2. Validar fluxo completo da tela de checks em banco descartavel.
-3. Classificar causas das diferencas de reconciliacao.
-4. Criar modelos de dominio para cadastros.
-5. Criar repositories para cadastros com `actor_user_id`.
-6. Criar primeira tela de cadastros mestres.
+2. Classificar causas das diferencas de reconciliacao.
+3. Criar modelos de dominio para cadastros.
+4. Criar repositories para cadastros com `actor_user_id`.
+5. Criar primeira tela de cadastros mestres.

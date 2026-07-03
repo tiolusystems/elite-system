@@ -4,6 +4,7 @@ from html import escape
 from http import cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import argparse
+import tempfile
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -23,6 +24,49 @@ from elite_system.services.security import (
 
 
 SESSION_COOKIE = "elite_session"
+TEST_PATH_MARKERS = ("test", "teste", "tmp", "temp", "descart", "etapa2", "scratch")
+
+
+def classify_database_condition(db_path: str | Path) -> dict[str, object]:
+    path = Path(db_path)
+    resolved = _safe_resolve(path)
+    temp_root = _safe_resolve(Path(tempfile.gettempdir()))
+    path_text = str(resolved if resolved else path).casefold()
+    parts = {part.casefold() for part in path.parts}
+    in_temp = False
+    if resolved and temp_root:
+        in_temp = resolved == temp_root or temp_root in resolved.parents
+
+    if in_temp or any(marker in path_text for marker in TEST_PATH_MARKERS):
+        return {
+            "mode": "descartavel",
+            "is_test": True,
+            "label": "BANCO DE TESTE/DESCARTAVEL",
+            "detail": "As acoes desta tela usam banco descartavel e nao alteram o banco oficial.",
+            "database": path.name or "banco",
+        }
+    if "data" in parts and path.name.casefold() == "elite.sqlite":
+        return {
+            "mode": "local",
+            "is_test": True,
+            "label": "BANCO LOCAL/DESENVOLVIMENTO",
+            "detail": "As acoes desta tela usam SQLite local, nao o ambiente cloud operacional.",
+            "database": path.name,
+        }
+    return {
+        "mode": "operacional",
+        "is_test": False,
+        "label": "BANCO OPERACIONAL",
+        "detail": "Ambiente sem marcador local ou descartavel detectado.",
+        "database": path.name or "banco",
+    }
+
+
+def _safe_resolve(path: Path) -> Path | None:
+    try:
+        return path.resolve()
+    except OSError:
+        return None
 
 
 def run_admin_server(db_path: str | Path, host: str = "127.0.0.1", port: int = 8765) -> None:
@@ -100,6 +144,7 @@ class _AdminApp:
           <section class="login-panel">
             <h1>Elite System</h1>
             <p class="muted">Acesso administrativo</p>
+            {self._db_banner()}
             {self._notice(message)}
             {bootstrap}
             <form method="post" action="/login" class="stack">
@@ -122,6 +167,7 @@ class _AdminApp:
           <section class="login-panel">
             <h1>Primeiro administrador</h1>
             <p class="muted">Cria o primeiro usuário local para acessar a tela de alçadas.</p>
+            {self._db_banner()}
             {self._notice(message)}
             <form method="post" action="/bootstrap" class="stack">
               <label>Usuário<input name="username" value="admin" autocomplete="username" required></label>
@@ -166,6 +212,7 @@ class _AdminApp:
           </div>
           <form method="post" action="/logout"><button class="ghost" type="submit">Sair</button></form>
         </header>
+        {self._db_banner()}
         <main class="workspace">
           <section class="toolbar">
             <div>
@@ -183,6 +230,7 @@ class _AdminApp:
             <div><span>Usuário</span><strong>{escape(str(selected["display_name"]))}</strong></div>
             <div><span>Perfil</span><strong>{escape(str(selected["role"]))}</strong></div>
             <div><span>Status</span><strong>{escape(str(selected["status"]))}</strong></div>
+            {self._db_summary_card()}
           </section>
           <form method="post" action="/permissions" class="permission-form">
             <input type="hidden" name="user_id" value="{selected_id}">
@@ -299,6 +347,7 @@ class _AdminApp:
     def _forbidden_body(self, display_name: str) -> str:
         return f"""
         <header class="topbar"><strong>Elite System</strong></header>
+        {self._db_banner()}
         <main class="workspace">
           <h1>Acesso negado</h1>
           <p class="muted">{escape(display_name)} não possui permissão para administrar alçadas.</p>
@@ -329,6 +378,28 @@ class _AdminApp:
         if query.get("saved") == ["1"]:
             return '<p class="notice">Alçadas salvas.</p>'
         return ""
+
+    def _db_banner(self) -> str:
+        condition = classify_database_condition(self.db_path)
+        css_class = "warning" if bool(condition["is_test"]) else "normal"
+        return f"""
+        <aside class="db-banner {css_class}">
+          <strong>{escape(str(condition["label"]))}</strong>
+          <span>{escape(str(condition["detail"]))}</span>
+          <span class="db-pill">{escape(str(condition["database"]))}</span>
+        </aside>
+        """
+
+    def _db_summary_card(self) -> str:
+        condition = classify_database_condition(self.db_path)
+        mode = str(condition["mode"]).replace("_", " ")
+        return (
+            '<div class="db-summary-card">'
+            "<span>Banco</span>"
+            f'<strong>{escape(str(condition["label"]))}</strong>'
+            f"<small>{escape(mode)}</small>"
+            "</div>"
+        )
 
     def _send_html(self, title: str, body: str, status: int = 200) -> None:
         html = f"""<!doctype html>
@@ -413,6 +484,43 @@ input, select {
   padding: 10px 12px;
   color: #164d86;
 }
+.db-banner {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(180px, auto) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  border: 1px solid #c9d7e3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f7fafc;
+  color: #22313d;
+}
+.topbar + .db-banner {
+  margin: 0;
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+}
+.db-banner.warning {
+  background: #fff7e6;
+  border-color: #f0c36d;
+  color: #573b00;
+}
+.db-banner.normal {
+  background: #ecfdf5;
+  border-color: #8fd7b0;
+  color: #123d2a;
+}
+.db-pill {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .topbar {
   height: 56px;
   background: white;
@@ -439,7 +547,7 @@ input, select {
 .user-select { min-width: 320px; }
 .summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -450,6 +558,7 @@ input, select {
   padding: 14px;
 }
 .summary span { display: block; color: #657382; font-size: 13px; margin-bottom: 6px; }
+.summary small { display: block; margin-top: 4px; color: #657382; }
 .permission-form {
   background: white;
   border: 1px solid #dde3ea;
@@ -488,6 +597,8 @@ td span { color: #607080; font-size: 13px; }
 @media (max-width: 760px) {
   .toolbar { display: block; }
   .user-select { min-width: 0; margin-top: 14px; }
+  .db-banner { grid-template-columns: 1fr; }
+  .db-pill { width: fit-content; }
   .summary { grid-template-columns: 1fr; }
   th:nth-child(2), td:nth-child(2), th:nth-child(4), td:nth-child(4) { display: none; }
   .workspace { padding: 16px; }

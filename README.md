@@ -63,6 +63,8 @@ Abrir tela administrativa local:
 python -m elite_system.cli admin --db .\data\elite.sqlite --port 8765
 ```
 
+Quando essa tela operar com banco local, temporario ou descartavel, ela exibe aviso visual e resumo analitico do ambiente. Essa regra evita confundir teste com banco operacional.
+
 ## Observacao
 
 SQLite e usado agora para desenvolvimento local e auditoria. O desenho evita SQL proprietario e prepara a migracao posterior para PostgreSQL/cloud.

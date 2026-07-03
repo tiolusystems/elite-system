@@ -26,6 +26,24 @@ A configuracao do banco deve vir de `ELITE_DATABASE_URL`:
 - local: `sqlite:///data/elite.sqlite`;
 - producao: `postgresql://...`.
 
+## Aviso de ambiente de banco
+
+Qualquer tela visual ou analitica que rode contra banco local, temporario ou descartavel deve avisar claramente essa condicao antes de qualquer acao.
+
+Padrao obrigatorio:
+
+- banner visual no topo ou dentro da tela;
+- resumo analitico com a classificacao do banco;
+- nao exibir caminho completo com pastas do usuario;
+- banco descartavel nao pode ser apresentado como producao;
+- validacoes automatizadas de escrita devem usar banco descartavel.
+
+A tela administrativa de usuarios e alcadas ja classifica e exibe:
+
+- `BANCO DE TESTE/DESCARTAVEL` para bancos temporarios, de teste ou etapa 2;
+- `BANCO LOCAL/DESENVOLVIMENTO` para `data/elite.sqlite`;
+- `BANCO OPERACIONAL` somente quando nao houver marcador local ou descartavel.
+
 ## Usuarios e login
 
 Tabelas-base:
@@ -143,7 +161,7 @@ python -m elite_system.cli set-user-permission --db .\data\elite.sqlite --actor-
 ## Pendencias tecnicas
 
 - Implementar sessoes reais para app web.
-- Criar tela de checks para alçadas por perfil e usuario.
+- Expandir tela de checks para manutencao completa de usuarios e perfis.
 - Criar migracoes PostgreSQL equivalentes ao schema SQLite.
 - Adicionar usuario em cada modulo operacional novo.
 - Criar tela de auditoria com filtros por usuario, periodo, modulo e entidade.

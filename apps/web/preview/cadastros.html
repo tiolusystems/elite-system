@@ -171,40 +171,81 @@
 
         <section class="panel form-panel" id="novo-cadastro" aria-labelledby="novo-title">
           <div class="panel-header">
-            <h2 id="novo-title">Entrada controlada</h2>
-            <span class="pill">auditavel</span>
+            <h2 id="novo-title">Novo cliente</h2>
+            <span class="pill">gravacao preparada</span>
           </div>
-          <div class="form-grid">
-            <label>
-              Tipo
-              <select>
-                <option>Cliente</option>
-                <option>Pessoa comercial</option>
-                <option>Materia-prima</option>
-                <option>Produto</option>
-                <option>Embalagem</option>
-              </select>
-            </label>
-            <label>
-              Nome principal
-              <input value="Cliente exemplo" readonly />
-            </label>
-            <label>
-              Codigo
-              <input value="CLI-0001" readonly />
-            </label>
-            <label>
-              Status
-              <select>
-                <option>active</option>
-                <option>pending_review</option>
-                <option>inactive</option>
-              </select>
-            </label>
+          <form onsubmit="return false">
+            <div class="form-grid">
+              <label>
+                Tipo
+                <select>
+                  <option>Cliente</option>
+                </select>
+              </label>
+              <label>
+                Nome principal
+                <input value="Cliente exemplo" />
+              </label>
+              <label>
+                Codigo legado
+                <input value="CLI-0001" />
+              </label>
+              <label>
+                Status
+                <select>
+                  <option>active</option>
+                  <option>pending_review</option>
+                  <option>inactive</option>
+                </select>
+              </label>
+              <label>
+                Cidade
+                <input value="Ribeirao Preto" />
+              </label>
+              <label>
+                UF
+                <input value="SP" maxlength="2" />
+              </label>
+              <label class="wide-field">
+                Apelidos e grafias
+                <input value="Cliente exemplo; Fazenda exemplo" />
+              </label>
+            </div>
+            <div class="form-footer">
+              <span>Na aplicacao Next.js, salvar chama funcao PostgreSQL auditavel e registra action_logs.</span>
+              <button class="primary-button" type="submit">Salvar cliente</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel form-panel" aria-labelledby="proximos-formularios-title">
+          <div class="panel-header">
+            <h2 id="proximos-formularios-title">Proximos formularios</h2>
+            <span class="pill">em sequencia</span>
           </div>
-          <div class="form-footer">
-            <span>Gravacao definitiva sera liberada via service auditavel com actor_user_id.</span>
-            <button class="primary-button" type="button" disabled>Salvar</button>
+          <div class="module-list">
+            <article class="module-card">
+              <div class="module-card-main">
+                <h3>Pessoa comercial</h3>
+                <span>Vendedor, agente, gerente, tecnico e entregador</span>
+              </div>
+              <div class="module-card-meta">
+                <span>Service pronto</span>
+                <strong>cadastros.manage</strong>
+              </div>
+              <p>O formulario sera ativado depois do cliente para evitar misturar alcadas e comissionamento antes da validacao.</p>
+            </article>
+            <article class="module-card">
+              <div class="module-card-main">
+                <h3>MP, produto e embalagem</h3>
+                <span>SKU corrigido, produto + embalagem e estoque de insumo</span>
+              </div>
+              <div class="module-card-meta">
+                <span>Service pronto</span>
+                <strong>cad_*</strong>
+              </div>
+              <p>Esses formularios entram na proxima etapa com conversoes, garantias e bloqueios de duplicidade.</p>
+            </article>
           </div>
         </section>
 

@@ -382,6 +382,18 @@ h1 {
   color: var(--warning-text);
 }
 
+.notice-panel.ok {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.notice-panel.warning {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
 .notice-panel span {
   color: inherit;
 }
@@ -403,6 +415,10 @@ h1 {
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
+}
+
+.wide-field {
+  grid-column: span 2;
 }
 
 .form-grid input,

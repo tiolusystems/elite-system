@@ -1,10 +1,16 @@
+import { createClienteAction } from "@/app/cadastros/actions";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
-export default async function CadastrosPage() {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+export default async function CadastrosPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+  const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
   const dashboard = await getMasterDataDashboard();
   const pendingCount = dashboard.validationIssues.length;
+  const result = singleValue(params.result);
+  const formMessage = messageForResult(result);
 
   return (
     <main className="app-shell">
@@ -73,6 +79,13 @@ export default async function CadastrosPage() {
           </section>
         ) : null}
 
+        {formMessage ? (
+          <section className={`notice-panel ${formMessage.kind}`} role="status">
+            <strong>{formMessage.title}</strong>
+            <span>{formMessage.detail}</span>
+          </section>
+        ) : null}
+
         <section className="two-column">
           <section className="panel" aria-labelledby="modulos-title">
             <div className="panel-header">
@@ -138,42 +151,83 @@ export default async function CadastrosPage() {
 
         <section className="panel form-panel" id="novo-cadastro" aria-labelledby="novo-title">
           <div className="panel-header">
-            <h2 id="novo-title">Entrada controlada</h2>
-            <span className="pill">auditavel</span>
+            <h2 id="novo-title">Novo cliente</h2>
+            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
           </div>
-          <div className="form-grid">
-            <label>
-              Tipo
-              <select defaultValue="cliente">
-                <option value="cliente">Cliente</option>
-                <option value="pessoa">Pessoa comercial</option>
-                <option value="materia-prima">Materia-prima</option>
-                <option value="produto">Produto</option>
-                <option value="embalagem">Embalagem</option>
-              </select>
-            </label>
-            <label>
-              Nome principal
-              <input placeholder="Nome do cadastro" />
-            </label>
-            <label>
-              Codigo
-              <input placeholder="Codigo legado ou novo codigo" />
-            </label>
-            <label>
-              Status
-              <select defaultValue="active">
-                <option value="active">active</option>
-                <option value="pending_review">pending_review</option>
-                <option value="inactive">inactive</option>
-              </select>
-            </label>
+          <form action={createClienteAction}>
+            <div className="form-grid">
+              <label>
+                Tipo
+                <select name="tipo" defaultValue="cliente">
+                  <option value="cliente">Cliente</option>
+                </select>
+              </label>
+              <label>
+                Nome principal
+                <input name="nome" placeholder="Nome do cliente" required />
+              </label>
+              <label>
+                Codigo legado
+                <input name="codigo_legado" placeholder="Codigo do Excel, se houver" />
+              </label>
+              <label>
+                Status
+                <select name="status" defaultValue="active">
+                  <option value="active">active</option>
+                  <option value="pending_review">pending_review</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </label>
+              <label>
+                Cidade
+                <input name="cidade" placeholder="Cidade" required />
+              </label>
+              <label>
+                UF
+                <input name="uf" placeholder="SP" required maxLength={2} />
+              </label>
+              <label className="wide-field">
+                Apelidos e grafias
+                <input name="apelidos" placeholder="Separar por virgula, ponto e virgula ou linha" />
+              </label>
+            </div>
+            <div className="form-footer">
+              <span>Salvar chama funcao PostgreSQL auditavel e registra `action_logs`.</span>
+              <button className="primary-button" type="submit">
+                Salvar cliente
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section className="panel form-panel" aria-labelledby="proximos-formularios-title">
+          <div className="panel-header">
+            <h2 id="proximos-formularios-title">Proximos formularios</h2>
+            <span className="pill">em sequencia</span>
           </div>
-          <div className="form-footer">
-            <span>Gravacao definitiva sera liberada via service auditavel com actor_user_id.</span>
-            <button className="primary-button" type="button" disabled>
-              Salvar
-            </button>
+          <div className="module-list">
+            <article className="module-card">
+              <div className="module-card-main">
+                <h3>Pessoa comercial</h3>
+                <span>Vendedor, agente, gerente, tecnico e entregador</span>
+              </div>
+              <div className="module-card-meta">
+                <span>Service pronto</span>
+                <strong>cadastros.manage</strong>
+              </div>
+              <p>O formulario sera ativado depois do cliente para evitar misturar alcadas e comissionamento antes da validacao.</p>
+            </article>
+            <article className="module-card">
+              <div className="module-card-main">
+                <h3>MP, produto e embalagem</h3>
+                <span>SKU corrigido, produto + embalagem e estoque de insumo</span>
+              </div>
+              <div className="module-card-meta">
+                <span>Service pronto</span>
+                <strong>cad_*</strong>
+              </div>
+              <p>Esses formularios entram na proxima etapa com conversoes, garantias e bloqueios de duplicidade.</p>
+            </article>
           </div>
         </section>
 
@@ -204,4 +258,57 @@ export default async function CadastrosPage() {
       </section>
     </main>
   );
+}
+
+function singleValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {
+  if (!result) {
+    return null;
+  }
+  const messages: Record<string, { kind: "ok" | "warning"; title: string; detail: string }> = {
+    cliente_created: {
+      kind: "ok",
+      title: "Cliente salvo",
+      detail: "Cadastro criado via funcao auditavel. A fila e as contagens serao atualizadas pelo Supabase."
+    },
+    duplicated: {
+      kind: "warning",
+      title: "Cadastro duplicado",
+      detail: "O codigo legado ou chave unica ja existe. Revise antes de tentar novamente."
+    },
+    invalid_status: {
+      kind: "warning",
+      title: "Status invalido",
+      detail: "Use active, pending_review ou inactive."
+    },
+    invalid_uf: {
+      kind: "warning",
+      title: "UF invalida",
+      detail: "UF deve ter exatamente duas letras."
+    },
+    missing_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Nome, cidade e UF sao obrigatorios para cliente."
+    },
+    not_configured: {
+      kind: "warning",
+      title: "Supabase nao configurado",
+      detail: "Configure as variaveis de ambiente antes de gravar cadastros reais ou de teste."
+    },
+    permission_denied: {
+      kind: "warning",
+      title: "Permissao negada",
+      detail: "Usuario precisa estar autenticado e autorizado para gravar cadastros."
+    },
+    save_failed: {
+      kind: "warning",
+      title: "Falha ao salvar",
+      detail: "O cadastro nao foi gravado. Consulte logs do Supabase para o detalhe tecnico."
+    }
+  };
+  return messages[result] ?? messages.save_failed;
 }

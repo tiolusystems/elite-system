@@ -421,3 +421,90 @@ on conflict (action_key) do update set
   description = excluded.description,
   default_allowed = excluded.default_allowed,
   sort_order = excluded.sort_order;
+
+create or replace function public.create_cad_cliente(
+  p_nome text,
+  p_nome_norm text,
+  p_cidade text,
+  p_uf text,
+  p_status text default 'active',
+  p_codigo_legado text default null,
+  p_apelidos_json jsonb default '[]'::jsonb,
+  p_payload_origem_json jsonb default '{}'::jsonb
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid;
+  v_cliente_id bigint;
+begin
+  if nullif(trim(p_nome), '') is null then
+    raise exception 'nome is required';
+  end if;
+  if nullif(trim(p_cidade), '') is null then
+    raise exception 'cidade is required';
+  end if;
+  if char_length(trim(p_uf)) <> 2 then
+    raise exception 'uf must have exactly two letters';
+  end if;
+  if p_status not in ('active', 'inactive', 'pending_review') then
+    raise exception 'invalid status';
+  end if;
+
+  v_actor := auth.uid();
+  if v_actor is not null and not exists (
+    select 1 from public.user_profiles where id = v_actor
+  ) then
+    v_actor := null;
+  end if;
+
+  insert into public.cad_clientes(
+    codigo_legado,
+    nome,
+    nome_norm,
+    cidade,
+    uf,
+    status,
+    apelidos_json,
+    payload_origem_json,
+    created_by,
+    updated_by
+  )
+  values (
+    nullif(trim(p_codigo_legado), ''),
+    trim(p_nome),
+    trim(p_nome_norm),
+    trim(p_cidade),
+    upper(trim(p_uf)),
+    p_status,
+    coalesce(p_apelidos_json, '[]'::jsonb),
+    coalesce(p_payload_origem_json, '{}'::jsonb),
+    v_actor,
+    v_actor
+  )
+  returning id into v_cliente_id;
+
+  perform public.log_action(
+    'cadastros.cliente_created',
+    'cad_clientes',
+    v_cliente_id::text,
+    'success',
+    null,
+    jsonb_build_object(
+      'nome', trim(p_nome),
+      'cidade', trim(p_cidade),
+      'uf', upper(trim(p_uf)),
+      'status', p_status
+    ),
+    jsonb_build_object('source', 'create_cad_cliente')
+  );
+
+  return v_cliente_id;
+end;
+$$;
+
+revoke all on function public.create_cad_cliente(text, text, text, text, text, text, jsonb, jsonb) from public;
+grant execute on function public.create_cad_cliente(text, text, text, text, text, text, jsonb, jsonb) to authenticated;

@@ -78,6 +78,7 @@ Status atual:
 - Testes de cadastros preparados para rodar em banco temporario descartavel.
 - Primeira tela de cadastros mestres criada em `apps/web/app/cadastros/page.tsx`, com condicao visual/analitica do banco, modulos `cad_*`, contagens Supabase quando configurado e fila de validacao.
 - Preview HTML estatico criado em `apps/web/preview/cadastros.html` para validacao visual sem depender de Node.js.
+- Primeiro formulario ativo preparado para cliente, chamando Server Action em `apps/web/app/cadastros/actions.ts` e funcao PostgreSQL auditavel `public.create_cad_cliente`.
 - Pendencia: validar migrations em runtime Python/PostgreSQL disponivel antes de usar em qualquer dado real.
 
 ## Bloco 3 - Comercial
@@ -240,5 +241,5 @@ Entregas:
 4. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.
 5. Instalar dependencias do `apps/web` e validar Next.js local.
 6. Ligar login Supabase no Next.js.
-7. Ativar gravacao segura dos formularios de cadastros mestres.
+7. Ativar formularios de pessoa comercial, MP, produto e embalagem.
 8. Classificar causas das diferencas de reconciliacao.

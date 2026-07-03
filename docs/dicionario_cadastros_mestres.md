@@ -1,6 +1,6 @@
 # Dicionario de cadastros mestres
 
-Versao: 0.1
+Versao: 0.2
 Data: 2026-07-03
 
 ## Objetivo
@@ -22,6 +22,8 @@ Nenhum cadastro mestre deve ser implementado como tabela definitiva sem:
 7. testes automatizados;
 8. gravacao auditada por service com usuario executor;
 9. validacao em banco descartavel antes de qualquer dado real.
+
+Decisao de modelagem: cadastros nao serao tratados como simples listas. Eles carregam regras operacionais de cliente, comissao, estoque, producao, garantias e rastreabilidade. Quando uma regra puder mudar ao longo do tempo, a regra deve ser versionada e auditada, nao sobrescrita silenciosamente.
 
 ## Campos tecnicos comuns
 
@@ -58,7 +60,9 @@ Fonte historica principal: tabela `CLIENTES`.
 
 Objeto de dominio: `Cliente`.
 
-Finalidade: identificar quem compra, quem recebe atendimento comercial e como pedidos historicos se conectam ao cadastro.
+Finalidade: identificar o grupo/cliente comercial unico, suas propriedades/fazendas, CNPJs, contatos, enderecos, vendedores vinculados e como pedidos historicos se conectam ao cadastro.
+
+Decisao: cliente nao pode ser duplicado. Quando houver duplicidade historica, o sistema deve apoiar analise e unificacao, preservando os registros originais e gravando a decisao em auditoria.
 
 | Campo operacional | Origem atual no Excel | Obrigatorio | Observacao |
 |---|---|---:|---|
@@ -68,42 +72,71 @@ Finalidade: identificar quem compra, quem recebe atendimento comercial e como pe
 | `vendedor_cadastrou` | `Vendedor que Cadastrou` | Nao | Deve virar vinculo com `Vendedor`. |
 | `vendedor_atende` | `Vendedor que Atende` | Nao | Deve virar vinculo com `Vendedor`. |
 | `status` | `A/I` | Sim | Normalizar para status padrao. |
-| `contato` | `CONTATO` | Nao | Texto livre inicialmente. |
-| `cidade` | `CIDADE` | Nao | Pode virar cadastro de apoio depois. |
-| `uf` | `UF` | Nao | Validar UF brasileira quando preenchida. |
+| `cidade` | `CIDADE` | Sim | Cidade minima do cadastro. |
+| `uf` | `UF` | Sim | UF minima do cadastro. |
 | `valor_total_compras` | `VALOR TOTAL DE COMPRAS` | Nao | Valor historico/analitico, nao deve ser editado como saldo manual. |
+
+Subcadastros previstos:
+
+| Subcadastro | Uso |
+|---|---|
+| `ClientePropriedade` | Fazenda/propriedade vinculada ao mesmo cliente, podendo ter CNPJ distinto. |
+| `ClienteDocumento` | CNPJ/CPF/IE por cliente ou propriedade. |
+| `ClienteEndereco` | Endereco de entrega, cobranca ou outro tipo. Endereco completo nao e obrigatorio inicialmente. |
+| `ClienteContato` | Contatos multiplos: gerente, compras, financeiro, proprietario, operacional etc. |
+| `ClienteVendedor` | Mais de um vendedor/agente vinculado ao cliente, com vigencia e status. |
+| `ClienteUnificacao` | Registro auditado de duplicidades analisadas e unificadas. |
 
 Regras iniciais:
 
 - `nome` nao pode ficar vazio.
-- `codigo_legado` nao deve duplicar quando preenchido.
-- duplicidade por nome deve gerar alerta, nao bloqueio automatico sem revisao.
+- `cidade` e `uf` sao obrigatorios no cadastro operacional.
+- `codigo_legado` nao deve duplicar quando preenchido, salvo em processo de unificacao.
+- duplicidade por nome, documento, propriedade ou grafia semelhante deve gerar fila de revisao.
+- clientes duplicados devem ser unificados por ferramenta propria, nunca apagados manualmente.
 - cliente inativo nao deve entrar em novo pedido sem permissao.
 - alteracao de vendedor de atendimento deve gerar auditoria.
+- cliente pode ter mais de um vendedor ativo.
+- cliente pode ter mais de uma fazenda/propriedade e mais de um CNPJ.
+- cliente pode ter mais de um contato com papel diferente.
 
 Perguntas para revisao:
 
-- Existe CNPJ/CPF fora das tabelas ja mapeadas?
-- Existe endereco completo ou so cidade/UF?
-- Cliente pode ter mais de um contato?
-- Cliente pode ter mais de um vendedor ativo?
-- Como tratar clientes duplicados do historico?
+- Onde estao hoje CNPJ/CPF/IE e enderecos completos?
+- Quais tipos de contato precisam aparecer na primeira tela?
+- O vendedor pode ser vinculado ao cliente inteiro, a uma propriedade ou a ambos?
+- Qual deve ser o fluxo de aprovacao para unificar clientes duplicados?
 
-## Vendedor
+## Pessoa comercial, vendedor e comissionado
 
 Fonte historica principal: tabela `Tabela153241`.
 
-Objeto de dominio: `Vendedor`.
+Objetos de dominio previstos: `PessoaComercial`, `PapelPessoa`, `VinculoAgente`, `Comissionado`.
 
-Finalidade: controlar atendimento comercial, comissao e correspondencia de nomes vindos de pedidos/importacoes.
+Finalidade: controlar vendedores, agentes, tecnicos de campo, funcionarios, comissionados e entregadores quando a mesma pessoa puder exercer mais de uma funcao.
+
+Decisao: vendedor, agente, tecnico de campo, funcionario e entregador nao devem ser modelados como tabelas totalmente separadas sem necessidade. O cadastro principal deve ser uma pessoa/entidade com papeis. Isso permite que um vendedor tambem seja entregador, sem concluir que todo entregador e vendedor.
+
+Tipos comerciais previstos:
+
+| Tipo | Descricao | Pode receber comissao |
+|---|---|---:|
+| `funcionario_elite` | Pessoa do time interno Elite. | Sim |
+| `agente_vinculado` | Agente com vinculo a outro vendedor do time Elite. | Sim |
+| `agente_direto_elite` | Agente direto da Elite. | Sim |
+| `vendedor_direto_elite` | Vendedor de venda direta Elite. | Sim |
+| `tecnico_campo` | Tecnico que faz aplicacoes e pode receber comissao por aplicacao, produto desenvolvido ou parcela de receita. | Sim |
+| `entregador` | Pessoa que faz entrega. Nao e vendedor por ser entregador. | Nao por entrega, salvo se tambem tiver papel comercial aprovado. |
 
 | Campo operacional | Origem atual no Excel | Obrigatorio | Observacao |
 |---|---|---:|---|
 | `codigo_legado` | Novo | Nao | Pode ser criado se o Excel nao possuir codigo estavel. |
-| `nome` | `FUNCIONARIO` | Sim | Nome principal do vendedor/funcionario. |
+| `nome` | `FUNCIONARIO` | Sim | Nome principal da pessoa. |
 | `apelidos` | Novo | Nao | Nomes curtos usados na operacao. |
 | `grafias_incorretas` | Novo | Nao | Ajuda a migracao a reconhecer nomes digitados errado. |
-| `funcao` | `Funcao` | Nao | Deve indicar se e vendedor, entregador, administrativo etc. |
+| `tipo_comercial` | Novo | Sim para comissionado | Um dos tipos comerciais previstos. |
+| `papeis` | `Funcao` + novo | Sim | Pode incluir vendedor, agente, tecnico, entregador, funcionario etc. |
+| `vendedor_responsavel_id` | Novo | Quando agente vinculado | Vendedor Elite responsavel por agente vinculado. |
 | `status` | `Ativo/Inativo` | Sim | Normalizar para status padrao. |
 | `admissao` | `Admissao` | Nao | Data historica. |
 | `demissao` | `Demissao` | Nao | Data historica. |
@@ -113,15 +146,52 @@ Finalidade: controlar atendimento comercial, comissao e correspondencia de nomes
 Regras iniciais:
 
 - `nome` nao pode ficar vazio.
-- vendedor inativo nao deve ser sugerido para novo pedido.
+- vendedor/agente/tecnico inativo nao deve ser sugerido para novo pedido.
 - apelidos e grafias incorretas nao podem apontar para mais de um vendedor sem revisao.
 - mudanca de status deve ser auditada.
+- entregador nunca vira vendedor automaticamente.
+- vendedor pode acumular papel de entregador.
+- entregador pode ou nao ser funcionario Elite.
+- agente vinculado deve apontar para um vendedor responsavel do time Elite.
+- tecnico de campo pode receber comissao por aplicacao, desenvolvimento de produto ou parcela da receita.
+
+## Comissionamento
+
+Objeto de dominio previsto: `ComissaoPedido`, `RegraComissao`, `CampanhaComercial`, `MetaComissao`, `PremioCampanha`.
+
+Decisao: em um pedido podem existir varios comissionados, cada um com comissao distinta. A comissao e informada na insercao do pedido e paga quando o pedido for recebido parcial ou integralmente.
+
+Campos previstos em `ComissaoPedido`:
+
+| Campo | Obrigatorio | Uso |
+|---|---:|---|
+| `pedido_id` | Sim | Pedido que gerou a comissao. |
+| `comissionado_id` | Sim | Pessoa que recebe. |
+| `tipo_comissionado` | Sim | Vendedor, agente, tecnico de campo etc. |
+| `base_calculo` | Sim | Valor ou quantidade base da comissao. |
+| `percentual` | Quando percentual | Percentual aplicado. |
+| `valor_fixo` | Quando fixo | Valor fixo combinado. |
+| `condicao_pagamento` | Sim | Recebimento parcial, recebimento integral ou regra aprovada. |
+| `status` | Sim | Prevista, liberada, paga, estornada. |
+| `campanha_id` | Nao | Campanha vigente aplicada, quando houver. |
+
+Regras iniciais:
+
+- pedido pode ter multiplas comissoes.
+- comissao nao deve ser paga apenas por pedido emitido; depende de recebimento parcial ou integral.
+- recebimento parcial libera apenas a parcela proporcional ou regra aprovada.
+- comissao pode ser variavel por pessoa.
+- podem existir travas individuais por meta, periodo e campanha.
+- pode haver mais de uma campanha vigente.
+- campanhas podem gerar aumento de percentual, premio, voucher de viagem ou outro beneficio.
+- toda alteracao de comissao deve ser auditada com antes/depois, autor e motivo.
 
 Perguntas para revisao:
 
-- Vendedor e funcionario sao o mesmo cadastro?
-- Entregador deve ficar em vendedor/funcionario ou em cadastro separado?
-- Comissao fica no vendedor, no produto, no pedido ou em regra propria?
+- Comissao parcial e sempre proporcional ao valor recebido?
+- Tecnico de campo recebe por produto desenvolvido, por aplicacao, por receita ou por combinacao?
+- Campanhas podem acumular entre si ou ha prioridade?
+- Voucher de viagem deve ser tratado como valor financeiro, premio nao financeiro ou ambos?
 
 ## Materia-prima
 
@@ -131,12 +201,15 @@ Objeto de dominio: `MateriaPrima`.
 
 Finalidade: controlar insumos, estoque minimo, unidade, custo historico e identificadores regulatórios.
 
+Decisao: `id_sku_mp` deveria ser codigo unico, mas foi usado em parte com nomes de materia-prima. Portanto, ele deve entrar como dado legado para saneamento, nao como SKU confiavel definitivo.
+
 | Campo operacional | Origem atual no Excel | Obrigatorio | Observacao |
 |---|---|---:|---|
-| `codigo_legado` | `id_sku_mp` | Sim, se existir | Pode virar SKU principal. |
+| `codigo_legado` | `id_sku_mp` | Sim, se existir | Campo legado a sanear; nao confiar como codigo definitivo sem revisao. |
+| `sku_corrigido` | Novo | Sim no cadastro final | Codigo unico corrigido da materia-prima. |
 | `nome` | `MATERIA PRIMA` | Sim | Nome do insumo. |
 | `tipo` | `TIPO` | Nao | Grupo ou classificacao operacional. |
-| `unidade_adotada` | `UNIDADE ADOTADA` | Sim | Unidade de controle do estoque. |
+| `unidade_base_estoque` | `UNIDADE ADOTADA` | Sim | Unidade atual de controle do estoque, normalmente padronizada. |
 | `densidade` | `Densidade` | Nao | Necessaria para conversoes quando aplicavel. |
 | `estoque_minimo` | `ESTOQUE MINIMO` | Nao | Parametro operacional de compras/alerta. |
 | `valor_estoque_minimo` | `R$ Estoque Minimo` | Nao | Valor historico/analitico. |
@@ -146,19 +219,34 @@ Finalidade: controlar insumos, estoque minimo, unidade, custo historico e identi
 | `codigo_ads` | `Codigo ADS` | Nao | Identificador operacional/regulatorio. |
 | `status` | `Ativo/Inativo` | Sim | Normalizar para status padrao. |
 
+Subcadastros previstos:
+
+| Subcadastro | Uso |
+|---|---|
+| `MateriaPrimaUnidadeHistorico` | Guarda mudancas de unidade ao longo do tempo, com vigencia. |
+| `ConversaoUnidadeMP` | Conversoes aprovadas: saca, ton, tonelada, t, kg, litro, unidade etc. |
+| `MateriaPrimaGarantia` | Garantias declaradas do insumo por cadastro ou padrao. |
+| `LoteMateriaPrimaGarantia` | Garantias por lote, vindas de fornecedor ou laboratorio. |
+| `MateriaPrimaSaneamentoSKU` | Fila de correcao de `id_sku_mp` usado como nome. |
+
 Regras iniciais:
 
 - `nome` nao pode ficar vazio.
-- `codigo_legado`/SKU nao deve duplicar quando preenchido.
+- `sku_corrigido` deve ser unico no cadastro final.
+- `id_sku_mp` legado pode duplicar ou conter nome; isso gera fila de saneamento.
 - unidade deve ser preenchida antes de movimentar estoque.
+- unidade pode mudar ao longo do tempo, mas a mudanca deve criar historico com vigencia.
 - materia-prima inativa nao deve entrar em nova compra/producao sem permissao.
 - densidade deve ser positiva quando preenchida.
+- XML/NF pode vir com unidades diferentes, como saca, ton, toneladas, t e kg; a entrada deve converter para unidade base por regra aprovada.
+- se o XML nao trouxer informacao suficiente para converter, o sistema deve pedir correcao manual assistida e registrar a decisao.
 
 Perguntas para revisao:
 
-- SKU da materia-prima e o campo `id_sku_mp`?
-- Unidade adotada pode mudar com estoque existente?
-- Existem conversoes oficiais entre kg, litro e unidade?
+- Qual formato do `sku_corrigido`: numerico, prefixo MP, ou outro?
+- Qual unidade base preferencial por tipo de MP?
+- Saca sempre tem o mesmo peso ou depende da MP/fornecedor?
+- Garantias de MP entram pelo fornecedor, por laudo de laboratorio, manualmente ou pelos tres caminhos?
 
 ## Produto acabado
 
@@ -168,9 +256,23 @@ Objeto de dominio: `Produto`.
 
 Finalidade: controlar o produto vendido/produzido, seus identificadores regulatorios e atributos usados em pedido, producao, estoque PA e romaneio.
 
+Decisao: produto precisa ter codigo. O produto pode ter varias embalagens, e o pedido vende a combinacao produto + embalagem. O cadastro deve separar produto base, apresentacao comercial e item de estoque.
+
+Objetos previstos:
+
+| Objeto | Uso |
+|---|---|
+| `ProdutoBase` | Produto tecnico/regulatorio sem embalagem especifica. |
+| `ProdutoEmbalagem` | Combinacao vendavel: produto + embalagem. |
+| `ItemEstoquePA` | Codigo de estoque para produto acabado disponivel. |
+| `ItemEstoquePI` | Codigo de produto intermediario usado em outras formulas ou embalagens. |
+
+O codigo de PA/PI pode ser exclusivamente numerico, por exemplo `0001` ate `9999`, desde que seja unico e auditado.
+
 | Campo operacional | Origem atual no Excel | Obrigatorio | Observacao |
 |---|---|---:|---|
-| `codigo_legado` | Novo ou a definir | Nao | Precisa validar se existe codigo estavel fora do nome. |
+| `codigo_legado` | Novo ou a definir | Nao | Precisa validar se existe codigo historico fora do nome. |
+| `codigo_produto` | Novo | Sim | Codigo unico do produto base. |
 | `nome` | `RELACAO DE PRODUTOS` | Sim | Nome principal do produto. |
 | `grupo` | `Grupo` | Nao | Familia ou classificacao. |
 | `densidade_kg_l` | `DENSIDADE Kg/L` | Nao | Usada em conversoes e producao. |
@@ -182,20 +284,68 @@ Finalidade: controlar o produto vendido/produzido, seus identificadores regulato
 | `ncm` | `NCM` | Nao | Campo fiscal/classificacao. |
 | `status` | Novo | Sim | Produto precisa poder ser inativado. |
 
+Subcadastros previstos:
+
+| Subcadastro | Uso |
+|---|---|
+| `ProdutoEmbalagem` | Define quais embalagens podem ser vendidas para cada produto. |
+| `FormulaProduto` | Formula editavel e versionada do produto. |
+| `ReceitaProducao` | Receita usada para produzir. |
+| `ReceitaMapa` | Receita/documentacao que fica registrada para MAPA. |
+| `GarantiaProdutoMapa` | Garantias declaradas no registro do MAPA. |
+| `TransformacaoPA_PI` | Conversoes auditadas entre PA, PI e embalagens. |
+
 Regras iniciais:
 
 - `nome` nao pode ficar vazio.
+- `codigo_produto` deve ser unico.
+- codigo de PA/PI deve ser unico quando criado.
 - duplicidade por nome deve gerar alerta.
 - produto inativo nao deve entrar em novo pedido, producao ou romaneio.
 - densidade deve ser positiva quando preenchida.
 - custo de MP importado e informativo ate o modulo de custos ser definido.
+- produto pode ter varias embalagens.
+- pedido deve informar produto + embalagem vendida.
+- PA pode nascer diretamente de producao ou de transformacao/embalagem de PI.
+- PI pode ser usado em outras formulas ou embalado para virar PA.
+- transformacao entre PA e PI deve gerar movimento auditado, nunca ajuste manual solto.
 
 Perguntas para revisao:
 
-- Produto possui codigo proprio alem do nome?
-- Embalagem pertence ao produto ou ao pedido?
-- Produto pode ter varias embalagens possiveis?
-- Produto tem formula unica ou varias fichas tecnicas por versao?
+- Codigo de produto deve ser numerico, alfanumerico ou separado por tipo PA/PI?
+- A numeracao `0001` a `9999` vale para PA e PI juntos ou separadamente?
+- Quais produtos atuais ja sao PI mesmo aparecendo como produto?
+- Produto + embalagem deve ter codigo proprio diferente do produto base?
+
+## Formula e receita
+
+Objetos de dominio previstos: `FormulaProduto`, `FormulaVersao`, `FormulaItem`, `ReceitaProducao`, `ReceitaMapa`.
+
+Finalidade: controlar formulas editaveis por versao, justificativa, autor, garantias e diferenca entre a receita operacional e a receita documentada para MAPA.
+
+Decisao: formula nunca deve ser sobrescrita sem rastro. Qualquer modificacao deve gerar nova versao com autor, data/hora, justificativa e hash encadeado. O efeito desejado e equivalente a uma trilha imutavel: uma vez registrada, a versao anterior nao deve ser alterada.
+
+Campos previstos em `FormulaVersao`:
+
+| Campo | Obrigatorio | Uso |
+|---|---:|---|
+| `produto_id` | Sim | Produto base da formula. |
+| `versao` | Sim | Numero ou codigo da versao. |
+| `tipo_receita` | Sim | `producao` ou `mapa`. |
+| `status` | Sim | Rascunho, ativa, substituida, cancelada. |
+| `justificativa` | Sim para alteracao | Motivo tecnico/operacional da mudanca. |
+| `created_by` | Sim | Autor da versao. |
+| `entry_hash` | Sim | Hash da versao. |
+| `previous_hash` | Sim quando houver | Hash da versao anterior. |
+
+Regras iniciais:
+
+- produto pode ter mais de uma receita.
+- deve existir distincao entre receita que vai para producao e receita documentada para MAPA.
+- alteracao de formula exige justificativa.
+- formula usada em ordem de producao deve apontar para uma versao fixa.
+- formula pode considerar PA, PI e MP como componentes, se aprovado.
+- alteracao de garantia ou lote de MP nao deve reescrever a formula historica; deve gerar calculo/resultado vinculado ao lote ou ordem.
 
 ## Veiculo
 
@@ -225,57 +375,117 @@ Perguntas para revisao:
 - Capacidade, peso ou volume existem na planilha `ROMANEIO` canonica?
 - Entregador fica vinculado ao veiculo ou ao romaneio?
 
+## Entregador
+
+Objeto de dominio previsto: `Entregador` como papel de `PessoaComercial` ou `PessoaOperacional`.
+
+Finalidade: identificar quem executa entrega/expedicao sem misturar esse papel com venda ou comissao comercial.
+
+Decisoes:
+
+- entregador nunca sera considerado vendedor apenas por ser entregador;
+- vendedor pode tambem atuar como entregador;
+- entregador pode ou nao ser funcionario Elite;
+- entrega nao gera comissao comercial automaticamente;
+- se a mesma pessoa tiver papel de vendedor e entregador, as regras devem separar claramente entrega, venda e comissao.
+
+Campos previstos:
+
+| Campo | Obrigatorio | Uso |
+|---|---:|---|
+| `pessoa_id` | Sim | Pessoa vinculada ao papel de entregador. |
+| `funcionario_elite` | Sim | Indica se pertence ao time Elite. |
+| `status` | Sim | Ativo/inativo. |
+| `observacao` | Nao | Restricoes operacionais, quando houver. |
+
 ## Embalagem
 
-Fonte historica atual: aparece em pedidos e saidas de PA como `EMB.` / `EMBALAGEM`.
+Fonte historica atual: existe tabela de embalagens e tambem aparece em pedidos e saidas de PA como `EMB.` / `EMBALAGEM`.
 
 Objeto de dominio previsto: `Embalagem`.
 
-Finalidade: padronizar embalagem usada em pedido, produto, estoque PA e romaneio.
+Finalidade: padronizar embalagem usada em pedido, produto, estoque PA, estoque de insumos e romaneio.
+
+Decisao: embalagem define quantidade/volume em litros e deve ser monitorada como insumo. Ela tambem pode participar de transformacoes de estoque, por exemplo um PA em embalagem de 20L pode ser convertido para 4 unidades de 5L ou outra quantidade auditada.
 
 | Campo operacional | Origem atual no Excel | Obrigatorio | Observacao |
 |---|---|---:|---|
 | `codigo_legado` | A definir | Nao | Ainda nao ha tabela de cadastro mapeada. |
 | `descricao` | `EMB.` / `EMBALAGEM` | Sim | Pode nascer da ocorrencia historica. |
-| `capacidade` | A definir | Nao | Validar se existe em alguma tabela. |
-| `unidade` | A definir | Nao | Litro, kg, unidade etc. |
+| `volume_litros` | Tabela de embalagens | Sim quando embalagem liquida | Quantidade/volume da embalagem. |
+| `unidade` | Tabela de embalagens | Sim | Litro, unidade etc. |
+| `controla_estoque` | Novo | Sim | Indica se embalagem baixa estoque de insumos. |
+| `materia_prima_id` | Novo | Quando controla estoque | Vinculo com item de estoque/insumo da embalagem. |
 | `status` | Novo | Sim | Ativa/inativa. |
 
 Regras iniciais:
 
-- nao criar cadastro definitivo de embalagem sem revisar as ocorrencias do historico;
+- embalagem e cadastro proprio e tambem pode ser insumo controlado no estoque;
 - descricao duplicada com grafias diferentes deve gerar fila de revisao;
 - embalagem inativa nao deve entrar em pedido novo.
+- produto pode ter varias embalagens possiveis.
+- pedido deve gravar a embalagem vendida.
+- transformacao de PA 20L para 5L, ou similar, deve ser um processo auditado com origem, destino, quantidade e perdas quando houver.
 
 Perguntas para revisao:
 
-- Existe uma tabela de embalagens no Excel?
-- Embalagem define quantidade/capacidade ou e apenas texto de pedido?
-- Embalagem afeta estoque PA ou apenas faturamento/expedicao?
+- Qual tabela atual e a fonte canonica de embalagens?
+- Toda embalagem controla estoque ou algumas sao apenas descricao comercial?
+- Embalagem usada em producao deve ser baixada junto da ordem de producao, do envase ou do romaneio?
 
 ## Garantia
 
-Fonte historica: pendente de identificacao.
+Fonte historica: registro do produto no MAPA, garantias de MP por fornecedor/lote, analises de laboratorio e informacao manual autorizada.
 
-Objeto de dominio previsto: `Garantia`.
+Objetos de dominio previstos: `GarantiaNutriente`, `GarantiaProdutoMapa`, `GarantiaMateriaPrima`, `GarantiaLoteMateriaPrima`, `GarantiaProdutoCalculada`.
 
-Finalidade: ainda precisa definicao operacional antes de modelagem.
+Finalidade: controlar os valores declarados no registro do produto no MAPA e comparar/calcular as garantias do produto final conforme as garantias das materias-primas usadas.
 
-Possibilidades a validar:
+Decisao: garantias dos fertilizantes sao valores declarados no registro do produto no MAPA e devem atender maximos ou minimos. O sistema deve permitir informar garantias manualmente ou calcular de acordo com garantias do lote de MP. Quando um produto acabado usar mais de um lote da mesma MP, as garantias por lote devem ser consideradas no resultado final.
 
-- garantia comercial do pedido;
-- garantia de produto/lote;
-- garantia regulatoria;
-- garantia financeira;
-- outro uso especifico do sistema legado.
+Campos previstos em `GarantiaProdutoMapa`:
 
-Regra: nao codar `Garantia` antes de entender o significado operacional no Excel.
+| Campo | Obrigatorio | Uso |
+|---|---:|---|
+| `produto_id` | Sim | Produto registrado. |
+| `nutriente` | Sim | Nutriente/componente garantido. |
+| `tipo_limite` | Sim | Minimo, maximo, faixa ou declarado. |
+| `valor` | Sim | Valor da garantia. |
+| `unidade` | Sim | %, g/L, kg/t ou unidade aprovada. |
+| `fonte` | Sim | MAPA, manual, laboratorio, fornecedor ou calculado. |
+| `vigencia_inicio` | Sim | Inicio da validade. |
+| `vigencia_fim` | Nao | Fim da validade, quando substituida. |
+
+Campos previstos em `GarantiaLoteMateriaPrima`:
+
+| Campo | Obrigatorio | Uso |
+|---|---:|---|
+| `materia_prima_id` | Sim | MP do lote. |
+| `lote_mp_id` | Sim | Lote da MP. |
+| `nutriente` | Sim | Nutriente/componente analisado. |
+| `valor` | Sim | Valor informado ou analisado. |
+| `unidade` | Sim | Unidade da garantia. |
+| `fonte` | Sim | Fornecedor, laboratorio ou manual. |
+| `documento_referencia` | Nao | Laudo, XML, certificado ou observacao. |
+| `created_by` | Sim | Usuario que informou. |
+
+Regras iniciais:
+
+- garantia manual exige autor e justificativa.
+- garantia de laboratorio deve aceitar documento/laudo de referencia.
+- garantia do fornecedor pode vir do lote ou certificado.
+- calculo do produto final deve considerar proporcao usada de cada MP e cada lote.
+- se a mesma MP entrar com mais de um lote, calcular por lote e nao por media simples do cadastro.
+- resultado calculado deve ser gravado como evidencia, sem apagar valores de origem.
+- divergencia contra limite MAPA deve bloquear ou alertar conforme regra aprovada.
+- mudanca de garantia gera nova versao auditada, nao sobrescrita silenciosa.
 
 Perguntas para revisao:
 
-- Onde aparece garantia no sistema legado?
-- Ela se vincula a cliente, produto, pedido, lote ou entrega?
-- Gera prazo, bloqueio, documento ou apenas observacao?
+- Quais nutrientes/garantias sao obrigatorios hoje por tipo de produto?
+- O limite MAPA e sempre minimo/maximo ou existem faixas?
+- Qual tolerancia tecnica usar antes de bloquear producao?
+- O laudo de laboratorio sera anexo no sistema ou apenas referencia textual inicialmente?
 
 ## Cadastros de apoio previstos
 
@@ -288,7 +498,16 @@ Estes cadastros podem ser necessarios, mas nao devem roubar prioridade dos mestr
 - status padronizados;
 - tipos de pedido;
 - funcoes de funcionario;
-- aliases/grafias para importacao.
+- aliases/grafias para importacao;
+- papeis de pessoa;
+- tipos de comissionado;
+- campanhas comerciais;
+- metas e premios;
+- conversoes de unidade;
+- nutrientes/garantias;
+- tipos de receita/formula;
+- motivos de alteracao de formula;
+- tipos de transformacao PA/PI.
 
 ## Auditorias de cadastros
 
@@ -301,6 +520,14 @@ Cada cadastro deve ter, no minimo:
 - registros usados em pedidos/estoque/producao sem cadastro mestre;
 - registros inativos usados em operacao nova;
 - alteracoes manuais com usuario, antes/depois e motivo quando aplicavel.
+- comissoes de pedido com multiplos comissionados e condicao de recebimento;
+- campanhas simultaneas aplicadas ao mesmo pedido;
+- clientes duplicados e decisoes de unificacao;
+- conversoes de unidade aplicadas em entradas por XML/NF;
+- mudancas de unidade de MP com vigencia;
+- formulas alteradas com justificativa e hash encadeado;
+- garantias calculadas por lote de MP e comparadas contra MAPA;
+- transformacoes entre PA, PI e embalagens.
 
 ## Ordem de implementacao recomendada
 

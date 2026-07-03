@@ -68,6 +68,7 @@ Auditorias:
 Status atual:
 
 - Dicionario inicial de cadastros criado em `docs/dicionario_cadastros_mestres.md`.
+- Dicionario evoluido para incluir papeis de vendedor/agente/tecnico/entregador, multiplos comissionados por pedido, cliente unico com propriedades/CNPJs, saneamento de SKU de MP, conversoes XML/NF, produto + embalagem, PA/PI, formulas versionadas e garantias MAPA.
 - Pendencia: revisar campos e perguntas em aberto com o usuario antes de criar migrations, repositories ou telas.
 
 ## Bloco 3 - Comercial
@@ -217,7 +218,7 @@ Entregas:
 ## Sequencia imediata
 
 1. Configurar GitHub privado somente com codigo.
-2. Revisar e aprovar `docs/dicionario_cadastros_mestres.md`.
+2. Revisar e aprovar `docs/dicionario_cadastros_mestres.md` v0.2.
 3. Criar modelos de dominio para cadastros.
 4. Criar validators puros para cadastros.
 5. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.

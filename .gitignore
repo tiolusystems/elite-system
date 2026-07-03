@@ -1,0 +1,26 @@
+# Dados reais, bancos locais e artefatos de migracao
+data/
+outputs/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3
+*.db
+*.bak
+*.backup
+*.dump
+*.xlsx
+*.xlsm
+*.xls
+*.csv
+*.tsv
+*.parquet
+
+# Segredos locais
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/

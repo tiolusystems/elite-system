@@ -1,4 +1,4 @@
-import { createPedidoRascunhoAction } from "@/app/pedidos/actions";
+import { createPedidoRascunhoAction, registrarCreditoPedidoAction } from "@/app/pedidos/actions";
 import { getOrdersDashboard, type OrderLookupOption, type OrderLookups } from "@/lib/orders";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -39,7 +39,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           <div>
             <h1>Pedidos</h1>
             <p className="muted">
-              Primeira camada comercial auditavel: pedido em rascunho, item vendavel e comissao prevista.
+              Camada comercial auditavel: pedido em rascunho, item vendavel, credito e comissao prevista.
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de pedido">
@@ -66,6 +66,10 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           <div className="summary-card">
             <span>Abertos</span>
             <strong>{valueOrDash(dashboard.metrics.abertos)}</strong>
+          </div>
+          <div className="summary-card">
+            <span>Bloqueados</span>
+            <strong>{valueOrDash(dashboard.metrics.bloqueados)}</strong>
           </div>
           <div className="summary-card">
             <span>Faturamento previsto</span>
@@ -179,6 +183,86 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           </section>
         </section>
 
+        <section className="two-column">
+          <section className="panel form-panel" id="credito-pedido" aria-labelledby="credito-pedido-title">
+            <div className="panel-header">
+              <h2 id="credito-pedido-title">Credito do pedido</h2>
+              <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
+            </div>
+            <form action={registrarCreditoPedidoAction}>
+              <div className="form-grid">
+                <label className="wide-field">
+                  Pedido
+                  <input name="pedido_id" list="pedidos-options" placeholder="Buscar pedido" required />
+                </label>
+                <label>
+                  Decisao
+                  <select name="decisao" defaultValue="liberado">
+                    <option value="liberado">liberado</option>
+                    <option value="bloqueado">bloqueado</option>
+                    <option value="pendente_aprovacao">pendente_aprovacao</option>
+                  </select>
+                </label>
+                <label>
+                  Limite disponivel
+                  <input name="limite_disponivel_snapshot" placeholder="0,00" inputMode="decimal" />
+                </label>
+                <label>
+                  Inadimplencia
+                  <input name="inadimplencia_snapshot" placeholder="0,00" inputMode="decimal" />
+                </label>
+                <label className="wide-field">
+                  Motivo
+                  <input name="motivo" placeholder="Obrigatorio para bloqueio ou aprovacao pendente" />
+                </label>
+                <label className="wide-field">
+                  Observacao
+                  <input name="observacao_credito" placeholder="Contexto da analise de credito" />
+                </label>
+              </div>
+              <div className="form-footer">
+                <span>Credito liberado abre o pedido. Bloqueio ou aprovacao pendente trava antes de faturamento.</span>
+                <button className="primary-button" type="submit">
+                  Registrar credito
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="panel" aria-labelledby="credito-recente-title">
+            <div className="panel-header">
+              <h2 id="credito-recente-title">Decisoes recentes</h2>
+              <span className="pill">{dashboard.recentCreditDecisions.length} registro(s)</span>
+            </div>
+            {dashboard.recentCreditDecisions.length > 0 ? (
+              <div className="module-list">
+                {dashboard.recentCreditDecisions.map((decision) => (
+                  <article className="module-card" key={decision.id}>
+                    <div className="module-card-main">
+                      <h3>Pedido #{decision.pedidoId}</h3>
+                      <span>{decision.decisao}</span>
+                    </div>
+                    <div className="module-card-meta">
+                      <span>{decision.statusAnterior}</span>
+                      <strong>{decision.statusResultante}</strong>
+                    </div>
+                    <p>{decision.motivo ?? "sem motivo obrigatorio"}</p>
+                    <div className="tag-row">
+                      <span className="tag">limite: {moneyOrDash(decision.limiteDisponivelSnapshot)}</span>
+                      <span className="tag">inad: {moneyOrDash(decision.inadimplenciaSnapshot)}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <strong>Nenhuma decisao carregada</strong>
+                <span>Quando Supabase estiver configurado, esta lista mostrara liberacoes e bloqueios recentes.</span>
+              </div>
+            )}
+          </section>
+        </section>
+
         <section className="panel" aria-labelledby="recentes-title">
           <div className="panel-header">
             <h2 id="recentes-title">Pedidos recentes</h2>
@@ -225,6 +309,7 @@ function LookupDatalists({ lookups }: { lookups: OrderLookups }) {
       <LookupDatalist id="clientes-options" options={lookups.clientes} />
       <LookupDatalist id="itens-vendaveis-options" options={lookups.itensVendaveis} />
       <LookupDatalist id="pessoas-comerciais-options" options={lookups.pessoasComerciais} />
+      <LookupDatalist id="pedidos-options" options={lookups.pedidos} />
     </>
   );
 }
@@ -271,10 +356,25 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Pedido salvo",
       detail: "Pedido criado via funcao auditavel com item e comissao prevista quando aplicavel."
     },
+    credit_decision_registered: {
+      kind: "ok",
+      title: "Credito registrado",
+      detail: "Decisao de credito gravada com snapshot e status do pedido atualizado."
+    },
     missing_order_required: {
       kind: "warning",
       title: "Campos obrigatorios",
       detail: "Cliente, item, data, quantidade e valor unitario sao obrigatorios."
+    },
+    missing_credit_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Pedido e decisao de credito sao obrigatorios."
+    },
+    missing_credit_reason: {
+      kind: "warning",
+      title: "Motivo obrigatorio",
+      detail: "Bloqueio ou aprovacao pendente precisa de motivo auditavel."
     },
     invalid_positive_number: {
       kind: "warning",
@@ -295,6 +395,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Status inicial invalido",
       detail: "Use draft, open ou blocked."
+    },
+    invalid_credit_decision: {
+      kind: "warning",
+      title: "Decisao invalida",
+      detail: "Use liberado, bloqueado ou pendente_aprovacao."
+    },
+    invalid_order_status: {
+      kind: "warning",
+      title: "Status do pedido invalido",
+      detail: "Pedidos cancelados ou concluidos nao aceitam nova decisao de credito."
     },
     missing_related_record: {
       kind: "warning",

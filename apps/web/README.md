@@ -23,7 +23,7 @@ Abra `http://localhost:3000`.
 ## Telas
 
 - `/` e `/cadastros`: tela operacional de cadastros mestres.
-- `/pedidos`: primeira tela operacional de pedidos, com rascunho auditavel, item vendavel e comissao prevista.
+- `/pedidos`: primeira tela operacional de pedidos, com rascunho auditavel, item vendavel, comissao prevista e decisao de credito.
 - A tela mostra a condicao visual/analitica do banco conforme `ELITE_DATABASE_MODE`.
 - Quando Supabase estiver configurado, a tela tenta carregar contagens das tabelas `cad_*` e alertas pendentes de `cadastro_validation_issues`.
 - Preview sem Node.js: abra `apps/web/preview/cadastros.html` diretamente no navegador.

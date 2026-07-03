@@ -119,6 +119,8 @@ Status atual:
 - Tela `/pedidos` criada em `apps/web/app/pedidos/page.tsx`, com condicao visual/analitica do banco, formulario de pedido e lista de pedidos recentes.
 - Preview HTML estatico criado em `apps/web/preview/pedidos.html` para validacao visual sem depender de Node.js.
 - Regra preservada: pedido em rascunho nao baixa estoque; bonificacao nao gera comissao; devolucao gera valor negativo auditado.
+- Gate de credito criado em `supabase/migrations/0004_order_credit_gate.sql`, com tabela `com_pedido_credito_decisoes` e funcao auditavel `public.registrar_com_pedido_decisao_credito`.
+- Tela `/pedidos` evoluida para registrar liberacao, bloqueio ou aprovacao pendente antes de faturamento.
 
 ## Bloco 4 - Estoque MP e PA
 
@@ -252,5 +254,5 @@ Entregas:
 5. Instalar dependencias do `apps/web` e validar Next.js local.
 6. Ligar login Supabase no Next.js.
 7. Classificar causas das diferencas de reconciliacao.
-8. Criar fluxo de credito/bloqueio para pedido antes de faturamento.
-9. Criar recebimentos parciais e liberacao proporcional de comissao.
+8. Criar recebimentos parciais e liberacao proporcional de comissao.
+9. Criar auditoria pedido x credito x recebimento x comissao.

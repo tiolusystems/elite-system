@@ -31,7 +31,7 @@
           <div>
             <h1>Pedidos</h1>
             <p class="muted">
-              Primeira camada comercial auditavel: pedido em rascunho, item vendavel e comissao prevista.
+              Camada comercial auditavel: pedido em rascunho, item vendavel, credito e comissao prevista.
             </p>
           </div>
           <div class="toolbar-actions" aria-label="Acoes de pedido">
@@ -52,6 +52,10 @@
           <option value="1 | Vendedor exemplo | vendedor_direto_elite / active"></option>
           <option value="2 | Gerente exemplo | gerente / active"></option>
         </datalist>
+        <datalist id="pedidos-options">
+          <option value="1 | PED-20260703190000123-ABCD | cliente 1 / venda / draft / 12500.00"></option>
+          <option value="2 | PED-20260703190100888-DCBA | cliente 2 / bonificacao / open / 0.00"></option>
+        </datalist>
 
         <section class="summary-grid" aria-label="Resumo dos pedidos">
           <div class="summary-card">
@@ -65,6 +69,10 @@
           <div class="summary-card">
             <span>Abertos</span>
             <strong>6</strong>
+          </div>
+          <div class="summary-card">
+            <span>Bloqueados</span>
+            <strong>2</strong>
           </div>
           <div class="summary-card">
             <span>Faturamento previsto</span>
@@ -159,6 +167,90 @@
                 <dd>Prevista no pedido e liberada apenas conforme recebimento futuro.</dd>
               </div>
             </dl>
+          </section>
+        </section>
+
+        <section class="two-column">
+          <section class="panel form-panel" id="credito-pedido" aria-labelledby="credito-pedido-title">
+            <div class="panel-header">
+              <h2 id="credito-pedido-title">Credito do pedido</h2>
+              <span class="pill">gravacao preparada</span>
+            </div>
+            <form onsubmit="return false">
+              <div class="form-grid">
+                <label class="wide-field">
+                  Pedido
+                  <input list="pedidos-options" value="1 | PED-20260703190000123-ABCD | cliente 1 / venda / draft / 12500.00" />
+                </label>
+                <label>
+                  Decisao
+                  <select>
+                    <option>liberado</option>
+                    <option>bloqueado</option>
+                    <option>pendente_aprovacao</option>
+                  </select>
+                </label>
+                <label>
+                  Limite disponivel
+                  <input value="50000,00" />
+                </label>
+                <label>
+                  Inadimplencia
+                  <input value="0,00" />
+                </label>
+                <label class="wide-field">
+                  Motivo
+                  <input placeholder="Obrigatorio para bloqueio ou aprovacao pendente" />
+                </label>
+                <label class="wide-field">
+                  Observacao
+                  <input value="Cliente liberado conforme limite vigente" />
+                </label>
+              </div>
+              <div class="form-footer">
+                <span>Credito liberado abre o pedido. Bloqueio ou aprovacao pendente trava antes de faturamento.</span>
+                <button class="primary-button" type="submit">Registrar credito</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel" aria-labelledby="credito-recente-title">
+            <div class="panel-header">
+              <h2 id="credito-recente-title">Decisoes recentes</h2>
+              <span class="pill">2 registro(s)</span>
+            </div>
+            <div class="module-list">
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Pedido #1</h3>
+                  <span>liberado</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>draft</span>
+                  <strong>open</strong>
+                </div>
+                <p>sem motivo obrigatorio</p>
+                <div class="tag-row">
+                  <span class="tag">limite: R$ 50.000,00</span>
+                  <span class="tag">inad: R$ 0,00</span>
+                </div>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Pedido #3</h3>
+                  <span>bloqueado</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>draft</span>
+                  <strong>blocked</strong>
+                </div>
+                <p>Limite indisponivel ate confirmacao financeira.</p>
+                <div class="tag-row">
+                  <span class="tag">limite: R$ 0,00</span>
+                  <span class="tag">inad: R$ 18.000,00</span>
+                </div>
+              </article>
+            </div>
           </section>
         </section>
 

@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from .audit import run_audit
+from .apps.admin_server import run_admin_server
 from .db import connect, init_db
 from .migration import import_workbook
 from .services.security import (
@@ -78,6 +79,11 @@ def main(argv: list[str] | None = None) -> int:
     role_permission_choice = role_permission_parser.add_mutually_exclusive_group(required=True)
     role_permission_choice.add_argument("--allow", action="store_true")
     role_permission_choice.add_argument("--deny", action="store_true")
+
+    admin_parser = sub.add_parser("admin", help="Inicia tela administrativa local")
+    admin_parser.add_argument("--db", required=True, type=Path)
+    admin_parser.add_argument("--host", default="127.0.0.1")
+    admin_parser.add_argument("--port", default=8765, type=int)
 
     args = parser.parse_args(argv)
     if args.command == "init":
@@ -167,6 +173,9 @@ def main(argv: list[str] | None = None) -> int:
             )
             conn.commit()
         _print({"status": "ok", "scope": "role", "role": args.role, "action": args.action, "allowed": bool(args.allow)})
+        return 0
+    if args.command == "admin":
+        run_admin_server(args.db, host=args.host, port=args.port)
         return 0
     parser.error("Comando invalido")
     return 2

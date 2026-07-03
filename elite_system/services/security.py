@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import json
 import os
+import secrets
 import sqlite3
 from typing import Any
 
@@ -15,6 +16,7 @@ from elite_system.repositories import security_repository
 
 PASSWORD_ALGORITHM = "pbkdf2_sha256"
 PASSWORD_ITERATIONS = 600_000
+SESSION_TOKEN_BYTES = 32
 
 
 def create_user(
@@ -131,6 +133,75 @@ def authenticate_user(
         occurred_at=occurred_at,
     )
     return AuthResult(ok=True, user=user)
+
+
+def create_session(
+    conn: sqlite3.Connection,
+    *,
+    user_id: int,
+    hours: int = 12,
+    metadata: dict[str, Any] | None = None,
+) -> str:
+    user = security_repository.get_user_by_id(conn, user_id)
+    token = secrets.token_urlsafe(SESSION_TOKEN_BYTES)
+    now = datetime.now(timezone.utc)
+    expires_at = (now + timedelta(hours=hours)).isoformat(timespec="seconds")
+    security_repository.create_session_record(
+        conn,
+        user_id=user.id,
+        token_hash=_token_hash(token),
+        expires_at=expires_at,
+        metadata_json=_json_dump(metadata),
+    )
+    log_action(
+        conn,
+        actor_user_id=user.id,
+        action="auth.session_created",
+        entity_type="user_sessions",
+        entity_id=str(user.id),
+        metadata={"hours": hours},
+        occurred_at=now.isoformat(timespec="seconds"),
+    )
+    return token
+
+
+def user_from_session(conn: sqlite3.Connection, token: str | None) -> User | None:
+    if not token:
+        return None
+    row = security_repository.get_active_session(conn, _token_hash(token), _utc_now())
+    if row is None:
+        return None
+    return User(
+        id=int(row["user_id"]),
+        username=str(row["username"]),
+        display_name=str(row["display_name"]),
+        role=str(row["role"]),
+        status=str(row["status"]),
+        must_change_password=bool(row["must_change_password"]),
+    )
+
+
+def revoke_session(conn: sqlite3.Connection, *, token: str | None, actor_user_id: int | None = None) -> None:
+    if not token:
+        return
+    occurred_at = _utc_now()
+    security_repository.revoke_session(conn, _token_hash(token), occurred_at)
+    log_action(
+        conn,
+        actor_user_id=actor_user_id,
+        action="auth.session_revoked",
+        entity_type="user_sessions",
+        status="success",
+        occurred_at=occurred_at,
+    )
+
+
+def list_users(conn: sqlite3.Connection) -> list[dict[str, object]]:
+    return [dict(row) for row in security_repository.list_users(conn)]
+
+
+def has_users(conn: sqlite3.Connection) -> bool:
+    return security_repository.count_users(conn) > 0
 
 
 def can_perform_action(conn: sqlite3.Connection, *, user_id: int, action_key: str) -> PermissionDecision:
@@ -287,6 +358,10 @@ def verify_password(password: str, stored_hash: str) -> bool:
 def _entry_hash(payload: dict[str, Any]) -> str:
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _json_dump(value: dict[str, Any] | None) -> str:

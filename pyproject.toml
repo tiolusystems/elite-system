@@ -10,6 +10,7 @@ cloud = ["psycopg[binary]>=3.2"]
 
 [project.scripts]
 elite = "elite_system.cli:main"
+elite-admin = "elite_system.apps.admin_server:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

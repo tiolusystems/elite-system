@@ -12,10 +12,13 @@ from elite_system.reconciliation import reconciliation_status, run_value_reconci
 from elite_system.services.security import (
     authenticate_user,
     can_perform_action,
+    create_session,
     create_user,
     log_action,
+    revoke_session,
     set_role_permission,
     set_user_permission,
+    user_from_session,
     verify_password,
 )
 from elite_system.settings import AppSettings
@@ -204,6 +207,43 @@ class CoreTests(unittest.TestCase):
                 logged_actions,
                 ["security.role_permission_updated", "security.user_permission_updated"],
             )
+
+    def test_session_create_lookup_and_revoke(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "elite.sqlite"
+            init_db(db_path)
+            with connect(db_path) as conn:
+                user = create_user(
+                    conn,
+                    username="sessao",
+                    password="StrongPass123!",
+                    display_name="Sessao",
+                    role="admin",
+                )
+                token = create_session(conn, user_id=user.id)
+                loaded = user_from_session(conn, token)
+                revoke_session(conn, token=token, actor_user_id=user.id)
+                revoked = user_from_session(conn, token)
+                conn.commit()
+
+                stored = conn.execute("SELECT token_hash FROM user_sessions").fetchone()[0]
+                logged_actions = [
+                    row[0]
+                    for row in conn.execute(
+                        """
+                        SELECT action
+                        FROM action_logs
+                        WHERE action IN ('auth.session_created', 'auth.session_revoked')
+                        ORDER BY id
+                        """
+                    )
+                ]
+
+            self.assertIsNotNone(loaded)
+            self.assertEqual(loaded.id, user.id)
+            self.assertIsNone(revoked)
+            self.assertNotEqual(stored, token)
+            self.assertEqual(logged_actions, ["auth.session_created", "auth.session_revoked"])
 
     def test_stock_detail_reconciliation_by_batch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

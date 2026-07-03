@@ -51,6 +51,22 @@ def get_user_with_password(conn: sqlite3.Connection, username: str) -> sqlite3.R
     ).fetchone()
 
 
+def list_users(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return list(
+        conn.execute(
+            """
+            SELECT id, username, display_name, role, status, must_change_password, last_login_at
+            FROM users
+            ORDER BY display_name, username
+            """
+        )
+    )
+
+
+def count_users(conn: sqlite3.Connection) -> int:
+    return int(conn.execute("SELECT COUNT(*) FROM users").fetchone()[0])
+
+
 def touch_last_login(conn: sqlite3.Connection, user_id: int, occurred_at: str) -> None:
     conn.execute(
         """
@@ -59,6 +75,50 @@ def touch_last_login(conn: sqlite3.Connection, user_id: int, occurred_at: str) -
         WHERE id = ?
         """,
         (occurred_at, occurred_at, user_id),
+    )
+
+
+def create_session_record(
+    conn: sqlite3.Connection,
+    *,
+    user_id: int,
+    token_hash: str,
+    expires_at: str,
+    metadata_json: str,
+) -> int:
+    cur = conn.execute(
+        """
+        INSERT INTO user_sessions(user_id, token_hash, expires_at, metadata_json)
+        VALUES (?, ?, ?, ?)
+        """,
+        (user_id, token_hash, expires_at, metadata_json),
+    )
+    return int(cur.lastrowid)
+
+
+def get_active_session(conn: sqlite3.Connection, token_hash: str, now: str) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT us.id AS session_id, us.user_id, us.expires_at,
+               u.username, u.display_name, u.role, u.status, u.must_change_password
+        FROM user_sessions us
+        JOIN users u ON u.id = us.user_id
+        WHERE us.token_hash = ?
+          AND us.revoked_at IS NULL
+          AND us.expires_at > ?
+        """,
+        (token_hash, now),
+    ).fetchone()
+
+
+def revoke_session(conn: sqlite3.Connection, token_hash: str, revoked_at: str) -> None:
+    conn.execute(
+        """
+        UPDATE user_sessions
+        SET revoked_at = ?
+        WHERE token_hash = ? AND revoked_at IS NULL
+        """,
+        (revoked_at, token_hash),
     )
 
 

@@ -122,6 +122,12 @@ Listar checks/permissoes:
 python -m elite_system.cli permissions --db .\data\elite.sqlite --user-id 1
 ```
 
+Abrir a tela administrativa local:
+
+```powershell
+python -m elite_system.cli admin --db .\data\elite.sqlite --port 8765
+```
+
 Retirar uma permissao de um perfil:
 
 ```powershell

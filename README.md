@@ -57,6 +57,12 @@ Listar permissoes/checks:
 python -m elite_system.cli permissions --db .\data\elite.sqlite --user-id 1
 ```
 
+Abrir tela administrativa local:
+
+```powershell
+python -m elite_system.cli admin --db .\data\elite.sqlite --port 8765
+```
+
 ## Observacao
 
 SQLite e usado agora para desenvolvimento local e auditoria. O desenho evita SQL proprietario e prepara a migracao posterior para PostgreSQL/cloud.

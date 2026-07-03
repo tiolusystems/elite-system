@@ -36,6 +36,15 @@ Cada reconciliacao retorna:
 - `status`: `ok`, `attention` ou `issue`.
 - `details`: identificadores tecnicos suficientes para rastrear a origem sem expor dados reais em documentacao versionada.
 
+## Detalhamento por item
+
+Alem das metricas agregadas, o sistema grava detalhes em `reconciliation_details` para localizar diferencas:
+
+- `estoque_mp_saldo_por_materia_prima`: compara saldo de materia-prima por item contra entradas menos saidas.
+- `estoque_pa_saldo_por_produto`: compara saldo de produto acabado por produto contra producao menos saidas.
+
+Esses detalhes sao sempre vinculados ao `batch_id` da importacao. Isso evita que uma auditoria some registros normalizados de outro historico importado no mesmo banco local.
+
 ## Regra de seguranca
 
 Relatorios com valores reais, linhas de planilha, lotes, clientes, produtos, notas fiscais ou qualquer outro historico comercial devem ficar em `outputs/` ou em outra pasta local ignorada pelo Git.
@@ -44,7 +53,5 @@ Este documento versionado descreve a logica de auditoria; ele nao deve registrar
 
 ## Proximas auditorias
 
-- Detalhar reconciliacao por materia-prima.
-- Detalhar reconciliacao por produto acabado.
 - Separar diferencas por categoria: linha incompleta, regra ainda nao migrada, ajuste manual, saldo inicial e divergencia real.
 - Gerar relatorio local completo em `outputs/`, mantendo somente a especificacao tecnica no Git.

@@ -3,10 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
-from .db import connect
+from .db import connect, init_db
 
 
 def run_audit(db_path: str | Path, batch_id: int | None = None) -> dict[str, object]:
+    init_db(db_path)
     with connect(db_path) as conn:
         if batch_id is None:
             row = conn.execute("SELECT id FROM migration_batches ORDER BY id DESC LIMIT 1").fetchone()
@@ -109,16 +110,47 @@ def run_audit(db_path: str | Path, batch_id: int | None = None) -> dict[str, obj
                 (batch_id,),
             )
         ]
+        detail_reconciliation_summary = [
+            dict(row)
+            for row in conn.execute(
+                """
+                SELECT metric_name, status, COUNT(*) AS count,
+                       SUM(ABS(COALESCE(difference, 0))) AS total_abs_difference
+                FROM reconciliation_details
+                WHERE batch_id = ?
+                GROUP BY metric_name, status
+                ORDER BY metric_name, status
+                """,
+                (batch_id,),
+            )
+        ]
+        detail_reconciliation_examples = [
+            {**dict(row), "details": _loads(row["details_json"])}
+            for row in conn.execute(
+                """
+                SELECT metric_name, key_type, key_label, source_value, system_value,
+                       difference, tolerance, status, details_json
+                FROM reconciliation_details
+                WHERE batch_id = ? AND status <> 'ok'
+                ORDER BY ABS(COALESCE(difference, 0)) DESC, metric_name, key_label
+                LIMIT 20
+                """,
+                (batch_id,),
+            )
+        ]
         raw_total = sum(row["imported_raw_rows"] for row in source_tables)
         failed_snapshots = [row for row in snapshots if row["status"] != "ok"]
         value_attention = [row for row in value_reconciliations if row["status"] != "ok"]
+        detail_attention = [row for row in detail_reconciliation_summary if row["status"] != "ok"]
         return {
-            "status": "ok" if not failed_snapshots and not value_attention else "attention",
+            "status": "ok" if not failed_snapshots and not value_attention and not detail_attention else "attention",
             "batch": dict(batch),
             "source_table_count": len(source_tables),
             "source_raw_row_count": raw_total,
             "normalized_counts": normalized_counts,
             "value_reconciliations": value_reconciliations,
+            "detail_reconciliation_summary": detail_reconciliation_summary,
+            "detail_reconciliation_examples": detail_reconciliation_examples,
             "issues": issues,
             "issue_examples": issue_examples,
             "failed_audits": failed_snapshots,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -7,7 +8,7 @@ import unittest
 
 from elite_system.db import init_db
 from elite_system.mappings import excel_date, normalize_table_row, number, text
-from elite_system.reconciliation import reconciliation_status
+from elite_system.reconciliation import reconciliation_status, run_value_reconciliations
 
 
 class CoreTests(unittest.TestCase):
@@ -27,6 +28,7 @@ class CoreTests(unittest.TestCase):
             self.assertIn("source_rows", tables)
             self.assertIn("migration_issues", tables)
             self.assertIn("value_reconciliations", tables)
+            self.assertIn("reconciliation_details", tables)
             self.assertIn("pedidos_linhas", tables)
 
     def test_value_normalizers(self) -> None:
@@ -60,6 +62,106 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(reconciliation_status(100.0, 100.004, 0.01), ("ok", 0.0040000000000048885))
         self.assertEqual(reconciliation_status(100.0, 101.0, 0.01)[0], "attention")
         self.assertEqual(reconciliation_status(None, 100.0, 0.01), ("missing", None))
+
+    def test_stock_detail_reconciliation_by_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "elite.sqlite"
+            init_db(db_path)
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            try:
+                batch_id = _seed_stock_detail_fixture(conn)
+
+                run_value_reconciliations(conn, batch_id)
+
+                rows = [
+                    dict(row)
+                    for row in conn.execute(
+                        """
+                        SELECT metric_name, key_label, source_value, system_value, difference, status
+                        FROM reconciliation_details
+                        WHERE batch_id = ?
+                        ORDER BY metric_name, key_label
+                        """,
+                        (batch_id,),
+                    )
+                ]
+            finally:
+                conn.close()
+
+            mp_row = next(row for row in rows if row["metric_name"] == "estoque_mp_saldo_por_materia_prima")
+            self.assertEqual(mp_row["key_label"], "MP A")
+            self.assertEqual(mp_row["source_value"], 7.0)
+            self.assertEqual(mp_row["system_value"], 7.0)
+            self.assertEqual(mp_row["status"], "ok")
+
+            pa_row = next(row for row in rows if row["metric_name"] == "estoque_pa_saldo_por_produto")
+            self.assertEqual(pa_row["key_label"], "Produto A")
+            self.assertEqual(pa_row["source_value"], 3.0)
+            self.assertEqual(pa_row["system_value"], 5.0)
+            self.assertEqual(pa_row["difference"], 2.0)
+            self.assertEqual(pa_row["status"], "attention")
+
+
+def _seed_stock_detail_fixture(conn: sqlite3.Connection) -> int:
+    conn.execute(
+        """
+        INSERT INTO source_workbooks(source_path, file_name, sha256, size_bytes)
+        VALUES ('local.xlsx', 'local.xlsx', 'abc', 1)
+        """
+    )
+    workbook_id = conn.execute("SELECT id FROM source_workbooks").fetchone()[0]
+    batch_id = conn.execute("INSERT INTO migration_batches(workbook_id) VALUES (?)", (workbook_id,)).lastrowid
+
+    estoque_mp_row_id = _source_row(conn, workbook_id, "CONT_ESTOQUEMP", 2, {"MATÉRIA PRIMA": "MP A", "SALDO ATUAL": 7})
+    estoque_pa_row_id = _source_row(conn, workbook_id, "CONT_ESTOQUE_PA", 3, {"PRODUTO": "Produto A", "SALDO LITROS": 3})
+    entrada_row_id = _source_row(conn, workbook_id, "ENTRADAS_MP", 4, {"MATÉRIA PRIMA": "MP A", "QUANTIDADE": 10, "VALOR": 100})
+    saida_mp_row_id = _source_row(conn, workbook_id, "SAÍDAS_MP", 5, {"MATÉRIA PRIMA": "MP A", "QUANTIDADE": 3})
+    producao_row_id = _source_row(conn, workbook_id, "PRODUCAO_LOTES", 6, {"PRODUTO": "Produto A", "QUANTIDADE PRODUZIDA": 8, "CUSTO MP": 20})
+    saida_pa_row_id = _source_row(conn, workbook_id, "SAIDAS_PA", 7, {"PRODUTO": "Produto A", "QUANTIDADE BAIXADA": 3})
+
+    conn.execute(
+        "INSERT INTO entradas_mp(source_row_id, materia_prima, quantidade, valor, payload_json) VALUES (?, 'MP A', 10, 100, '{}')",
+        (entrada_row_id,),
+    )
+    conn.execute(
+        "INSERT INTO saidas_mp(source_row_id, materia_prima, quantidade, payload_json) VALUES (?, 'MP A', 3, '{}')",
+        (saida_mp_row_id,),
+    )
+    conn.execute(
+        "INSERT INTO lotes_producao(source_row_id, produto, quantidade_produzida, custo_mp, payload_json) VALUES (?, 'Produto A', 8, 20, '{}')",
+        (producao_row_id,),
+    )
+    conn.execute(
+        "INSERT INTO saidas_pa(source_row_id, produto, quantidade_baixada, payload_json) VALUES (?, 'Produto A', 3, '{}')",
+        (saida_pa_row_id,),
+    )
+    conn.commit()
+    assert estoque_mp_row_id
+    assert estoque_pa_row_id
+    return int(batch_id)
+
+
+def _source_row(conn: sqlite3.Connection, workbook_id: int, table_name: str, excel_row: int, payload: dict[str, object]) -> int:
+    table_id = conn.execute(
+        """
+        INSERT INTO source_tables(
+            workbook_id, sheet_name, table_name, ref, header_row,
+            data_first_row, data_last_row, column_count, row_count
+        )
+        VALUES (?, 'Sheet1', ?, ?, 1, 2, 2, 2, 1)
+        """,
+        (workbook_id, table_name, f"A{excel_row}:B{excel_row}"),
+    ).lastrowid
+    return int(
+        conn.execute(
+            """
+            INSERT INTO source_rows(table_id, excel_row_number, row_index, row_hash, payload_json)
+            VALUES (?, ?, 1, ?, ?)
+            """,
+            (table_id, excel_row, f"hash-{excel_row}", json.dumps(payload, ensure_ascii=False)),
+        ).lastrowid
+    )
 
 
 if __name__ == "__main__":

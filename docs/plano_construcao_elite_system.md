@@ -34,7 +34,8 @@ Status atual:
 - Importador Excel implementado.
 - Auditoria de contagem implementada.
 - Auditoria de valores implementada.
-- Pendencia conhecida: detalhar saldos de estoque por item.
+- Auditoria de saldo por materia-prima e produto implementada em tabela de detalhes.
+- Pendencia conhecida: classificar automaticamente a causa de cada diferenca.
 
 ## Bloco 2 - Cadastros mestres
 
@@ -177,10 +178,8 @@ Entregas:
 
 ## Sequencia imediata
 
-1. Inicializar Git local.
-2. Criar commit base do Elite System.
-3. Configurar GitHub privado.
-4. Detalhar reconciliacao de estoque por item.
-5. Criar modelos de dominio para cadastros.
-6. Criar repositories para cadastros.
-7. Criar primeira app/tela administrativa.
+1. Configurar GitHub privado somente com codigo.
+2. Classificar causas das diferencas de reconciliacao.
+3. Criar modelos de dominio para cadastros.
+4. Criar repositories para cadastros.
+5. Criar primeira app/tela administrativa.

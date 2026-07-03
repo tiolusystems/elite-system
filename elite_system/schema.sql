@@ -103,6 +103,23 @@ CREATE TABLE IF NOT EXISTS value_reconciliations (
     UNIQUE(batch_id, metric_name)
 );
 
+CREATE TABLE IF NOT EXISTS reconciliation_details (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id INTEGER NOT NULL REFERENCES migration_batches(id),
+    metric_name TEXT NOT NULL,
+    key_type TEXT NOT NULL,
+    key_norm TEXT NOT NULL,
+    key_label TEXT NOT NULL,
+    source_value REAL NOT NULL DEFAULT 0,
+    system_value REAL NOT NULL DEFAULT 0,
+    difference REAL,
+    tolerance REAL NOT NULL,
+    status TEXT NOT NULL,
+    details_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(batch_id, metric_name, key_type, key_norm)
+);
+
 CREATE TABLE IF NOT EXISTS materias_primas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_row_id INTEGER NOT NULL UNIQUE REFERENCES source_rows(id),
@@ -270,6 +287,7 @@ CREATE TABLE IF NOT EXISTS saidas_pa (
 CREATE INDEX IF NOT EXISTS idx_source_rows_table ON source_rows(table_id);
 CREATE INDEX IF NOT EXISTS idx_source_tables_name ON source_tables(table_name);
 CREATE INDEX IF NOT EXISTS idx_imported_records_entity ON imported_records(entity_name);
+CREATE INDEX IF NOT EXISTS idx_reconciliation_details_batch ON reconciliation_details(batch_id, metric_name, status);
 CREATE INDEX IF NOT EXISTS idx_pedidos_linhas_id_pedido ON pedidos_linhas(id_pedido);
 CREATE INDEX IF NOT EXISTS idx_entradas_mp_materia ON entradas_mp(materia_prima);
 CREATE INDEX IF NOT EXISTS idx_lotes_producao_lote ON lotes_producao(lote);

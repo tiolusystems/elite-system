@@ -65,7 +65,7 @@ Responsabilidade:
 
 - alimentar o futuro software operacional;
 - criar chaves, filtros, regras, telas e relatorios;
-- permitir migracao para PostgreSQL/cloud.
+- permitir migracao para PostgreSQL/Supabase.
 
 ### 4. Camada de auditoria
 

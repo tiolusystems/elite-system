@@ -39,6 +39,9 @@ Status atual:
 - Permissoes implementadas com autonomia total inicial e overrides por perfil/usuario.
 - Tela administrativa local de usuarios/alcadas implementada com login, checks e aviso visual/analitico de banco local ou descartavel.
 - Etapa 2 validada em banco descartavel, com evidencia em `docs/validacao_etapa_2_checks_db_descartavel.md`.
+- Stack web/cloud definida: PostgreSQL, Supabase, Next.js e Vercel.
+- Base inicial Next.js criada em `apps/web`.
+- Migration inicial Supabase criada em `supabase/migrations`.
 - Pendencia conhecida: classificar automaticamente a causa de cada diferenca.
 
 ## Bloco 2 - Cadastros mestres
@@ -157,11 +160,14 @@ Entregas:
 
 ## Bloco 8 - Banco em nuvem
 
-Objetivo: sair de SQLite local para PostgreSQL cloud sem perder auditoria.
+Objetivo: sair de SQLite local para PostgreSQL/Supabase sem perder auditoria.
 
 Entregas:
 
-- Schema PostgreSQL.
+- Projeto Supabase de teste.
+- Schema PostgreSQL em migrations versionadas.
+- Supabase Auth ligado aos perfis do sistema.
+- Row Level Security revisado por tabela.
 - Migração de dados.
 - Backup automatizado.
 - Credenciais por ambiente.
@@ -175,7 +181,9 @@ Objetivo: entregar o sistema para uso diario.
 
 Entregas:
 
-- App web/local.
+- App web Next.js.
+- Deploy Vercel.
+- Integracao Supabase.
 - Login e perfis.
 - Telas completas.
 - Empacotamento inicial via Edge app mode.
@@ -185,7 +193,10 @@ Entregas:
 ## Sequencia imediata
 
 1. Configurar GitHub privado somente com codigo.
-2. Classificar causas das diferencas de reconciliacao.
-3. Criar modelos de dominio para cadastros.
-4. Criar repositories para cadastros com `actor_user_id`.
-5. Criar primeira tela de cadastros mestres.
+2. Criar projeto Supabase de teste e aplicar migration inicial.
+3. Instalar dependencias do `apps/web` e validar Next.js local.
+4. Ligar login Supabase no Next.js.
+5. Classificar causas das diferencas de reconciliacao.
+6. Criar modelos de dominio para cadastros.
+7. Criar repositories para cadastros com `actor_user_id`.
+8. Criar primeira tela de cadastros mestres.

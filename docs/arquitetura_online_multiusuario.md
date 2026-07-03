@@ -6,25 +6,37 @@ Data da decisao: 2026-07-03
 
 O Elite System deve ser construido para operar com banco online, multiplos usuarios, login por senha e registro de cada acao relevante.
 
-SQLite continua permitido apenas como banco local de desenvolvimento, migracao e testes descartaveis. A arquitetura de producao mira PostgreSQL gerenciado em nuvem.
+SQLite continua permitido apenas como banco local de desenvolvimento, migracao e testes descartaveis. A arquitetura de producao passa a mirar PostgreSQL no Supabase, com frontend em Next.js e deploy na Vercel.
 
 ## Banco online
 
 Direcao de producao:
 
-- PostgreSQL gerenciado.
+- PostgreSQL gerenciado no Supabase.
+- Autenticacao inicial pelo Supabase Auth.
+- Frontend operacional em Next.js.
+- Deploy do frontend na Vercel.
 - Backups automaticos.
 - Restore testado.
 - Credenciais por ambiente.
-- Acesso via services e repositories, nunca direto pelas telas.
+- Acesso via camada controlada do app, policies, services e auditoria.
 - Sem dados reais no Git.
 
-O pacote ja reserva dependencia opcional `elite-system[cloud]` para driver PostgreSQL. A troca completa para cloud sera feita no bloco de banco em nuvem, com migracoes versionadas e validacao em banco de testes.
+O pacote Python ja reserva dependencia opcional `elite-system[cloud]` para driver PostgreSQL. A troca completa para cloud sera feita no bloco de banco em nuvem, com migrations Supabase versionadas e validacao em banco de testes.
 
 A configuracao do banco deve vir de `ELITE_DATABASE_URL`:
 
 - local: `sqlite:///data/elite.sqlite`;
 - producao: `postgresql://...`.
+
+A configuracao do app Next.js deve vir de variaveis de ambiente:
+
+- `NEXT_PUBLIC_SUPABASE_URL`;
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`;
+- `ELITE_DATABASE_MODE`: `local`, `test`, `staging` ou `production`;
+- `ELITE_DATABASE_LABEL`: rotulo visual do ambiente.
+
+Segredos administrativos, service role keys, dumps e backups nao podem ser versionados.
 
 ## Aviso de ambiente de banco
 

@@ -17,11 +17,29 @@ O sistema deve nascer com separacao clara de responsabilidades para permitir aud
 7. Cada modulo deve ter teste e auditoria antes de virar tela principal.
 8. Toda acao operacional deve ter usuario, permissao e log de auditoria.
 
+## Stack de produto
+
+A stack operacional aprovada e:
+
+- Next.js com App Router e TypeScript para o frontend.
+- Supabase como backend inicial.
+- PostgreSQL como banco principal em nuvem.
+- Vercel para deploy do frontend.
+- Python mantido como nucleo de migracao, reconciliacao, auditoria e ferramentas internas.
+
+FastAPI com Uvicorn e ORM fica reservado para uma etapa posterior, se o Supabase deixar de ser suficiente para regras complexas, integracoes externas ou processamento assicrono. App desktop em C# com Avalonia fica fora da primeira entrega e sera reavaliado somente se houver necessidade real de desktop nativo.
+
+Detalhamento: `docs/decisao_stack_web_cloud.md`.
+
 ## Hierarquia de codigo
 
 ```text
+apps/
+  web/               # Next.js operacional com Supabase
+supabase/
+  migrations/        # schema PostgreSQL e politicas Supabase
 elite_system/
-  apps/              # Streamlit/FastAPI/CLI e entradas de usuario
+  apps/              # CLI, admin local e futuras entradas internas Python
   domain/            # modelos, regras e objetos de negocio
   services/          # casos de uso e orquestracao
   repositories/      # acesso a banco e persistencia
@@ -143,7 +161,7 @@ Fase atual:
 
 Fase cloud:
 
-- PostgreSQL gerenciado.
+- PostgreSQL gerenciado via Supabase.
 - Backups automatizados.
 - Migrações versionadas.
 - Controle de acesso por perfil.

@@ -4,6 +4,10 @@ Base inicial do Elite System, o novo software comercial, industrial e auditavel 
 
 ## Decisao principal
 
+A stack operacional definida e PostgreSQL, Supabase, Next.js e Vercel.
+
+O nucleo Python permanece responsavel por migracao, auditoria e reconciliacao do historico. O app operacional novo fica em `apps/web` e usa Supabase/PostgreSQL como backend inicial.
+
 O sistema tem duas camadas de dados:
 
 1. **Camada bruta auditavel**: guarda a workbook original por hash, as tabelas extraidas, cada linha original em JSON e as formulas encontradas.
@@ -65,9 +69,19 @@ python -m elite_system.cli admin --db .\data\elite.sqlite --port 8765
 
 Quando essa tela operar com banco local, temporario ou descartavel, ela exibe aviso visual e resumo analitico do ambiente. Essa regra evita confundir teste com banco operacional.
 
+Preparar app web Next.js:
+
+```powershell
+cd .\apps\web
+npm install
+npm run dev
+```
+
+Antes disso, copie `.env.example` para `.env.local` e configure as variaveis do Supabase.
+
 ## Observacao
 
-SQLite e usado agora para desenvolvimento local e auditoria. O desenho evita SQL proprietario e prepara a migracao posterior para PostgreSQL/cloud.
+SQLite e usado agora para desenvolvimento local e auditoria. O desenho prepara a migracao para PostgreSQL/Supabase.
 
 O sistema ja possui base de usuarios, hash de senha, `action_logs` append-only e permissoes por checks. A regra inicial e autonomia total para usuarios ativos; depois as alçadas podem ser reduzidas por perfil ou usuario.
 

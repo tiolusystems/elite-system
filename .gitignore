@@ -19,8 +19,19 @@ outputs/
 # Segredos locais
 .env
 .env.*
+!.env.example
+!apps/**/.env.example
 
 # Python
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+dist/
+coverage/
+*.tsbuildinfo

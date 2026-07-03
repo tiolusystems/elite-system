@@ -1,4 +1,4 @@
-import { createClienteAction } from "@/app/cadastros/actions";
+import { createClienteAction, createPessoaComercialAction } from "@/app/cadastros/actions";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -200,23 +200,97 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           </form>
         </section>
 
+        <section className="panel form-panel" aria-labelledby="nova-pessoa-title">
+          <div className="panel-header">
+            <h2 id="nova-pessoa-title">Nova pessoa comercial</h2>
+            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
+          </div>
+          <form action={createPessoaComercialAction} id="nova-pessoa">
+            <div className="form-grid">
+              <label>
+                Nome
+                <input name="nome" placeholder="Nome da pessoa" required />
+              </label>
+              <label>
+                Codigo legado
+                <input name="codigo_legado" placeholder="Codigo, se houver" />
+              </label>
+              <label>
+                Tipo comercial
+                <select name="tipo_comercial" defaultValue="vendedor_direto_elite">
+                  <option value="funcionario_elite">funcionario_elite</option>
+                  <option value="agente_vinculado">agente_vinculado</option>
+                  <option value="agente_direto_elite">agente_direto_elite</option>
+                  <option value="vendedor_direto_elite">vendedor_direto_elite</option>
+                  <option value="tecnico_campo">tecnico_campo</option>
+                  <option value="entregador">entregador</option>
+                  <option value="gerente">gerente</option>
+                  <option value="vendedor_gerente">vendedor_gerente</option>
+                </select>
+              </label>
+              <label>
+                Status
+                <select name="status" defaultValue="active">
+                  <option value="active">active</option>
+                  <option value="pending_review">pending_review</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </label>
+              <label>
+                Vendedor responsavel
+                <input name="vendedor_responsavel_id" placeholder="Obrigatorio para agente vinculado" type="number" />
+              </label>
+              <label className="wide-field">
+                Apelidos
+                <input name="apelidos" placeholder="Separar por virgula, ponto e virgula ou linha" />
+              </label>
+              <label className="wide-field">
+                Grafias incorretas
+                <input name="grafias_incorretas" placeholder="Grafias usadas historicamente" />
+              </label>
+            </div>
+            <fieldset className="check-grid">
+              <legend>Papeis</legend>
+              <label>
+                <input name="papeis" type="checkbox" value="vendedor" defaultChecked />
+                Vendedor
+              </label>
+              <label>
+                <input name="papeis" type="checkbox" value="agente" />
+                Agente
+              </label>
+              <label>
+                <input name="papeis" type="checkbox" value="gerente" />
+                Gerente
+              </label>
+              <label>
+                <input name="papeis" type="checkbox" value="tecnico_campo" />
+                Tecnico campo
+              </label>
+              <label>
+                <input name="papeis" type="checkbox" value="entregador" />
+                Entregador
+              </label>
+              <label>
+                <input name="papeis" type="checkbox" value="comissionado" defaultChecked />
+                Comissionado
+              </label>
+            </fieldset>
+            <div className="form-footer">
+              <span>Entregador nao vira vendedor automaticamente; papeis ficam separados para auditoria.</span>
+              <button className="primary-button" type="submit">
+                Salvar pessoa
+              </button>
+            </div>
+          </form>
+        </section>
+
         <section className="panel form-panel" aria-labelledby="proximos-formularios-title">
           <div className="panel-header">
             <h2 id="proximos-formularios-title">Proximos formularios</h2>
-            <span className="pill">em sequencia</span>
+            <span className="pill">MP / produto / embalagem</span>
           </div>
           <div className="module-list">
-            <article className="module-card">
-              <div className="module-card-main">
-                <h3>Pessoa comercial</h3>
-                <span>Vendedor, agente, gerente, tecnico e entregador</span>
-              </div>
-              <div className="module-card-meta">
-                <span>Service pronto</span>
-                <strong>cadastros.manage</strong>
-              </div>
-              <p>O formulario sera ativado depois do cliente para evitar misturar alcadas e comissionamento antes da validacao.</p>
-            </article>
             <article className="module-card">
               <div className="module-card-main">
                 <h3>MP, produto e embalagem</h3>
@@ -274,6 +348,11 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Cliente salvo",
       detail: "Cadastro criado via funcao auditavel. A fila e as contagens serao atualizadas pelo Supabase."
     },
+    pessoa_created: {
+      kind: "ok",
+      title: "Pessoa comercial salva",
+      detail: "Cadastro criado via funcao auditavel com papeis separados para venda, entrega, gerencia e comissao."
+    },
     duplicated: {
       kind: "warning",
       title: "Cadastro duplicado",
@@ -293,6 +372,26 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Campos obrigatorios",
       detail: "Nome, cidade e UF sao obrigatorios para cliente."
+    },
+    missing_person_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Nome e ao menos um papel sao obrigatorios para pessoa comercial."
+    },
+    invalid_commercial_type: {
+      kind: "warning",
+      title: "Tipo comercial invalido",
+      detail: "Use um dos tipos comerciais aprovados no dicionario de cadastros."
+    },
+    missing_responsible_seller: {
+      kind: "warning",
+      title: "Vendedor responsavel obrigatorio",
+      detail: "Agente vinculado precisa apontar para um vendedor responsavel Elite."
+    },
+    invalid_responsible_seller: {
+      kind: "warning",
+      title: "Vendedor responsavel invalido",
+      detail: "Informe o ID numerico do vendedor responsavel."
     },
     not_configured: {
       kind: "warning",

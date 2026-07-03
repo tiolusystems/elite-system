@@ -508,3 +508,124 @@ $$;
 
 revoke all on function public.create_cad_cliente(text, text, text, text, text, text, jsonb, jsonb) from public;
 grant execute on function public.create_cad_cliente(text, text, text, text, text, text, jsonb, jsonb) to authenticated;
+
+create or replace function public.create_cad_pessoa_comercial(
+  p_nome text,
+  p_nome_norm text,
+  p_papeis_json jsonb,
+  p_status text default 'active',
+  p_tipo_comercial text default null,
+  p_codigo_legado text default null,
+  p_vendedor_responsavel_id bigint default null,
+  p_apelidos_json jsonb default '[]'::jsonb,
+  p_grafias_incorretas_json jsonb default '[]'::jsonb,
+  p_payload_origem_json jsonb default '{}'::jsonb
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid;
+  v_pessoa_id bigint;
+  v_alias text;
+begin
+  if nullif(trim(p_nome), '') is null then
+    raise exception 'nome is required';
+  end if;
+  if p_papeis_json is null or jsonb_array_length(p_papeis_json) = 0 then
+    raise exception 'papeis_json must have at least one item';
+  end if;
+  if p_status not in ('active', 'inactive', 'pending_review') then
+    raise exception 'invalid status';
+  end if;
+  if p_tipo_comercial is not null and p_tipo_comercial not in (
+    'funcionario_elite',
+    'agente_vinculado',
+    'agente_direto_elite',
+    'vendedor_direto_elite',
+    'tecnico_campo',
+    'entregador',
+    'gerente',
+    'vendedor_gerente'
+  ) then
+    raise exception 'invalid tipo_comercial';
+  end if;
+  if p_tipo_comercial = 'agente_vinculado' and p_vendedor_responsavel_id is null then
+    raise exception 'vendedor_responsavel_id is required';
+  end if;
+
+  v_actor := auth.uid();
+  if v_actor is not null and not exists (
+    select 1 from public.user_profiles where id = v_actor
+  ) then
+    v_actor := null;
+  end if;
+
+  insert into public.cad_pessoas_comerciais(
+    codigo_legado,
+    nome,
+    nome_norm,
+    tipo_comercial,
+    papeis_json,
+    status,
+    vendedor_responsavel_id,
+    apelidos_json,
+    grafias_incorretas_json,
+    payload_origem_json,
+    created_by,
+    updated_by
+  )
+  values (
+    nullif(trim(p_codigo_legado), ''),
+    trim(p_nome),
+    trim(p_nome_norm),
+    p_tipo_comercial,
+    p_papeis_json,
+    p_status,
+    p_vendedor_responsavel_id,
+    coalesce(p_apelidos_json, '[]'::jsonb),
+    coalesce(p_grafias_incorretas_json, '[]'::jsonb),
+    coalesce(p_payload_origem_json, '{}'::jsonb),
+    v_actor,
+    v_actor
+  )
+  returning id into v_pessoa_id;
+
+  insert into public.cad_pessoa_aliases(pessoa_id, alias, alias_norm, tipo)
+  values (v_pessoa_id, trim(p_nome), trim(p_nome_norm), 'nome');
+
+  for v_alias in select jsonb_array_elements_text(coalesce(p_apelidos_json, '[]'::jsonb))
+  loop
+    insert into public.cad_pessoa_aliases(pessoa_id, alias, alias_norm, tipo)
+    values (v_pessoa_id, trim(v_alias), upper(trim(v_alias)), 'apelido');
+  end loop;
+
+  for v_alias in select jsonb_array_elements_text(coalesce(p_grafias_incorretas_json, '[]'::jsonb))
+  loop
+    insert into public.cad_pessoa_aliases(pessoa_id, alias, alias_norm, tipo)
+    values (v_pessoa_id, trim(v_alias), upper(trim(v_alias)), 'grafia_incorreta');
+  end loop;
+
+  perform public.log_action(
+    'cadastros.pessoa_comercial_created',
+    'cad_pessoas_comerciais',
+    v_pessoa_id::text,
+    'success',
+    null,
+    jsonb_build_object(
+      'nome', trim(p_nome),
+      'tipo_comercial', p_tipo_comercial,
+      'status', p_status,
+      'papeis', p_papeis_json
+    ),
+    jsonb_build_object('source', 'create_cad_pessoa_comercial')
+  );
+
+  return v_pessoa_id;
+end;
+$$;
+
+revoke all on function public.create_cad_pessoa_comercial(text, text, jsonb, text, text, text, bigint, jsonb, jsonb, jsonb) from public;
+grant execute on function public.create_cad_pessoa_comercial(text, text, jsonb, text, text, text, bigint, jsonb, jsonb, jsonb) to authenticated;

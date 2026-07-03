@@ -421,6 +421,41 @@ h1 {
   grid-column: span 2;
 }
 
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0 16px 16px;
+  border: 0;
+}
+
+.check-grid legend {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.check-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.check-grid input {
+  width: 16px;
+  height: 16px;
+}
+
 .form-grid input,
 .form-grid select {
   width: 100%;
@@ -469,6 +504,7 @@ h1 {
   .status-row,
   .two-column,
   .form-grid,
+  .check-grid,
   .module-card {
     grid-template-columns: 1fr;
   }

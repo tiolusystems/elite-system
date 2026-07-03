@@ -218,23 +218,75 @@
           </form>
         </section>
 
+        <section class="panel form-panel" aria-labelledby="nova-pessoa-title">
+          <div class="panel-header">
+            <h2 id="nova-pessoa-title">Nova pessoa comercial</h2>
+            <span class="pill">gravacao preparada</span>
+          </div>
+          <form onsubmit="return false">
+            <div class="form-grid">
+              <label>
+                Nome
+                <input value="Vendedor exemplo" />
+              </label>
+              <label>
+                Codigo legado
+                <input value="VEN-0001" />
+              </label>
+              <label>
+                Tipo comercial
+                <select>
+                  <option>vendedor_direto_elite</option>
+                  <option>vendedor_gerente</option>
+                  <option>agente_vinculado</option>
+                  <option>gerente</option>
+                  <option>tecnico_campo</option>
+                  <option>entregador</option>
+                </select>
+              </label>
+              <label>
+                Status
+                <select>
+                  <option>active</option>
+                  <option>pending_review</option>
+                  <option>inactive</option>
+                </select>
+              </label>
+              <label>
+                Vendedor responsavel
+                <input placeholder="Obrigatorio para agente vinculado" />
+              </label>
+              <label class="wide-field">
+                Apelidos
+                <input value="Vendedor exemplo; VEN exemplo" />
+              </label>
+              <label class="wide-field">
+                Grafias incorretas
+                <input value="Vend. exemplo" />
+              </label>
+            </div>
+            <fieldset class="check-grid">
+              <legend>Papeis</legend>
+              <label><input type="checkbox" checked /> Vendedor</label>
+              <label><input type="checkbox" /> Agente</label>
+              <label><input type="checkbox" /> Gerente</label>
+              <label><input type="checkbox" /> Tecnico campo</label>
+              <label><input type="checkbox" /> Entregador</label>
+              <label><input type="checkbox" checked /> Comissionado</label>
+            </fieldset>
+            <div class="form-footer">
+              <span>Entregador nao vira vendedor automaticamente; papeis ficam separados para auditoria.</span>
+              <button class="primary-button" type="submit">Salvar pessoa</button>
+            </div>
+          </form>
+        </section>
+
         <section class="panel form-panel" aria-labelledby="proximos-formularios-title">
           <div class="panel-header">
             <h2 id="proximos-formularios-title">Proximos formularios</h2>
-            <span class="pill">em sequencia</span>
+            <span class="pill">MP / produto / embalagem</span>
           </div>
           <div class="module-list">
-            <article class="module-card">
-              <div class="module-card-main">
-                <h3>Pessoa comercial</h3>
-                <span>Vendedor, agente, gerente, tecnico e entregador</span>
-              </div>
-              <div class="module-card-meta">
-                <span>Service pronto</span>
-                <strong>cadastros.manage</strong>
-              </div>
-              <p>O formulario sera ativado depois do cliente para evitar misturar alcadas e comissionamento antes da validacao.</p>
-            </article>
             <article class="module-card">
               <div class="module-card-main">
                 <h3>MP, produto e embalagem</h3>

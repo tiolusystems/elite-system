@@ -26,7 +26,7 @@ Abra `http://localhost:3000`.
 - A tela mostra a condicao visual/analitica do banco conforme `ELITE_DATABASE_MODE`.
 - Quando Supabase estiver configurado, a tela tenta carregar contagens das tabelas `cad_*` e alertas pendentes de `cadastro_validation_issues`.
 - Preview sem Node.js: abra `apps/web/preview/cadastros.html` diretamente no navegador.
-- O formulario de cliente usa Server Action e a funcao PostgreSQL `public.create_cad_cliente`; nao gravar diretamente em `cad_clientes` pela UI.
+- Os formularios de cliente e pessoa comercial usam Server Actions e funcoes PostgreSQL auditaveis; nao gravar diretamente em `cad_clientes` ou `cad_pessoas_comerciais` pela UI.
 
 ## Regra de seguranca
 

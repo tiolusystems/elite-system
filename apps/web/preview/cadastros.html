@@ -60,6 +60,23 @@
           </div>
         </section>
 
+        <datalist id="materias-primas-options">
+          <option value="1 | MP-0001 - Materia-prima exemplo | KG / active"></option>
+          <option value="2 | MP-0002 - Embalagem 5L | UN / active"></option>
+        </datalist>
+        <datalist id="produtos-options">
+          <option value="1 | 0001 - Produto exemplo | active"></option>
+          <option value="2 | 0002 - Produto foliar exemplo | pending_review"></option>
+        </datalist>
+        <datalist id="embalagens-options">
+          <option value="1 | Balde 20L | UN / 20 L / active"></option>
+          <option value="2 | Galao 5L | UN / 5 L / active"></option>
+        </datalist>
+        <datalist id="pessoas-comerciais-options">
+          <option value="1 | Vendedor exemplo | vendedor_direto_elite / active"></option>
+          <option value="2 | Gerente exemplo | gerente / active"></option>
+        </datalist>
+
         <section class="two-column">
           <section class="panel" aria-labelledby="modulos-title">
             <div class="panel-header">
@@ -318,7 +335,7 @@
               </label>
               <label>
                 Vendedor responsavel
-                <input placeholder="Obrigatorio para agente vinculado" />
+                <input list="pessoas-comerciais-options" placeholder="Buscar por ID, nome ou tipo" />
               </label>
               <label class="wide-field">
                 Apelidos
@@ -495,8 +512,8 @@
                 </select>
               </label>
               <label>
-                ID da MP vinculada
-                <input placeholder="Obrigatorio se controlar estoque" />
+                MP vinculada
+                <input list="materias-primas-options" placeholder="Obrigatoria se controlar estoque" />
               </label>
               <label class="checkbox-line">
                 <input type="checkbox" />
@@ -518,12 +535,12 @@
           <form onsubmit="return false">
             <div class="form-grid">
               <label>
-                ID do produto
-                <input value="1" />
+                Produto
+                <input list="produtos-options" value="1 | 0001 - Produto exemplo | active" />
               </label>
               <label>
-                ID da embalagem
-                <input value="1" />
+                Embalagem
+                <input list="embalagens-options" value="1 | Balde 20L | UN / 20 L / active" />
               </label>
               <label>
                 Codigo do item
@@ -553,8 +570,8 @@
           <form onsubmit="return false">
             <div class="form-grid">
               <label>
-                ID da materia-prima
-                <input value="1" />
+                Materia-prima
+                <input list="materias-primas-options" value="1 | MP-0001 - Materia-prima exemplo | KG / active" />
               </label>
               <label>
                 Unidade origem

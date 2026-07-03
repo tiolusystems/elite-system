@@ -387,6 +387,10 @@ function optionalInteger(formData: FormData, name: string): number | null {
   if (value === null) {
     return null;
   }
+  const idPrefix = value.match(/^\s*(\d+)/);
+  if (idPrefix) {
+    return Number(idPrefix[1]);
+  }
   return Number(value);
 }
 

@@ -27,6 +27,7 @@ Abra `http://localhost:3000`.
 - Quando Supabase estiver configurado, a tela tenta carregar contagens das tabelas `cad_*` e alertas pendentes de `cadastro_validation_issues`.
 - Preview sem Node.js: abra `apps/web/preview/cadastros.html` diretamente no navegador.
 - Os formularios de cliente, pessoa comercial, materia-prima, produto-base, embalagem, item vendavel e conversao de MP usam Server Actions e funcoes PostgreSQL auditaveis; nao gravar diretamente em tabelas `cad_*` pela UI.
+- Vendedores responsaveis, MPs, produtos e embalagens usam seletores pesquisaveis com ID embutido para reduzir erro de digitacao em vinculos.
 
 ## Regra de seguranca
 

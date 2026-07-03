@@ -29,12 +29,33 @@ export type MasterDataMetric = {
   error: string | null;
 };
 
+export type LookupOption = {
+  id: number;
+  label: string;
+  detail: string | null;
+};
+
+export type MasterDataLookups = {
+  materiasPrimas: LookupOption[];
+  produtos: LookupOption[];
+  embalagens: LookupOption[];
+  pessoasComerciais: LookupOption[];
+};
+
 export type MasterDataDashboard = {
   modules: MasterDataModule[];
   metrics: MasterDataMetric[];
   validationIssues: ValidationIssue[];
+  lookups: MasterDataLookups;
   source: "supabase" | "not_configured" | "error";
   error: string | null;
+};
+
+const EMPTY_LOOKUPS: MasterDataLookups = {
+  materiasPrimas: [],
+  produtos: [],
+  embalagens: [],
+  pessoasComerciais: []
 };
 
 export const MASTER_DATA_MODULES: MasterDataModule[] = [
@@ -120,33 +141,99 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const metrics = await Promise.all(
-      MASTER_DATA_MODULES.map(async (module) => {
-        const { count, error } = await supabase.from(module.table).select("*", { count: "exact", head: true });
-        return {
-          moduleKey: module.key,
-          table: module.table,
-          count: count ?? null,
-          error: error?.message ?? null
-        };
-      })
-    );
-    const { data, error } = await supabase
-      .from("cadastro_validation_issues")
-      .select("id,entity,entity_key,severity,code,message,field,created_at")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(8);
+    const [metrics, validationResult, lookups] = await Promise.all([
+      Promise.all(
+        MASTER_DATA_MODULES.map(async (module) => {
+          const { count, error } = await supabase.from(module.table).select("*", { count: "exact", head: true });
+          return {
+            moduleKey: module.key,
+            table: module.table,
+            count: count ?? null,
+            error: error?.message ?? null
+          };
+        })
+      ),
+      supabase
+        .from("cadastro_validation_issues")
+        .select("id,entity,entity_key,severity,code,message,field,created_at")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(8),
+      getMasterDataLookups(supabase)
+    ]);
 
     return {
       modules: MASTER_DATA_MODULES,
       metrics,
-      validationIssues: error ? [] : ((data ?? []) as ValidationIssue[]),
+      validationIssues: validationResult.error ? [] : ((validationResult.data ?? []) as ValidationIssue[]),
+      lookups,
       source: "supabase",
-      error: error?.message ?? null
+      error: validationResult.error?.message ?? null
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
+  }
+}
+
+async function getMasterDataLookups(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+): Promise<MasterDataLookups> {
+  try {
+    const [materiasPrimas, produtos, embalagens, pessoasComerciais] = await Promise.all([
+      supabase
+        .from("cad_materias_primas")
+        .select("id,sku_corrigido,nome,unidade_base_estoque,status")
+        .order("created_at", { ascending: false })
+        .limit(80),
+      supabase
+        .from("cad_produtos_base")
+        .select("id,codigo_produto,nome,status")
+        .order("created_at", { ascending: false })
+        .limit(80),
+      supabase
+        .from("cad_embalagens")
+        .select("id,descricao,unidade,volume_litros,status")
+        .order("created_at", { ascending: false })
+        .limit(80),
+      supabase
+        .from("cad_pessoas_comerciais")
+        .select("id,nome,tipo_comercial,status")
+        .order("created_at", { ascending: false })
+        .limit(80)
+    ]);
+
+    return {
+      materiasPrimas: materiasPrimas.error
+        ? []
+        : (materiasPrimas.data ?? []).map((item) => ({
+            id: Number(item.id),
+            label: `${item.sku_corrigido} - ${item.nome}`,
+            detail: `${item.unidade_base_estoque} / ${item.status}`
+          })),
+      produtos: produtos.error
+        ? []
+        : (produtos.data ?? []).map((item) => ({
+            id: Number(item.id),
+            label: `${item.codigo_produto} - ${item.nome}`,
+            detail: item.status
+          })),
+      embalagens: embalagens.error
+        ? []
+        : (embalagens.data ?? []).map((item) => ({
+            id: Number(item.id),
+            label: item.descricao,
+            detail: `${item.unidade}${item.volume_litros ? ` / ${item.volume_litros} L` : ""} / ${item.status}`
+          })),
+      pessoasComerciais: pessoasComerciais.error
+        ? []
+        : (pessoasComerciais.data ?? []).map((item) => ({
+            id: Number(item.id),
+            label: item.nome,
+            detail: `${item.tipo_comercial ?? "sem tipo"} / ${item.status}`
+          }))
+    };
+  } catch {
+    return EMPTY_LOOKUPS;
   }
 }
 
@@ -160,6 +247,7 @@ function emptyDashboard(source: MasterDataDashboard["source"], error: string | n
       error: null
     })),
     validationIssues: [],
+    lookups: EMPTY_LOOKUPS,
     source,
     error
   };

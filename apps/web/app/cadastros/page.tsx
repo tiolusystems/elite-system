@@ -7,7 +7,7 @@ import {
   createProdutoBaseAction,
   createProdutoEmbalagemAction
 } from "@/app/cadastros/actions";
-import { getMasterDataDashboard } from "@/lib/master-data";
+import { getMasterDataDashboard, type LookupOption, type MasterDataLookups } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -16,6 +16,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
   const dashboard = await getMasterDataDashboard();
+  const lookups = dashboard.lookups;
   const pendingCount = dashboard.validationIssues.length;
   const result = singleValue(params.result);
   const formMessage = messageForResult(result);
@@ -93,6 +94,8 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
             <span>{formMessage.detail}</span>
           </section>
         ) : null}
+
+        <LookupDatalists lookups={lookups} />
 
         <section className="two-column">
           <section className="panel" aria-labelledby="modulos-title">
@@ -246,7 +249,11 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
               </label>
               <label>
                 Vendedor responsavel
-                <input name="vendedor_responsavel_id" placeholder="Obrigatorio para agente vinculado" type="number" />
+                <input
+                  name="vendedor_responsavel_id"
+                  list="pessoas-comerciais-options"
+                  placeholder="Buscar por ID, nome ou tipo"
+                />
               </label>
               <label className="wide-field">
                 Apelidos
@@ -447,8 +454,12 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
                 </select>
               </label>
               <label>
-                ID da MP vinculada
-                <input name="materia_prima_id" placeholder="Obrigatorio se controlar estoque" type="number" />
+                MP vinculada
+                <input
+                  name="materia_prima_id"
+                  list="materias-primas-options"
+                  placeholder="Obrigatoria se controlar estoque"
+                />
               </label>
               <label className="checkbox-line">
                 <input name="controla_estoque" type="checkbox" value="1" />
@@ -472,12 +483,12 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           <form action={createProdutoEmbalagemAction}>
             <div className="form-grid">
               <label>
-                ID do produto
-                <input name="produto_id" placeholder="Produto-base" required type="number" />
+                Produto
+                <input name="produto_id" list="produtos-options" placeholder="Buscar produto-base" required />
               </label>
               <label>
-                ID da embalagem
-                <input name="embalagem_id" placeholder="Embalagem" required type="number" />
+                Embalagem
+                <input name="embalagem_id" list="embalagens-options" placeholder="Buscar embalagem" required />
               </label>
               <label>
                 Codigo do item
@@ -509,8 +520,8 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           <form action={createConversaoUnidadeMpAction}>
             <div className="form-grid">
               <label>
-                ID da materia-prima
-                <input name="materia_prima_id" placeholder="MP cadastrada" required type="number" />
+                Materia-prima
+                <input name="materia_prima_id" list="materias-primas-options" placeholder="Buscar MP cadastrada" required />
               </label>
               <label>
                 Unidade origem
@@ -569,6 +580,31 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
       </section>
     </main>
   );
+}
+
+function LookupDatalists({ lookups }: { lookups: MasterDataLookups }) {
+  return (
+    <>
+      <LookupDatalist id="materias-primas-options" options={lookups.materiasPrimas} />
+      <LookupDatalist id="produtos-options" options={lookups.produtos} />
+      <LookupDatalist id="embalagens-options" options={lookups.embalagens} />
+      <LookupDatalist id="pessoas-comerciais-options" options={lookups.pessoasComerciais} />
+    </>
+  );
+}
+
+function LookupDatalist({ id, options }: { id: string; options: LookupOption[] }) {
+  return (
+    <datalist id={id}>
+      {options.map((option) => (
+        <option key={option.id} value={lookupValue(option)} />
+      ))}
+    </datalist>
+  );
+}
+
+function lookupValue(option: LookupOption): string {
+  return option.detail ? `${option.id} | ${option.label} | ${option.detail}` : `${option.id} | ${option.label}`;
 }
 
 function singleValue(value: string | string[] | undefined): string | undefined {

@@ -77,6 +77,7 @@ Status atual:
 - Repositories e services auditaveis de cadastros criados em `elite_system/repositories/cadastros_repository.py` e `elite_system/services/cadastros.py`.
 - Testes de cadastros preparados para rodar em banco temporario descartavel.
 - Primeira tela de cadastros mestres criada em `apps/web/app/cadastros/page.tsx`, com condicao visual/analitica do banco, modulos `cad_*`, contagens Supabase quando configurado e fila de validacao.
+- Preview HTML estatico criado em `apps/web/preview/cadastros.html` para validacao visual sem depender de Node.js.
 - Pendencia: validar migrations em runtime Python/PostgreSQL disponivel antes de usar em qualquer dado real.
 
 ## Bloco 3 - Comercial

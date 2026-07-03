@@ -25,6 +25,7 @@ Abra `http://localhost:3000`.
 - `/` e `/cadastros`: tela operacional de cadastros mestres.
 - A tela mostra a condicao visual/analitica do banco conforme `ELITE_DATABASE_MODE`.
 - Quando Supabase estiver configurado, a tela tenta carregar contagens das tabelas `cad_*` e alertas pendentes de `cadastro_validation_issues`.
+- Preview sem Node.js: abra `apps/web/preview/cadastros.html` diretamente no navegador.
 
 ## Regra de seguranca
 

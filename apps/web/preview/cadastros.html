@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite System - Preview de Cadastros</title>
+    <link rel="stylesheet" href="../app/globals.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <strong>Elite System</strong>
+          <span>Cadastros mestres</span>
+        </div>
+        <nav class="topnav" aria-label="Modulos principais">
+          <a href="#" aria-current="page">Cadastros</a>
+          <a href="#validacao">Validacao</a>
+          <a href="#credito">Credito</a>
+        </nav>
+      </header>
+
+      <aside class="db-banner">
+        <strong>BANCO DE TESTE/DESCARTAVEL</strong>
+        <span>Preview visual. As acoes desta pagina nao alteram dados reais.</span>
+        <span class="pill">test</span>
+      </aside>
+
+      <section class="workspace">
+        <div class="toolbar">
+          <div>
+            <h1>Cadastros mestres</h1>
+            <p class="muted">
+              Tela operacional para revisar, cadastrar e auditar clientes, pessoas comerciais, MP, produtos,
+              embalagens e credito.
+            </p>
+          </div>
+          <div class="toolbar-actions" aria-label="Acoes de cadastro">
+            <a class="secondary-button" href="#validacao">Fila</a>
+            <a class="primary-button" href="#novo-cadastro">Novo cadastro</a>
+          </div>
+        </div>
+
+        <section class="summary-grid" aria-label="Resumo dos cadastros">
+          <div class="summary-card">
+            <span>Modulos prontos</span>
+            <strong>6</strong>
+          </div>
+          <div class="summary-card">
+            <span>Alertas pendentes</span>
+            <strong>3</strong>
+          </div>
+          <div class="summary-card">
+            <span>Fonte</span>
+            <strong>Preview local</strong>
+          </div>
+          <div class="summary-card">
+            <span>Alcadas</span>
+            <strong>Autonomia inicial</strong>
+          </div>
+        </section>
+
+        <section class="two-column">
+          <section class="panel" aria-labelledby="modulos-title">
+            <div class="panel-header">
+              <h2 id="modulos-title">Modulos de cadastro</h2>
+              <span class="pill">cad_*</span>
+            </div>
+            <div class="module-list">
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Clientes</h3>
+                  <span>cad_clientes</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>Comercial</span>
+                  <strong>128</strong>
+                </div>
+                <p>Duplicidade, unificacao, vendedor e credito.</p>
+                <div class="tag-row">
+                  <span class="tag">nome</span>
+                  <span class="tag">cidade</span>
+                  <span class="tag">uf</span>
+                  <span class="tag">status</span>
+                </div>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Pessoas comerciais</h3>
+                  <span>cad_pessoas_comerciais</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>Comercial</span>
+                  <strong>24</strong>
+                </div>
+                <p>Alias, grafias, agentes, gerente e comissionado.</p>
+                <div class="tag-row">
+                  <span class="tag">nome</span>
+                  <span class="tag">papeis</span>
+                  <span class="tag">status</span>
+                </div>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Materias-primas</h3>
+                  <span>cad_materias_primas</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>Estoque</span>
+                  <strong>86</strong>
+                </div>
+                <p>SKU legado, unidade, conversao e garantias.</p>
+                <div class="tag-row">
+                  <span class="tag">sku_corrigido</span>
+                  <span class="tag">nome</span>
+                  <span class="tag">unidade_base_estoque</span>
+                </div>
+              </article>
+              <article class="module-card">
+                <div class="module-card-main">
+                  <h3>Produtos</h3>
+                  <span>cad_produtos_base</span>
+                </div>
+                <div class="module-card-meta">
+                  <span>Producao</span>
+                  <strong>42</strong>
+                </div>
+                <p>Produto, embalagem, PI/PA e garantias MAPA.</p>
+                <div class="tag-row">
+                  <span class="tag">codigo_produto</span>
+                  <span class="tag">nome</span>
+                  <span class="tag">status</span>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel" id="validacao" aria-labelledby="validacao-title">
+            <div class="panel-header">
+              <h2 id="validacao-title">Fila de validacao</h2>
+              <span class="pill">3 pendente(s)</span>
+            </div>
+            <div class="issue-list">
+              <article class="issue-row error">
+                <div>
+                  <strong>clientes</strong>
+                  <span>Fazenda Boa Vista</span>
+                </div>
+                <p>Nome normalizado aparece em mais de um cadastro.</p>
+                <span class="tag">duplicate_nome_normalized</span>
+              </article>
+              <article class="issue-row warning">
+                <div>
+                  <strong>materias_primas</strong>
+                  <span>Ureia Tecnica</span>
+                </div>
+                <p>SKU legado parece conter o nome da materia-prima.</p>
+                <span class="tag">legacy_sku_looks_like_name</span>
+              </article>
+              <article class="issue-row warning">
+                <div>
+                  <strong>pessoas_comerciais</strong>
+                  <span>Maria</span>
+                </div>
+                <p>Alias ou grafia incorreta aponta para mais de uma pessoa.</p>
+                <span class="tag">alias_points_to_multiple_people</span>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel form-panel" id="novo-cadastro" aria-labelledby="novo-title">
+          <div class="panel-header">
+            <h2 id="novo-title">Entrada controlada</h2>
+            <span class="pill">auditavel</span>
+          </div>
+          <div class="form-grid">
+            <label>
+              Tipo
+              <select>
+                <option>Cliente</option>
+                <option>Pessoa comercial</option>
+                <option>Materia-prima</option>
+                <option>Produto</option>
+                <option>Embalagem</option>
+              </select>
+            </label>
+            <label>
+              Nome principal
+              <input value="Cliente exemplo" readonly />
+            </label>
+            <label>
+              Codigo
+              <input value="CLI-0001" readonly />
+            </label>
+            <label>
+              Status
+              <select>
+                <option>active</option>
+                <option>pending_review</option>
+                <option>inactive</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-footer">
+            <span>Gravacao definitiva sera liberada via service auditavel com actor_user_id.</span>
+            <button class="primary-button" type="button" disabled>Salvar</button>
+          </div>
+        </section>
+
+        <section class="panel" id="credito" aria-labelledby="credito-title">
+          <div class="panel-header">
+            <h2 id="credito-title">Credito e alcadas</h2>
+            <span class="pill">controle inicial</span>
+          </div>
+          <dl class="status-list">
+            <div class="status-row">
+              <dt>Vendedor</dt>
+              <dd>Cria rascunho, ve limite autorizado e nao aprova bloqueio.</dd>
+            </div>
+            <div class="status-row">
+              <dt>Gerente</dt>
+              <dd>Aprova excecoes conforme alcada e acompanha equipe/regiao.</dd>
+            </div>
+            <div class="status-row">
+              <dt>Financeiro</dt>
+              <dd>Define limite manual, bloqueio, reducao e motivo auditado.</dd>
+            </div>
+            <div class="status-row">
+              <dt>Auditoria</dt>
+              <dd>Compara snapshot de credito, pedido, recebimento, comissao e devolucao.</dd>
+            </div>
+          </dl>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

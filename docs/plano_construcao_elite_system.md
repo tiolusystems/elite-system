@@ -111,6 +111,15 @@ Auditorias:
 - Comissao negativa compensada em futuras.
 - Pedido bloqueado por credito/inadimplencia.
 
+Status atual:
+
+- Migration Supabase/PostgreSQL inicial criada em `supabase/migrations/0003_commercial_orders_foundation.sql`.
+- Tabelas `com_pedidos`, `com_pedido_itens` e `com_pedido_comissionados` criadas para pedido, item vendavel e comissao prevista.
+- Funcao PostgreSQL auditavel `public.create_com_pedido_rascunho` criada para abrir o primeiro fluxo sem insert direto pela UI.
+- Tela `/pedidos` criada em `apps/web/app/pedidos/page.tsx`, com condicao visual/analitica do banco, formulario de pedido e lista de pedidos recentes.
+- Preview HTML estatico criado em `apps/web/preview/pedidos.html` para validacao visual sem depender de Node.js.
+- Regra preservada: pedido em rascunho nao baixa estoque; bonificacao nao gera comissao; devolucao gera valor negativo auditado.
+
 ## Bloco 4 - Estoque MP e PA
 
 Objetivo: fechar saldos e movimentos.
@@ -243,5 +252,5 @@ Entregas:
 5. Instalar dependencias do `apps/web` e validar Next.js local.
 6. Ligar login Supabase no Next.js.
 7. Classificar causas das diferencas de reconciliacao.
-8. Iniciar tabelas e fluxo auditavel de pedidos.
-9. Criar seletores pesquisaveis para cliente e item vendavel no fluxo de pedido.
+8. Criar fluxo de credito/bloqueio para pedido antes de faturamento.
+9. Criar recebimentos parciais e liberacao proporcional de comissao.

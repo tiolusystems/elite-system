@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite System - Preview de Pedidos</title>
+    <link rel="stylesheet" href="../app/globals.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <strong>Elite System</strong>
+          <span>Pedidos</span>
+        </div>
+        <nav class="topnav" aria-label="Modulos principais">
+          <a href="cadastros.html">Cadastros</a>
+          <a href="#" aria-current="page">Pedidos</a>
+          <a href="#novo-pedido">Novo pedido</a>
+        </nav>
+      </header>
+
+      <aside class="db-banner">
+        <strong>BANCO DE TESTE/DESCARTAVEL</strong>
+        <span>Preview visual. As acoes desta pagina nao alteram dados reais.</span>
+        <span class="pill">test</span>
+      </aside>
+
+      <section class="workspace">
+        <div class="toolbar">
+          <div>
+            <h1>Pedidos</h1>
+            <p class="muted">
+              Primeira camada comercial auditavel: pedido em rascunho, item vendavel e comissao prevista.
+            </p>
+          </div>
+          <div class="toolbar-actions" aria-label="Acoes de pedido">
+            <a class="secondary-button" href="cadastros.html">Cadastros</a>
+            <a class="primary-button" href="#novo-pedido">Novo pedido</a>
+          </div>
+        </div>
+
+        <datalist id="clientes-options">
+          <option value="1 | Cliente exemplo | Ribeirao Preto / SP / active"></option>
+          <option value="2 | Fazenda exemplo | Uberaba / MG / active"></option>
+        </datalist>
+        <datalist id="itens-vendaveis-options">
+          <option value="1 | 0001-20L - 0001 Produto exemplo | Balde 20L / active"></option>
+          <option value="2 | 0002-5L - 0002 Produto foliar exemplo | Galao 5L / active"></option>
+        </datalist>
+        <datalist id="pessoas-comerciais-options">
+          <option value="1 | Vendedor exemplo | vendedor_direto_elite / active"></option>
+          <option value="2 | Gerente exemplo | gerente / active"></option>
+        </datalist>
+
+        <section class="summary-grid" aria-label="Resumo dos pedidos">
+          <div class="summary-card">
+            <span>Total de pedidos</span>
+            <strong>12</strong>
+          </div>
+          <div class="summary-card">
+            <span>Rascunhos</span>
+            <strong>4</strong>
+          </div>
+          <div class="summary-card">
+            <span>Abertos</span>
+            <strong>6</strong>
+          </div>
+          <div class="summary-card">
+            <span>Faturamento previsto</span>
+            <strong>R$ 184.250,00</strong>
+          </div>
+        </section>
+
+        <section class="two-column">
+          <section class="panel form-panel" id="novo-pedido" aria-labelledby="novo-pedido-title">
+            <div class="panel-header">
+              <h2 id="novo-pedido-title">Novo pedido</h2>
+              <span class="pill">gravacao preparada</span>
+            </div>
+            <form onsubmit="return false">
+              <div class="form-grid">
+                <label class="wide-field">
+                  Cliente
+                  <input list="clientes-options" value="1 | Cliente exemplo | Ribeirao Preto / SP / active" />
+                </label>
+                <label class="wide-field">
+                  Item vendavel
+                  <input list="itens-vendaveis-options" value="1 | 0001-20L - 0001 Produto exemplo | Balde 20L / active" />
+                </label>
+                <label>
+                  Tipo
+                  <select>
+                    <option>venda</option>
+                    <option>bonificacao</option>
+                    <option>devolucao</option>
+                  </select>
+                </label>
+                <label>
+                  Status inicial
+                  <select>
+                    <option>draft</option>
+                    <option>open</option>
+                    <option>blocked</option>
+                  </select>
+                </label>
+                <label>
+                  Data
+                  <input type="date" value="2026-07-03" />
+                </label>
+                <label>
+                  Quantidade
+                  <input value="10" />
+                </label>
+                <label>
+                  Valor unitario
+                  <input value="1250,00" />
+                </label>
+                <label>
+                  Vendedor/comissionado
+                  <input list="pessoas-comerciais-options" value="1 | Vendedor exemplo | vendedor_direto_elite / active" />
+                </label>
+                <label>
+                  % comissao
+                  <input value="3" />
+                </label>
+                <label class="wide-field">
+                  Observacao
+                  <input value="Primeiro fluxo auditavel de pedido" />
+                </label>
+              </div>
+              <div class="form-footer">
+                <span>Rascunho nao baixa estoque. Bonificacao nao gera comissao. Devolucao gera valor negativo auditado.</span>
+                <button class="primary-button" type="submit">Salvar pedido</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel" aria-labelledby="fluxo-title">
+            <div class="panel-header">
+              <h2 id="fluxo-title">Regras iniciais</h2>
+              <span class="pill">sem baixa de estoque</span>
+            </div>
+            <dl class="status-list">
+              <div class="status-row">
+                <dt>draft</dt>
+                <dd>Pedido em rascunho. Nao baixa estoque e pode ser revisado.</dd>
+              </div>
+              <div class="status-row">
+                <dt>open</dt>
+                <dd>Pedido aberto para seguir ao romaneio, credito e faturamento.</dd>
+              </div>
+              <div class="status-row">
+                <dt>blocked</dt>
+                <dd>Pedido parado por credito, cadastro ou regra operacional.</dd>
+              </div>
+              <div class="status-row">
+                <dt>Comissao</dt>
+                <dd>Prevista no pedido e liberada apenas conforme recebimento futuro.</dd>
+              </div>
+            </dl>
+          </section>
+        </section>
+
+        <section class="panel" aria-labelledby="recentes-title">
+          <div class="panel-header">
+            <h2 id="recentes-title">Pedidos recentes</h2>
+            <span class="pill">preview</span>
+          </div>
+          <div class="module-list">
+            <article class="module-card">
+              <div class="module-card-main">
+                <h3>PED-20260703190000123-ABCD</h3>
+                <span>Cliente #1</span>
+              </div>
+              <div class="module-card-meta">
+                <span>draft</span>
+                <strong>R$ 12.500,00</strong>
+              </div>
+              <p>venda / 2026-07-03</p>
+              <div class="tag-row">
+                <span class="tag">pedido_id: 1</span>
+                <span class="tag">draft</span>
+                <span class="tag">venda</span>
+              </div>
+            </article>
+            <article class="module-card">
+              <div class="module-card-main">
+                <h3>PED-20260703190100888-DCBA</h3>
+                <span>Cliente #2</span>
+              </div>
+              <div class="module-card-meta">
+                <span>open</span>
+                <strong>R$ 0,00</strong>
+              </div>
+              <p>bonificacao / 2026-07-03</p>
+              <div class="tag-row">
+                <span class="tag">pedido_id: 2</span>
+                <span class="tag">open</span>
+                <span class="tag">bonificacao</span>
+              </div>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

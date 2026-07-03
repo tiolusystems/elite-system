@@ -32,6 +32,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           <a href="/cadastros" aria-current="page">
             Cadastros
           </a>
+          <a href="/pedidos">Pedidos</a>
           <a href="#validacao">Validacao</a>
           <a href="#credito">Credito</a>
         </nav>

@@ -1,0 +1,2 @@
+-- Seed intencionalmente vazio.
+-- Dados comerciais, historicos, clientes, pedidos, estoque e producao nao entram no Git.

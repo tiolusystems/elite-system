@@ -79,6 +79,27 @@ npm run dev
 
 Antes disso, copie `.env.example` para `.env.local` e configure as variaveis do Supabase.
 
+## Supabase/PostgreSQL
+
+A CLI do Supabase pode ser instalada localmente em `.tools/supabase-cli/supabase.exe`. A pasta `.tools/` e ignorada pelo Git.
+
+Verificar CLI local:
+
+```powershell
+.\.tools\supabase-cli\supabase.exe --version
+```
+
+O projeto Supabase fica configurado em `supabase/config.toml` e as migrations ficam em `supabase/migrations`.
+
+Validacao estrutural sem dados reais:
+
+- criar um PostgreSQL descartavel em `.tools/pg-validate`;
+- aplicar as migrations em ordem com `psql -v ON_ERROR_STOP=1`;
+- executar smoke tests sem dados reais;
+- descartar/parar o banco ao final.
+
+O registro da validacao fica em `docs/validacao_supabase_migrations_descartavel.md`.
+
 ## Observacao
 
 SQLite e usado agora para desenvolvimento local e auditoria. O desenho prepara a migracao para PostgreSQL/Supabase.

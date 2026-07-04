@@ -220,37 +220,57 @@ set search_path = public
 as $$
 declare
   v_action_key text;
-  v_logged_action_key text;
 begin
   v_action_key := nullif(trim(p_action_key), '');
 
   if not public.can_current_user(v_action_key) then
-    select action_key
-      into v_logged_action_key
-      from public.permission_actions
-      where action_key = v_action_key;
-
-    perform public.log_audit_event(
-      'seguranca',
-      'permission_actions',
-      v_action_key,
-      'seguranca.permissao_negada',
-      v_logged_action_key,
-      'denied',
-      null,
-      jsonb_build_object('action_key', v_action_key),
-      jsonb_build_object('alcada_usada', v_action_key, 'decision', 'denied'),
-      'database_rpc',
-      jsonb_build_object('source', 'require_current_user_permission')
-    );
     raise exception 'not allowed: %', v_action_key;
   end if;
 end;
 $$;
 
+create or replace function public.log_permission_denied(
+  p_action_key text,
+  p_origin text default 'application',
+  p_metadata_json jsonb default '{}'::jsonb
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_action_key text;
+  v_logged_action_key text;
+begin
+  v_action_key := nullif(trim(p_action_key), '');
+
+  select action_key
+    into v_logged_action_key
+    from public.permission_actions
+    where action_key = v_action_key;
+
+  return public.log_audit_event(
+    'seguranca',
+    'permission_actions',
+    v_action_key,
+    'seguranca.permissao_negada',
+    v_logged_action_key,
+    'denied',
+    null,
+    jsonb_build_object('action_key', v_action_key),
+    jsonb_build_object('alcada_usada', v_action_key, 'decision', 'denied'),
+    p_origin,
+    coalesce(p_metadata_json, '{}'::jsonb)
+  );
+end;
+$$;
+
 revoke all on function public.log_audit_event(text, text, text, text, text, text, jsonb, jsonb, jsonb, text, jsonb) from public;
+revoke all on function public.log_permission_denied(text, text, jsonb) from public;
 revoke all on function public.log_action(text, text, text, text, jsonb, jsonb, jsonb) from public;
 
 grant execute on function public.current_actor_id() to authenticated;
 grant execute on function public.can_current_user(text) to authenticated;
 grant execute on function public.require_current_user_permission(text) to authenticated;
+grant execute on function public.log_permission_denied(text, text, jsonb) to authenticated;

@@ -6,7 +6,8 @@ Esta matriz guia o endurecimento de RLS por dominio. A regra de construcao e:
 2. Escritas criticas devem passar por RPC `security definer`.
 3. Cada RPC valida `require_current_user_permission(action_key)`.
 4. Cada RPC registra auditoria em `action_logs` via `log_audit_event`.
-5. RLS restritivo entra por dominio, depois que as RPCs daquele dominio estiverem cobertas.
+5. Negativas de permissao capturadas pela aplicacao devem registrar `log_permission_denied` em transacao separada.
+6. RLS restritivo entra por dominio, depois que as RPCs daquele dominio estiverem cobertas.
 
 ## Rotas publicas
 
@@ -58,5 +59,7 @@ perform public.log_audit_event(
   jsonb_build_object('origem_funcao', '<nome_da_rpc>')
 );
 ```
+
+Nao registrar permissao negada dentro de `require_current_user_permission` antes de `raise exception`: o PostgreSQL reverte o insert de auditoria junto com a excecao. Para negativa persistente, a camada de aplicacao deve capturar o erro `not allowed` e chamar `log_permission_denied(...)` em uma nova transacao.
 
 `default_allowed=true` permanece apenas como decisao de fase inicial para acoes conhecidas. O endurecimento deve acontecer por dominio, nunca por flip global sem matriz revisada.

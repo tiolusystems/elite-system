@@ -91,6 +91,30 @@ Fronteira desta etapa:
 - a baixa PA fica registrada como movimento auditavel do romaneio, pronta para reconciliar com o livro de estoque quando o modulo de estoque for codado;
 - nao foi implementada tela estetica de romaneio nesta etapa.
 
+## Evolucao com estoque PA real
+
+Migration complementar: `supabase/migrations/0007_pa_stock_lots_foundation.sql`.
+
+A partir desta etapa, o romaneio confirmado passa a exigir reserva de lote PA real quando usado pelo fluxo novo de estoque:
+
+- `est_lotes_pa` guarda lote PA por produto/embalagem;
+- `est_reservas_pa` registra reserva ativa por item de romaneio;
+- `est_movimentos_pa` registra a baixa fisica no livro de estoque;
+- `est_lotes_pa_saldos` mostra saldo fisico, reserva e saldo disponivel;
+- `exp_romaneio_itens.lote_pa_id` liga o item do romaneio ao lote real;
+- `exp_romaneio_movimentos_pa.lote_pa_id` liga a baixa/estorno do romaneio ao lote real.
+
+Fluxo operacional atualizado:
+
+1. Pedido aberto nao baixa PA.
+2. Romaneio em rascunho nao baixa PA.
+3. Reserva de lote PA reduz saldo disponivel, mas nao reduz saldo fisico.
+4. Confirmacao do romaneio gera `saida_romaneio` em `est_movimentos_pa`.
+5. Cancelamento antes da confirmacao libera reserva ativa.
+6. Estorno depois da confirmacao gera `estorno_saida` no mesmo lote.
+
+O campo textual `lote_pa_ref` permanece para compatibilidade e leitura humana, mas a chave auditavel passa a ser `lote_pa_id`.
+
 ## Fora do escopo inicial
 
 Nao implementar como parte do romaneio inicial, salvo se estiver na planilha `ROMANEIO` canonica:

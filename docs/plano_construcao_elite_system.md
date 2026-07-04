@@ -145,6 +145,15 @@ Auditorias:
 - Saldo por lote.
 - Diferencas de inventario.
 
+Status atual:
+
+- Migration `0007_pa_stock_lots_foundation.sql` criada para fundacao de estoque PA por lote.
+- Tabelas `est_lotes_pa`, `est_movimentos_pa` e `est_reservas_pa` criadas.
+- View `est_lotes_pa_saldos` criada para saldo fisico, reserva ativa e saldo disponivel.
+- Funcoes auditaveis criadas: `create_est_lote_pa`, `registrar_est_reserva_pa` e `registrar_est_ajuste_pa`.
+- Movimentos de PA protegidos contra edicao e exclusao; correcao deve gerar novo movimento auditavel.
+- Validacao descartavel executada com entrada PA, reserva, baixa por romaneio, estorno e bloqueio por saldo insuficiente.
+
 ## Bloco 5 - Producao
 
 Objetivo: transformar fichas e lotes em processo de producao.
@@ -203,6 +212,9 @@ Status atual:
 - View `exp_pedido_item_romaneio_saldos` criada para pedido x quantidade confirmada x saldo pendente.
 - Funcoes auditaveis criadas: `create_exp_romaneio`, `registrar_exp_romaneio_separacao`, `confirmar_exp_romaneio`, `cancelar_exp_romaneio` e `estornar_exp_romaneio`.
 - Regra preservada: pedido aberto nao baixa estoque; romaneio confirmado gera movimento de baixa PA; estorno gera movimento inverso auditado.
+- Migration `0007_pa_stock_lots_foundation.sql` integrou o romaneio ao estoque PA real por lote.
+- Confirmacao do romaneio agora exige reserva ativa em `est_reservas_pa` no fluxo novo e gera `saida_romaneio` em `est_movimentos_pa`.
+- Cancelamento libera reservas ativas e estorno devolve saldo fisico ao mesmo lote PA.
 
 ## Bloco 7 - Relatorios e dashboards
 

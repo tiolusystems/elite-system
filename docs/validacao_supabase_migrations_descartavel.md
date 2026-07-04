@@ -39,6 +39,54 @@ Migrations aplicadas em ordem no banco descartavel:
 
 Resultado: todas aplicaram com sucesso via `psql -v ON_ERROR_STOP=1`.
 
+## Validacao adicional - estoque PA por lote
+
+Data/hora local: 2026-07-03 23:33 -03:00.
+
+Banco descartavel complementar:
+
+- Pasta: `.tools/pg-validate-0007`.
+- Porta: `55433`.
+- Sem dados reais.
+
+Migrations aplicadas em ordem:
+
+- `0001_security_audit_foundation.sql`;
+- `0002_master_data_foundation.sql`;
+- `0003_commercial_orders_foundation.sql`;
+- `0004_order_credit_gate.sql`;
+- `0005_order_receipts_commissions.sql`;
+- `0006_romaneio_foundation.sql`;
+- `0007_pa_stock_lots_foundation.sql`.
+
+Resultado: todas aplicaram com sucesso via `psql -v ON_ERROR_STOP=1`.
+
+Smoke test `smoke_pa_0007`:
+
+- criou cadastros minimos;
+- criou lote PA com 10 unidades;
+- criou pedido aberto de 6 unidades;
+- criou romaneio total em rascunho;
+- reservou 6 unidades do lote;
+- validou saldo fisico 10, reserva 6 e saldo disponivel 4;
+- confirmou romaneio;
+- validou `saida_romaneio` de -6 em `est_movimentos_pa`;
+- validou pedido `fulfilled`;
+- estornou romaneio;
+- validou saldo restaurado para 10 e pedido reaberto como `open`;
+- tentou reservar 11 unidades com saldo disponivel 10;
+- validou erro esperado de saldo insuficiente.
+- tentou confirmar romaneio com apenas `lote_pa_ref` textual e sem reserva real;
+- validou bloqueio esperado: reserva PA ativa obrigatoria antes da confirmacao;
+- tentou editar diretamente `est_movimentos_pa`;
+- validou bloqueio append-only do livro de movimentos PA.
+- cancelou romaneio com reserva ativa;
+- validou reserva `liberada` e saldo disponivel restaurado;
+- registrou ajuste manual negativo e positivo em PA;
+- validou saldo de PA apos os ajustes auditados.
+
+Resultado: passou.
+
 ## Smoke test funcional
 
 Fluxo positivo validado:

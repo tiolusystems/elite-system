@@ -307,12 +307,17 @@ Direcao visual:
 
 ## Sequencia imediata
 
-1. Publicar codigo e docs no GitHub privado, sem dados.
-2. Criar telas operacionais de estoque MP/PI e PCP com aviso visual/analitico de banco conectado.
-3. Validar Next.js local com Supabase configurado.
-4. Ligar login Supabase no Next.js.
-5. Evoluir auditorias para PCP: teorico x reservado x consumido x gerado.
-6. Evoluir garantias por lote de MP e calculo de garantias do produto final.
-7. Classificar causas das diferencas de reconciliacao.
-8. Criar auditoria pedido x credito x recebimento x comissao.
-9. Iniciar devolucao/abatimento de comissao em recebimentos futuros.
+Referencia de ordem: `docs/fluxo_operacional_elite_system.md`.
+
+1. Expor usuarios, login e alcadas no app web.
+2. Criar telas operacionais de cadastros tecnicos: MP, embalagens, PA e PI.
+3. Criar tela de formulas PA/PI.
+4. Criar tela PCP para formulacao, reserva de insumos, CQ e baixa de insumos.
+5. Criar tela de romaneio com entregador, separacao por lote e baixa de produtos.
+6. Implementar atualizacao encadeada de status de pedido, OP, estoque, romaneio, financeiro e comissoes.
+7. Consolidar recebimentos e comissoes, incluindo devolucao e abatimento futuro.
+8. Criar simulador de producao com base em historico ou alimentacao manual.
+9. Criar estoque regulador de PA, PI e MP.
+10. Evoluir relatorios de vendas por vendedor, periodo, cliente e produto.
+11. Evoluir rastreabilidade de lotes MP, PA e PI.
+12. Validar Next.js local com Supabase configurado e login Supabase.

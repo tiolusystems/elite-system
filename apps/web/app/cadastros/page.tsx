@@ -33,6 +33,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
             Cadastros
           </a>
           <a href="/pedidos">Pedidos</a>
+          <a href="/relatorios">Relatorios</a>
           <a href="#validacao">Validacao</a>
           <a href="#credito">Credito</a>
         </nav>

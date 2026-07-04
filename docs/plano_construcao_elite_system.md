@@ -263,6 +263,8 @@ Status atual:
 - Escopo de relatorios registrado em `docs/escopo_relatorios.md`.
 - Migration `0010_product_validity_reports_foundation.sql` criou `relatorio_catalogo`, `rel_estoque_lotes_vencimento` e `rel_estoque_reprocessamento_candidatos`.
 - Relatorios foram classificados como modulo essencial, herdando a importancia das dezenas de telas de relatorios do Tio Lu System XLSX.
+- Primeira tela `/relatorios` criada no Next.js para catalogo, vencimentos e candidatos a reprocessamento.
+- Preview estatico criado em `apps/web/preview/relatorios.html` para validacao visual sem depender de Node.js.
 
 ## Bloco 8 - Banco em nuvem
 

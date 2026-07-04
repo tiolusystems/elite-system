@@ -1,5 +1,6 @@
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getOrdersDashboard } from "@/lib/orders";
+import { getReportsDashboard } from "@/lib/reports";
 import { getRuntimeStatus } from "@/lib/runtime";
 
 const FLOW_STEPS = [
@@ -19,9 +20,9 @@ const FLOW_STEPS = [
     detail: "Separacao parcial ou total, reserva de lote e confirmacao para baixa de PA."
   },
   {
-    title: "Estoque",
-    status: "fila",
-    detail: "Entradas MP, saidas MP, producao, PI/PA e saldos auditaveis."
+    title: "Relatorios",
+    status: "em uso",
+    detail: "Vencimento de PA/PI/MP, candidatos a reprocessamento e catalogo inicial."
   }
 ];
 
@@ -34,11 +35,15 @@ const AUDIT_STEPS = [
 
 export default async function HomePage() {
   const runtime = getRuntimeStatus();
-  const [cadastros, pedidos] = await Promise.all([getMasterDataDashboard(), getOrdersDashboard()]);
+  const [cadastros, pedidos, relatorios] = await Promise.all([
+    getMasterDataDashboard(),
+    getOrdersDashboard(),
+    getReportsDashboard()
+  ]);
   const cadastrosProntos = cadastros.modules.filter((module) => module.status === "ready").length;
-  const alertasPendentes = cadastros.validationIssues.length;
   const pedidosAbertos = pedidos.metrics.abertos;
   const totalRecebido = pedidos.metrics.totalRecebido;
+  const candidatosReprocessamento = relatorios.metrics.candidatosReprocessamento;
 
   return (
     <main className="app-shell">
@@ -53,6 +58,7 @@ export default async function HomePage() {
           </a>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
+          <a href="/relatorios">Relatorios</a>
         </nav>
       </header>
 
@@ -79,6 +85,9 @@ export default async function HomePage() {
             <a className="primary-button" href="/pedidos">
               Pedidos
             </a>
+            <a className="secondary-button" href="/relatorios">
+              Relatorios
+            </a>
           </div>
         </div>
 
@@ -101,9 +110,9 @@ export default async function HomePage() {
             <p>Base para liberacao proporcional de comissoes.</p>
           </article>
           <article className="kpi-card accent-red">
-            <span>Alertas</span>
-            <strong>{alertasPendentes}</strong>
-            <p>Pendencias de validacao de cadastro carregadas do banco.</p>
+            <span>Reprocessamento</span>
+            <strong>{valueOrDash(candidatosReprocessamento)}</strong>
+            <p>Candidatos vindos de vencimento, bloqueio ou saldo disponivel.</p>
           </article>
         </section>
 
@@ -152,8 +161,8 @@ export default async function HomePage() {
               <div className="queue-row">
                 <span className="queue-status danger"></span>
                 <div>
-                  <strong>Devolucao e abatimento</strong>
-                  <p>Proximo ajuste financeiro: estorno auditado e compensacao futura.</p>
+                  <strong>Relatorios do Tio Lu XLSX</strong>
+                  <p>Mapear as dezenas de telas historicas para catalogo, filtros e reconciliacao.</p>
                 </div>
               </div>
             </div>
@@ -188,13 +197,13 @@ export default async function HomePage() {
                   <span style={{ width: "12%" }}></span>
                 </div>
               </div>
-              <div className="module-tile muted-tile">
-                <strong>Auditorias</strong>
-                <span>reconciliacao por valor e quantidade</span>
+              <a className="module-tile" href="/relatorios">
+                <strong>Relatorios</strong>
+                <span>{valueOrDash(relatorios.metrics.catalogados)} catalogados</span>
                 <div className="progress-rail">
-                  <span style={{ width: "18%" }}></span>
+                  <span style={{ width: "28%" }}></span>
                 </div>
-              </div>
+              </a>
             </div>
           </article>
 
@@ -211,10 +220,10 @@ export default async function HomePage() {
           </article>
         </section>
 
-        {(cadastros.error || pedidos.error) && (
+        {(cadastros.error || pedidos.error || relatorios.error) && (
           <section className="notice-panel warning" role="status">
             <strong>Conexao parcial</strong>
-            <span>{cadastros.error ?? pedidos.error}</span>
+            <span>{cadastros.error ?? pedidos.error ?? relatorios.error}</span>
           </section>
         )}
       </section>

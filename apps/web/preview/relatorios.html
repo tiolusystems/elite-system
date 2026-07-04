@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Elite System - Preview de Relatorios</title>
+    <link rel="stylesheet" href="../app/globals.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <strong>Elite System</strong>
+          <span>Relatorios</span>
+        </div>
+        <nav class="topnav" aria-label="Modulos principais">
+          <a href="index.html">Inicio</a>
+          <a href="cadastros.html">Cadastros</a>
+          <a href="pedidos.html">Pedidos</a>
+          <a href="#" aria-current="page">Relatorios</a>
+        </nav>
+      </header>
+
+      <aside class="db-banner">
+        <strong>BANCO DE TESTE/DESCARTAVEL</strong>
+        <span>Preview visual. As acoes desta pagina nao alteram dados reais.</span>
+        <span class="pill">visual</span>
+      </aside>
+
+      <section class="workspace dashboard-workspace">
+        <div class="dashboard-header">
+          <div>
+            <span class="eyebrow">analise operacional</span>
+            <h1>Relatorios e vencimentos</h1>
+            <p class="muted">
+              Primeira tela analitica para catalogo de relatorios, lotes vencidos, lotes a vencer e candidatos a
+              reprocessamento de PA, PI e MP.
+            </p>
+          </div>
+          <div class="toolbar-actions" aria-label="Acoes de relatorio">
+            <a class="secondary-button" href="#catalogo">Catalogo</a>
+            <a class="primary-button" href="#reprocessamento">Reprocessamento</a>
+          </div>
+        </div>
+
+        <section class="kpi-grid" aria-label="Resumo dos relatorios">
+          <article class="kpi-card accent-blue">
+            <span>Relatorios catalogados</span>
+            <strong>6</strong>
+            <p>3 ativo(s) para uso inicial.</p>
+          </article>
+          <article class="kpi-card accent-red">
+            <span>Vencidos com saldo</span>
+            <strong>2</strong>
+            <p>Lotes que devem ser tratados antes de nova expedicao ou producao.</p>
+          </article>
+          <article class="kpi-card accent-amber">
+            <span>Vencem em 30 dias</span>
+            <strong>4</strong>
+            <p>Saldo disponivel que pode exigir decisao comercial, CQ ou PCP.</p>
+          </article>
+          <article class="kpi-card accent-green">
+            <span>Candidatos a reprocessar</span>
+            <strong>5</strong>
+            <p>3 com prioridade alta.</p>
+          </article>
+        </section>
+
+        <section class="dashboard-grid">
+          <section class="panel" id="catalogo" aria-labelledby="catalogo-title">
+            <div class="panel-header">
+              <h2 id="catalogo-title">Catalogo de relatorios</h2>
+              <span class="pill">6 item(ns)</span>
+            </div>
+            <div class="report-list">
+              <article class="report-row">
+                <div>
+                  <strong>Lotes por vencimento</strong>
+                  <span>estoque_lotes_vencimento</span>
+                </div>
+                <p>PA, PI e MP com data de validade, saldo e situacao de vencimento.</p>
+                <div class="tag-row">
+                  <span class="tag">estoque</span>
+                  <span class="status-chip ativo">ativo</span>
+                  <span class="tag">rel_estoque_lotes_vencimento</span>
+                </div>
+              </article>
+              <article class="report-row">
+                <div>
+                  <strong>Candidatos a reprocessamento</strong>
+                  <span>estoque_reprocessamento_candidatos</span>
+                </div>
+                <p>Lotes vencidos ou bloqueados com saldo disponivel para avaliacao de reprocessamento.</p>
+                <div class="tag-row">
+                  <span class="tag">estoque</span>
+                  <span class="status-chip ativo">ativo</span>
+                  <span class="tag">rel_estoque_reprocessamento_candidatos</span>
+                </div>
+              </article>
+              <article class="report-row">
+                <div>
+                  <strong>Status de OP</strong>
+                  <span>pcp_op_status</span>
+                </div>
+                <p>Ordens de producao por status, tipo e CQ.</p>
+                <div class="tag-row">
+                  <span class="tag">pcp</span>
+                  <span class="status-chip planejado">planejado</span>
+                  <span class="tag">pcp_ordens_producao</span>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel" id="reprocessamento" aria-labelledby="reprocessamento-title">
+            <div class="panel-header">
+              <h2 id="reprocessamento-title">Fila de reprocessamento</h2>
+              <span class="pill">5 lote(s)</span>
+            </div>
+            <div class="queue-list">
+              <article class="queue-row">
+                <span class="queue-status danger"></span>
+                <div>
+                  <strong>PA PA-20260704-0000188</strong>
+                  <p>Produto Exemplo 20 L - 12 disponivel - vencido com saldo</p>
+                  <div class="tag-row">
+                    <span class="status-chip alta">alta</span>
+                    <span class="tag">disponivel</span>
+                    <span class="tag">04/06/2026</span>
+                  </div>
+                </div>
+              </article>
+              <article class="queue-row">
+                <span class="queue-status danger"></span>
+                <div>
+                  <strong>MP MP-20260704-0000210</strong>
+                  <p>Materia Prima Exemplo - 240 disponivel - vencido com saldo</p>
+                  <div class="tag-row">
+                    <span class="status-chip alta">alta</span>
+                    <span class="tag">disponivel</span>
+                    <span class="tag">03/07/2026</span>
+                  </div>
+                </div>
+              </article>
+              <article class="queue-row">
+                <span class="queue-status warning"></span>
+                <div>
+                  <strong>PI PI-20260704-0000195</strong>
+                  <p>Produto Intermediario Exemplo - 38 disponivel - vence em 30 dias</p>
+                  <div class="tag-row">
+                    <span class="status-chip media">media</span>
+                    <span class="tag">disponivel</span>
+                    <span class="tag">03/08/2026</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel" aria-labelledby="vencimentos-title">
+          <div class="panel-header">
+            <h2 id="vencimentos-title">Lotes por vencimento</h2>
+            <span class="pill">preview</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Lote</th>
+                  <th>Cadastro</th>
+                  <th>Status</th>
+                  <th>Validade</th>
+                  <th>Dias</th>
+                  <th>Saldo</th>
+                  <th>Reserva</th>
+                  <th>Disponivel</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="tag">PA</span></td>
+                  <td>
+                    <strong>PA-20260704-0000188</strong>
+                    <span class="table-subtext">Balde 20 L</span>
+                  </td>
+                  <td>
+                    <strong>0001</strong>
+                    <span class="table-subtext">Produto Exemplo</span>
+                  </td>
+                  <td><span class="status-chip vencido_com_saldo">vencido com saldo</span></td>
+                  <td>04/06/2026</td>
+                  <td>-30</td>
+                  <td>12</td>
+                  <td>0</td>
+                  <td>12</td>
+                </tr>
+                <tr>
+                  <td><span class="tag">PI</span></td>
+                  <td>
+                    <strong>PI-20260704-0000195</strong>
+                    <span class="table-subtext">OP-20260704-0000042</span>
+                  </td>
+                  <td>
+                    <strong>0001</strong>
+                    <span class="table-subtext">Produto Exemplo</span>
+                  </td>
+                  <td><span class="status-chip vence_30_dias">vence em 30 dias</span></td>
+                  <td>03/08/2026</td>
+                  <td>30</td>
+                  <td>38</td>
+                  <td>0</td>
+                  <td>38</td>
+                </tr>
+                <tr>
+                  <td><span class="tag">MP</span></td>
+                  <td>
+                    <strong>MP-20260704-0000210</strong>
+                    <span class="table-subtext">NF fornecedor</span>
+                  </td>
+                  <td>
+                    <strong>MP-001</strong>
+                    <span class="table-subtext">Materia Prima Exemplo</span>
+                  </td>
+                  <td><span class="status-chip vencido_com_saldo">vencido com saldo</span></td>
+                  <td>03/07/2026</td>
+                  <td>-1</td>
+                  <td>240</td>
+                  <td>0</td>
+                  <td>240</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

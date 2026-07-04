@@ -525,11 +525,13 @@ h1 {
 }
 
 .module-list,
-.issue-list {
+.issue-list,
+.report-list {
   display: grid;
 }
 
-.module-card {
+.module-card,
+.report-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(96px, auto);
   gap: 8px 14px;
@@ -538,12 +540,14 @@ h1 {
 }
 
 .module-card:last-child,
-.issue-row:last-child {
+.issue-row:last-child,
+.report-row:last-child {
   border-bottom: 0;
 }
 
 .module-card h3,
-.module-card p {
+.module-card p,
+.report-row p {
   margin: 0;
 }
 
@@ -553,6 +557,28 @@ h1 {
 
 .module-card p {
   grid-column: 1 / -1;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.report-row {
+  grid-template-columns: 1fr;
+}
+
+.report-row div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.report-row div:first-child span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-row p {
   color: var(--muted);
   line-height: 1.35;
 }
@@ -592,6 +618,82 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-chip.ativo,
+.status-chip.vigente,
+.status-chip.baixa {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.status-chip.planejado,
+.status-chip.vence_30_dias,
+.status-chip.vence_60_dias,
+.status-chip.media {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.status-chip.vencido_com_saldo,
+.status-chip.vencido_sem_saldo,
+.status-chip.alta {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid #edf1f5;
+  padding: 11px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th {
+  background: #fbfcfd;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.data-table td {
+  font-size: 14px;
+}
+
+.table-subtext {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .issue-row {

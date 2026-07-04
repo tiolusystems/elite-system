@@ -34,6 +34,12 @@ Relatorios iniciais registrados:
 - `romaneio_pendencias`
 - `auditoria_reconciliacao`
 
+Tela inicial:
+
+- Next.js: `apps/web/app/relatorios/page.tsx`.
+- Preview estatico: `apps/web/preview/relatorios.html`.
+- Dados: `apps/web/lib/reports.ts`.
+
 Permissao:
 
 - `reports.view`: visualizar relatorios e dashboards operacionais.

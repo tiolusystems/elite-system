@@ -28,6 +28,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           <a href="/pedidos" aria-current="page">
             Pedidos
           </a>
+          <a href="/relatorios">Relatorios</a>
           <a href="#novo-pedido">Novo pedido</a>
         </nav>
       </header>

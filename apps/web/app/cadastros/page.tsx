@@ -39,6 +39,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           <a href="/pcp">PCP</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
+          <a href="/login">Login</a>
           <a href="#validacao">Validacao</a>
           <a href="#credito">Credito</a>
         </nav>

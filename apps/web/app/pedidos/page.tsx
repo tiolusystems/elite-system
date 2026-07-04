@@ -34,6 +34,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           <a href="/pcp">PCP</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
+          <a href="/login">Login</a>
           <a href="#novo-pedido">Novo pedido</a>
         </nav>
       </header>

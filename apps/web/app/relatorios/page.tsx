@@ -27,6 +27,7 @@ export default async function RelatoriosPage() {
           <a href="/relatorios" aria-current="page">
             Relatorios
           </a>
+          <a href="/login">Login</a>
         </nav>
       </header>
 

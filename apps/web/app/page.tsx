@@ -1,3 +1,4 @@
+import { getAuthStatus } from "@/lib/auth";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getOrdersDashboard } from "@/lib/orders";
 import { getReportsDashboard } from "@/lib/reports";
@@ -52,12 +53,14 @@ const AUDIT_STEPS = [
   "NF XML entra em staging e so gera lote depois de confirmacao.",
   "PCP baixa estoque apenas na finalizacao de OP com CQ.",
   "Romaneio baixa PA apenas na confirmacao com reserva fechada.",
+  "Login Supabase identifica o usuario por sessao e perfil.",
   "Proxima etapa: status encadeado e financeiro/comissoes."
 ];
 
 export default async function HomePage() {
   const runtime = getRuntimeStatus();
-  const [cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios] = await Promise.all([
+  const [auth, cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios] = await Promise.all([
+    getAuthStatus(),
     getMasterDataDashboard(),
     getOrdersDashboard(),
     getReportsDashboard(),
@@ -89,6 +92,7 @@ export default async function HomePage() {
           <a href="/pcp">PCP</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
+          <a href="/login">Login</a>
         </nav>
       </header>
 
@@ -255,13 +259,20 @@ export default async function HomePage() {
                   <span style={{ width: "28%" }}></span>
                 </div>
               </a>
+              <a className="module-tile" href="/login">
+                <strong>Login</strong>
+                <span>{auth.profile?.displayName ?? auth.email ?? "entrar no sistema"}</span>
+                <div className="progress-rail">
+                  <span style={{ width: auth.isAuthenticated ? "70%" : "24%" }}></span>
+                </div>
+              </a>
             </div>
           </article>
 
           <article className="panel">
             <div className="panel-header">
               <h2>Trilha de auditoria</h2>
-              <span className="pill">controle</span>
+              <span className="pill">{auth.isAuthenticated ? "sessao ativa" : "sem sessao"}</span>
             </div>
             <ol className="audit-list">
               {AUDIT_STEPS.map((step) => (
@@ -277,7 +288,8 @@ export default async function HomePage() {
           importacaoXml.error ||
           kanban.error ||
           pcp.error ||
-          romaneios.error) && (
+          romaneios.error ||
+          auth.error) && (
           <section className="notice-panel warning" role="status">
             <strong>Conexao parcial</strong>
             <span>
@@ -287,7 +299,8 @@ export default async function HomePage() {
                 importacaoXml.error ??
                 kanban.error ??
                 pcp.error ??
-                romaneios.error}
+                romaneios.error ??
+                auth.error}
             </span>
           </section>
         )}

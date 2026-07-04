@@ -284,6 +284,10 @@ h1 {
   max-width: 1520px;
 }
 
+.login-workspace {
+  max-width: 980px;
+}
+
 .flow-board,
 .queue-list,
 .module-radar,

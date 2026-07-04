@@ -42,6 +42,8 @@ Status atual:
 - Stack web/cloud definida: PostgreSQL, Supabase, Next.js e Vercel.
 - Base inicial Next.js criada em `apps/web`.
 - Migration inicial Supabase criada em `supabase/migrations`.
+- Tela `/login` criada no Next.js para autenticar por Supabase Auth, consultar `user_profiles` e encerrar sessao.
+- Painel inicial passou a exibir estado de sessao e link direto para login.
 - Pendencia conhecida: classificar automaticamente a causa de cada diferenca.
 
 ## Bloco 2 - Cadastros mestres
@@ -326,7 +328,7 @@ Direcao visual:
 
 Referencia de ordem: `docs/fluxo_operacional_elite_system.md`.
 
-1. Expor usuarios, login e alcadas no app web.
+1. Homologar `/login` contra Supabase Auth configurado e usuario com `user_profiles` ativo.
 2. Criar telas operacionais de cadastros tecnicos: MP, embalagens, PA e PI.
 3. Homologar tela `/pcp` de formulas PA/PI contra Supabase configurado.
 4. Homologar tela `/pcp` para formulacao, reserva de insumos, CQ e baixa de insumos.

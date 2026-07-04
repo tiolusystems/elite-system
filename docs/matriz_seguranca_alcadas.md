@@ -66,4 +66,6 @@ Acesso direto ao banco fora da aplicacao Next.js, como SQL editor, script admini
 
 Para acoes com escopo, usar action keys separadas em vez de uma permissao generica. Exemplo: `.own` para registros do proprio ator e `.any` para registros fora do escopo. A RPC deve gravar em `permission_context` a alcada efetivamente usada e o escopo decidido.
 
+O padrao `.own/.any` nao deve ser aplicado mecanicamente a todo cadastro. A decisao de eixo de alcada por subdominio esta documentada em `docs/decisao_alcadas_cadastros_mestres.md`.
+
 `default_allowed=true` permanece apenas como decisao de fase inicial para acoes conhecidas. O endurecimento deve acontecer por dominio, nunca por flip global sem matriz revisada.

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getRuntimeStatus } from "@/lib/runtime";
+import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ALLOWED_TIPO_PEDIDO = new Set(["venda", "bonificacao", "devolucao"]);
@@ -57,7 +58,7 @@ export async function createPedidoRascunhoAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_com_pedido_operacional", {
+  const { error } = await auditedRpc(supabase, "create_com_pedido_operacional", {
     p_cliente_id: clienteId,
     p_data_pedido: dataPedido,
     p_observacao: optionalField(formData, "observacao"),
@@ -111,7 +112,7 @@ export async function registrarCreditoPedidoAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("registrar_com_pedido_decisao_credito", {
+  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_credito", {
     p_decisao: decisao,
     p_inadimplencia_snapshot: inadimplenciaSnapshot,
     p_limite_disponivel_snapshot: limiteDisponivelSnapshot,
@@ -149,7 +150,7 @@ export async function registrarRecebimentoPedidoAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("registrar_com_recebimento", {
+  const { error } = await auditedRpc(supabase, "registrar_com_recebimento", {
     p_data_recebimento: dataRecebimento,
     p_forma_recebimento: optionalField(formData, "forma_recebimento"),
     p_observacao: optionalField(formData, "observacao_recebimento"),
@@ -217,7 +218,7 @@ function mapSupabaseError(message: string): string {
   if (normalized.includes("receipt exceeds order balance")) {
     return "receipt_exceeds_balance";
   }
-  if (normalized.includes("permission") || normalized.includes("row-level security")) {
+  if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
   }
   return "save_failed";

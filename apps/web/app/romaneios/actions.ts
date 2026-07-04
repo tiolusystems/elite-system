@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getRuntimeStatus } from "@/lib/runtime";
+import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const DECIMAL_SEPARATOR = /,/g;
@@ -33,7 +34,7 @@ export async function createRomaneioAction(formData: FormData) {
     redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(item.error?.message ?? "pedido item not found"))}#novo-romaneio`);
   }
 
-  const { error } = await supabase.rpc("create_exp_romaneio", {
+  const { error } = await auditedRpc(supabase, "create_exp_romaneio", {
     p_lote_pa_ref: null,
     p_observacao: optionalField(formData, "observacao"),
     p_pedido_id: pedidoId,
@@ -65,7 +66,7 @@ export async function addRomaneioItemAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("add_exp_romaneio_item", {
+  const { error } = await auditedRpc(supabase, "add_exp_romaneio_item", {
     p_observacao: optionalField(formData, "observacao"),
     p_pedido_item_id: pedidoItemId,
     p_quantidade_romaneada: quantidadeRomaneada,
@@ -97,7 +98,7 @@ export async function reserveRomaneioPaLotAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("registrar_est_reserva_pa", {
+  const { error } = await auditedRpc(supabase, "registrar_est_reserva_pa", {
     p_lote_pa_id: lotePaId,
     p_observacao: optionalField(formData, "observacao"),
     p_quantidade_reservada: quantidadeReservada,
@@ -124,7 +125,7 @@ export async function confirmRomaneioAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("confirmar_exp_romaneio", {
+  const { error } = await auditedRpc(supabase, "confirmar_exp_romaneio", {
     p_observacao: optionalField(formData, "observacao"),
     p_romaneio_id: romaneioId
   });
@@ -151,7 +152,7 @@ export async function cancelRomaneioAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("cancelar_exp_romaneio", {
+  const { error } = await auditedRpc(supabase, "cancelar_exp_romaneio", {
     p_motivo: motivo,
     p_romaneio_id: romaneioId
   });
@@ -176,7 +177,7 @@ export async function reverseRomaneioAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("estornar_exp_romaneio", {
+  const { error } = await auditedRpc(supabase, "estornar_exp_romaneio", {
     p_motivo: motivo,
     p_romaneio_id: romaneioId
   });
@@ -220,7 +221,7 @@ function optionalInteger(formData: FormData, name: string): number | null {
 
 function mapRomaneioError(message: string): string {
   const normalized = message.toLowerCase();
-  if (normalized.includes("permission") || normalized.includes("row-level security")) {
+  if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
   }
   if (normalized.includes("not found") || normalized.includes("foreign key")) {

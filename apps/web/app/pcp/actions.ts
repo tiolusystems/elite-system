@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getRuntimeStatus } from "@/lib/runtime";
+import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const DECIMAL_SEPARATOR = /,/g;
@@ -52,7 +53,7 @@ export async function createPcpFormulaAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_pcp_formula_versao", {
+  const { error } = await auditedRpc(supabase, "create_pcp_formula_versao", {
     p_componentes_jsonb: componentes,
     p_justificativa: justificativa,
     p_observacao: optionalField(formData, "observacao"),
@@ -80,7 +81,7 @@ export async function activatePcpFormulaAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("activate_pcp_formula_versao", {
+  const { error } = await auditedRpc(supabase, "activate_pcp_formula_versao", {
     p_formula_versao_id: formulaVersionId,
     p_motivo: motivo
   });
@@ -113,7 +114,7 @@ export async function createPcpOpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_pcp_op", {
+  const { error } = await auditedRpc(supabase, "create_pcp_op", {
     p_formula_versao_id: formulaVersionId,
     p_observacao: optionalField(formData, "observacao"),
     p_quantidade_planejada: quantidadePlanejada,
@@ -149,7 +150,7 @@ export async function reservePcpComponentAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("reservar_pcp_op_componente", {
+  const { error } = await auditedRpc(supabase, "reservar_pcp_op_componente", {
     p_lote_mp_id: tipoComponente === "MP" ? loteId : null,
     p_lote_pa_id: tipoComponente === "PA" ? loteId : null,
     p_lote_pi_id: tipoComponente === "PI" ? loteId : null,
@@ -177,7 +178,7 @@ export async function startPcpOpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("iniciar_pcp_op", {
+  const { error } = await auditedRpc(supabase, "iniciar_pcp_op", {
     p_observacao: optionalField(formData, "observacao"),
     p_op_id: opId
   });
@@ -221,7 +222,7 @@ export async function finishPcpOpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("finalizar_pcp_op", {
+  const { error } = await auditedRpc(supabase, "finalizar_pcp_op", {
     p_conferente_mp: conferenteMp,
     p_cq_status: cqStatus,
     p_densidade_kg_l: densidade,
@@ -257,7 +258,7 @@ export async function cancelPcpOpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("cancelar_pcp_op", {
+  const { error } = await auditedRpc(supabase, "cancelar_pcp_op", {
     p_motivo: motivo,
     p_op_id: opId
   });
@@ -376,7 +377,7 @@ function optionalInteger(formData: FormData, name: string): number | null {
 
 function mapPcpError(message: string): string {
   const normalized = message.toLowerCase();
-  if (normalized.includes("permission") || normalized.includes("row-level security")) {
+  if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
   }
   if (normalized.includes("not found") || normalized.includes("foreign key")) {

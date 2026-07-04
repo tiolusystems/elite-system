@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getRuntimeStatus } from "@/lib/runtime";
+import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const DECIMAL_SEPARATOR = /,/g;
@@ -51,7 +52,7 @@ export async function importNfeXmlTextAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: nfeId, error } = await supabase.rpc("stage_imp_nfe_xml", {
+  const { data: nfeId, error } = await auditedRpc<number>(supabase, "stage_imp_nfe_xml", {
     p_chave_acesso: parsed.chaveAcesso,
     p_data_emissao: parsed.dataEmissao,
     p_emitente_cnpj: parsed.emitenteCnpj,
@@ -66,7 +67,7 @@ export async function importNfeXmlTextAction(formData: FormData) {
   }
 
   for (const item of parsed.items) {
-    const itemResult = await supabase.rpc("stage_imp_nfe_xml_item", {
+    const itemResult = await auditedRpc(supabase, "stage_imp_nfe_xml_item", {
       p_cfop: item.cfop,
       p_codigo_fornecedor: item.codigoFornecedor,
       p_data_fabricacao: null,
@@ -102,7 +103,7 @@ export async function stageNfeHeaderAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("stage_imp_nfe_xml", {
+  const { error } = await auditedRpc(supabase, "stage_imp_nfe_xml", {
     p_chave_acesso: chaveAcesso,
     p_data_emissao: optionalField(formData, "data_emissao"),
     p_emitente_cnpj: optionalField(formData, "emitente_cnpj"),
@@ -144,7 +145,7 @@ export async function stageNfeItemAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("stage_imp_nfe_xml_item", {
+  const { error } = await auditedRpc(supabase, "stage_imp_nfe_xml_item", {
     p_cfop: optionalField(formData, "cfop"),
     p_codigo_fornecedor: optionalField(formData, "codigo_fornecedor"),
     p_data_fabricacao: optionalField(formData, "data_fabricacao"),
@@ -190,7 +191,7 @@ export async function confirmNfeItemMatchAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("confirm_imp_nfe_item_match", {
+  const { error } = await auditedRpc(supabase, "confirm_imp_nfe_item_match", {
     p_data_fabricacao: optionalField(formData, "data_fabricacao"),
     p_data_validade: optionalField(formData, "data_validade"),
     p_fator_conversao: fatorConversao,
@@ -225,7 +226,7 @@ export async function generateMpLotFromNfeItemAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("gerar_lote_mp_from_imp_nfe_item", {
+  const { error } = await auditedRpc(supabase, "gerar_lote_mp_from_imp_nfe_item", {
     p_item_id: itemId,
     p_observacao: optionalField(formData, "observacao"),
     p_status: status
@@ -252,7 +253,7 @@ export async function ignoreNfeItemAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("ignore_imp_nfe_xml_item", {
+  const { error } = await auditedRpc(supabase, "ignore_imp_nfe_xml_item", {
     p_item_id: itemId,
     p_motivo: motivo
   });
@@ -401,7 +402,7 @@ function mapImportError(message: string): string {
   if (normalized.includes("not found") || normalized.includes("foreign key")) {
     return "missing_related_record";
   }
-  if (normalized.includes("permission") || normalized.includes("row-level security")) {
+  if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
   }
   if (normalized.includes("duplicate") || normalized.includes("unique")) {

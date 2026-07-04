@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { normalizeKey, normalizeUf } from "@/lib/normalization";
 import { getRuntimeStatus } from "@/lib/runtime";
+import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ALLOWED_STATUS = new Set(["active", "inactive", "pending_review"]);
@@ -45,7 +46,7 @@ export async function createClienteAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_cad_cliente", {
+  const { error } = await auditedRpc(supabase, "create_cad_cliente", {
     p_apelidos_json: apelidos,
     p_cidade: cidade,
     p_codigo_legado: codigoLegado,
@@ -103,7 +104,7 @@ export async function createPessoaComercialAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_cad_pessoa_comercial", {
+  const { error } = await auditedRpc(supabase, "create_cad_pessoa_comercial", {
     p_apelidos_json: apelidos,
     p_codigo_legado: codigoLegado,
     p_grafias_incorretas_json: grafiasIncorretas,
@@ -154,7 +155,7 @@ export async function createMateriaPrimaAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_cad_materia_prima", {
+  const { error } = await auditedRpc(supabase, "create_cad_materia_prima", {
     p_codigo_ads: optionalField(formData, "codigo_ads"),
     p_codigo_legado: optionalField(formData, "codigo_legado"),
     p_densidade: densidade,
@@ -211,7 +212,7 @@ export async function createProdutoBaseAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: produtoId, error } = await supabase.rpc("create_cad_produto_base", {
+  const { data: produtoId, error } = await auditedRpc<number>(supabase, "create_cad_produto_base", {
     p_ads: optionalField(formData, "ads"),
     p_codigo_produto: codigoProduto.toUpperCase(),
     p_densidade_kg_l: densidadeKgL,
@@ -232,7 +233,7 @@ export async function createProdutoBaseAction(formData: FormData) {
     redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-produto`);
   }
   if (prazoValidadeMeses !== null && produtoId) {
-    const { error: prazoError } = await supabase.rpc("set_cad_produto_prazo_validade", {
+    const { error: prazoError } = await auditedRpc(supabase, "set_cad_produto_prazo_validade", {
       p_motivo: "Cadastro inicial do produto acabado",
       p_prazo_validade_meses: prazoValidadeMeses,
       p_produto_id: produtoId
@@ -277,7 +278,7 @@ export async function createEmbalagemAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_cad_embalagem", {
+  const { error } = await auditedRpc(supabase, "create_cad_embalagem", {
     p_codigo_legado: optionalField(formData, "codigo_legado"),
     p_controla_estoque: controlaEstoque,
     p_descricao: descricao,
@@ -322,7 +323,7 @@ export async function createProdutoEmbalagemAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_cad_produto_embalagem", {
+  const { error } = await auditedRpc(supabase, "create_cad_produto_embalagem", {
     p_codigo_item: codigoItem.toUpperCase(),
     p_embalagem_id: embalagemId,
     p_produto_id: produtoId,
@@ -367,7 +368,7 @@ export async function createConversaoUnidadeMpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_cad_conversao_unidade_mp", {
+  const { error } = await auditedRpc(supabase, "create_cad_conversao_unidade_mp", {
     p_fator: fator,
     p_materia_prima_id: materiaPrimaId,
     p_unidade_destino: unidadeDestino,
@@ -442,7 +443,7 @@ function mapSupabaseError(message: string): string {
   if (normalized.includes("duplicate") || normalized.includes("unique")) {
     return "duplicated";
   }
-  if (normalized.includes("permission") || normalized.includes("row-level security")) {
+  if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
   }
   return "save_failed";

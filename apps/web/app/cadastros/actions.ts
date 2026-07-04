@@ -68,6 +68,80 @@ export async function createClienteAction(formData: FormData) {
   redirect("/cadastros?result=cliente_created#novo-cadastro");
 }
 
+export async function updateClienteAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#novo-cadastro");
+  }
+
+  const clienteId = optionalInteger(formData, "cliente_id");
+  const nome = field(formData, "nome");
+  const cidade = field(formData, "cidade");
+  const uf = normalizeUf(field(formData, "uf"));
+  const codigoLegado = optionalField(formData, "codigo_legado");
+  const motivo = field(formData, "motivo");
+  const apelidos = splitLines(optionalField(formData, "apelidos"));
+
+  if (!clienteId || !nome || !cidade || !uf || !motivo) {
+    redirect("/cadastros?result=missing_required#novo-cadastro");
+  }
+  if (!Number.isInteger(clienteId) || clienteId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#novo-cadastro");
+  }
+  if (uf.length !== 2) {
+    redirect("/cadastros?result=invalid_uf#novo-cadastro");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "update_cad_cliente", {
+    p_apelidos_json: apelidos,
+    p_cidade: cidade,
+    p_cliente_id: clienteId,
+    p_codigo_legado: codigoLegado,
+    p_motivo: motivo,
+    p_nome: nome,
+    p_nome_norm: normalizeKey(nome),
+    p_uf: uf
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-cadastro`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=cliente_updated#novo-cadastro");
+}
+
+export async function deactivateClienteAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#novo-cadastro");
+  }
+
+  const clienteId = optionalInteger(formData, "cliente_id");
+  const motivo = field(formData, "motivo");
+
+  if (!clienteId || !motivo) {
+    redirect("/cadastros?result=missing_required#novo-cadastro");
+  }
+  if (!Number.isInteger(clienteId) || clienteId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#novo-cadastro");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "deactivate_cad_cliente", {
+    p_cliente_id: clienteId,
+    p_motivo: motivo
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-cadastro`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=cliente_deactivated#novo-cadastro");
+}
+
 export async function createPessoaComercialAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {

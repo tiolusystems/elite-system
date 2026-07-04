@@ -633,6 +633,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Cliente salvo",
       detail: "Cadastro criado via funcao auditavel. A fila e as contagens serao atualizadas pelo Supabase."
     },
+    cliente_updated: {
+      kind: "ok",
+      title: "Cliente atualizado",
+      detail: "Cadastro editado via funcao auditavel com before/after registrado em action_logs."
+    },
+    cliente_deactivated: {
+      kind: "ok",
+      title: "Cliente desativado",
+      detail: "Cadastro preservado como historico e marcado como inactive por funcao auditavel."
+    },
     pessoa_created: {
       kind: "ok",
       title: "Pessoa comercial salva",

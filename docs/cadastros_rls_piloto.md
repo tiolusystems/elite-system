@@ -17,6 +17,12 @@ Escrita:
 - cada RPC valida uma `action_key` especifica;
 - cada RPC registra auditoria com `log_audit_event`.
 
+Exclusao:
+
+- cadastro mestre nao deve usar hard-delete como regra operacional;
+- exclusao vira soft-delete por mudanca de `status` para `inactive`;
+- reativacao futura deve ter RPC e `action_key` proprias.
+
 ## Limite explicito do contrato atual
 
 O wrapper `apps/web/lib/supabase/rpc.ts` garante log de negativa para chamadas feitas pela aplicacao Next.js.
@@ -35,8 +41,24 @@ Acesso direto ao banco fora desse fluxo, como SQL editor, script administrativo 
 | Criar embalagem | `create_cad_embalagem` | `cadastros.embalagens.create` | `cad_embalagens` |
 | Criar item vendavel | `create_cad_produto_embalagem` | `cadastros.produto_embalagens.create` | `cad_produto_embalagens` |
 | Criar conversao de unidade MP | `create_cad_conversao_unidade_mp` | `cadastros.conversoes_unidade_mp.create` | `cad_conversoes_unidade_mp` |
+| Editar proprio cliente | `update_cad_cliente` | `cadastros.clientes.update.own` | `cad_clientes` |
+| Editar qualquer cliente | `update_cad_cliente` | `cadastros.clientes.update.any` | `cad_clientes` |
+| Desativar proprio cliente | `deactivate_cad_cliente` | `cadastros.clientes.deactivate.own` | `cad_clientes` |
+| Desativar qualquer cliente | `deactivate_cad_cliente` | `cadastros.clientes.deactivate.any` | `cad_clientes` |
 
 Tabelas auxiliares de cadastro que ainda nao possuem RPC propria, como areas comerciais e vinculos pessoa-area, ficam em leitura autenticada e com escrita direta revogada. A escrita dessas tabelas so deve voltar quando houver uma RPC especifica com `action_key` e auditoria.
+
+## Contrato de edicao e escopo
+
+`update_cad_cliente` e `deactivate_cad_cliente` usam escopo inicial por autoria (`created_by`):
+
+- se o cadastro foi criado pelo ator atual, a RPC tenta usar a alcada `.own`;
+- se nao foi criado pelo ator atual, a RPC exige a alcada `.any`;
+- se `.own` estiver negada mas `.any` estiver permitida, a RPC usa `.any`;
+- a alcada efetivamente usada fica em `permission_context.alcada_usada`;
+- `before_json` e `after_json` devem guardar o estado completo antes e depois da alteracao.
+
+Este escopo por autoria e o primeiro degrau. Escopos futuros podem considerar carteira de vendedor, gerente, area comercial, filial ou propriedade.
 
 ## Smoke minimo obrigatorio
 
@@ -49,3 +71,6 @@ Antes de considerar o piloto fechado:
 5. usuario inativo nao passa em `can_current_user`;
 6. role `anon` nao executa RPC nem le tabela;
 7. insert/update/delete direto nas tabelas de cadastro nao funciona para `authenticated`.
+8. edicao registra `before_json` e `after_json` com diferenca real;
+9. soft-delete muda apenas `status` para `inactive` e preserva o registro;
+10. usuario com `.any` negado edita/desativa cadastro proprio, mas nao cadastro de outro usuario.

@@ -64,4 +64,6 @@ Nao registrar permissao negada dentro de `require_current_user_permission` antes
 
 Acesso direto ao banco fora da aplicacao Next.js, como SQL editor, script administrativo ou integracao futura, nao e coberto pelo wrapper `auditedRpc`. Esses caminhos devem usar RPCs auditadas ou ter auditoria propria antes de serem considerados operacionais.
 
+Para acoes com escopo, usar action keys separadas em vez de uma permissao generica. Exemplo: `.own` para registros do proprio ator e `.any` para registros fora do escopo. A RPC deve gravar em `permission_context` a alcada efetivamente usada e o escopo decidido.
+
 `default_allowed=true` permanece apenas como decisao de fase inicial para acoes conhecidas. O endurecimento deve acontecer por dominio, nunca por flip global sem matriz revisada.

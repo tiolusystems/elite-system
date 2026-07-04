@@ -112,7 +112,11 @@ def criar_produto_base(
         action="cadastros.produto_base_created",
         entity_type="cad_produtos_base",
         entity_id=str(produto_id),
-        after={"nome": produto.nome, "codigo_produto": produto.codigo_produto},
+        after={
+            "nome": produto.nome,
+            "codigo_produto": produto.codigo_produto,
+            "prazo_validade_meses": produto.prazo_validade_meses,
+        },
     )
     return produto_id
 

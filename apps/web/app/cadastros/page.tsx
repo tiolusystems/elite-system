@@ -398,6 +398,10 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
                 <input name="densidade_kg_l" placeholder="1,20" inputMode="decimal" />
               </label>
               <label>
+                Validade PA/PI em meses
+                <input name="prazo_validade_meses" placeholder="12" inputMode="numeric" />
+              </label>
+              <label>
                 Registro MAPA
                 <input name="reg_mapa" />
               </label>

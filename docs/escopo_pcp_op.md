@@ -27,6 +27,7 @@ A OP MAPA e documental apenas. Ela registra a receita regulatoria/documental, ma
 15. Reprocessamento pode consumir MP+PA+PI e gerar PA/PI como transformacao.
 16. Movimentos de MP e PI sao append-only; correcao deve ser novo movimento auditavel.
 17. Formula, itens de formula e ativacoes sao append-only; correcao deve ser nova versao.
+18. PA e PI gerados por OP podem herdar validade automatica do produto quando o cadastro tiver `prazo_validade_meses`.
 
 ## Estrutura criada
 

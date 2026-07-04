@@ -103,6 +103,8 @@ Alteracoes:
 - `registrar_est_reserva_pa` permite reservas parciais por lote e valida que a soma nao ultrapassa a quantidade romaneada.
 - `confirmar_exp_romaneio` exige que a soma das reservas ativas seja exatamente igual a quantidade romaneada e gera uma baixa por lote.
 - `est_lotes_pa_saldos` passou a considerar tambem reservas de PA feitas pelo PCP.
+- `0010_product_validity_reports_foundation.sql` adicionou calculo automatico de validade de lote PA a partir do prazo em meses do produto, quando a validade nao for informada manualmente.
+- A mesma etapa criou relatorios de vencimento e candidatos a reprocessamento para PA, PI e MP.
 
 Resultado validado:
 

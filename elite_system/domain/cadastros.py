@@ -258,6 +258,7 @@ class ProdutoBase:
     status: CadastroStatus | str = CadastroStatus.ACTIVE
     grupo: str | None = None
     densidade_kg_l: float | None = None
+    prazo_validade_meses: int | None = None
     reg_mapa: str | None = None
     ncm: str | None = None
     ibama: str | None = None
@@ -268,6 +269,8 @@ class ProdutoBase:
         _validate_required(self.nome, "nome")
         object.__setattr__(self, "status", _coerce_enum(CadastroStatus, self.status, "status"))
         _validate_positive_optional(self.densidade_kg_l, "densidade_kg_l")
+        if self.prazo_validade_meses is not None and not 1 <= self.prazo_validade_meses <= 240:
+            raise ValueError("prazo_validade_meses must be between 1 and 240")
 
 
 @dataclass(frozen=True)

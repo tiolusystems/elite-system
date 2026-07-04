@@ -191,6 +191,8 @@ export async function createProdutoBaseAction(formData: FormData) {
   const nome = field(formData, "nome");
   const status = field(formData, "status") || "active";
   const densidadeKgL = optionalNumber(formData, "densidade_kg_l");
+  const prazoValidadeMesesText = optionalField(formData, "prazo_validade_meses");
+  const prazoValidadeMeses = prazoValidadeMesesText === null ? null : Number(prazoValidadeMesesText);
 
   if (!codigoProduto || !nome) {
     redirect("/cadastros?result=missing_product_required#novo-produto");
@@ -201,9 +203,15 @@ export async function createProdutoBaseAction(formData: FormData) {
   if (densidadeKgL !== null && (!Number.isFinite(densidadeKgL) || densidadeKgL <= 0)) {
     redirect("/cadastros?result=invalid_positive_number#novo-produto");
   }
+  if (
+    prazoValidadeMeses !== null &&
+    (!Number.isInteger(prazoValidadeMeses) || prazoValidadeMeses < 1 || prazoValidadeMeses > 240)
+  ) {
+    redirect("/cadastros?result=invalid_validity_months#novo-produto");
+  }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_cad_produto_base", {
+  const { data: produtoId, error } = await supabase.rpc("create_cad_produto_base", {
     p_ads: optionalField(formData, "ads"),
     p_codigo_produto: codigoProduto.toUpperCase(),
     p_densidade_kg_l: densidadeKgL,
@@ -222,6 +230,17 @@ export async function createProdutoBaseAction(formData: FormData) {
 
   if (error) {
     redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-produto`);
+  }
+  if (prazoValidadeMeses !== null && produtoId) {
+    const { error: prazoError } = await supabase.rpc("set_cad_produto_prazo_validade", {
+      p_motivo: "Cadastro inicial do produto acabado",
+      p_prazo_validade_meses: prazoValidadeMeses,
+      p_produto_id: produtoId
+    });
+
+    if (prazoError) {
+      redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(prazoError.message))}#novo-produto`);
+    }
   }
 
   revalidatePath("/cadastros");

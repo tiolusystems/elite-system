@@ -156,9 +156,9 @@ def insert_produto_base(
         """
         INSERT INTO cad_produtos_base(
             codigo_produto, nome, nome_norm, status, grupo, densidade_kg_l,
-            reg_mapa, ncm, ibama, ads, payload_origem_json, created_by, updated_by
+            prazo_validade_meses, reg_mapa, ncm, ibama, ads, payload_origem_json, created_by, updated_by
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             produto.codigo_produto,
@@ -167,6 +167,7 @@ def insert_produto_base(
             _enum_value(produto.status),
             produto.grupo,
             produto.densidade_kg_l,
+            produto.prazo_validade_meses,
             produto.reg_mapa,
             produto.ncm,
             produto.ibama,

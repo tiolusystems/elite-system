@@ -9,6 +9,7 @@ INSERT OR IGNORE INTO schema_migrations(version) VALUES ('001_initial');
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('002_security_audit');
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('003_default_allow_permissions');
 INSERT OR IGNORE INTO schema_migrations(version) VALUES ('004_cadastros_mestres');
+INSERT OR IGNORE INTO schema_migrations(version) VALUES ('005_relatorios_validade');
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,6 +109,27 @@ BEFORE DELETE ON action_logs
 BEGIN
     SELECT RAISE(ABORT, 'action_logs are append-only');
 END;
+
+CREATE TABLE IF NOT EXISTS relatorio_catalogo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo TEXT NOT NULL UNIQUE,
+    modulo TEXT NOT NULL,
+    nome TEXT NOT NULL,
+    descricao TEXT NOT NULL,
+    fonte_principal TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'ativo',
+    sort_order INTEGER NOT NULL DEFAULT 100,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('ativo', 'planejado', 'inativo'))
+);
+
+INSERT OR IGNORE INTO relatorio_catalogo(codigo, modulo, nome, descricao, fonte_principal, status, sort_order) VALUES
+    ('estoque_lotes_vencimento', 'estoque', 'Lotes por vencimento', 'PA, PI e MP com data de validade, saldo e situacao de vencimento.', 'rel_estoque_lotes_vencimento', 'ativo', 100),
+    ('estoque_reprocessamento_candidatos', 'estoque', 'Candidatos a reprocessamento', 'Lotes vencidos ou bloqueados com saldo disponivel para avaliacao de reprocessamento.', 'rel_estoque_reprocessamento_candidatos', 'ativo', 101),
+    ('pcp_op_status', 'pcp', 'Status de OP', 'Ordens de producao por status, tipo e CQ.', 'pcp_ordens_producao', 'planejado', 200),
+    ('comercial_pedidos_abertos', 'comercial', 'Pedidos em aberto', 'Pedidos abertos, bloqueados, pendentes e faturamento previsto.', 'com_pedidos', 'planejado', 300),
+    ('romaneio_pendencias', 'romaneio', 'Pendencias de romaneio', 'Pedidos e itens com saldo pendente de separacao, reserva ou baixa.', 'exp_pedido_item_romaneio_saldos', 'planejado', 400),
+    ('auditoria_reconciliacao', 'auditoria', 'Reconciliacao contra Excel', 'Metricas do sistema contra valores esperados da migracao.', 'value_reconciliations', 'ativo', 500);
 
 CREATE TABLE IF NOT EXISTS source_workbooks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -571,6 +593,7 @@ CREATE TABLE IF NOT EXISTS cad_produtos_base (
     status TEXT NOT NULL DEFAULT 'active',
     grupo TEXT,
     densidade_kg_l REAL,
+    prazo_validade_meses INTEGER,
     reg_mapa TEXT,
     ncm TEXT,
     ibama TEXT,
@@ -583,7 +606,8 @@ CREATE TABLE IF NOT EXISTS cad_produtos_base (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK(status IN ('active', 'inactive', 'pending_review')),
-    CHECK(densidade_kg_l IS NULL OR densidade_kg_l > 0)
+    CHECK(densidade_kg_l IS NULL OR densidade_kg_l > 0),
+    CHECK(prazo_validade_meses IS NULL OR prazo_validade_meses BETWEEN 1 AND 240)
 );
 
 CREATE TABLE IF NOT EXISTS cad_embalagens (

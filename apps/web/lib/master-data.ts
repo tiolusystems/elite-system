@@ -187,7 +187,7 @@ async function getMasterDataLookups(
         .limit(80),
       supabase
         .from("cad_produtos_base")
-        .select("id,codigo_produto,nome,status")
+        .select("id,codigo_produto,nome,status,prazo_validade_meses")
         .order("created_at", { ascending: false })
         .limit(80),
       supabase
@@ -215,7 +215,7 @@ async function getMasterDataLookups(
         : (produtos.data ?? []).map((item) => ({
             id: Number(item.id),
             label: `${item.codigo_produto} - ${item.nome}`,
-            detail: item.status
+            detail: `${item.status}${item.prazo_validade_meses ? ` / validade ${item.prazo_validade_meses} meses` : ""}`
           })),
       embalagens: embalagens.error
         ? []

@@ -156,6 +156,7 @@ Status atual:
 - Migration `0009_pcp_op_foundation.sql` adicionou lotes e movimentos de MP e PI.
 - Views `est_lotes_mp_saldos` e `est_lotes_pi_saldos` criadas para saldo fisico, reserva e disponibilidade.
 - Estoque PA passou a considerar reservas de romaneio e reservas PCP na view `est_lotes_pa_saldos`.
+- Migration `0010_product_validity_reports_foundation.sql` adicionou prazo de validade em meses ao produto-base e relatorios de vencimento/reprocessamento para PA, PI e MP.
 
 ## Bloco 5 - Producao
 
@@ -191,6 +192,7 @@ Status atual:
 - Reprocessamento pode consumir MP+PA+PI e gerar PA/PI.
 - Formula, movimentos MP e movimentos PI protegidos como append-only.
 - Validacao descartavel passou com OP estoque, OP experimental, OP reprocessamento, OP MAPA documental, CQ obrigatorio, append-only e romaneio multilote.
+- PA e PI podem herdar validade automatica do `prazo_validade_meses` do produto quando o lote tem data de fabricacao e nao recebeu validade manual.
 
 ## Bloco 6 - Romaneio
 
@@ -258,6 +260,9 @@ Status atual:
 - Funcao `run_aud_reconciliacao_operacional` compara sistema x fonte esperada e grava status `ok`, `attention` ou `missing`.
 - Camada bruta `source_workbooks`, `source_tables`, `source_rows` e `imported_records` foi protegida contra edicao/exclusao direta.
 - Validacao descartavel confirmou rodada `ok`, rodada divergente `attention` e bloqueio append-only em `source_rows`.
+- Escopo de relatorios registrado em `docs/escopo_relatorios.md`.
+- Migration `0010_product_validity_reports_foundation.sql` criou `relatorio_catalogo`, `rel_estoque_lotes_vencimento` e `rel_estoque_reprocessamento_candidatos`.
+- Relatorios foram classificados como modulo essencial, herdando a importancia das dezenas de telas de relatorios do Tio Lu System XLSX.
 
 ## Bloco 8 - Banco em nuvem
 

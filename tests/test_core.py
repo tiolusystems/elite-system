@@ -62,6 +62,7 @@ class CoreTests(unittest.TestCase):
             self.assertIn("users", tables)
             self.assertIn("user_sessions", tables)
             self.assertIn("action_logs", tables)
+            self.assertIn("relatorio_catalogo", tables)
             self.assertIn("permission_actions", tables)
             self.assertIn("role_permission_overrides", tables)
             self.assertIn("user_permission_overrides", tables)

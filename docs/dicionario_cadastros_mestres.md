@@ -321,6 +321,7 @@ O codigo de PA/PI pode ser exclusivamente numerico, por exemplo `0001` ate `9999
 | `nome` | `RELACAO DE PRODUTOS` | Sim | Nome principal do produto. |
 | `grupo` | `Grupo` | Nao | Familia ou classificacao. |
 | `densidade_kg_l` | `DENSIDADE Kg/L` | Nao | Usada em conversoes e producao. |
+| `prazo_validade_meses` | Novo | Nao | Prazo padrao de validade do PA/PI em meses; usado para gerar validade de lote e relatorios de vencimento/reprocessamento. |
 | `custo_mp_historico` | `CUSTO MP` | Nao | Historico; custo definitivo fica para modulo de custos. |
 | `reg_mapa` | `Reg MAPA` | Nao | Campo regulatorio. |
 | `ph` | `pH` | Nao | Campo tecnico do produto. |
@@ -348,6 +349,7 @@ Regras iniciais:
 - duplicidade por nome deve gerar alerta.
 - produto inativo nao deve entrar em novo pedido, producao ou romaneio.
 - densidade deve ser positiva quando preenchida.
+- prazo de validade em meses, quando preenchido, deve ser positivo e auditavel.
 - custo de MP importado e informativo ate o modulo de custos ser definido.
 - produto pode ter varias embalagens.
 - pedido deve informar produto + embalagem vendida.

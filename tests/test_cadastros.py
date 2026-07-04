@@ -149,6 +149,16 @@ class CadastroValidatorTests(unittest.TestCase):
         self.assertIn("duplicate_product_code", codes)
         self.assertIn("duplicate_descricao_normalized", codes)
 
+    def test_produto_base_validates_validity_months(self) -> None:
+        with self.assertRaisesRegex(ValueError, "prazo_validade_meses"):
+            ProdutoBase(codigo_produto="0001", nome="Produto A", prazo_validade_meses=0)
+
+        with self.assertRaisesRegex(ValueError, "prazo_validade_meses"):
+            ProdutoBase(codigo_produto="0001", nome="Produto A", prazo_validade_meses=241)
+
+        produto = ProdutoBase(codigo_produto="0001", nome="Produto A", prazo_validade_meses=12)
+        self.assertEqual(produto.prazo_validade_meses, 12)
+
 
 if __name__ == "__main__":
     unittest.main()

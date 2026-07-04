@@ -214,3 +214,50 @@ Resultado resumido do smoke:
 - Baixas PA por romaneio: 2.
 
 Resultado: passou.
+
+## Validacao adicional - validade de produto e relatorios
+
+Data/hora local: 2026-07-04.
+
+Banco descartavel complementar:
+
+- Pasta: `.tools/pg-validate-0010-*`.
+- Porta: `55436`.
+- Database final de smoke: `elite_validate_0010_final`.
+- Sem dados reais.
+
+Migrations aplicadas em ordem:
+
+- `0001_security_audit_foundation.sql`;
+- `0002_master_data_foundation.sql`;
+- `0003_commercial_orders_foundation.sql`;
+- `0004_order_credit_gate.sql`;
+- `0005_order_receipts_commissions.sql`;
+- `0006_romaneio_foundation.sql`;
+- `0007_pa_stock_lots_foundation.sql`;
+- `0008_audit_reconciliation_foundation.sql`;
+- `0009_pcp_op_foundation.sql`;
+- `0010_product_validity_reports_foundation.sql`.
+
+Resultado: todas aplicaram com sucesso via `psql -v ON_ERROR_STOP=1`.
+
+Smoke test `smoke_validity_reports_0010`:
+
+- criou MP, produto, embalagem e produto/embalagem falsos;
+- registrou `prazo_validade_meses = 1` para o produto via funcao auditavel;
+- criou lote PA sem informar `data_validade` e validou calculo automatico pela data de fabricacao;
+- criou lote PI sem informar `data_validade` e validou calculo automatico pela data de fabricacao;
+- criou lote MP vencido por validade informada no lote;
+- validou catalogo com relatorios de vencimento e reprocessamento ativos;
+- validou PA vencido em `rel_estoque_lotes_vencimento`;
+- validou PI vigente/proximo do vencimento em `rel_estoque_lotes_vencimento`;
+- validou MP vencida em `rel_estoque_reprocessamento_candidatos`;
+- validou PA vencido em `rel_estoque_reprocessamento_candidatos`.
+
+Resultado resumido do smoke:
+
+- Relatorios catalogados: 6.
+- Lotes no relatorio de vencimento: 3.
+- Candidatos a reprocessamento: 2.
+
+Resultado: passou.

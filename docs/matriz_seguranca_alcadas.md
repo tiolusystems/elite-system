@@ -9,6 +9,8 @@ Esta matriz guia o endurecimento de RLS por dominio. A regra de construcao e:
 5. Negativas de permissao capturadas pela aplicacao devem registrar `log_permission_denied` em transacao separada.
 6. RLS restritivo entra por dominio, depois que as RPCs daquele dominio estiverem cobertas.
 
+A receita operacional para escolher eixo de alcada, validar dominio no banco, escrever RPC auditada e rodar smoke esta em `docs/receita_rls_rpc_auditada.md`.
+
 ## Rotas publicas
 
 | Rota | Motivo |

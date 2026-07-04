@@ -169,6 +169,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Login negado",
       detail: "E-mail ou senha invalidos."
     },
+    auth_required: {
+      kind: "warning",
+      title: "Sessao obrigatoria",
+      detail: "Entre com usuario e senha para acessar as telas operacionais."
+    },
+    profile_required: {
+      kind: "warning",
+      title: "Perfil obrigatorio",
+      detail: "O usuario precisa estar vinculado a um perfil ativo em user_profiles."
+    },
     email_not_confirmed: {
       kind: "warning",
       title: "E-mail nao confirmado",

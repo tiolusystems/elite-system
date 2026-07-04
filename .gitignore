@@ -35,6 +35,7 @@ out/
 dist/
 coverage/
 *.tsbuildinfo
+*.log
 
 # Ferramentas locais baixadas para desenvolvimento
 .tools/

@@ -1,0 +1,62 @@
+# Matriz de seguranca e alcadas
+
+Esta matriz guia o endurecimento de RLS por dominio. A regra de construcao e:
+
+1. Rotas operacionais exigem sessao valida e perfil ativo.
+2. Escritas criticas devem passar por RPC `security definer`.
+3. Cada RPC valida `require_current_user_permission(action_key)`.
+4. Cada RPC registra auditoria em `action_logs` via `log_audit_event`.
+5. RLS restritivo entra por dominio, depois que as RPCs daquele dominio estiverem cobertas.
+
+## Rotas publicas
+
+| Rota | Motivo |
+|---|---|
+| `/login` | Entrada e saida de sessao |
+| `/health` | Health-check tecnico |
+| `/api/health` | Health-check tecnico |
+| assets/Next.js | Arquivos estaticos, imagens, fontes e chunks |
+
+Todas as demais rotas nascem protegidas por allowlist: rota nova exige sessao por padrao.
+
+## Matriz por dominio
+
+| Dominio | Leitura inicial | Escrita inicial | RPC existente? | Alcadas iniciais | Endurecimento RLS |
+|---|---|---|---|---|---|
+| seguranca | usuario autenticado ve proprio perfil, catalogo de permissoes e proprias excecoes | usuarios/permissoes somente por RPC administrativa | parcial | `system.admin`, `security.manage_users`, `security.manage_permissions` | restringir escrita direta imediatamente; leitura administrativa por RPC/view |
+| cadastros | usuarios autenticados veem cadastros mestres necessarios a operacao | criacao/edicao por RPC auditada | sim | `cadastros.manage`, depois granular por tipo de cadastro | por subdominio: clientes, pessoas, MP, PA/PI, embalagens |
+| pedidos | vendedor/gerente/administracao ve pedidos conforme carteira, area ou perfil | criar pedido, aprovar credito, registrar recebimento e comissao por RPC | sim | `pedidos.create`, `pedidos.credit.approve`, `pedidos.receipts.register` | bloquear escrita direta; leitura filtrada por carteira/gerencia |
+| importacao_xml | operadores veem fila de XML e matches pendentes | staged XML, match, ignore e geracao de lote MP por RPC | sim | `importacao.nfe_xml.stage`, `importacao.nfe_xml.match`, `importacao.nfe_xml.generate_mp_lot` | restringir escrita direta apos validar fluxo XML completo |
+| estoque | operadores veem lotes e saldos necessarios ao trabalho | entrada, reserva, baixa, ajuste e transformacao por RPC | sim | `estoque.manage`, `estoque.mp.lots.create`, `estoque.pa.reserve`, `estoque.pa.adjust` | separar leitura por MP, PI, PA e movimentos |
+| pcp | producao/CQ ve formulas, OPs, reservas, apontamentos e CQ | formula, OP, reserva, inicio, finalizacao, cancelamento e release por RPC | sim | `pcp.formula.create`, `pcp.formula.change`, `pcp.op.create`, `pcp.op.finish`, `pcp.cq.record` | bloquear alteracao direta de formula, OP e CQ; leitura por equipe/gestao |
+| romaneios | expedicao/comercial ve rascunhos, separacao e historico | criar, reservar, confirmar, cancelar e estornar por RPC | sim | `romaneios.create`, `romaneios.confirm`, `romaneios.cancel` | leitura por expedicao/comercial; escrita so por RPC |
+| financeiro_comissoes | comercial/financeiro ve recebimentos e comissoes conforme alcada | recebimento, estorno, compensacao e liberacao de comissao por RPC | parcial | `pedidos.receipts.register`, futura `comissoes.settle`, `comissoes.reverse` | separar leitura por vendedor, gerente, financeiro e auditoria |
+| auditoria | auditoria/admin ve logs, reconciliacoes e relatorios | execucao de reconciliacao e registro de metricas por RPC | sim | `audit.view`, `audit.reconciliation.run` | logs append-only; leitura completa apenas auditoria/admin |
+| relatorios | leitura conforme dados permitidos por dominio | sem escrita operacional, exceto parametros/snapshots auditados | parcial | `audit.view` e futuras alcadas de relatorio | views filtradas por perfil e escopo |
+
+## Contrato de RPC auditada
+
+Toda RPC de escrita critica deve seguir este formato:
+
+```sql
+perform public.require_current_user_permission('<action_key>');
+
+-- validar entrada, status e transicao permitida
+-- executar alteracao dentro da propria funcao
+
+perform public.log_audit_event(
+  '<dominio>',
+  '<entidade>',
+  v_entity_id::text,
+  '<acao_auditavel>',
+  '<action_key>',
+  'success',
+  v_before_json,
+  v_after_json,
+  jsonb_build_object('alcada_usada', '<action_key>'),
+  'database_rpc',
+  jsonb_build_object('origem_funcao', '<nome_da_rpc>')
+);
+```
+
+`default_allowed=true` permanece apenas como decisao de fase inicial para acoes conhecidas. O endurecimento deve acontecer por dominio, nunca por flip global sem matriz revisada.

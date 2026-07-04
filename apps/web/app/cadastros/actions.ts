@@ -390,6 +390,219 @@ export async function createMateriaPrimaAction(formData: FormData) {
   redirect("/cadastros?result=mp_created#nova-mp");
 }
 
+export async function updateMateriaPrimaIdentityAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-mp");
+  }
+
+  const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
+  const nome = field(formData, "nome");
+  const tipo = optionalField(formData, "tipo");
+  const motivo = field(formData, "motivo");
+
+  if (!materiaPrimaId || !nome || !motivo) {
+    redirect("/cadastros?result=missing_mp_required#nova-mp");
+  }
+  if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "update_cad_materia_prima_identity", {
+    p_materia_prima_id: materiaPrimaId,
+    p_motivo: motivo,
+    p_nome: nome,
+    p_nome_norm: normalizeKey(nome),
+    p_tipo: tipo
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=mp_identity_updated#nova-mp");
+}
+
+export async function updateMateriaPrimaSkuAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-mp");
+  }
+
+  const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
+  const skuCorrigido = field(formData, "sku_corrigido").toUpperCase();
+  const codigoLegado = optionalField(formData, "codigo_legado");
+  const motivo = field(formData, "motivo");
+
+  if (!materiaPrimaId || !skuCorrigido || !motivo) {
+    redirect("/cadastros?result=missing_mp_required#nova-mp");
+  }
+  if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+  }
+  if (/\s/.test(skuCorrigido)) {
+    redirect("/cadastros?result=invalid_sku#nova-mp");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "update_cad_materia_prima_sku", {
+    p_codigo_legado: codigoLegado,
+    p_materia_prima_id: materiaPrimaId,
+    p_motivo: motivo,
+    p_sku_corrigido: skuCorrigido
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=mp_sku_updated#nova-mp");
+}
+
+export async function updateMateriaPrimaTechnicalAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-mp");
+  }
+
+  const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
+  const unidadeBaseEstoque = field(formData, "unidade_base_estoque").toUpperCase();
+  const densidade = optionalNumber(formData, "densidade");
+  const motivo = field(formData, "motivo");
+
+  if (!materiaPrimaId || !unidadeBaseEstoque || !motivo) {
+    redirect("/cadastros?result=missing_mp_required#nova-mp");
+  }
+  if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+  }
+  if (densidade !== null && (!Number.isFinite(densidade) || densidade <= 0)) {
+    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "update_cad_materia_prima_technical", {
+    p_densidade: densidade,
+    p_materia_prima_id: materiaPrimaId,
+    p_motivo: motivo,
+    p_unidade_base_estoque: unidadeBaseEstoque
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=mp_technical_updated#nova-mp");
+}
+
+export async function updateMateriaPrimaStockPolicyAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-mp");
+  }
+
+  const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
+  const estoqueMinimo = optionalNumber(formData, "estoque_minimo");
+  const motivo = field(formData, "motivo");
+
+  if (!materiaPrimaId || estoqueMinimo === null || !motivo) {
+    redirect("/cadastros?result=missing_mp_required#nova-mp");
+  }
+  if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+  }
+  if (!Number.isFinite(estoqueMinimo) || estoqueMinimo < 0) {
+    redirect("/cadastros?result=invalid_non_negative_number#nova-mp");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "update_cad_materia_prima_stock_policy", {
+    p_estoque_minimo: estoqueMinimo,
+    p_materia_prima_id: materiaPrimaId,
+    p_motivo: motivo
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=mp_stock_policy_updated#nova-mp");
+}
+
+export async function updateMateriaPrimaRegulatoryAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-mp");
+  }
+
+  const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
+  const ncm = optionalField(formData, "ncm");
+  const ibama = optionalField(formData, "ibama");
+  const codigoAds = optionalField(formData, "codigo_ads");
+  const motivo = field(formData, "motivo");
+
+  if (!materiaPrimaId || !motivo) {
+    redirect("/cadastros?result=missing_mp_required#nova-mp");
+  }
+  if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+  }
+  if (ncm && !/^\d{8}$/.test(onlyDigits(ncm))) {
+    redirect("/cadastros?result=invalid_ncm#nova-mp");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "update_cad_materia_prima_regulatory", {
+    p_codigo_ads: codigoAds,
+    p_ibama: ibama,
+    p_materia_prima_id: materiaPrimaId,
+    p_motivo: motivo,
+    p_ncm: ncm
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=mp_regulatory_updated#nova-mp");
+}
+
+export async function deactivateMateriaPrimaAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?result=not_configured#nova-mp");
+  }
+
+  const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
+  const motivo = field(formData, "motivo");
+
+  if (!materiaPrimaId || !motivo) {
+    redirect("/cadastros?result=missing_mp_required#nova-mp");
+  }
+  if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
+    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "deactivate_cad_materia_prima", {
+    p_materia_prima_id: materiaPrimaId,
+    p_motivo: motivo
+  });
+
+  if (error) {
+    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect("/cadastros?result=mp_deactivated#nova-mp");
+}
+
 export async function createProdutoBaseAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
@@ -644,6 +857,10 @@ function uniqueStrings(values: string[]): string[] {
     result.push(value);
   }
   return result;
+}
+
+function onlyDigits(value: string): string {
+  return value.replace(/\D/g, "");
 }
 
 function mapSupabaseError(message: string): string {

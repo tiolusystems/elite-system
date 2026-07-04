@@ -668,6 +668,36 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Materia-prima salva",
       detail: "Cadastro criado com SKU corrigido e validacao de unidade base."
     },
+    mp_identity_updated: {
+      kind: "ok",
+      title: "Identidade de MP atualizada",
+      detail: "Nome ou tipo da materia-prima foi alterado por eixo auditavel."
+    },
+    mp_sku_updated: {
+      kind: "ok",
+      title: "SKU de MP atualizado",
+      detail: "Codigo operacional da materia-prima foi alterado com before/after."
+    },
+    mp_technical_updated: {
+      kind: "ok",
+      title: "Dados tecnicos atualizados",
+      detail: "Unidade base ou densidade da MP foi alterada por RPC tecnica."
+    },
+    mp_stock_policy_updated: {
+      kind: "ok",
+      title: "Politica de estoque atualizada",
+      detail: "Estoque minimo da materia-prima foi alterado por eixo proprio."
+    },
+    mp_regulatory_updated: {
+      kind: "ok",
+      title: "Dados regulatorios atualizados",
+      detail: "NCM, IBAMA ou ADS foram alterados por RPC regulatoria."
+    },
+    mp_deactivated: {
+      kind: "ok",
+      title: "Materia-prima desativada",
+      detail: "Cadastro preservado como historico e marcado como inactive por funcao auditavel."
+    },
     produto_created: {
       kind: "ok",
       title: "Produto salvo",
@@ -757,6 +787,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Conversao invalida",
       detail: "Unidade de origem e unidade de destino precisam ser diferentes."
+    },
+    invalid_sku: {
+      kind: "warning",
+      title: "SKU invalido",
+      detail: "SKU corrigido nao pode conter espacos."
+    },
+    invalid_ncm: {
+      kind: "warning",
+      title: "NCM invalido",
+      detail: "NCM deve conter exatamente 8 digitos."
     },
     invalid_date_range: {
       kind: "warning",

@@ -48,6 +48,12 @@ Acesso direto ao banco fora desse fluxo, como SQL editor, script administrativo 
 | Editar identidade de pessoa comercial | `update_cad_pessoa_comercial_identity` | `cadastros.pessoas.update.identity` | `cad_pessoas_comerciais` |
 | Editar papeis comerciais | `update_cad_pessoa_comercial_role` | `cadastros.pessoas.update.role` | `cad_pessoas_comerciais` |
 | Desativar pessoa comercial | `deactivate_cad_pessoa_comercial` | `cadastros.pessoas.deactivate` | `cad_pessoas_comerciais` |
+| Editar identidade de MP | `update_cad_materia_prima_identity` | `cadastros.materias_primas.update.identity` | `cad_materias_primas` |
+| Editar SKU de MP | `update_cad_materia_prima_sku` | `cadastros.materias_primas.update.sku` | `cad_materias_primas` |
+| Editar dados tecnicos de MP | `update_cad_materia_prima_technical` | `cadastros.materias_primas.update.technical` | `cad_materias_primas` |
+| Editar politica de estoque de MP | `update_cad_materia_prima_stock_policy` | `cadastros.materias_primas.update.stock_policy` | `cad_materias_primas` |
+| Editar dados regulatorios de MP | `update_cad_materia_prima_regulatory` | `cadastros.materias_primas.update.regulatory` | `cad_materias_primas` |
+| Desativar MP | `deactivate_cad_materia_prima` | `cadastros.materias_primas.deactivate` | `cad_materias_primas` |
 
 Tabelas auxiliares de cadastro que ainda nao possuem RPC propria, como areas comerciais e vinculos pessoa-area, ficam em leitura autenticada e com escrita direta revogada. A escrita dessas tabelas so deve voltar quando houver uma RPC especifica com `action_key` e auditoria.
 
@@ -79,6 +85,25 @@ Este escopo por autoria e o primeiro degrau. Escopos futuros podem considerar ca
 - `papeis_removidos`;
 - tipo comercial antes/depois;
 - vendedor responsavel antes/depois.
+
+## Contrato de materias-primas
+
+`cad_materias_primas` tambem nao usa `own/any`. A alteracao e separada por risco de campo:
+
+- identidade: nome e tipo;
+- SKU: codigo legado e SKU corrigido;
+- tecnico: unidade base e densidade;
+- politica de estoque: estoque minimo;
+- regulatorio: NCM, IBAMA e ADS;
+- desativacao: soft-delete por `status = inactive`.
+
+Cada RPC de MP aceita somente os campos do seu eixo. Validacoes basicas ficam no banco:
+
+- SKU corrigido obrigatorio, maiusculo e sem espacos;
+- densidade positiva quando preenchida;
+- estoque minimo maior/igual a zero quando preenchido;
+- NCM com exatamente 8 digitos quando preenchido;
+- motivo obrigatorio em toda alteracao.
 
 ## Smoke minimo obrigatorio
 

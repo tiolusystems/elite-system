@@ -99,6 +99,17 @@ Action keys previstas:
 
 Regra: custo de materia-prima nao entra nesse bloco. Custo fica para o modulo futuro de formacao de custos.
 
+Cada RPC de materia-prima deve aceitar apenas os campos do seu eixo e validar o dominio no banco:
+
+- `identity`: nome obrigatorio e tipo descritivo opcional;
+- `sku`: SKU corrigido obrigatorio, normalizado em maiusculas e sem espacos;
+- `technical`: unidade base obrigatoria e densidade positiva quando preenchida;
+- `stock_policy`: estoque minimo nulo ou maior/igual a zero;
+- `regulatory`: NCM nulo ou com exatamente 8 digitos, alem de IBAMA/ADS;
+- `deactivate`: soft-delete com motivo obrigatorio.
+
+Essas validacoes tambem podem existir no client para UX, mas a RPC SQL e o ultimo ponto de controle antes do dado virar verdade.
+
 ## Edicao com multiplos eixos
 
 Nao criar RPC generica de atualizacao que aceite campos de varios eixos ao mesmo tempo.

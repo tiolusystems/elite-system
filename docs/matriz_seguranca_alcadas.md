@@ -62,4 +62,6 @@ perform public.log_audit_event(
 
 Nao registrar permissao negada dentro de `require_current_user_permission` antes de `raise exception`: o PostgreSQL reverte o insert de auditoria junto com a excecao. Para negativa persistente, a camada de aplicacao deve capturar o erro `not allowed` e chamar `log_permission_denied(...)` em uma nova transacao. No web app, esse contrato fica centralizado em `apps/web/lib/supabase/rpc.ts`; Server Actions nao devem chamar `.rpc(...)` diretamente.
 
+Acesso direto ao banco fora da aplicacao Next.js, como SQL editor, script administrativo ou integracao futura, nao e coberto pelo wrapper `auditedRpc`. Esses caminhos devem usar RPCs auditadas ou ter auditoria propria antes de serem considerados operacionais.
+
 `default_allowed=true` permanece apenas como decisao de fase inicial para acoes conhecidas. O endurecimento deve acontecer por dominio, nunca por flip global sem matriz revisada.

@@ -9,6 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = REPO_ROOT / "supabase" / "migrations"
 MIGRATION_0007 = MIGRATIONS / "0007_pa_stock_lots_foundation.sql"
 MIGRATION_0009 = MIGRATIONS / "0009_pcp_op_foundation.sql"
+MIGRATION_0018 = MIGRATIONS / "0018_estoque_rls_adjustment_axes.sql"
 RECIPE_DOC = REPO_ROOT / "docs" / "receita_rls_rpc_auditada.md"
 SECURITY_MATRIX_DOC = REPO_ROOT / "docs" / "matriz_seguranca_alcadas.md"
 
@@ -74,6 +75,55 @@ class EstoqueEventLedgerContractTests(unittest.TestCase):
 
         self.assertIn("Nao usar uma action key generica `estoque.adjust`", recipe_text)
         self.assertNotRegex(matrix_text, r"`estoque\.adjust`")
+
+    def test_0018_replaces_permissive_stock_policies_with_read_only_policies(self) -> None:
+        text = MIGRATION_0018.read_text(encoding="utf-8").lower()
+
+        for policy_name in (
+            "authenticated full pa lot access",
+            "authenticated full pa movement access",
+            "authenticated full pa reservation access",
+            "authenticated full mp lot access",
+            "authenticated full mp movement access",
+            "authenticated full pi lot access",
+            "authenticated full pi movement access",
+        ):
+            self.assertIn(f'drop policy if exists "{policy_name}"', text)
+
+        self.assertIn("revoke insert, update, delete on", text)
+        self.assertIn("for select to authenticated using (public.current_actor_id() is not null)", text)
+        self.assertNotIn("for all to authenticated using (true) with check (true)", text)
+
+    def test_0018_adjustment_rpcs_require_family_specific_permission(self) -> None:
+        text = MIGRATION_0018.read_text(encoding="utf-8")
+
+        expected = {
+            "registrar_est_ajuste_mp": "estoque.mp.adjust",
+            "registrar_est_ajuste_pa": "estoque.pa.adjust",
+            "registrar_est_ajuste_pi": "estoque.pi.adjust",
+        }
+        for function_name, action_key in expected.items():
+            self.assertIn(f"create or replace function public.{function_name}", text)
+            self.assertIn(f"perform public.require_current_user_permission('{action_key}');", text)
+            self.assertIn(f"grant execute on function public.{function_name}", text)
+            self.assertIn(f"'{action_key}'", text)
+
+        self.assertIn("create or replace function public.create_est_lote_pa", text)
+        self.assertIn("perform public.require_current_user_permission('estoque.pa.lots.create');", text)
+        self.assertIn("'estoque.pa.lots.create'", text)
+        self.assertIn("grant execute on function public.create_est_lote_pa", text)
+
+    def test_0018_adjustment_audit_uses_derived_before_after_snapshot(self) -> None:
+        text = MIGRATION_0018.read_text(encoding="utf-8")
+
+        for view_name in ("est_lotes_mp_saldos", "est_lotes_pa_saldos", "est_lotes_pi_saldos"):
+            self.assertIn(f"from public.{view_name} saldo", text)
+
+        self.assertGreaterEqual(text.count("into v_before"), 3)
+        self.assertGreaterEqual(text.count("into v_after"), 3)
+        self.assertGreaterEqual(text.count("public.log_audit_event("), 3)
+        self.assertIn("'axis', 'event_movement'", text)
+        self.assertIn("'event', 'adjust'", text)
 
 
 if __name__ == "__main__":

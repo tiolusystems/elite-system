@@ -120,6 +120,18 @@ Padrao de action keys:
 | Ajuste manual de inventario | `<dominio>.<familia>.adjust` |
 | Estorno/reversao | `<dominio>.<familia>.reverse.<origem>` |
 
+Para ajuste manual de inventario, a familia e obrigatoria. Nao usar uma action key generica `estoque.adjust`.
+
+Padrao decidido:
+
+| Familia | Action key |
+|---|---|
+| Materia-prima | `estoque.mp.adjust` |
+| Produto acabado | `estoque.pa.adjust` |
+| Produto intermediario | `estoque.pi.adjust` |
+
+Cargo/papel define quem recebe cada check. A permissao em si fica separada por familia, porque ajuste de MP, PA e PI tem impactos diferentes em custo, producao, faturamento, rastreabilidade e compliance.
+
 Regras obrigatorias:
 
 - nunca criar RPC do tipo `update_saldo` ou campo editavel de saldo fisico;
@@ -130,7 +142,8 @@ Regras obrigatorias:
 - sinal da quantidade deve ser validado por tipo de movimento no banco;
 - correcao de erro deve ser novo movimento de reversao/ajuste, nao edicao do movimento original;
 - tabelas de movimento devem ter gatilho contra `update` e `delete`;
-- ajuste manual de inventario exige motivo obrigatorio e alcada mais forte que movimento com documento-fonte.
+- ajuste manual de inventario exige motivo obrigatorio e alcada mais forte que movimento com documento-fonte;
+- ajuste manual deve ser concedido por familia (`MP`, `PA`, `PI`), nao por uma permissao global.
 
 Para RPCs de movimento, `before_json` e `after_json` nao representam uma edicao do mesmo registro. Eles devem representar, no minimo, o estado derivado antes/depois do lote ou documento-fonte:
 

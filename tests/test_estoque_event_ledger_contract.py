@@ -10,6 +10,7 @@ MIGRATIONS = REPO_ROOT / "supabase" / "migrations"
 MIGRATION_0007 = MIGRATIONS / "0007_pa_stock_lots_foundation.sql"
 MIGRATION_0009 = MIGRATIONS / "0009_pcp_op_foundation.sql"
 RECIPE_DOC = REPO_ROOT / "docs" / "receita_rls_rpc_auditada.md"
+SECURITY_MATRIX_DOC = REPO_ROOT / "docs" / "matriz_seguranca_alcadas.md"
 
 
 def _create_table_body(sql: str, table_name: str) -> str:
@@ -62,6 +63,17 @@ class EstoqueEventLedgerContractTests(unittest.TestCase):
         self.assertIn("nunca criar rpc do tipo `update_saldo`", text)
         self.assertIn("saldo fisico deve ser derivado da soma de movimentos append-only", text)
         self.assertIn("ajuste manual de inventario exige motivo obrigatorio", text)
+
+    def test_manual_inventory_adjustment_is_family_scoped(self) -> None:
+        recipe_text = RECIPE_DOC.read_text(encoding="utf-8")
+        matrix_text = SECURITY_MATRIX_DOC.read_text(encoding="utf-8")
+        combined = f"{recipe_text}\n{matrix_text}"
+
+        for action_key in ("estoque.mp.adjust", "estoque.pa.adjust", "estoque.pi.adjust"):
+            self.assertIn(action_key, combined)
+
+        self.assertIn("Nao usar uma action key generica `estoque.adjust`", recipe_text)
+        self.assertNotRegex(matrix_text, r"`estoque\.adjust`")
 
 
 if __name__ == "__main__":

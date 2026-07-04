@@ -45,6 +45,9 @@ Acesso direto ao banco fora desse fluxo, como SQL editor, script administrativo 
 | Editar qualquer cliente | `update_cad_cliente` | `cadastros.clientes.update.any` | `cad_clientes` |
 | Desativar proprio cliente | `deactivate_cad_cliente` | `cadastros.clientes.deactivate.own` | `cad_clientes` |
 | Desativar qualquer cliente | `deactivate_cad_cliente` | `cadastros.clientes.deactivate.any` | `cad_clientes` |
+| Editar identidade de pessoa comercial | `update_cad_pessoa_comercial_identity` | `cadastros.pessoas.update.identity` | `cad_pessoas_comerciais` |
+| Editar papeis comerciais | `update_cad_pessoa_comercial_role` | `cadastros.pessoas.update.role` | `cad_pessoas_comerciais` |
+| Desativar pessoa comercial | `deactivate_cad_pessoa_comercial` | `cadastros.pessoas.deactivate` | `cad_pessoas_comerciais` |
 
 Tabelas auxiliares de cadastro que ainda nao possuem RPC propria, como areas comerciais e vinculos pessoa-area, ficam em leitura autenticada e com escrita direta revogada. A escrita dessas tabelas so deve voltar quando houver uma RPC especifica com `action_key` e auditoria.
 
@@ -59,6 +62,23 @@ Tabelas auxiliares de cadastro que ainda nao possuem RPC propria, como areas com
 - `before_json` e `after_json` devem guardar o estado completo antes e depois da alteracao.
 
 Este escopo por autoria e o primeiro degrau. Escopos futuros podem considerar carteira de vendedor, gerente, area comercial, filial ou propriedade.
+
+## Contrato de pessoas comerciais
+
+`cad_pessoas_comerciais` nao usa `own/any` como eixo inicial. A alteracao e separada por tipo de campo:
+
+- identidade: nome, codigo legado, apelidos e grafias incorretas;
+- papel comercial: `tipo_comercial`, `papeis_json` e `vendedor_responsavel_id`;
+- desativacao: soft-delete por `status = inactive`.
+
+`update_cad_pessoa_comercial_role` deve registrar motivo padronizado e diff de papeis:
+
+- `motivo_codigo`;
+- `motivo_detalhe`, quando houver;
+- `papeis_adicionados`;
+- `papeis_removidos`;
+- tipo comercial antes/depois;
+- vendedor responsavel antes/depois.
 
 ## Smoke minimo obrigatorio
 

@@ -60,6 +60,26 @@ Motivo: mudar `tipo_comercial`, `papeis_json` ou `vendedor_responsavel_id` pode 
 
 Observacao: papel comercial em `cad_pessoas_comerciais` nao e a mesma coisa que role de autenticacao em `user_profiles.role`, mas ainda assim e uma mudanca de alcada de negocio. A implementacao deve manter essa diferenca explicita.
 
+Motivos padronizados para `cadastros.pessoas.update.role`:
+
+| Codigo | Uso |
+|---|---|
+| `promocao` | mudanca de funcao por promocao ou aumento de responsabilidade |
+| `correcao_cadastro` | correcao de erro cadastral |
+| `transferencia_carteira` | transferencia de carteira, area ou vendedor responsavel |
+| `desligamento_funcao` | retirada de papel por desligamento ou fim de funcao |
+| `mudanca_comissao` | alteracao relacionada a comissao ou elegibilidade |
+| `outro` | excecao; exige detalhe textual |
+
+O log de `cadastros.pessoas.update.role` deve registrar, alem de `before_json` e `after_json`:
+
+- `motivo_codigo`;
+- `motivo_detalhe`, quando houver;
+- `papeis_adicionados`;
+- `papeis_removidos`;
+- tipo comercial antes/depois;
+- vendedor responsavel antes/depois.
+
 ## Materias-primas
 
 Eixo aprovado: risco tecnico/operacional do campo, nao `own/any`.

@@ -648,6 +648,21 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Pessoa comercial salva",
       detail: "Cadastro criado via funcao auditavel com papeis separados para venda, entrega, gerencia e comissao."
     },
+    pessoa_identity_updated: {
+      kind: "ok",
+      title: "Identidade atualizada",
+      detail: "Nome, apelidos ou grafias foram editados com before/after em action_logs."
+    },
+    pessoa_role_updated: {
+      kind: "ok",
+      title: "Papel comercial atualizado",
+      detail: "Papeis comerciais foram alterados com motivo padronizado e diff de adicionados/removidos."
+    },
+    pessoa_deactivated: {
+      kind: "ok",
+      title: "Pessoa desativada",
+      detail: "Cadastro preservado como historico e marcado como inactive por funcao auditavel."
+    },
     mp_created: {
       kind: "ok",
       title: "Materia-prima salva",
@@ -762,6 +777,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Vendedor responsavel invalido",
       detail: "Informe o ID numerico do vendedor responsavel."
+    },
+    invalid_role_reason: {
+      kind: "warning",
+      title: "Motivo invalido",
+      detail: "Use um dos motivos padronizados para alterar papel comercial."
+    },
+    missing_role_reason_detail: {
+      kind: "warning",
+      title: "Detalhe obrigatorio",
+      detail: "Quando o motivo for outro, descreva o motivo da alteracao."
     },
     not_configured: {
       kind: "warning",

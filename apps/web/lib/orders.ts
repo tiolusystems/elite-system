@@ -9,6 +9,7 @@ export type OrderLookupOption = {
 
 export type OrderLookups = {
   clientes: OrderLookupOption[];
+  propriedades: OrderLookupOption[];
   itensVendaveis: OrderLookupOption[];
   pessoasComerciais: OrderLookupOption[];
   pedidos: OrderLookupOption[];
@@ -18,6 +19,9 @@ export type RecentOrder = {
   id: number;
   codigoPedido: string;
   clienteId: number;
+  propriedadeId: number | null;
+  sequenciaPropriedade: number | null;
+  vendedorGeradorId: number | null;
   tipoPedido: string;
   status: string;
   dataPedido: string;
@@ -78,6 +82,7 @@ export type OrdersDashboard = {
 
 const EMPTY_LOOKUPS: OrderLookups = {
   clientes: [],
+  propriedades: [],
   itensVendaveis: [],
   pessoasComerciais: [],
   pedidos: []
@@ -114,7 +119,7 @@ export async function getOrdersDashboard(): Promise<OrdersDashboard> {
       supabase.from("com_comissao_liberacoes").select("valor_liberado,status").limit(1000),
       supabase
         .from("com_pedidos")
-        .select("id,codigo_pedido,cliente_id,tipo_pedido,status,data_pedido,valor_total,created_at")
+        .select("id,codigo_pedido,cliente_id,propriedade_id,sequencia_propriedade,vendedor_gerador_id,tipo_pedido,status,data_pedido,valor_total,created_at")
         .order("created_at", { ascending: false })
         .limit(8),
       supabase
@@ -162,6 +167,9 @@ export async function getOrdersDashboard(): Promise<OrdersDashboard> {
             id: Number(row.id),
             codigoPedido: String(row.codigo_pedido),
             clienteId: Number(row.cliente_id),
+            propriedadeId: nullableNumber(row.propriedade_id),
+            sequenciaPropriedade: nullableNumber(row.sequencia_propriedade),
+            vendedorGeradorId: nullableNumber(row.vendedor_gerador_id),
             tipoPedido: String(row.tipo_pedido),
             status: String(row.status),
             dataPedido: String(row.data_pedido),
@@ -228,12 +236,18 @@ async function getOrderLookups(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
 ): Promise<OrderLookups> {
   try {
-    const [clientes, itensVendaveis, pessoasComerciais, pedidos] = await Promise.all([
+    const [clientes, propriedades, itensVendaveis, pessoasComerciais, pedidos] = await Promise.all([
       supabase
         .from("cad_clientes")
         .select("id,nome,cidade,uf,status")
         .order("created_at", { ascending: false })
         .limit(120),
+      supabase
+        .from("cad_cliente_propriedades")
+        .select("id,cliente_id,nome,cidade,uf,status")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(200),
       supabase
         .from("cad_produto_embalagens")
         .select("id,codigo_item,status,produto_id,embalagem_id,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)")
@@ -259,6 +273,13 @@ async function getOrderLookups(
             id: Number(item.id),
             label: String(item.nome),
             detail: `${item.cidade ?? "sem cidade"} / ${item.uf ?? "sem UF"} / ${item.status ?? "sem status"}`
+          })),
+      propriedades: propriedades.error
+        ? []
+        : ((propriedades.data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+            id: Number(item.id),
+            label: String(item.nome),
+            detail: `cliente ${item.cliente_id} / ${item.cidade ?? "sem cidade"} / ${item.uf ?? "sem UF"}`
           })),
       itensVendaveis: itensVendaveis.error
         ? []
@@ -301,6 +322,10 @@ function firstNested(value: unknown): Record<string, unknown> | null {
     return value as Record<string, unknown>;
   }
   return null;
+}
+
+function nullableNumber(value: unknown): number | null {
+  return value === null || value === undefined ? null : Number(value);
 }
 
 function emptyDashboard(source: OrdersDashboard["source"], error: string | null): OrdersDashboard {

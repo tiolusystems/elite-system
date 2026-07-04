@@ -24,10 +24,13 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           <span>Pedidos</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
+          <a href="/">Inicio</a>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos" aria-current="page">
             Pedidos
           </a>
+          <a href="/kanban">Kanban</a>
+          <a href="/importacao-xml">XML MP</a>
           <a href="/relatorios">Relatorios</a>
           <a href="#novo-pedido">Novo pedido</a>
         </nav>
@@ -117,6 +120,10 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
                   <input name="cliente_id" list="clientes-options" placeholder="Buscar cliente" required />
                 </label>
                 <label className="wide-field">
+                  Propriedade
+                  <input name="propriedade_id" list="propriedades-options" placeholder="Opcional: fazenda/propriedade do cliente" />
+                </label>
+                <label className="wide-field">
                   Item vendavel
                   <input name="produto_embalagem_id" list="itens-vendaveis-options" placeholder="Produto + embalagem" required />
                 </label>
@@ -162,7 +169,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
                 </label>
               </div>
               <div className="form-footer">
-                <span>Rascunho nao baixa estoque. Bonificacao nao gera comissao. Devolucao gera valor negativo auditado.</span>
+                <span>Pedido por propriedade recebe sequencia propria. Rascunho nao baixa estoque.</span>
                 <button className="primary-button" type="submit">
                   Salvar pedido
                 </button>
@@ -384,7 +391,10 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
                 <article className="module-card" key={order.id}>
                   <div className="module-card-main">
                     <h3>{order.codigoPedido}</h3>
-                    <span>Cliente #{order.clienteId}</span>
+                    <span>
+                      Cliente #{order.clienteId}
+                      {order.propriedadeId ? ` / Propriedade #${order.propriedadeId}` : ""}
+                    </span>
                   </div>
                   <div className="module-card-meta">
                     <span>{order.status}</span>
@@ -395,6 +405,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
                   </p>
                   <div className="tag-row">
                     <span className="tag">pedido_id: {order.id}</span>
+                    <span className="tag">seq: {order.sequenciaPropriedade ?? "-"}</span>
                     <span className="tag">{order.status}</span>
                     <span className="tag">{order.tipoPedido}</span>
                   </div>
@@ -417,6 +428,7 @@ function LookupDatalists({ lookups }: { lookups: OrderLookups }) {
   return (
     <>
       <LookupDatalist id="clientes-options" options={lookups.clientes} />
+      <LookupDatalist id="propriedades-options" options={lookups.propriedades} />
       <LookupDatalist id="itens-vendaveis-options" options={lookups.itensVendaveis} />
       <LookupDatalist id="pessoas-comerciais-options" options={lookups.pessoasComerciais} />
       <LookupDatalist id="pedidos-options" options={lookups.pedidos} />

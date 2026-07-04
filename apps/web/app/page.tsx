@@ -2,6 +2,8 @@ import { getMasterDataDashboard } from "@/lib/master-data";
 import { getOrdersDashboard } from "@/lib/orders";
 import { getReportsDashboard } from "@/lib/reports";
 import { getRuntimeStatus } from "@/lib/runtime";
+import { getImportacaoXmlDashboard } from "@/lib/importacao-xml";
+import { getKanbanDashboard } from "@/lib/kanban";
 
 const FLOW_STEPS = [
   {
@@ -12,7 +14,17 @@ const FLOW_STEPS = [
   {
     title: "Pedidos",
     status: "codando",
-    detail: "Rascunho, credito, recebimento parcial e comissao proporcional."
+    detail: "Cliente, propriedade, sequencia propria, credito, recebimento e comissao proporcional."
+  },
+  {
+    title: "XML MP",
+    status: "em uso",
+    detail: "Importacao semiautomatica, match de MP, conversao e lote apenas apos conferencia."
+  },
+  {
+    title: "Kanban",
+    status: "em uso",
+    detail: "Status visual por vendedor, gerente vinculado e area comercial."
   },
   {
     title: "Romaneio",
@@ -29,20 +41,23 @@ const FLOW_STEPS = [
 const AUDIT_STEPS = [
   "Cada gravacao critica passa por funcao SQL auditavel.",
   "Banco operacional, teste e homologacao aparecem no topo da tela.",
-  "Recebimentos e comissoes guardam snapshot proporcional.",
-  "Proxima etapa: reconciliacao de valores contra Excel."
+    "Recebimentos e comissoes guardam snapshot proporcional.",
+    "NF XML entra em staging e so gera lote depois de confirmacao.",
+    "Proxima etapa: telas de PCP, romaneio e status encadeado."
 ];
 
 export default async function HomePage() {
   const runtime = getRuntimeStatus();
-  const [cadastros, pedidos, relatorios] = await Promise.all([
+  const [cadastros, pedidos, relatorios, importacaoXml, kanban] = await Promise.all([
     getMasterDataDashboard(),
     getOrdersDashboard(),
-    getReportsDashboard()
+    getReportsDashboard(),
+    getImportacaoXmlDashboard(),
+    getKanbanDashboard()
   ]);
   const cadastrosProntos = cadastros.modules.filter((module) => module.status === "ready").length;
   const pedidosAbertos = pedidos.metrics.abertos;
-  const totalRecebido = pedidos.metrics.totalRecebido;
+  const pendentesXml = importacaoXml.metrics.itensPendentes;
   const candidatosReprocessamento = relatorios.metrics.candidatosReprocessamento;
 
   return (
@@ -58,6 +73,8 @@ export default async function HomePage() {
           </a>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
+          <a href="/kanban">Kanban</a>
+          <a href="/importacao-xml">XML MP</a>
           <a href="/relatorios">Relatorios</a>
         </nav>
       </header>
@@ -105,9 +122,9 @@ export default async function HomePage() {
             <p>Pedidos aptos a seguir para credito, romaneio e faturamento.</p>
           </article>
           <article className="kpi-card accent-amber">
-            <span>Recebido</span>
-            <strong>{moneyOrDash(totalRecebido)}</strong>
-            <p>Base para liberacao proporcional de comissoes.</p>
+            <span>XML pendente</span>
+            <strong>{valueOrDash(pendentesXml)}</strong>
+            <p>Itens de NF XML aguardando MP e conversao.</p>
           </article>
           <article className="kpi-card accent-red">
             <span>Reprocessamento</span>
@@ -147,8 +164,8 @@ export default async function HomePage() {
               <div className="queue-row">
                 <span className="queue-status warning"></span>
                 <div>
-                  <strong>Romaneio</strong>
-                  <p>Construir tela de separacao com reserva e baixa apenas na confirmacao.</p>
+                <strong>Romaneio</strong>
+                <p>Construir tela de separacao com reserva e baixa apenas na confirmacao.</p>
                 </div>
               </div>
               <div className="queue-row">
@@ -190,13 +207,20 @@ export default async function HomePage() {
                   <span style={{ width: "42%" }}></span>
                 </div>
               </a>
-              <div className="module-tile muted-tile">
-                <strong>Romaneio</strong>
-                <span>tela e migration na proxima etapa</span>
+              <a className="module-tile" href="/importacao-xml">
+                <strong>XML MP</strong>
+                <span>{valueOrDash(importacaoXml.metrics.itensPendentes)} item(ns) pendente(s)</span>
                 <div className="progress-rail">
-                  <span style={{ width: "12%" }}></span>
+                  <span style={{ width: "46%" }}></span>
                 </div>
-              </div>
+              </a>
+              <a className="module-tile" href="/kanban">
+                <strong>Kanban</strong>
+                <span>{valueOrDash(kanban.metrics.total)} pedido(s) no quadro</span>
+                <div className="progress-rail">
+                  <span style={{ width: "44%" }}></span>
+                </div>
+              </a>
               <a className="module-tile" href="/relatorios">
                 <strong>Relatorios</strong>
                 <span>{valueOrDash(relatorios.metrics.catalogados)} catalogados</span>
@@ -220,10 +244,10 @@ export default async function HomePage() {
           </article>
         </section>
 
-        {(cadastros.error || pedidos.error || relatorios.error) && (
+        {(cadastros.error || pedidos.error || relatorios.error || importacaoXml.error || kanban.error) && (
           <section className="notice-panel warning" role="status">
             <strong>Conexao parcial</strong>
-            <span>{cadastros.error ?? pedidos.error ?? relatorios.error}</span>
+            <span>{cadastros.error ?? pedidos.error ?? relatorios.error ?? importacaoXml.error ?? kanban.error}</span>
           </section>
         )}
       </section>

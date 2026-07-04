@@ -95,14 +95,18 @@ Objetos tecnicos:
 - `cad_pessoa_areas_comerciais`
 - `com_pedidos_kanban`
 
+## Telas implementadas
+
+- `/importacao-xml`: importacao de XML colado, cabecalho manual, item manual, fila de match, confirmacao de MP/conversao, ignore de item e geracao de lote MP.
+- `/pedidos`: cadastro de pedido com propriedade opcional e gravacao pelo fluxo operacional novo.
+- `/kanban`: quadro de pedidos por coluna de status, cliente, propriedade, vendedor, gerente e area.
+
 ## Proximas telas
 
-1. Tela de importacao XML com fila de itens pendentes e seletor de MP candidata.
-2. Tela de confirmacao de conversao com unidade XML, unidade base, fator e quantidade convertida.
-3. Botao auditado para gerar lote de MP.
-4. Tela de pedidos usando cliente + propriedade e codigo sequencial.
-5. Quadro Kanban de pedidos por status, vendedor, gerente e area.
-
+- Tela de historico completo de XML por NF, com detalhe de todos os itens ja conferidos.
+- Filtros do Kanban por vendedor, gerente, area, cliente e propriedade.
+- Acoes de mudanca de status direto no Kanban com log auditavel.
+- Upload de arquivo XML alem de colagem de conteudo.
 ## Auditorias obrigatorias
 
 - NF XML importada x itens conferidos.

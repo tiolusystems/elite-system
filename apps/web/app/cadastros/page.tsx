@@ -29,10 +29,13 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           <span>Cadastros mestres</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
+          <a href="/">Inicio</a>
           <a href="/cadastros" aria-current="page">
             Cadastros
           </a>
           <a href="/pedidos">Pedidos</a>
+          <a href="/kanban">Kanban</a>
+          <a href="/importacao-xml">XML MP</a>
           <a href="/relatorios">Relatorios</a>
           <a href="#validacao">Validacao</a>
           <a href="#credito">Credito</a>

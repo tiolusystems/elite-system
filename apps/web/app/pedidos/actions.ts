@@ -18,6 +18,7 @@ export async function createPedidoRascunhoAction(formData: FormData) {
   }
 
   const clienteId = optionalInteger(formData, "cliente_id");
+  const propriedadeId = optionalInteger(formData, "propriedade_id");
   const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
   const vendedorId = optionalInteger(formData, "vendedor_id");
   const quantidade = optionalNumber(formData, "quantidade");
@@ -31,6 +32,9 @@ export async function createPedidoRascunhoAction(formData: FormData) {
     redirect("/pedidos?result=missing_order_required#novo-pedido");
   }
   if (!Number.isInteger(clienteId) || clienteId <= 0 || !Number.isInteger(produtoEmbalagemId) || produtoEmbalagemId <= 0) {
+    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
+  }
+  if (propriedadeId !== null && (!Number.isInteger(propriedadeId) || propriedadeId <= 0)) {
     redirect("/pedidos?result=invalid_positive_number#novo-pedido");
   }
   if (vendedorId !== null && (!Number.isInteger(vendedorId) || vendedorId <= 0)) {
@@ -53,11 +57,12 @@ export async function createPedidoRascunhoAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("create_com_pedido_rascunho", {
+  const { error } = await supabase.rpc("create_com_pedido_operacional", {
     p_cliente_id: clienteId,
     p_data_pedido: dataPedido,
     p_observacao: optionalField(formData, "observacao"),
     p_percentual_comissao: percentualComissao,
+    p_propriedade_id: propriedadeId,
     p_produto_embalagem_id: produtoEmbalagemId,
     p_quantidade: quantidade,
     p_status: status,

@@ -121,3 +121,39 @@ Resultado: travas passaram.
 - `supabase db lint` conectou ao banco descartavel, mas falhou ao habilitar `pgsql_check`, extensao nao disponivel no PostgreSQL vanilla instalado localmente.
 - Docker nao esta disponivel/rodando nesta sessao, entao `supabase start`, `migration list --local` e `db reset` da stack local Supabase nao foram executados.
 - Nenhum dado real foi usado.
+
+## Validacao adicional - auditoria de reconciliacao Supabase
+
+Data/hora local: 2026-07-03.
+
+Banco descartavel complementar:
+
+- Pasta: `.tools/pg-validate-0008`.
+- Porta: `55434`.
+- Sem dados reais.
+
+Migrations aplicadas em ordem:
+
+- `0001_security_audit_foundation.sql`;
+- `0002_master_data_foundation.sql`;
+- `0003_commercial_orders_foundation.sql`;
+- `0004_order_credit_gate.sql`;
+- `0005_order_receipts_commissions.sql`;
+- `0006_romaneio_foundation.sql`;
+- `0007_pa_stock_lots_foundation.sql`;
+- `0008_audit_reconciliation_foundation.sql`.
+
+Smoke test `smoke_audit_0008`:
+
+- criou cadastros minimos, pedido, lote PA e romaneio confirmado;
+- criou fonte Excel simulada em `source_workbooks`, `source_tables` e `source_rows`;
+- criou `migration_batches`;
+- registrou valores esperados por `record_aud_source_expected_metric`;
+- rodou `run_aud_reconciliacao_operacional`;
+- validou primeira rodada com `status = ok`, `metric_count = 13`, `attention_count = 0`;
+- alterou o valor esperado de `faturamento_total` para criar divergencia controlada;
+- validou segunda rodada com `status = attention`, `metric_count = 13`, `attention_count = 1`;
+- tentou editar diretamente `source_rows`;
+- validou bloqueio append-only da camada bruta.
+
+Resultado: passou.

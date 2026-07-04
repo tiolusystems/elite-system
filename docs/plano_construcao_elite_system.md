@@ -229,6 +229,15 @@ Entregas:
 - Relatorio de pedidos pendentes.
 - Relatorio de compras/necessidade MP.
 
+Status atual:
+
+- Migration `0008_audit_reconciliation_foundation.sql` criou a camada cloud de fonte, batch, linhas brutas, issues e reconciliacoes.
+- View `aud_operational_metric_values` expõe metricas operacionais atuais de pedidos, faturamento, recebimentos, comissoes, romaneios e estoque PA.
+- Funcao `record_aud_source_expected_metric` registra valores esperados vindos do Excel ou de resumo validado.
+- Funcao `run_aud_reconciliacao_operacional` compara sistema x fonte esperada e grava status `ok`, `attention` ou `missing`.
+- Camada bruta `source_workbooks`, `source_tables`, `source_rows` e `imported_records` foi protegida contra edicao/exclusao direta.
+- Validacao descartavel confirmou rodada `ok`, rodada divergente `attention` e bloqueio append-only em `source_rows`.
+
 ## Bloco 8 - Banco em nuvem
 
 Objetivo: sair de SQLite local para PostgreSQL/Supabase sem perder auditoria.

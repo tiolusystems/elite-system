@@ -55,3 +55,56 @@ Este documento versionado descreve a logica de auditoria; ele nao deve registrar
 
 - Separar diferencas por categoria: linha incompleta, regra ainda nao migrada, ajuste manual, saldo inicial e divergencia real.
 - Gerar relatorio local completo em `outputs/`, mantendo somente a especificacao tecnica no Git.
+
+## Fundacao Supabase/PostgreSQL
+
+Migration: `supabase/migrations/0008_audit_reconciliation_foundation.sql`.
+
+A camada cloud recebeu a estrutura equivalente para preservar fonte e reconciliar valores:
+
+- `source_workbooks`: workbook original, hash e metadados.
+- `migration_batches`: rodada de importacao.
+- `source_tables`: tabelas/abas extraidas.
+- `source_rows`: linhas brutas em JSON.
+- `migration_issues`: problemas de migracao.
+- `imported_records`: vinculo entre linha bruta e entidade normalizada.
+- `audit_snapshots`: auditorias de contagem.
+- `source_expected_metrics`: valores esperados vindos do Excel ou de resumo validado.
+- `audit_reconciliation_runs`: execucoes de reconciliacao.
+- `value_reconciliations`: resultado por metrica.
+- `reconciliation_details`: detalhes por chave, para evolucao por item/lote/produto.
+
+Funcoes:
+
+- `record_aud_source_expected_metric`: registra valor esperado para uma metrica de um batch.
+- `run_aud_reconciliacao_operacional`: compara metricas operacionais do sistema contra os valores esperados registrados.
+
+View operacional:
+
+- `aud_operational_metric_values`: consolida metricas atuais de pedidos, faturamento, recebimentos, comissoes, romaneios e estoque PA.
+
+Metricas iniciais no Supabase:
+
+- `total_pedidos_distintos`;
+- `faturamento_total`;
+- `faturamento_vendas`;
+- `recebimentos_total`;
+- `comissao_prevista`;
+- `comissao_liberada`;
+- `romaneios_confirmados`;
+- `romaneios_baixa_pa_quantidade`;
+- `entradas_pa_quantidade`;
+- `saidas_pa_quantidade`;
+- `estornos_pa_quantidade`;
+- `estoque_pa_saldo`;
+- `estoque_pa_reservado`.
+
+Validacao descartavel:
+
+- rodada com valores esperados corretos retornou `ok`;
+- rodada com `faturamento_total` divergente retornou `attention`;
+- tentativa de editar `source_rows` foi bloqueada como append-only.
+
+Limite atual:
+
+- reconciliacoes MP e producao entram quando as migrations operacionais desses modulos existirem no Supabase.

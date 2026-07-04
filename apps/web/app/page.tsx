@@ -8,6 +8,8 @@ import { getKanbanDashboard } from "@/lib/kanban";
 import { getPcpDashboard } from "@/lib/pcp";
 import { getRomaneioDashboard } from "@/lib/romaneios";
 
+export const dynamic = "force-dynamic";
+
 const FLOW_STEPS = [
   {
     title: "Cadastros",

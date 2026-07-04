@@ -5,6 +5,8 @@ import {
 } from "@/lib/reports";
 import { getRuntimeStatus } from "@/lib/runtime";
 
+export const dynamic = "force-dynamic";
+
 export default async function RelatoriosPage() {
   const runtime = getRuntimeStatus();
   const dashboard = await getReportsDashboard();

@@ -1,6 +1,8 @@
 import { getKanbanDashboard, type KanbanOrder } from "@/lib/kanban";
 import { getRuntimeStatus } from "@/lib/runtime";
 
+export const dynamic = "force-dynamic";
+
 export default async function KanbanPage() {
   const runtime = getRuntimeStatus();
   const dashboard = await getKanbanDashboard();

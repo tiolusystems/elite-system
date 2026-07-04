@@ -44,6 +44,7 @@ Cadastros tecnicos:
 - PA;
 - PI;
 - produto + embalagem;
+- importacao semiautomatica de NF XML para entrada de MP;
 - prazo de validade;
 - garantias;
 - formulas.
@@ -51,8 +52,11 @@ Cadastros tecnicos:
 Comercial:
 
 - cliente;
+- propriedade/fazenda do cliente;
 - pedido;
+- sequencia de pedido por propriedade quando aplicavel;
 - vendedor/comissionados;
+- Kanban por vendedor, gerente vinculado e area comercial;
 - credito;
 - status do pedido.
 
@@ -105,12 +109,14 @@ A proxima codificacao deve priorizar as telas e fluxos que destravam esta ordem:
 
 1. Usuarios/alçadas visiveis no app web.
 2. Estoque/cadastros tecnicos MP, embalagens, PA e PI.
-3. Formulas PA/PI.
-4. PCP/formulacao/CQ.
-5. Romaneio com entregador e baixa de produto.
-6. Atualizacao de status encadeada.
-7. Recebimentos/comissoes.
-8. Simulador e estoque regulador.
-9. Relatorios de venda e rastreabilidade.
+3. Importacao semiautomatica de NF XML para MP, com conferencia e geracao auditada de lote.
+4. Pedido por cliente/propriedade, sequencia propria e Kanban comercial.
+5. Formulas PA/PI.
+6. PCP/formulacao/CQ.
+7. Romaneio com entregador e baixa de produto.
+8. Atualizacao de status encadeada.
+9. Recebimentos/comissoes.
+10. Simulador e estoque regulador.
+11. Relatorios de venda e rastreabilidade.
 
 Essa sequencia passa a ser a referencia para decidir proximos passos e evitar construir telas fora da ordem operacional.

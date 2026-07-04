@@ -80,6 +80,8 @@ Status atual:
 - Preview HTML estatico criado em `apps/web/preview/cadastros.html` para validacao visual sem depender de Node.js.
 - Formularios ativos preparados para cliente, pessoa comercial, materia-prima, produto-base, embalagem, item vendavel e conversao de MP, chamando Server Actions em `apps/web/app/cadastros/actions.ts` e funcoes PostgreSQL auditaveis `public.create_cad_cliente`, `public.create_cad_pessoa_comercial`, `public.create_cad_materia_prima`, `public.create_cad_produto_base`, `public.create_cad_embalagem`, `public.create_cad_produto_embalagem` e `public.create_cad_conversao_unidade_mp`.
 - Seletores pesquisaveis preparados para vendedor responsavel, MP, produto e embalagem, usando listas carregadas do Supabase quando configurado.
+- Migration `0011_importacao_xml_pedidos_kanban.sql` adicionou vinculo entre pessoa comercial e usuario de login, areas comerciais e vinculos vendedor/gerente/area.
+- Escopo de importacao XML, pedidos por propriedade e Kanban registrado em `docs/escopo_importacao_xml_pedidos_kanban.md`.
 - Pendencia: validar migrations em runtime Python/PostgreSQL disponivel antes de usar em qualquer dado real.
 
 ## Bloco 3 - Comercial
@@ -123,6 +125,8 @@ Status atual:
 - Tela `/pedidos` evoluida para registrar liberacao, bloqueio ou aprovacao pendente antes de faturamento.
 - Recebimentos parciais e liberacao proporcional de comissao criados em `supabase/migrations/0005_order_receipts_commissions.sql`, com tabelas `com_recebimentos` e `com_comissao_liberacoes`.
 - Tela `/pedidos` evoluida para registrar recebimento de pedido aberto e listar comissoes liberadas por recebimento.
+- Migration `0011_importacao_xml_pedidos_kanban.sql` adicionou pedido por propriedade, sequencia propria por propriedade/cliente, vendedor gerador do pedido e view `com_pedidos_kanban`.
+- Funcao auditavel `public.create_com_pedido_operacional` criada para novo fluxo de pedido com cliente, propriedade, item vendavel, comissao e codigo sequencial.
 
 ## Bloco 4 - Estoque MP e PA
 
@@ -157,6 +161,7 @@ Status atual:
 - Views `est_lotes_mp_saldos` e `est_lotes_pi_saldos` criadas para saldo fisico, reserva e disponibilidade.
 - Estoque PA passou a considerar reservas de romaneio e reservas PCP na view `est_lotes_pa_saldos`.
 - Migration `0010_product_validity_reports_foundation.sql` adicionou prazo de validade em meses ao produto-base e relatorios de vencimento/reprocessamento para PA, PI e MP.
+- Migration `0011_importacao_xml_pedidos_kanban.sql` adicionou a fundacao da importacao semiautomatica de NF XML para entrada de MP, com staging, candidatos de match, confirmacao auditada, conversao de unidade e geracao de lote MP somente apos conferencia.
 
 ## Bloco 5 - Producao
 

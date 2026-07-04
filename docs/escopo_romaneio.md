@@ -137,6 +137,27 @@ Validacao descartavel:
 - confirmacao com duas baixas PA;
 - pedido finalizado como `fulfilled`.
 
+## Evolucao web operacional
+
+Arquivos:
+
+- `supabase/migrations/0012_romaneio_multi_item_web.sql`
+- `apps/web/lib/romaneios.ts`
+- `apps/web/app/romaneios/actions.ts`
+- `apps/web/app/romaneios/page.tsx`
+
+Funcionalidades implementadas:
+
+- Tela `/romaneios` com painel visual/analitico de pedidos com pendencia, romaneios em rascunho, romaneios em separacao e quantidade pendente.
+- Criacao de romaneio a partir de item pendente do pedido, em rascunho e sem baixa de PA.
+- Adicao de novos itens ao mesmo romaneio pela funcao `add_exp_romaneio_item`, sem insert direto pela UI.
+- Reserva de lote PA por item de romaneio via `registrar_est_reserva_pa`, com suporte a multilote.
+- Confirmacao de romaneio via `confirmar_exp_romaneio`, exigindo reserva ativa fechada e gerando baixa PA por lote.
+- Cancelamento antes da confirmacao e estorno apos confirmacao, ambos via funcoes auditaveis.
+- Consulta de lotes PA disponiveis com saldo fisico, reservado, disponivel e validade.
+
+Status: implementada no Next.js. Ainda precisa ser homologada contra Supabase configurado com usuario logado e dados de teste antes de uso operacional.
+
 ## Fora do escopo inicial
 
 Nao implementar como parte do romaneio inicial, salvo se estiver na planilha `ROMANEIO` canonica:
@@ -155,6 +176,6 @@ O modulo de romaneio so sera considerado fiel quando:
 - reproduzir os campos e decisoes da planilha `ROMANEIO` canonica;
 - permitir separacao total e parcial;
 - localizar lotes disponiveis;
-- registrar pedido, produto, lote e quantidade;
+- registrar pedido, produto, lote e quantidade, inclusive com varios itens no mesmo romaneio;
 - gerar baixa auditada de PA apenas no momento correto;
 - reconciliar as baixas contra `SAIDAS_PA` e contra o historico importado.

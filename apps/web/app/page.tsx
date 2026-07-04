@@ -5,6 +5,7 @@ import { getRuntimeStatus } from "@/lib/runtime";
 import { getImportacaoXmlDashboard } from "@/lib/importacao-xml";
 import { getKanbanDashboard } from "@/lib/kanban";
 import { getPcpDashboard } from "@/lib/pcp";
+import { getRomaneioDashboard } from "@/lib/romaneios";
 
 const FLOW_STEPS = [
   {
@@ -34,8 +35,8 @@ const FLOW_STEPS = [
   },
   {
     title: "Romaneio",
-    status: "proximo",
-    detail: "Separacao parcial ou total, reserva de lote e confirmacao para baixa de PA."
+    status: "em uso",
+    detail: "Separacao parcial ou total, multi-item, reserva multilote e confirmacao para baixa de PA."
   },
   {
     title: "Relatorios",
@@ -50,18 +51,20 @@ const AUDIT_STEPS = [
   "Recebimentos e comissoes guardam snapshot proporcional.",
   "NF XML entra em staging e so gera lote depois de confirmacao.",
   "PCP baixa estoque apenas na finalizacao de OP com CQ.",
-  "Proxima etapa: romaneio operacional e status encadeado."
+  "Romaneio baixa PA apenas na confirmacao com reserva fechada.",
+  "Proxima etapa: status encadeado e financeiro/comissoes."
 ];
 
 export default async function HomePage() {
   const runtime = getRuntimeStatus();
-  const [cadastros, pedidos, relatorios, importacaoXml, kanban, pcp] = await Promise.all([
+  const [cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios] = await Promise.all([
     getMasterDataDashboard(),
     getOrdersDashboard(),
     getReportsDashboard(),
     getImportacaoXmlDashboard(),
     getKanbanDashboard(),
-    getPcpDashboard()
+    getPcpDashboard(),
+    getRomaneioDashboard()
   ]);
   const cadastrosProntos = cadastros.modules.filter((module) => module.status === "ready").length;
   const pedidosAbertos = pedidos.metrics.abertos;
@@ -84,6 +87,7 @@ export default async function HomePage() {
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
           <a href="/pcp">PCP</a>
+          <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
         </nav>
       </header>
@@ -171,10 +175,10 @@ export default async function HomePage() {
             </div>
             <div className="queue-list">
               <div className="queue-row">
-                <span className="queue-status warning"></span>
+                <span className="queue-status ok"></span>
                 <div>
                 <strong>Romaneio</strong>
-                <p>Construir tela de separacao com reserva e baixa apenas na confirmacao.</p>
+                <p>Tela operacional criada com multi-item, reserva PA e confirmacao auditada.</p>
                 </div>
               </div>
               <div className="queue-row">
@@ -237,6 +241,13 @@ export default async function HomePage() {
                   <span style={{ width: "48%" }}></span>
                 </div>
               </a>
+              <a className="module-tile" href="/romaneios">
+                <strong>Romaneio</strong>
+                <span>{valueOrDash(romaneios.metrics.romaneiosSeparacao)} em separacao</span>
+                <div className="progress-rail">
+                  <span style={{ width: "46%" }}></span>
+                </div>
+              </a>
               <a className="module-tile" href="/relatorios">
                 <strong>Relatorios</strong>
                 <span>{valueOrDash(relatorios.metrics.catalogados)} catalogados</span>
@@ -260,10 +271,24 @@ export default async function HomePage() {
           </article>
         </section>
 
-        {(cadastros.error || pedidos.error || relatorios.error || importacaoXml.error || kanban.error || pcp.error) && (
+        {(cadastros.error ||
+          pedidos.error ||
+          relatorios.error ||
+          importacaoXml.error ||
+          kanban.error ||
+          pcp.error ||
+          romaneios.error) && (
           <section className="notice-panel warning" role="status">
             <strong>Conexao parcial</strong>
-            <span>{cadastros.error ?? pedidos.error ?? relatorios.error ?? importacaoXml.error ?? kanban.error ?? pcp.error}</span>
+            <span>
+              {cadastros.error ??
+                pedidos.error ??
+                relatorios.error ??
+                importacaoXml.error ??
+                kanban.error ??
+                pcp.error ??
+                romaneios.error}
+            </span>
           </section>
         )}
       </section>

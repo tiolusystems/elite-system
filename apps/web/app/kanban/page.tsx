@@ -21,6 +21,7 @@ export default async function KanbanPage() {
           </a>
           <a href="/importacao-xml">XML MP</a>
           <a href="/pcp">PCP</a>
+          <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
         </nav>
       </header>

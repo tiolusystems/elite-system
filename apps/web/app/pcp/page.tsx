@@ -43,6 +43,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           <a href="/pcp" aria-current="page">
             PCP
           </a>
+          <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
         </nav>
       </header>

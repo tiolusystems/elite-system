@@ -23,6 +23,7 @@ export default async function RelatoriosPage() {
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
           <a href="/pcp">PCP</a>
+          <a href="/romaneios">Romaneio</a>
           <a href="/relatorios" aria-current="page">
             Relatorios
           </a>

@@ -251,6 +251,10 @@ Status atual:
 - Migration `0009_pcp_op_foundation.sql` removeu a limitacao de um unico lote por item de romaneio.
 - O mesmo item de romaneio agora pode ter varias reservas PA ativas, uma por lote.
 - Confirmacao do romaneio valida que a soma das reservas ativas fecha a quantidade romaneada e baixa cada lote separadamente.
+- Migration `0012_romaneio_multi_item_web.sql` adicionou `add_exp_romaneio_item` para permitir varios itens no mesmo romaneio por RPC auditavel.
+- Camada web de romaneio criada em `apps/web/lib/romaneios.ts`, `apps/web/app/romaneios/actions.ts` e `apps/web/app/romaneios/page.tsx`.
+- Tela `/romaneios` criada para consultar itens pendentes, criar romaneio, adicionar item, reservar lote PA, confirmar, cancelar e estornar.
+- Pendencia: homologar `/romaneios` contra Supabase configurado com usuario logado e dados de teste antes de uso operacional.
 
 ## Bloco 7 - Relatorios e dashboards
 
@@ -326,11 +330,12 @@ Referencia de ordem: `docs/fluxo_operacional_elite_system.md`.
 2. Criar telas operacionais de cadastros tecnicos: MP, embalagens, PA e PI.
 3. Homologar tela `/pcp` de formulas PA/PI contra Supabase configurado.
 4. Homologar tela `/pcp` para formulacao, reserva de insumos, CQ e baixa de insumos.
-5. Criar tela de romaneio com entregador, separacao por lote e baixa de produtos.
-6. Implementar atualizacao encadeada de status de pedido, OP, estoque, romaneio, financeiro e comissoes.
-7. Consolidar recebimentos e comissoes, incluindo devolucao e abatimento futuro.
-8. Criar simulador de producao com base em historico ou alimentacao manual.
-9. Criar estoque regulador de PA, PI e MP.
-10. Evoluir relatorios de vendas por vendedor, periodo, cliente e produto.
-11. Evoluir rastreabilidade de lotes MP, PA e PI.
-12. Validar Next.js local com Supabase configurado e login Supabase.
+5. Homologar tela `/romaneios` com separacao por lote e baixa de produtos.
+6. Definir e implementar entregador no romaneio, se o campo existir na planilha canonica.
+7. Implementar atualizacao encadeada de status de pedido, OP, estoque, romaneio, financeiro e comissoes.
+8. Consolidar recebimentos e comissoes, incluindo devolucao e abatimento futuro.
+9. Criar simulador de producao com base em historico ou alimentacao manual.
+10. Criar estoque regulador de PA, PI e MP.
+11. Evoluir relatorios de vendas por vendedor, periodo, cliente e produto.
+12. Evoluir rastreabilidade de lotes MP, PA e PI.
+13. Validar Next.js local com Supabase configurado e login Supabase.

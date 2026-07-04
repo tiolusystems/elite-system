@@ -38,6 +38,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
             XML MP
           </a>
           <a href="/pcp">PCP</a>
+          <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
         </nav>
       </header>

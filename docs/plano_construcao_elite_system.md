@@ -198,9 +198,11 @@ Fora do escopo inicial:
 
 Status atual:
 
-- Modelos de dominio do romaneio criados em `elite_system/domain/romaneio.py`.
-- Servico puro de romaneio criado em `elite_system/services/romaneio.py`.
-- Fluxos cobertos por teste: separacao parcial, reserva, cancelamento, confirmacao com baixa de PA e estorno.
+- Migration `0006_romaneio_foundation.sql` criada para fundacao PostgreSQL do romaneio.
+- Tabelas `exp_romaneios`, `exp_romaneio_itens` e `exp_romaneio_movimentos_pa` criadas.
+- View `exp_pedido_item_romaneio_saldos` criada para pedido x quantidade confirmada x saldo pendente.
+- Funcoes auditaveis criadas: `create_exp_romaneio`, `registrar_exp_romaneio_separacao`, `confirmar_exp_romaneio`, `cancelar_exp_romaneio` e `estornar_exp_romaneio`.
+- Regra preservada: pedido aberto nao baixa estoque; romaneio confirmado gera movimento de baixa PA; estorno gera movimento inverso auditado.
 
 ## Bloco 7 - Relatorios e dashboards
 

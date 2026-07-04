@@ -66,6 +66,31 @@ Expedicao:
 
 - recebe o romaneio confirmado como lista operacional de separacao/entrega.
 
+## Implementacao tecnica atual
+
+Migration: `supabase/migrations/0006_romaneio_foundation.sql`.
+
+Fundacao criada:
+
+- `exp_romaneios`: cabecalho do romaneio, pedido vinculado, tipo de separacao e ciclo de status.
+- `exp_romaneio_itens`: pedido, item, produto/embalagem, lote PA informado e quantidade romaneada.
+- `exp_romaneio_movimentos_pa`: movimentos auditaveis de baixa e estorno de PA gerados por romaneio confirmado ou estornado.
+- `exp_pedido_item_romaneio_saldos`: view de quantidade do pedido, quantidade confirmada, quantidade em separacao e saldo pendente.
+
+Funcoes auditaveis:
+
+- `create_exp_romaneio`: cria romaneio em rascunho ou separacao, sem baixar estoque.
+- `registrar_exp_romaneio_separacao`: coloca romaneio em separacao e reserva lote PA informado.
+- `confirmar_exp_romaneio`: confirma romaneio e gera movimento positivo de baixa PA.
+- `cancelar_exp_romaneio`: cancela romaneio antes da confirmacao e libera reserva logica.
+- `estornar_exp_romaneio`: estorna romaneio confirmado com movimento inverso auditado.
+
+Fronteira desta etapa:
+
+- o lote PA ainda e referencia textual (`lote_pa_ref`) ate a fundacao completa de estoque/lotes PA;
+- a baixa PA fica registrada como movimento auditavel do romaneio, pronta para reconciliar com o livro de estoque quando o modulo de estoque for codado;
+- nao foi implementada tela estetica de romaneio nesta etapa.
+
 ## Fora do escopo inicial
 
 Nao implementar como parte do romaneio inicial, salvo se estiver na planilha `ROMANEIO` canonica:

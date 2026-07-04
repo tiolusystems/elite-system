@@ -291,6 +291,13 @@ Entregas:
 - Manual operacional.
 - Homologacao visual e funcional.
 
+Direcao visual:
+
+- Diretriz registrada em `docs/direcao_visual_ux.md`.
+- Layout principal deve ser moderno, operacional e previsivel, com menus, icones nomeados, busca, filtros e tabelas.
+- Recursos 3D com estruturas moleculares sao viaveis como identidade visual, dashboard, visualizacao de formulas/PCP e modo apresentacao.
+- O 3D nao deve ser a navegacao principal de rotinas criticas como pedido, romaneio, CQ, estoque, recebimento e auditoria.
+
 ## Sequencia imediata
 
 1. Publicar codigo e docs no GitHub privado, sem dados.

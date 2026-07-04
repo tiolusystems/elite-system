@@ -54,6 +54,12 @@ Action keys previstas:
 
 Regra: se no futuro houver edicao do proprio perfil por usuario logado, isso deve ser fluxo de `usuarios` ou `perfil`, nao permissao ampla sobre `cad_pessoas_comerciais`.
 
+`cadastros.pessoas.update.role` deve ser tratado como alteracao sensivel, nao como campo textual simples.
+
+Motivo: mudar `tipo_comercial`, `papeis_json` ou `vendedor_responsavel_id` pode afetar pedido, comissao, gerente, agente vinculado, tecnico de campo, entregador e leitura operacional futura. A RPC deve exigir motivo e registrar no `before_json` e `after_json` quais papeis/tipos foram alterados.
+
+Observacao: papel comercial em `cad_pessoas_comerciais` nao e a mesma coisa que role de autenticacao em `user_profiles.role`, mas ainda assim e uma mudanca de alcada de negocio. A implementacao deve manter essa diferenca explicita.
+
 ## Materias-primas
 
 Eixo aprovado: risco tecnico/operacional do campo, nao `own/any`.
@@ -73,8 +79,24 @@ Action keys previstas:
 
 Regra: custo de materia-prima nao entra nesse bloco. Custo fica para o modulo futuro de formacao de custos.
 
+## Edicao com multiplos eixos
+
+Nao criar RPC generica de atualizacao que aceite campos de varios eixos ao mesmo tempo.
+
+Quando uma tela permitir alterar mais de um grupo de campos, a camada de aplicacao deve:
+
+1. separar a mudanca por eixo;
+2. chamar uma RPC especifica por eixo;
+3. registrar cada alteracao com `action_key`, `before_json`, `after_json` e motivo proprios.
+
+Exemplo: se materia-prima tiver alteracao de nome e estoque minimo no mesmo submit visual, a aplicacao deve chamar uma RPC de identidade e outra RPC de politica de estoque. Isso deixa a auditoria legivel: "alterou identidade" e "alterou estoque minimo", em vez de um log generico de "alterou MP".
+
+Se no futuro for indispensavel aplicar multiplos eixos em uma unica transacao atomica, criar uma RPC orquestradora especifica, com action key propria e lista de subalteracoes auditadas. Nao usar isso como caminho padrao.
+
 ## Consequencia para proximas migrations
 
 Proxima migration de `cadastros` deve implementar primeiro `pessoas_comerciais` por tipo de alteracao.
+
+Motivo da ordem: `pessoas_comerciais` valida a separacao por eixo em um dominio menos acoplado a estoque, XML, PCP e garantias. `materias_primas` deve vir depois, porque toca conversoes, unidade base, densidade, XML/NF, estoque minimo e dados regulatorios.
 
 Depois, `materias_primas` deve ser implementada com RPCs separadas por grupo de campo. Nao criar `materias_primas.update.own`, porque essa alcada nao representa uma regra real de negocio.

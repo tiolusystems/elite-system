@@ -10,6 +10,7 @@ MIGRATIONS = REPO_ROOT / "supabase" / "migrations"
 MIGRATION_0007 = MIGRATIONS / "0007_pa_stock_lots_foundation.sql"
 MIGRATION_0009 = MIGRATIONS / "0009_pcp_op_foundation.sql"
 MIGRATION_0018 = MIGRATIONS / "0018_estoque_rls_adjustment_axes.sql"
+MIGRATION_0019 = MIGRATIONS / "0019_estoque_romaneio_reverse_contract.sql"
 RECIPE_DOC = REPO_ROOT / "docs" / "receita_rls_rpc_auditada.md"
 SECURITY_MATRIX_DOC = REPO_ROOT / "docs" / "matriz_seguranca_alcadas.md"
 
@@ -124,6 +125,39 @@ class EstoqueEventLedgerContractTests(unittest.TestCase):
         self.assertGreaterEqual(text.count("public.log_audit_event("), 3)
         self.assertIn("'axis', 'event_movement'", text)
         self.assertIn("'event', 'adjust'", text)
+
+    def test_0019_romaneio_reverse_requires_business_and_stock_permissions(self) -> None:
+        text = MIGRATION_0019.read_text(encoding="utf-8")
+
+        self.assertIn("'estoque.pa.reverse.romaneio'", text)
+        self.assertIn("create or replace function public.estornar_exp_romaneio", text)
+        self.assertIn("perform public.require_current_user_permission('romaneios.cancel');", text)
+        self.assertIn("perform public.require_current_user_permission('estoque.pa.reverse.romaneio');", text)
+        self.assertIn("public.log_audit_event(", text)
+        self.assertIn("'business_action_key', 'romaneios.cancel'", text)
+        self.assertIn("'axis', 'event_movement'", text)
+        self.assertIn("'event', 'reverse'", text)
+        self.assertIn("'origem', 'romaneio'", text)
+
+    def test_0019_cancel_romaneio_requires_permission_and_logs_audit_event(self) -> None:
+        text = MIGRATION_0019.read_text(encoding="utf-8")
+
+        self.assertIn("create or replace function public.cancelar_exp_romaneio", text)
+        self.assertIn("perform public.require_current_user_permission('romaneios.cancel');", text)
+        self.assertIn("'expedicao.romaneio_cancelado'", text)
+        self.assertIn("'romaneios.cancel'", text)
+        self.assertIn("'estoque_pa_reserva_liberada', true", text)
+        self.assertNotIn("perform public.log_action(", text)
+
+    def test_0019_reverse_audit_uses_stock_balance_and_reservation_snapshots(self) -> None:
+        text = MIGRATION_0019.read_text(encoding="utf-8")
+
+        self.assertIn("from public.est_lotes_pa_saldos saldo", text)
+        self.assertIn("from public.est_reservas_pa reserva", text)
+        self.assertIn("v_before", text)
+        self.assertIn("v_after", text)
+        self.assertIn("'estorno_saida'", text)
+        self.assertIn("returning id into v_est_movimento_id", text)
 
 
 if __name__ == "__main__":

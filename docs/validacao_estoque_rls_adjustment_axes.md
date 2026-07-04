@@ -39,6 +39,20 @@ Todas as migrations `0001` a `0018` aplicaram com sucesso no banco descartavel l
 
 As mensagens de `DROP TRIGGER ... nao existe` e `DROP POLICY ... nao existe` foram esperadas, pois o banco estava limpo.
 
+## Efeito colateral corrigido
+
+Durante a implementacao da `0018`, foi identificado que `create_est_lote_pa(...)` ainda vinha da fundacao antiga do estoque PA. A funcao gerava entrada de PA, mas nao exigia `require_current_user_permission(...)` nem registrava `action_key` no modelo novo de auditoria.
+
+Mesmo nao sendo o foco inicial de ajuste manual, ela foi corrigida na mesma migration porque pertence ao mesmo dominio operacional:
+
+- agora exige `estoque.pa.lots.create`;
+- usa `public.current_actor_id()`;
+- registra `log_audit_event(...)`;
+- grava `before_json = null` e `after_json` derivado de `est_lotes_pa_saldos`;
+- registra `permission_context` com eixo `event_movement`, familia `PA` e evento `entry`.
+
+Esse ponto fica documentado aqui para deixar claro quando a alcada de criacao manual de lote PA passou para o contrato novo.
+
 ## Smoke test executado
 
 Arquivo: `.tools/smoke_estoque_0018.sql`.

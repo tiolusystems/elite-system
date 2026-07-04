@@ -202,6 +202,10 @@ Status atual:
 - Formula, movimentos MP e movimentos PI protegidos como append-only.
 - Validacao descartavel passou com OP estoque, OP experimental, OP reprocessamento, OP MAPA documental, CQ obrigatorio, append-only e romaneio multilote.
 - PA e PI podem herdar validade automatica do `prazo_validade_meses` do produto quando o lote tem data de fabricacao e nao recebeu validade manual.
+- Camada web PCP criada em `apps/web/lib/pcp.ts`, `apps/web/app/pcp/actions.ts` e `apps/web/app/pcp/page.tsx`.
+- Tela `/pcp` criada para consultar formulas, formulas ativas, OPs, componentes planejados, reservas, produtos gerados e lotes disponiveis de MP/PA/PI.
+- Tela `/pcp` permite criar nova versao de formula, ativar formula, abrir OP, reservar componente, iniciar OP, cancelar OP planejada e finalizar OP com dados de CQ e geracao de PA/PI via funcoes PostgreSQL auditaveis.
+- Pendencia: homologar `/pcp` contra Supabase configurado com usuario logado e dados de teste antes de uso operacional.
 
 ## Bloco 6 - Romaneio
 
@@ -320,8 +324,8 @@ Referencia de ordem: `docs/fluxo_operacional_elite_system.md`.
 
 1. Expor usuarios, login e alcadas no app web.
 2. Criar telas operacionais de cadastros tecnicos: MP, embalagens, PA e PI.
-3. Criar tela de formulas PA/PI.
-4. Criar tela PCP para formulacao, reserva de insumos, CQ e baixa de insumos.
+3. Homologar tela `/pcp` de formulas PA/PI contra Supabase configurado.
+4. Homologar tela `/pcp` para formulacao, reserva de insumos, CQ e baixa de insumos.
 5. Criar tela de romaneio com entregador, separacao por lote e baixa de produtos.
 6. Implementar atualizacao encadeada de status de pedido, OP, estoque, romaneio, financeiro e comissoes.
 7. Consolidar recebimentos e comissoes, incluindo devolucao e abatimento futuro.

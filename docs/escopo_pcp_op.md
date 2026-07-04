@@ -80,6 +80,29 @@ Romaneio:
 - `registrar_est_reserva_pa`: reserva PA multilote para romaneio.
 - `confirmar_exp_romaneio`: confirma romaneio e baixa cada lote reservado.
 
+## Tela web implementada
+
+Arquivos:
+
+- `apps/web/lib/pcp.ts`
+- `apps/web/app/pcp/actions.ts`
+- `apps/web/app/pcp/page.tsx`
+
+Funcionalidades da tela `/pcp`:
+
+- Painel visual/analitico de formulas versionadas, formulas ativas, OP abertas, OP em processo e lotes bloqueados.
+- Criacao de nova versao de formula por produto e tipo de receita, com ate seis componentes MP/PA/PI por lancamento.
+- Ativacao de formula com motivo auditavel.
+- Abertura de OP operacional ou OP MAPA documental.
+- Consulta de componentes planejados por OP e reservas ja realizadas.
+- Reserva de componentes por lote MP, PA ou PI, sem baixa fisica.
+- Inicio da OP apenas por funcao SQL auditavel.
+- Cancelamento de OP planejada com motivo.
+- Finalizacao da OP com CQ completo, baixa de componentes reservados e geracao de ate tres outputs PA/PI com lote automatico.
+- Tabela de lotes MP/PA/PI disponiveis para apoio a reserva.
+
+Status: implementada no Next.js e validada por `pnpm run build`. Ainda precisa ser homologada contra Supabase configurado com usuario logado e dados de teste.
+
 ## Permissoes
 
 As acoes foram registradas em `permission_actions` com `default_allowed = true`, mantendo a decisao de autonomia inicial:
@@ -145,6 +168,6 @@ Resultado: passou.
 - Calculo de custo de producao.
 - Simulador de compra/necessidade MP.
 - Garantias calculadas por lote de MP.
-- Tela operacional estetica do PCP.
+- Refinamento estetico final e usabilidade avancada do PCP.
 - Integracao fiscal/faturamento completa.
 - Deploy Supabase/Vercel.

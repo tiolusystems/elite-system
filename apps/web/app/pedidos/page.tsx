@@ -31,6 +31,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           </a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
+          <a href="/pcp">PCP</a>
           <a href="/relatorios">Relatorios</a>
           <a href="#novo-pedido">Novo pedido</a>
         </nav>

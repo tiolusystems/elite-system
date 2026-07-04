@@ -4,6 +4,7 @@ import { getReportsDashboard } from "@/lib/reports";
 import { getRuntimeStatus } from "@/lib/runtime";
 import { getImportacaoXmlDashboard } from "@/lib/importacao-xml";
 import { getKanbanDashboard } from "@/lib/kanban";
+import { getPcpDashboard } from "@/lib/pcp";
 
 const FLOW_STEPS = [
   {
@@ -27,6 +28,11 @@ const FLOW_STEPS = [
     detail: "Status visual por vendedor, gerente vinculado e area comercial."
   },
   {
+    title: "PCP",
+    status: "em uso",
+    detail: "Formula versionada, OP, reserva de componentes, CQ e geracao de PA/PI."
+  },
+  {
     title: "Romaneio",
     status: "proximo",
     detail: "Separacao parcial ou total, reserva de lote e confirmacao para baixa de PA."
@@ -41,24 +47,26 @@ const FLOW_STEPS = [
 const AUDIT_STEPS = [
   "Cada gravacao critica passa por funcao SQL auditavel.",
   "Banco operacional, teste e homologacao aparecem no topo da tela.",
-    "Recebimentos e comissoes guardam snapshot proporcional.",
-    "NF XML entra em staging e so gera lote depois de confirmacao.",
-    "Proxima etapa: telas de PCP, romaneio e status encadeado."
+  "Recebimentos e comissoes guardam snapshot proporcional.",
+  "NF XML entra em staging e so gera lote depois de confirmacao.",
+  "PCP baixa estoque apenas na finalizacao de OP com CQ.",
+  "Proxima etapa: romaneio operacional e status encadeado."
 ];
 
 export default async function HomePage() {
   const runtime = getRuntimeStatus();
-  const [cadastros, pedidos, relatorios, importacaoXml, kanban] = await Promise.all([
+  const [cadastros, pedidos, relatorios, importacaoXml, kanban, pcp] = await Promise.all([
     getMasterDataDashboard(),
     getOrdersDashboard(),
     getReportsDashboard(),
     getImportacaoXmlDashboard(),
-    getKanbanDashboard()
+    getKanbanDashboard(),
+    getPcpDashboard()
   ]);
   const cadastrosProntos = cadastros.modules.filter((module) => module.status === "ready").length;
   const pedidosAbertos = pedidos.metrics.abertos;
   const pendentesXml = importacaoXml.metrics.itensPendentes;
-  const candidatosReprocessamento = relatorios.metrics.candidatosReprocessamento;
+  const opsAbertas = pcp.metrics.opsAbertas;
 
   return (
     <main className="app-shell">
@@ -75,6 +83,7 @@ export default async function HomePage() {
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
+          <a href="/pcp">PCP</a>
           <a href="/relatorios">Relatorios</a>
         </nav>
       </header>
@@ -127,9 +136,9 @@ export default async function HomePage() {
             <p>Itens de NF XML aguardando MP e conversao.</p>
           </article>
           <article className="kpi-card accent-red">
-            <span>Reprocessamento</span>
-            <strong>{valueOrDash(candidatosReprocessamento)}</strong>
-            <p>Candidatos vindos de vencimento, bloqueio ou saldo disponivel.</p>
+            <span>OP abertas</span>
+            <strong>{valueOrDash(opsAbertas)}</strong>
+            <p>PCP em rascunho, planejado ou em processo.</p>
           </article>
         </section>
 
@@ -171,8 +180,8 @@ export default async function HomePage() {
               <div className="queue-row">
                 <span className="queue-status ok"></span>
                 <div>
-                  <strong>Comissao por recebimento</strong>
-                  <p>Primeira versao codada com proporcionalidade e snapshot.</p>
+                  <strong>PCP</strong>
+                  <p>Tela inicial codada para formula, OP, reserva, CQ e geracao de PA/PI.</p>
                 </div>
               </div>
               <div className="queue-row">
@@ -221,6 +230,13 @@ export default async function HomePage() {
                   <span style={{ width: "44%" }}></span>
                 </div>
               </a>
+              <a className="module-tile" href="/pcp">
+                <strong>PCP</strong>
+                <span>{valueOrDash(pcp.metrics.opsAbertas)} OP(s) aberta(s)</span>
+                <div className="progress-rail">
+                  <span style={{ width: "48%" }}></span>
+                </div>
+              </a>
               <a className="module-tile" href="/relatorios">
                 <strong>Relatorios</strong>
                 <span>{valueOrDash(relatorios.metrics.catalogados)} catalogados</span>
@@ -244,10 +260,10 @@ export default async function HomePage() {
           </article>
         </section>
 
-        {(cadastros.error || pedidos.error || relatorios.error || importacaoXml.error || kanban.error) && (
+        {(cadastros.error || pedidos.error || relatorios.error || importacaoXml.error || kanban.error || pcp.error) && (
           <section className="notice-panel warning" role="status">
             <strong>Conexao parcial</strong>
-            <span>{cadastros.error ?? pedidos.error ?? relatorios.error ?? importacaoXml.error ?? kanban.error}</span>
+            <span>{cadastros.error ?? pedidos.error ?? relatorios.error ?? importacaoXml.error ?? kanban.error ?? pcp.error}</span>
           </section>
         )}
       </section>

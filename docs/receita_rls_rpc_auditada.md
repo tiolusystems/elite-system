@@ -12,6 +12,8 @@ Esta receita nasce de tres exemplos validados:
 - `pessoas_comerciais`: eixo por tipo de alteracao de negocio;
 - `materias_primas`: eixo por risco do campo alterado.
 
+E passa a incluir a regra de `estoque`: eixo por tipo de evento/movimento, porque saldo nao deve ser editado diretamente.
+
 ## Arvore de decisao
 
 ### 1. Existe dono operacional claro?
@@ -90,6 +92,55 @@ Padrao de action keys:
 | Desativacao | `<dominio>.<entidade>.deactivate` |
 
 Nao criar RPC generica que aceite campos de varios eixos ao mesmo tempo. Se uma tela visual permitir alterar multiplos grupos, a camada de aplicacao deve chamar uma RPC por eixo.
+
+### 4. O estado e derivado de eventos ou movimentos?
+
+Use eixo por tipo de evento/movimento quando o registro principal nao deve ser sobrescrito diretamente, e sim reconstruido a partir de fatos auditaveis.
+
+Exemplos:
+
+- entrada de MP por NF/XML;
+- entrada de PA/PI por OP;
+- reserva de PA por romaneio;
+- reserva de MP/PA/PI por OP;
+- baixa de PA por romaneio confirmado;
+- consumo de MP/PA/PI por OP finalizada;
+- transformacao de PA em PI ou PI em PA;
+- ajuste manual de inventario;
+- cancelamento, estorno ou reversao auditada.
+
+Padrao de action keys:
+
+| Caso | Formato |
+|---|---|
+| Entrada com documento-fonte | `<dominio>.<familia>.entry.<origem>` |
+| Reserva operacional | `<dominio>.<familia>.reserve.<origem>` |
+| Baixa/consumo operacional | `<dominio>.<familia>.issue.<origem>` ou `<dominio>.<familia>.consume.<origem>` |
+| Transformacao | `<dominio>.<familia>.transform` |
+| Ajuste manual de inventario | `<dominio>.<familia>.adjust` |
+| Estorno/reversao | `<dominio>.<familia>.reverse.<origem>` |
+
+Regras obrigatorias:
+
+- nunca criar RPC do tipo `update_saldo` ou campo editavel de saldo fisico;
+- saldo fisico deve ser derivado da soma de movimentos append-only;
+- saldo disponivel deve ser derivado de saldo fisico menos reservas ativas;
+- reserva nao baixa saldo fisico, apenas reduz disponibilidade;
+- movimento deve ter `tipo_movimento`, `quantidade`, origem, documento-fonte quando houver e usuario;
+- sinal da quantidade deve ser validado por tipo de movimento no banco;
+- correcao de erro deve ser novo movimento de reversao/ajuste, nao edicao do movimento original;
+- tabelas de movimento devem ter gatilho contra `update` e `delete`;
+- ajuste manual de inventario exige motivo obrigatorio e alcada mais forte que movimento com documento-fonte.
+
+Para RPCs de movimento, `before_json` e `after_json` nao representam uma edicao do mesmo registro. Eles devem representar, no minimo, o estado derivado antes/depois do lote ou documento-fonte:
+
+- saldo fisico antes/depois;
+- saldo disponivel antes/depois;
+- reservas ativas relacionadas;
+- movimento ou reserva criada;
+- origem operacional que justificou o evento.
+
+Assim, o log explica por que o saldo mudou sem transformar saldo em estado editavel.
 
 ## Onde validar regras
 

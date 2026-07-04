@@ -157,3 +157,60 @@ Smoke test `smoke_audit_0008`:
 - validou bloqueio append-only da camada bruta.
 
 Resultado: passou.
+
+## Validacao adicional - PCP, PI e romaneio multilote
+
+Data/hora local: 2026-07-04.
+
+Banco descartavel complementar:
+
+- Pasta: `.tools/pg-validate-0009-*`.
+- Porta: `55435`.
+- Database de smoke: `elite_validate_0009_smoke`.
+- Sem dados reais.
+
+Migrations aplicadas em ordem:
+
+- `0001_security_audit_foundation.sql`;
+- `0002_master_data_foundation.sql`;
+- `0003_commercial_orders_foundation.sql`;
+- `0004_order_credit_gate.sql`;
+- `0005_order_receipts_commissions.sql`;
+- `0006_romaneio_foundation.sql`;
+- `0007_pa_stock_lots_foundation.sql`;
+- `0008_audit_reconciliation_foundation.sql`;
+- `0009_pcp_op_foundation.sql`.
+
+Resultado: todas aplicaram com sucesso via `psql -v ON_ERROR_STOP=1`.
+
+Smoke test `smoke_pcp_0009`:
+
+- criou cadastros minimos falsos;
+- criou lote MP;
+- criou formula de producao com MP;
+- criou OP para estoque, reservou MP, iniciou e finalizou com CQ;
+- validou geracao de PA e PI disponiveis;
+- validou baixa de MP por `consumo_op`;
+- criou OP experimental, finalizou com CQ aprovado e validou lote PA bloqueado;
+- liberou lote experimental e validou status `disponivel`;
+- criou formula de reprocessamento com MP+PA+PI;
+- validou consumo de MP, PA e PI no reprocessamento;
+- criou OP MAPA documental e validou que ela nao criou componentes nem movimentos de estoque;
+- criou romaneio total com duas reservas PA em lotes diferentes;
+- confirmou romaneio e validou duas baixas PA;
+- validou pedido `fulfilled`;
+- validou erro esperado para finalizacao sem pH;
+- validou bloqueio append-only em `est_movimentos_mp`;
+- validou bloqueio append-only em `pcp_formula_itens`.
+
+Resultado resumido do smoke:
+
+- OPs criadas: 5.
+- CQ registrados: 3.
+- Produtos gerados: 5.
+- Consumos MP por OP: 3.
+- Consumos PA por OP: 1.
+- Consumos PI por OP: 1.
+- Baixas PA por romaneio: 2.
+
+Resultado: passou.

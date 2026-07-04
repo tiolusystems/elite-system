@@ -153,6 +153,9 @@ Status atual:
 - Funcoes auditaveis criadas: `create_est_lote_pa`, `registrar_est_reserva_pa` e `registrar_est_ajuste_pa`.
 - Movimentos de PA protegidos contra edicao e exclusao; correcao deve gerar novo movimento auditavel.
 - Validacao descartavel executada com entrada PA, reserva, baixa por romaneio, estorno e bloqueio por saldo insuficiente.
+- Migration `0009_pcp_op_foundation.sql` adicionou lotes e movimentos de MP e PI.
+- Views `est_lotes_mp_saldos` e `est_lotes_pi_saldos` criadas para saldo fisico, reserva e disponibilidade.
+- Estoque PA passou a considerar reservas de romaneio e reservas PCP na view `est_lotes_pa_saldos`.
 
 ## Bloco 5 - Producao
 
@@ -173,6 +176,21 @@ Auditorias:
 - Custo MP.
 - Consumo teorico x consumo baixado.
 - Produtos sem formula valida.
+
+Status atual:
+
+- Escopo tecnico documentado em `docs/escopo_pcp_op.md`.
+- Migration `0009_pcp_op_foundation.sql` criada para fundacao PCP/PostgreSQL.
+- Tabelas de formula versionada criadas: `pcp_formula_versoes`, `pcp_formula_itens` e `pcp_formula_ativacoes`.
+- View `pcp_formula_ativa` criada para a ultima formula ativada por produto e tipo de receita.
+- Tabelas de OP criadas: `pcp_ordens_producao`, `pcp_op_componentes_planejados`, `pcp_op_reservas_componentes`, `pcp_op_consumos_componentes`, `pcp_op_cq_resultados` e `pcp_op_produtos_gerados`.
+- OP MAPA documental implementada sem reserva, sem baixa e sem geracao de estoque.
+- OP operacional implementada com reserva de MP/PA/PI, inicio com reserva completa, CQ obrigatorio e baixa na finalizacao.
+- OP pode gerar PA, PI ou PA+PI.
+- OP experimental/desenvolvimento gera lotes bloqueados ate liberacao auditada.
+- Reprocessamento pode consumir MP+PA+PI e gerar PA/PI.
+- Formula, movimentos MP e movimentos PI protegidos como append-only.
+- Validacao descartavel passou com OP estoque, OP experimental, OP reprocessamento, OP MAPA documental, CQ obrigatorio, append-only e romaneio multilote.
 
 ## Bloco 6 - Romaneio
 
@@ -215,6 +233,9 @@ Status atual:
 - Migration `0007_pa_stock_lots_foundation.sql` integrou o romaneio ao estoque PA real por lote.
 - Confirmacao do romaneio agora exige reserva ativa em `est_reservas_pa` no fluxo novo e gera `saida_romaneio` em `est_movimentos_pa`.
 - Cancelamento libera reservas ativas e estorno devolve saldo fisico ao mesmo lote PA.
+- Migration `0009_pcp_op_foundation.sql` removeu a limitacao de um unico lote por item de romaneio.
+- O mesmo item de romaneio agora pode ter varias reservas PA ativas, uma por lote.
+- Confirmacao do romaneio valida que a soma das reservas ativas fecha a quantidade romaneada e baixa cada lote separadamente.
 
 ## Bloco 7 - Relatorios e dashboards
 
@@ -272,12 +293,12 @@ Entregas:
 
 ## Sequencia imediata
 
-1. Configurar GitHub privado somente com codigo.
-2. Revisar e aprovar `docs/dicionario_cadastros_mestres.md` v0.3.
-3. Validar migrations de cadastros em banco descartavel/local quando houver runtime Python disponivel.
-4. Criar projeto Supabase de teste e aplicar migrations de seguranca/cadastros.
-5. Instalar dependencias do `apps/web` e validar Next.js local.
-6. Ligar login Supabase no Next.js.
+1. Publicar codigo e docs no GitHub privado, sem dados.
+2. Criar telas operacionais de estoque MP/PI e PCP com aviso visual/analitico de banco conectado.
+3. Validar Next.js local com Supabase configurado.
+4. Ligar login Supabase no Next.js.
+5. Evoluir auditorias para PCP: teorico x reservado x consumido x gerado.
+6. Evoluir garantias por lote de MP e calculo de garantias do produto final.
 7. Classificar causas das diferencas de reconciliacao.
 8. Criar auditoria pedido x credito x recebimento x comissao.
 9. Iniciar devolucao/abatimento de comissao em recebimentos futuros.

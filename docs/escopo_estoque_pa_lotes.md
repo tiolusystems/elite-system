@@ -90,5 +90,26 @@ Resultado: passou.
 ## Limites desta etapa
 
 - Ainda nao ha tela operacional estetica para estoque PA.
-- O modelo atual considera um lote PA por item de romaneio. Se for necessario dividir o mesmo item entre varios lotes, a proxima evolucao deve permitir multiplos itens/lotes no mesmo romaneio.
+- A integracao fiscal e faturamento ainda consumira o romaneio confirmado em etapa futura.
+
+## Evolucao 2026-07-04 - Romaneio multilote e PCP
+
+Migration complementar: `supabase/migrations/0009_pcp_op_foundation.sql`.
+
+Alteracoes:
+
+- O modelo deixou de limitar o item do romaneio a uma unica reserva PA ativa.
+- `est_reservas_pa` agora permite multiplos lotes ativos para o mesmo item de romaneio, desde que a combinacao item+lote seja unica.
+- `registrar_est_reserva_pa` permite reservas parciais por lote e valida que a soma nao ultrapassa a quantidade romaneada.
+- `confirmar_exp_romaneio` exige que a soma das reservas ativas seja exatamente igual a quantidade romaneada e gera uma baixa por lote.
+- `est_lotes_pa_saldos` passou a considerar tambem reservas de PA feitas pelo PCP.
+
+Resultado validado:
+
+- Um romaneio total de 6 unidades foi separado em dois lotes PA de 3 unidades.
+- A confirmacao gerou duas baixas fisicas PA e marcou o pedido como `fulfilled`.
+
+Limites restantes:
+
+- Ainda nao ha tela operacional estetica para escolher multiplos lotes visualmente.
 - A integracao fiscal e faturamento ainda consumira o romaneio confirmado em etapa futura.

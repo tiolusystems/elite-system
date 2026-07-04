@@ -115,6 +115,28 @@ Fluxo operacional atualizado:
 
 O campo textual `lote_pa_ref` permanece para compatibilidade e leitura humana, mas a chave auditavel passa a ser `lote_pa_id`.
 
+## Evolucao com romaneio multilote
+
+Migration complementar: `supabase/migrations/0009_pcp_op_foundation.sql`.
+
+A partir desta etapa, um mesmo item de romaneio pode ser atendido por mais de um lote PA:
+
+1. `registrar_est_reserva_pa` pode registrar varias reservas ativas para o mesmo item, desde que cada reserva aponte para um lote diferente.
+2. A soma das reservas ativas nao pode ultrapassar a quantidade romaneada.
+3. Quando ha mais de um lote, `exp_romaneio_itens.lote_pa_ref` fica como `MULTILOTE` para leitura humana.
+4. `confirmar_exp_romaneio` exige que a soma das reservas ativas seja exatamente igual a quantidade romaneada.
+5. A confirmacao gera uma baixa PA por lote reservado.
+6. O saldo PA considera reservas de romaneio e reservas de PCP.
+
+Validacao descartavel:
+
+- pedido de 6 unidades;
+- romaneio total de 6 unidades;
+- reserva de 3 unidades no lote A;
+- reserva de 3 unidades no lote B;
+- confirmacao com duas baixas PA;
+- pedido finalizado como `fulfilled`.
+
 ## Fora do escopo inicial
 
 Nao implementar como parte do romaneio inicial, salvo se estiver na planilha `ROMANEIO` canonica:

@@ -79,10 +79,14 @@ Funcoes conferidas:
 
 Com a `0019`, o ponto critico encontrado na auditoria do estoque foi corrigido: estorno de romaneio confirmado nao fica mais como funcao antiga sem guard central.
 
-Ainda nao considero o dominio de estoque totalmente fechado. Proximo bloco recomendado:
+Ainda nao considero o dominio de estoque totalmente fechado.
 
-1. auditar entradas automaticas `create_est_lote_pa_auto`, `create_est_lote_mp`, `create_est_lote_pi` e geracao de lote MP por XML;
-2. auditar consumo/transformacao dentro de `finalizar_pcp_op`;
-3. auditar baixa PA em `confirmar_exp_romaneio` para migrar o log final de `log_action(...)` para `log_audit_event(...)` com action key e snapshots derivados.
+As entradas automaticas `create_est_lote_pa_auto`, `create_est_lote_mp` e `create_est_lote_pi` foram migradas na `0021_estoque_lot_entry_rpc_contract.sql`.
+
+Proximo bloco recomendado:
+
+1. auditar baixa PA em `confirmar_exp_romaneio` para migrar o log final de `log_action(...)` para `log_audited_rpc_change(...)` com action key e snapshots derivados;
+2. auditar geracao de lote MP por XML/NF com contrato proprio, alem da chamada a `create_est_lote_mp`;
+3. auditar consumo/transformacao dentro de `finalizar_pcp_op`.
 
 Esses pontos ja passam por RPC `security definer` e permissoes de negocio em parte dos casos, mas ainda misturam o contrato antigo de auditoria em alguns fluxos. Por isso, devem ser tratados antes de marcar `estoque` como concluido.

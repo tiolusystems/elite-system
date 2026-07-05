@@ -301,6 +301,8 @@ Antes de considerar uma migration pronta:
 11. smoke em PostgreSQL descartavel limpo;
 12. documento de validacao.
 
+Para estoque, o teste estatico tambem deve impedir nova funcao SQL com `insert into public.est_movimentos_*` sem `begin_audited_rpc(...)`, salvo divida tecnica declarada explicitamente.
+
 ## Smoke minimo
 
 Para cada dominio:

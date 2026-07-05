@@ -11,8 +11,24 @@ MIGRATION_0007 = MIGRATIONS / "0007_pa_stock_lots_foundation.sql"
 MIGRATION_0009 = MIGRATIONS / "0009_pcp_op_foundation.sql"
 MIGRATION_0018 = MIGRATIONS / "0018_estoque_rls_adjustment_axes.sql"
 MIGRATION_0019 = MIGRATIONS / "0019_estoque_romaneio_reverse_contract.sql"
+MIGRATION_0021 = MIGRATIONS / "0021_estoque_lot_entry_rpc_contract.sql"
 RECIPE_DOC = REPO_ROOT / "docs" / "receita_rls_rpc_auditada.md"
 SECURITY_MATRIX_DOC = REPO_ROOT / "docs" / "matriz_seguranca_alcadas.md"
+
+PRE_HELPER_STOCK_MOVEMENT_RPCS = {
+    "create_est_lote_pa",
+    "estornar_exp_romaneio",
+    "registrar_est_ajuste_mp",
+    "registrar_est_ajuste_pa",
+    "registrar_est_ajuste_pi",
+}
+
+PENDING_STOCK_MOVEMENT_RPCS = {
+    "confirmar_exp_romaneio",
+    "finalizar_pcp_op",
+}
+
+ALLOWED_STOCK_MOVEMENT_RPC_DEBT = PRE_HELPER_STOCK_MOVEMENT_RPCS | PENDING_STOCK_MOVEMENT_RPCS
 
 
 def _create_table_body(sql: str, table_name: str) -> str:
@@ -21,6 +37,21 @@ def _create_table_body(sql: str, table_name: str) -> str:
     if match is None:
         raise AssertionError(f"table definition not found: {table_name}")
     return match.group(1).lower()
+
+
+def _latest_sql_function_bodies() -> dict[str, str]:
+    functions: dict[str, str] = {}
+    pattern = re.compile(
+        r"create or replace function public\.([a-z0-9_]+)\s*\(.*?\)\s*returns\b.*?\bas \$\$(.*?)\$\$;",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
+    for path in sorted(MIGRATIONS.glob("*.sql")):
+        text = path.read_text(encoding="utf-8")
+        for match in pattern.finditer(text):
+            functions[match.group(1)] = match.group(2)
+
+    return functions
 
 
 class EstoqueEventLedgerContractTests(unittest.TestCase):
@@ -158,6 +189,51 @@ class EstoqueEventLedgerContractTests(unittest.TestCase):
         self.assertIn("v_after", text)
         self.assertIn("'estorno_saida'", text)
         self.assertIn("returning id into v_est_movimento_id", text)
+
+    def test_stock_movement_insert_rpcs_use_audited_helper_or_declared_debt(self) -> None:
+        function_bodies = _latest_sql_function_bodies()
+        movement_functions = {
+            name: body
+            for name, body in function_bodies.items()
+            if re.search(r"insert\s+into\s+public\.est_movimentos_(mp|pa|pi)\b", body, flags=re.IGNORECASE)
+        }
+
+        untracked = sorted(
+            name
+            for name, body in movement_functions.items()
+            if "begin_audited_rpc(" not in body and name not in ALLOWED_STOCK_MOVEMENT_RPC_DEBT
+        )
+
+        self.assertEqual(
+            untracked,
+            [],
+            "Stock movement RPCs must call begin_audited_rpc before movement insert or be declared as debt",
+        )
+        self.assertTrue(
+            ALLOWED_STOCK_MOVEMENT_RPC_DEBT.issubset(movement_functions),
+            "Declared stock movement RPC debt must still point to real movement-writing functions",
+        )
+
+    def test_0021_lot_entry_rpcs_use_audited_contract_helpers(self) -> None:
+        text = MIGRATION_0021.read_text(encoding="utf-8")
+
+        expected = {
+            "create_est_lote_pa_auto": ("est_lotes_pa", "estoque.pa.lots.create", "PA"),
+            "create_est_lote_mp": ("est_lotes_mp", "estoque.mp.lots.create", "MP"),
+            "create_est_lote_pi": ("est_lotes_pi", "estoque.pi.lots.create", "PI"),
+        }
+
+        for function_name, (entity_type, action_key, family) in expected.items():
+            self.assertIn(f"create or replace function public.{function_name}", text)
+            self.assertIn("v_permission_context := public.begin_audited_rpc(", text)
+            self.assertIn(f"'{action_key}'", text)
+            self.assertIn(f"'{entity_type}'", text)
+            self.assertIn("'movement_event'", text)
+            self.assertIn(f"'familia', '{family}'", text)
+            self.assertIn("perform public.log_audited_rpc_change(", text)
+            self.assertIn(f"'source', '{function_name}'", text)
+
+        self.assertNotIn("perform public.log_action(", text)
 
 
 if __name__ == "__main__":

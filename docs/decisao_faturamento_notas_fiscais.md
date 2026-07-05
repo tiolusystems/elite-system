@@ -53,6 +53,12 @@ Campos planejados para `fat_nota_fiscal_itens`:
 
 Essa tabela permite reconciliar pedido, NF, romaneio e item/quantidade sem duplicar campos fiscais em `com_pedidos`.
 
+Leituras derivadas planejadas:
+
+- quantidade faturada comercialmente: soma itens de `remessa_total`, `simples_faturamento` e complemento com quantidade;
+- quantidade remetida fisicamente por documento fiscal: soma itens de `remessa_total` e `remessa_vinculada`;
+- `remessa_vinculada` nao duplica faturamento comercial da NF simples pai, apenas documenta a carga posterior.
+
 Tipos iniciais:
 
 - `remessa_total`;
@@ -112,7 +118,9 @@ Regras de integridade:
 - `nota_pai_id` e `nota_complementada_id` nao devem ser preenchidos ao mesmo tempo;
 - pedido com simples faturamento nao deve perder visibilidade das remessas posteriores;
 - romaneio de carga nao deve ficar fiscalmente solto quando existir NF pai de simples faturamento;
-- a mesma quantidade/item nao deve ser coberta duas vezes por `remessa_total` e `simples_faturamento`; a reconciliacao deve usar `fat_nota_fiscal_itens`.
+- a mesma quantidade/item nao deve ser coberta duas vezes como faturamento comercial por `remessa_total` e `simples_faturamento`; a RPC deve bloquear excesso;
+- `remessa_vinculada` nao entra de novo na soma de quantidade faturada, mas nao pode ultrapassar a quantidade da NF simples pai para o mesmo item;
+- a reconciliacao deve usar `fat_nota_fiscal_itens`.
 
 View planejada:
 
@@ -268,7 +276,7 @@ NF original -> evento cancelada -> ajuste financeiro/comissao por evento auditad
 
 ## Criterio para migration futura
 
-A migration de faturamento so deve ser escrita depois que esta decisao estiver refletida em:
+A migration de faturamento foi implementada em `supabase/migrations/0025_faturamento_nf_contract.sql` depois que esta decisao foi refletida em:
 
 - matriz de seguranca e alcadas;
 - receita RLS/RPC auditada;

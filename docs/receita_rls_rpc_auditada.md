@@ -190,6 +190,9 @@ Regras obrigatorias:
 - `tipo = remessa_total` deve apontar para `romaneio_id` e nao deve ter `nota_pai_id`;
 - `tipo = remessa_vinculada` deve apontar para `romaneio_id` e `nota_pai_id`;
 - NF de remessa vinculada deve pertencer ao mesmo pedido da NF simples pai;
+- `fat_nota_fiscal_itens` deve apontar para `pedido_item_id` e, quando a NF nascer de carga, tambem para `romaneio_item_id`;
+- RPC de emissao deve bloquear quantidade faturada comercialmente acima da quantidade do item do pedido;
+- RPC de emissao deve bloquear `remessa_vinculada` acima da quantidade da NF simples pai para o mesmo item;
 - `fat_nota_fiscal_itens` deve reconciliar item/quantidade fiscal para impedir dupla cobertura por modalidades diferentes;
 - `tipo = complementar` deve apontar para `nota_complementada_id`;
 - `nota_pai_id` e `nota_complementada_id` nao devem ser preenchidos ao mesmo tempo;

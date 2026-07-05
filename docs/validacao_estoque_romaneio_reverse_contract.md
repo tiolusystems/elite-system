@@ -83,10 +83,11 @@ Ainda nao considero o dominio de estoque totalmente fechado.
 
 As entradas automaticas `create_est_lote_pa_auto`, `create_est_lote_mp` e `create_est_lote_pi` foram migradas na `0021_estoque_lot_entry_rpc_contract.sql`.
 
+`confirmar_exp_romaneio` foi migrado na `0022_estoque_romaneio_confirm_contract.sql`, com snapshot de reserva PA e saldo PA antes/depois.
+
 Proximo bloco recomendado:
 
-1. auditar baixa PA em `confirmar_exp_romaneio` para migrar o log final de `log_action(...)` para `log_audited_rpc_change(...)` com action key e snapshots derivados;
-2. auditar geracao de lote MP por XML/NF com contrato proprio, alem da chamada a `create_est_lote_mp`;
-3. auditar consumo/transformacao dentro de `finalizar_pcp_op`.
+1. auditar geracao de lote MP por XML/NF com contrato proprio, alem da chamada a `create_est_lote_mp`;
+2. auditar consumo/transformacao dentro de `finalizar_pcp_op`.
 
 Esses pontos ja passam por RPC `security definer` e permissoes de negocio em parte dos casos, mas ainda misturam o contrato antigo de auditoria em alguns fluxos. Por isso, devem ser tratados antes de marcar `estoque` como concluido.

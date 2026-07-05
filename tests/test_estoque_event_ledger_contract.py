@@ -12,6 +12,7 @@ MIGRATION_0009 = MIGRATIONS / "0009_pcp_op_foundation.sql"
 MIGRATION_0018 = MIGRATIONS / "0018_estoque_rls_adjustment_axes.sql"
 MIGRATION_0019 = MIGRATIONS / "0019_estoque_romaneio_reverse_contract.sql"
 MIGRATION_0021 = MIGRATIONS / "0021_estoque_lot_entry_rpc_contract.sql"
+MIGRATION_0022 = MIGRATIONS / "0022_estoque_romaneio_confirm_contract.sql"
 RECIPE_DOC = REPO_ROOT / "docs" / "receita_rls_rpc_auditada.md"
 SECURITY_MATRIX_DOC = REPO_ROOT / "docs" / "matriz_seguranca_alcadas.md"
 
@@ -24,7 +25,6 @@ PRE_HELPER_STOCK_MOVEMENT_RPCS = {
 }
 
 PENDING_STOCK_MOVEMENT_RPCS = {
-    "confirmar_exp_romaneio",
     "finalizar_pcp_op",
 }
 
@@ -233,6 +233,30 @@ class EstoqueEventLedgerContractTests(unittest.TestCase):
             self.assertIn("perform public.log_audited_rpc_change(", text)
             self.assertIn(f"'source', '{function_name}'", text)
 
+        self.assertNotIn("perform public.log_action(", text)
+
+    def test_0022_confirm_romaneio_uses_stock_issue_contract_and_composite_snapshots(self) -> None:
+        text = MIGRATION_0022.read_text(encoding="utf-8")
+
+        self.assertIn("'estoque.pa.issue.romaneio'", text)
+        self.assertIn("perform public.require_current_user_permission('romaneios.confirm');", text)
+        self.assertIn("v_permission_context := public.begin_audited_rpc(", text)
+        self.assertIn("'business_action_key', 'romaneios.confirm'", text)
+        self.assertIn("'event', 'issue'", text)
+        self.assertIn("'origem', 'romaneio'", text)
+        self.assertIn("insert into public.est_movimentos_pa", text)
+        self.assertIn("'saida_romaneio'", text)
+        self.assertIn("update public.est_reservas_pa", text)
+        self.assertIn("set status = 'baixada'", text)
+        self.assertIn("'reservas_pa'", text)
+        self.assertIn("from public.est_reservas_pa reserva", text)
+        self.assertIn("'pa_saldos'", text)
+        self.assertIn("from public.est_lotes_pa_saldos saldo", text)
+        self.assertIn("'exp_movimentos_pa'", text)
+        self.assertIn("'est_movimentos_pa'", text)
+        self.assertIn("perform public.log_audited_rpc_change(", text)
+        self.assertIn("'estoque.pa_romaneio_confirmado'", text)
+        self.assertIn("'movimentos_saida'", text)
         self.assertNotIn("perform public.log_action(", text)
 
 

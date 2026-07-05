@@ -84,6 +84,7 @@ Migrar os RPCs pendentes do dominio de estoque para o novo template:
 
 - importacao XML/NF de MP;
 - consumo e transformacao em `finalizar_pcp_op`;
-- baixa PA em `confirmar_exp_romaneio`.
 
 Os tres criadores de lote `create_est_lote_pa_auto`, `create_est_lote_mp` e `create_est_lote_pi` foram migrados na `0021_estoque_lot_entry_rpc_contract.sql`.
+
+A baixa PA em `confirmar_exp_romaneio` foi migrada na `0022_estoque_romaneio_confirm_contract.sql`.

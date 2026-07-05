@@ -90,6 +90,7 @@ Dividas ainda declaradas:
 
 ## Proximo bloco recomendado
 
-1. Migrar `confirmar_exp_romaneio`, fechando a simetria com `estornar_exp_romaneio`.
-2. Migrar geracao de lote MP por XML/NF para contrato auditado proprio, mesmo que a entrada de lote ja use `create_est_lote_mp`.
-3. Migrar `finalizar_pcp_op` por ultimo, pois e multi-tabela, multi-familia e mistura consumo de MP/PA/PI com entrada de PA/PI.
+1. Migrar geracao de lote MP por XML/NF para contrato auditado proprio, mesmo que a entrada de lote ja use `create_est_lote_mp`.
+2. Migrar `finalizar_pcp_op` por ultimo, pois e multi-tabela, multi-familia e mistura consumo de MP/PA/PI com entrada de PA/PI.
+
+`confirmar_exp_romaneio` foi migrado na `0022_estoque_romaneio_confirm_contract.sql`.

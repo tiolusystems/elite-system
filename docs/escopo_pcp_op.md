@@ -29,6 +29,19 @@ A OP MAPA e documental apenas. Ela registra a receita regulatoria/documental, ma
 17. Formula, itens de formula e ativacoes sao append-only; correcao deve ser nova versao.
 18. PA e PI gerados por OP podem herdar validade automatica do produto quando o cadastro tiver `prazo_validade_meses`.
 
+## Decisao para finalizacao auditada
+
+A regra detalhada para migrar `finalizar_pcp_op` para o contrato auditado esta em `docs/decisao_finalizacao_pcp_op.md`.
+
+Resumo:
+
+- finalizacao continua em transacao unica;
+- falha em qualquer etapa reverte toda a OP;
+- CQ reprovado ou bloqueado gera lote bloqueado, nao apaga a producao fisica;
+- OP experimental/desenvolvimento gera lote bloqueado mesmo com CQ aprovado;
+- segunda finalizacao da mesma OP deve falhar sem duplicar consumo ou entrada;
+- todos os logs da finalizacao devem compartilhar `correlation_id = 'pcp_op:' || p_op_id || ':finish'`.
+
 ## Estrutura criada
 
 Migration: `supabase/migrations/0009_pcp_op_foundation.sql`.

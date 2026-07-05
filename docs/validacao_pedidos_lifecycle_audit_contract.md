@@ -129,3 +129,48 @@ Smoke `.tools/smoke_pedidos_0029.sql` validou:
 - cancelamento de pedido sem efeitos ativos move comissao `prevista` para `cancelada`;
 - pedido com comissao paga nao pode ser cancelado por `cancelar_com_pedido`;
 - pedido com OP ativa vinculada nao pode ser cancelado por `cancelar_com_pedido`.
+
+## Contrato de troca e mostruario 0030
+
+Migration: `supabase/migrations/0030_pedidos_troca_mostruario_contract.sql`.
+
+Escopo:
+
+- `com_pedidos.tipo_pedido` e `com_pedido_itens.tipo_item` aceitam `troca` e `mostruario`;
+- `mostruario` entra pelo fluxo normal de pedido, mas com valor comercial zero e sem comissao;
+- `troca` nao entra pelo fluxo generico de pedido: usa `create_com_pedido_troca(...)`;
+- troca exige `pedido_origem_id` e `pedido_item_origem_id`;
+- RPC de troca usa action key `pedidos.exchange.create`, axis `change_type`, lock no pedido/item de origem e log auditado;
+- soma de trocas ativas do mesmo item nao pode ultrapassar a quantidade original;
+- troca nao gera comissionado previsto.
+
+Validacao executada:
+
+```text
+python -m unittest tests.test_pedidos_troca_mostruario_contract
+python -m unittest discover -s tests -p "test*.py"
+pnpm --dir apps/web lint
+pnpm --dir apps/web build
+```
+
+Status:
+
+- `python -m unittest tests.test_pedidos_troca_mostruario_contract`: OK, 5 testes.
+- `python -m unittest discover -s tests -p "test*.py"`: OK, 133 testes.
+- `pnpm --dir apps/web lint`: OK.
+- `pnpm --dir apps/web build`: OK.
+
+Validacao em PostgreSQL descartavel:
+
+```text
+PG_VALIDATE_0030_WITH_SMOKE_OK
+```
+
+Smoke `.tools/smoke_pedidos_0030.sql` validou:
+
+- pedido `venda` continua gerando comissionado previsto quando percentual e vendedor existem;
+- pedido `mostruario` nao gera comissionado previsto e fica com valor comercial zero;
+- tentativa de criar `troca` pelo fluxo generico falha e direciona para `create_com_pedido_troca`;
+- `create_com_pedido_troca` cria pedido `troca` com vinculo ao pedido e item de origem;
+- troca nao gera comissionado previsto;
+- troca acima da quantidade original do item e bloqueada.

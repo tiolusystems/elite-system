@@ -117,6 +117,21 @@ Regras:
 - bonificacao pode aparecer em relatorios comerciais, mas nao deve entrar em comissao;
 - se um pedido misturar venda e bonificacao, apenas os itens de venda entram na base comissionavel.
 
+## Troca e mostruario
+
+Mostruario nao gera comissao, mesmo quando houver vendedor informado no pedido. O valor comercial do item fica zero no fluxo operacional, porque a finalidade e controle de envio/amostra, nao faturamento comissionavel.
+
+troca exige pedido e item de origem. Ela nao deve ser criada pelo fluxo generico de pedido, porque precisa preservar a rastreabilidade do que esta sendo substituido. A RPC propria de troca cria um novo pedido `tipo_pedido = troca`, com `pedido_origem_id` e `pedido_item_origem_id`, sem gerar comissionado previsto.
+
+Regra decidida:
+
+- venda gera comissionado previsto quando houver percentual;
+- bonificacao nao gera comissionado previsto;
+- devolucao nao gera comissionado previsto;
+- mostruario nao gera comissao prevista;
+- troca nao gera comissionado previsto;
+- a soma das trocas ativas de um item nao pode ultrapassar a quantidade original desse item.
+
 ## Devolucao
 
 Devolucao abate comissao.

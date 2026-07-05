@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import {
   createPedidoRascunhoAction,
+  criarTrocaPedidoAction,
   registrarCreditoPedidoAction,
   registrarRecebimentoPedidoAction
 } from "@/app/pedidos/actions";
@@ -138,6 +139,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
                     <option value="venda">venda</option>
                     <option value="bonificacao">bonificacao</option>
                     <option value="devolucao">devolucao</option>
+                    <option value="mostruario">mostruario</option>
                   </select>
                 </label>
                 <label>
@@ -285,6 +287,89 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
                 <span>Quando Supabase estiver configurado, esta lista mostrara liberacoes e bloqueios recentes.</span>
               </div>
             )}
+          </section>
+        </section>
+
+        <section className="two-column">
+          <section className="panel form-panel" id="troca-pedido" aria-labelledby="troca-pedido-title">
+            <div className="panel-header">
+              <h2 id="troca-pedido-title">Troca</h2>
+              <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
+            </div>
+            <form action={criarTrocaPedidoAction}>
+              <div className="form-grid">
+                <label className="wide-field">
+                  Pedido origem
+                  <input name="pedido_origem_id" list="pedidos-options" placeholder="Pedido de venda ou bonificacao" required />
+                </label>
+                <label className="wide-field">
+                  Item origem
+                  <input name="pedido_item_origem_id" list="pedido-itens-options" placeholder="Item original do pedido" required />
+                </label>
+                <label className="wide-field">
+                  Item reposicao
+                  <input name="produto_embalagem_id" list="itens-vendaveis-options" placeholder="Opcional: vazio usa o item original" />
+                </label>
+                <label>
+                  Quantidade
+                  <input name="quantidade_troca" placeholder="Vazio = total do item" inputMode="decimal" />
+                </label>
+                <label>
+                  Motivo
+                  <select name="motivo_troca" defaultValue="qualidade">
+                    <option value="qualidade">qualidade</option>
+                    <option value="avaria_transporte">avaria_transporte</option>
+                    <option value="erro_separacao">erro_separacao</option>
+                    <option value="erro_comercial">erro_comercial</option>
+                    <option value="acordo_comercial">acordo_comercial</option>
+                    <option value="outro">outro</option>
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select name="status_troca" defaultValue="open">
+                    <option value="draft">draft</option>
+                    <option value="open">open</option>
+                    <option value="blocked">blocked</option>
+                  </select>
+                </label>
+                <label>
+                  Data
+                  <input name="data_troca" type="date" defaultValue={today} required />
+                </label>
+                <label className="wide-field">
+                  Observacao
+                  <input name="observacao_troca" placeholder="Obrigatorio quando motivo = outro" />
+                </label>
+              </div>
+              <div className="form-footer">
+                <span>Troca cria pedido vinculado ao pedido e item de origem, sem comissao.</span>
+                <button className="primary-button" type="submit">
+                  Criar troca
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="panel" aria-labelledby="troca-regras-title">
+            <div className="panel-header">
+              <h2 id="troca-regras-title">Controle de troca</h2>
+              <span className="pill">rastreavel</span>
+            </div>
+            <dl className="status-list">
+              <div className="status-row">
+                <dt>Origem</dt>
+                <dd>Troca exige pedido e item original ativos para manter rastreabilidade.</dd>
+              </div>
+              <div className="status-row">
+                <dt>Quantidade</dt>
+                <dd>A soma das trocas nao pode ultrapassar a quantidade do item original.</dd>
+              </div>
+              <div className="status-row">
+                <dt>Comissao</dt>
+                <dd>Troca e mostruario nao criam comissionado previsto.</dd>
+              </div>
+            </dl>
           </section>
         </section>
 
@@ -437,6 +522,7 @@ function LookupDatalists({ lookups }: { lookups: OrderLookups }) {
       <LookupDatalist id="itens-vendaveis-options" options={lookups.itensVendaveis} />
       <LookupDatalist id="pessoas-comerciais-options" options={lookups.pessoasComerciais} />
       <LookupDatalist id="pedidos-options" options={lookups.pedidos} />
+      <LookupDatalist id="pedido-itens-options" options={lookups.pedidoItens} />
     </>
   );
 }
@@ -503,6 +589,11 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Recebimento registrado",
       detail: "Recebimento gravado e comissao proporcional liberada quando aplicavel."
     },
+    exchange_created: {
+      kind: "ok",
+      title: "Troca criada",
+      detail: "Pedido de troca criado com vinculo ao pedido e item de origem."
+    },
     missing_order_required: {
       kind: "warning",
       title: "Campos obrigatorios",
@@ -523,6 +614,11 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Campos obrigatorios",
       detail: "Pedido, valor recebido e data do recebimento sao obrigatorios."
     },
+    missing_exchange_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Pedido origem, item origem e data da troca sao obrigatorios."
+    },
     invalid_positive_number: {
       kind: "warning",
       title: "Numero invalido",
@@ -536,7 +632,7 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     invalid_order_type: {
       kind: "warning",
       title: "Tipo invalido",
-      detail: "Use venda, bonificacao ou devolucao."
+      detail: "Use venda, bonificacao, devolucao ou mostruario. Troca usa o formulario proprio."
     },
     invalid_initial_status: {
       kind: "warning",
@@ -562,6 +658,21 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Recebimento acima do saldo",
       detail: "O valor informado ultrapassa o saldo pendente do pedido."
+    },
+    invalid_exchange_reason: {
+      kind: "warning",
+      title: "Motivo invalido",
+      detail: "Use um motivo de troca padronizado."
+    },
+    missing_exchange_observation: {
+      kind: "warning",
+      title: "Observacao obrigatoria",
+      detail: "Motivo outro exige observacao."
+    },
+    invalid_exchange_source: {
+      kind: "warning",
+      title: "Troca nao permitida",
+      detail: "Revise pedido origem, item origem ou quantidade ja trocada."
     },
     missing_related_record: {
       kind: "warning",

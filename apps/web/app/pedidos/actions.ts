@@ -7,9 +7,10 @@ import { getRuntimeStatus } from "@/lib/runtime";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const ALLOWED_TIPO_PEDIDO = new Set(["venda", "bonificacao", "devolucao"]);
+const ALLOWED_TIPO_PEDIDO = new Set(["venda", "bonificacao", "devolucao", "mostruario"]);
 const ALLOWED_STATUS_INICIAL = new Set(["draft", "open", "blocked"]);
 const ALLOWED_DECISAO_CREDITO = new Set(["liberado", "bloqueado", "pendente_aprovacao"]);
+const ALLOWED_MOTIVO_TROCA = new Set(["qualidade", "avaria_transporte", "erro_separacao", "erro_comercial", "acordo_comercial", "outro"]);
 const DECIMAL_SEPARATOR = /,/g;
 
 export async function createPedidoRascunhoAction(formData: FormData) {
@@ -192,6 +193,71 @@ export async function registrarRecebimentoPedidoAction(formData: FormData) {
   redirect("/pedidos?result=receipt_registered#recebimento-pedido");
 }
 
+export async function criarTrocaPedidoAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/pedidos?result=not_configured#troca-pedido");
+  }
+
+  const pedidoOrigemId = optionalInteger(formData, "pedido_origem_id");
+  const pedidoItemOrigemId = optionalInteger(formData, "pedido_item_origem_id");
+  const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
+  const quantidade = optionalNumber(formData, "quantidade_troca");
+  const status = field(formData, "status_troca") || "open";
+  const dataPedido = field(formData, "data_troca");
+  const motivoTroca = field(formData, "motivo_troca") || "qualidade";
+
+  if (!pedidoOrigemId || !pedidoItemOrigemId || !dataPedido) {
+    redirect("/pedidos?result=missing_exchange_required#troca-pedido");
+  }
+  if (!Number.isInteger(pedidoOrigemId) || pedidoOrigemId <= 0 || !Number.isInteger(pedidoItemOrigemId) || pedidoItemOrigemId <= 0) {
+    redirect("/pedidos?result=invalid_positive_number#troca-pedido");
+  }
+  if (produtoEmbalagemId !== null && (!Number.isInteger(produtoEmbalagemId) || produtoEmbalagemId <= 0)) {
+    redirect("/pedidos?result=invalid_positive_number#troca-pedido");
+  }
+  if (quantidade !== null && (!Number.isFinite(quantidade) || quantidade <= 0)) {
+    redirect("/pedidos?result=invalid_positive_number#troca-pedido");
+  }
+  if (!ALLOWED_STATUS_INICIAL.has(status)) {
+    redirect("/pedidos?result=invalid_initial_status#troca-pedido");
+  }
+  if (!ALLOWED_MOTIVO_TROCA.has(motivoTroca)) {
+    redirect("/pedidos?result=invalid_exchange_reason#troca-pedido");
+  }
+  if (motivoTroca === "outro" && !optionalField(formData, "observacao_troca")) {
+    redirect("/pedidos?result=missing_exchange_observation#troca-pedido");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "create_com_pedido_troca", {
+    p_data_pedido: dataPedido,
+    p_motivo_troca: motivoTroca,
+    p_observacao: optionalField(formData, "observacao_troca"),
+    p_pedido_item_origem_id: pedidoItemOrigemId,
+    p_pedido_origem_id: pedidoOrigemId,
+    p_produto_embalagem_id: produtoEmbalagemId,
+    p_quantidade: quantidade,
+    p_status: status
+  }, {
+    metadata: {
+      action_key: "pedidos.exchange.create",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedidos",
+      entity_id: String(pedidoOrigemId),
+      failure_action: "pedidos.exchange_create_failed"
+    }
+  });
+
+  if (error) {
+    redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#troca-pedido`);
+  }
+
+  revalidatePath("/pedidos");
+  redirect("/pedidos?result=exchange_created#troca-pedido");
+}
+
 function field(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }
@@ -243,6 +309,18 @@ function mapSupabaseError(message: string): string {
   }
   if (normalized.includes("receipt exceeds order balance")) {
     return "receipt_exceeds_balance";
+  }
+  if (normalized.includes("use create_com_pedido_troca")) {
+    return "invalid_order_type";
+  }
+  if (normalized.includes("invalid motivo_troca")) {
+    return "invalid_exchange_reason";
+  }
+  if (normalized.includes("observacao is required when motivo_troca is outro")) {
+    return "missing_exchange_observation";
+  }
+  if (normalized.includes("origem") || normalized.includes("exchange quantity exceeds")) {
+    return "invalid_exchange_source";
   }
   if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";

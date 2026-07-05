@@ -13,6 +13,7 @@ export type OrderLookups = {
   itensVendaveis: OrderLookupOption[];
   pessoasComerciais: OrderLookupOption[];
   pedidos: OrderLookupOption[];
+  pedidoItens: OrderLookupOption[];
 };
 
 export type RecentOrder = {
@@ -85,7 +86,8 @@ const EMPTY_LOOKUPS: OrderLookups = {
   propriedades: [],
   itensVendaveis: [],
   pessoasComerciais: [],
-  pedidos: []
+  pedidos: [],
+  pedidoItens: []
 };
 
 export async function getOrdersDashboard(): Promise<OrdersDashboard> {
@@ -236,7 +238,7 @@ async function getOrderLookups(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
 ): Promise<OrderLookups> {
   try {
-    const [clientes, propriedades, itensVendaveis, pessoasComerciais, pedidos] = await Promise.all([
+    const [clientes, propriedades, itensVendaveis, pessoasComerciais, pedidos, pedidoItens] = await Promise.all([
       supabase
         .from("cad_clientes")
         .select("id,nome,cidade,uf,status")
@@ -262,6 +264,12 @@ async function getOrderLookups(
         .from("com_pedidos")
         .select("id,codigo_pedido,cliente_id,tipo_pedido,status,valor_total")
         .in("status", ["draft", "open", "blocked"])
+        .order("created_at", { ascending: false })
+        .limit(120),
+      supabase
+        .from("com_pedido_itens")
+        .select("id,pedido_id,produto_embalagem_id,tipo_item,quantidade,status")
+        .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(120)
     ]);
@@ -307,6 +315,13 @@ async function getOrderLookups(
             id: Number(item.id),
             label: String(item.codigo_pedido),
             detail: `cliente ${item.cliente_id} / ${item.tipo_pedido} / ${item.status} / ${Number(item.valor_total ?? 0).toFixed(2)}`
+          })),
+      pedidoItens: pedidoItens.error
+        ? []
+        : ((pedidoItens.data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+            id: Number(item.id),
+            label: `pedido ${item.pedido_id} / item ${item.produto_embalagem_id}`,
+            detail: `${item.tipo_item} / qtd ${Number(item.quantidade ?? 0).toFixed(4)} / ${item.status ?? "sem status"}`
           }))
     };
   } catch {

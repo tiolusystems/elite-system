@@ -165,6 +165,7 @@ Exemplos:
 
 - NF emitida por romaneio;
 - NF de simples faturamento direta no pedido;
+- NF de remessa vinculada ao romaneio de carga e dependente da NF simples pai;
 - cancelamento de NF;
 - carta de correcao;
 - NF complementar;
@@ -186,6 +187,9 @@ Regras obrigatorias:
 - NF nao deve virar campo de `com_pedidos`;
 - pedido pode ter zero, uma ou varias NFs;
 - `romaneio_id` deve ser nullable para permitir `simples_faturamento`;
+- `tipo = remessa` deve apontar para `romaneio_id` e, quando houver simples faturamento, para `nota_referenciada_id`;
+- NF de remessa deve pertencer ao mesmo pedido da NF simples pai;
+- o corpo do pedido deve exibir dossie fiscal por relacionamento/view, sem duplicar campos fiscais em `com_pedidos`;
 - NF emitida nao baixa estoque por si so;
 - NF emitida nao libera comissao sozinha;
 - cancelamento, carta de correcao, complemento e substituicao devem criar eventos em tabela de eventos fiscais;

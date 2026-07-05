@@ -19,7 +19,8 @@ class FaturamentoNfDecisionContractTests(unittest.TestCase):
     def test_decision_models_nf_as_one_to_many_not_order_field(self) -> None:
         text = DECISION_DOC.read_text(encoding="utf-8")
 
-        self.assertIn("nota fiscal nao e um campo do pedido", text)
+        self.assertIn("nota fiscal nao e um campo solto do pedido", text)
+        self.assertIn("NF deve aparecer no corpo do pedido como rastreabilidade fiscal", text)
         self.assertIn("relacao um-para-muitos", text)
         self.assertIn("pedido pode ter zero, uma ou varias notas fiscais", text)
         self.assertIn("fat_notas_fiscais", text)
@@ -34,6 +35,20 @@ class FaturamentoNfDecisionContractTests(unittest.TestCase):
         self.assertIn("simples faturamento nao baixa estoque", text)
         self.assertIn("NF emitida nao baixa estoque por si so", text)
         self.assertIn("romaneio confirmado baixa PA", text)
+
+    def test_simple_invoice_is_parent_of_remittance_invoices(self) -> None:
+        text = DECISION_DOC.read_text(encoding="utf-8")
+        romaneio = ROMANEIO_DOC.read_text(encoding="utf-8")
+        flow = FLOW_DOC.read_text(encoding="utf-8")
+        combined = f"{text}\n{romaneio}\n{flow}"
+
+        self.assertIn("NF de simples faturamento vira o documento fiscal pai do pedido", combined)
+        self.assertIn("cada romaneio de carga posterior deve sair com uma NF de remessa filha", combined)
+        self.assertIn("`tipo = remessa` exige `pedido_id`, `romaneio_id`", combined)
+        self.assertIn("`nota_referenciada_id` apontando para essa NF pai", combined)
+        self.assertIn("NF de remessa deve pertencer ao mesmo `pedido_id` da NF pai", combined)
+        self.assertIn("romaneio de carga deve exibir a NF de remessa e a NF simples pai", combined)
+        self.assertIn("fat_pedido_dossie_fiscal", combined)
 
     def test_fiscal_lifecycle_is_event_based(self) -> None:
         text = DECISION_DOC.read_text(encoding="utf-8")
@@ -64,6 +79,7 @@ class FaturamentoNfDecisionContractTests(unittest.TestCase):
             self.assertIn("docs/decisao_faturamento_notas_fiscais.md", text)
 
         self.assertIn("NF por simples faturamento deve apontar para `pedido_id` e deixar `romaneio_id` nullable", romaneio)
+        self.assertIn("quando o pedido tiver NF de simples faturamento, a NF de remessa deve apontar `nota_referenciada_id`", romaneio)
         self.assertIn("12. Faturamento e NF.", flow)
         self.assertIn("Faturamento/NF como evento fiscal auditavel", flow)
 

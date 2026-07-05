@@ -48,6 +48,7 @@ Regras:
 
 - pedido pode ter varias NFs;
 - uma NF pode nascer de romaneio confirmado ou de simples faturamento direto do pedido;
+- em pedido de simples faturamento, cada romaneio de carga pode gerar NF de remessa filha vinculada a NF simples pai;
 - `romaneio_id` deve ser nullable no dominio fiscal;
 - recebimento deve poder apontar para pedido, NF ou parcela quando essa informacao existir;
 - se um pagamento cobrir varias NFs/pedidos, a evolucao correta e uma tabela de alocacao, como `fin_recebimento_alocacoes`;

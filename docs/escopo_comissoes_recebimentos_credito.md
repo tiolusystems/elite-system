@@ -249,6 +249,31 @@ O ledger append-only de meta deve registrar:
 - devolucao gera evento negativo, salvo motivo de qualidade;
 - ajuste manual de meta exige motivo, alcada e auditoria.
 
+## Entrega tecnica 0032 - ledger de metas
+
+A migration `supabase/migrations/0032_metas_event_ledger_contract.sql` cria o primeiro contrato operacional de metas.
+
+Entregue:
+
+- `axis = target_event`, separado de `financial_event`;
+- `com_meta_periodos`, com periodos customizados da empresa;
+- `com_meta_movimentos`, ledger append-only de venda aberta, cancelamento, devolucao e ajuste manual;
+- `com_meta_pessoa_periodo_locks`, linha tecnica para lock por pessoa + periodo, sem armazenar saldo editavel;
+- view `com_meta_saldos_pessoa_periodo`, derivada da soma dos movimentos;
+- `upsert_com_meta_periodo(...)`, RPC auditada para cadastrar/ajustar periodos;
+- `registrar_com_meta_venda_aberta(...)`, RPC auditada para inserir venda `open` no ledger;
+- `registrar_com_meta_cancelamento_pedido(...)`, RPC auditada para abater cancelamento no periodo do evento;
+- `registrar_com_meta_devolucao_nf(...)`, RPC auditada para abater devolucao fiscal quando o motivo nao for `qualidade`;
+- `registrar_com_meta_ajuste_manual(...)`, RPC auditada com motivo padronizado.
+
+Nao acoplado automaticamente nesta etapa:
+
+- criacao/aprovacao/cancelamento de pedido ainda nao chama o ledger de metas automaticamente;
+- estorno pos-pagamento ainda nao chama o ledger de metas automaticamente;
+- motor de faixa de comissao ainda nao calcula percentual congelado.
+
+Motivo: primeiro e necessario configurar os periodos customizados. Depois disso, os fluxos de pedido/devolucao podem chamar as RPCs de meta sem risco de quebrar criacao de pedido por ausencia de periodo configurado.
+
 Faixa por volume acumulado usa fracionamento por volume acumulado. Exemplo: se a faixa muda em 500k, a parte ate 500k usa a taxa anterior e a parte acima usa a taxa nova.
 
 Faixa por grupo ou linha de produto nao usa o mesmo fracionamento: cada item busca sua taxa pela classificacao propria.

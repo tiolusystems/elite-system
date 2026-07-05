@@ -20,6 +20,8 @@ O dominio financeiro acrescenta a variacao de evento financeiro: recebimentos, a
 
 O dominio de `pedidos` acrescenta a variacao de ciclo de vida por transicao de status: o pedido continua sendo entidade operacional, mas criacao, revisao de credito e cancelamento devem passar por RPC auditada e tabela de transicoes permitidas.
 
+O dominio de `metas` acrescenta a variacao de evento de meta comercial: venda aberta, cancelamento, devolucao e ajuste manual sao fatos historicos. O saldo de meta e derivado do ledger, e o lock de pessoa + periodo existe apenas para serializar calculos futuros de faixas.
+
 ## Arvore de decisao
 
 ### 1. Existe dono operacional claro?
@@ -283,6 +285,42 @@ Regras obrigatorias:
 
 Para esse caso, usar `axis = status_transition`.
 
+### 8. O registro mede meta, campanha ou faixa comercial?
+
+Use eixo por evento de meta quando a operacao representa acumulado comercial vendido, abatimento por cancelamento/devolucao ou ajuste manual autorizado.
+
+Exemplos:
+
+- venda que entrou em `open`;
+- cancelamento de pedido que ja havia contado para meta;
+- devolucao fiscal com motivo que penaliza meta;
+- ajuste manual de meta por correcao ou campanha excepcional;
+- futura leitura de acumulado para congelar faixa de comissao no pedido.
+
+Padrao de action keys:
+
+| Caso | Formato |
+|---|---|
+| Leitura de meta | `<dominio>.view` |
+| Periodo customizado | `<dominio>.periods.manage` |
+| Venda aberta | `<dominio>.sales.register` |
+| Cancelamento | `<dominio>.cancellations.register` |
+| Devolucao | `<dominio>.returns.register` |
+| Ajuste manual | `<dominio>.adjust` |
+
+Regras obrigatorias:
+
+- saldo de meta deve ser derivado de movimentos append-only;
+- periodo e customizado pela empresa;
+- venda aberta usa a data do pedido para escolher periodo;
+- cancelamento e devolucao abatem no periodo do evento, sem reabrir periodo original;
+- devolucao por qualidade nao penaliza vendedor;
+- ajuste manual exige motivo padronizado; `outro` exige detalhe;
+- calculo futuro de faixa deve travar pessoa + periodo antes de ler acumulado;
+- tabela de lock nao deve armazenar saldo editavel.
+
+Para esse caso, usar `axis = target_event`.
+
 ## Onde validar regras
 
 ### Banco
@@ -375,6 +413,7 @@ Eixos permitidos:
 | `movement_event` | estado derivado de evento/movimento |
 | `fiscal_event` | documento fiscal com ciclo de vida por eventos |
 | `financial_event` | recebimento, alocacao e conta corrente financeira |
+| `target_event` | meta, campanha e acumulado comercial derivado de eventos |
 | `status_transition` | transicao operacional de status sem movimento fisico direto |
 
 O texto legado `event_movement` e normalizado para `movement_event` pelo helper, mas RPC nova deve usar `movement_event`.

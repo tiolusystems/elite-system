@@ -40,6 +40,32 @@ comissao_liberavel = comissao_prevista_total * proporcao_recebida - comissao_ja_
 
 A formula final pode mudar por campanha, gerente, tipo de comissionado ou regra especifica, mas toda alteracao deve ficar versionada.
 
+## Entrega tecnica 0026
+
+A migration `supabase/migrations/0026_finance_receipts_commissions_contract.sql` implementa o nucleo auditavel de recebimentos e comissoes.
+
+Entregue:
+
+- `axis = financial_event`;
+- `fin_recebimento_alocacoes`, permitindo um recebimento cobrir um ou mais pedidos/NFs;
+- `fin_comissao_movimentos`, conta corrente append-only de comissoes;
+- `registrar_fin_recebimento_alocado(...)`, RPC para recebimento com alocacoes;
+- `registrar_com_recebimento(...)`, compatibilidade com a tela atual de recebimento por pedido;
+- liberacao proporcional de comissao com `memoria_calculo_json`;
+- `registrar_fin_comissao_pagamento(...)`, pagamento de comissao como debito na conta corrente;
+- `registrar_fin_comissao_ajuste(...)`, ajuste manual com motivo obrigatorio;
+- bloqueio de escrita direta nas tabelas financeiras sensiveis;
+- views `fin_recebimento_saldos_pedido` e `fin_comissao_saldos`.
+
+Nao entregue nesta etapa:
+
+- motor de campanhas/metas/travas;
+- baixa bancaria automatica;
+- estorno completo de recebimento por devolucao/cancelamento;
+- regras granulares de visibilidade por carteira de vendedor/gerente.
+
+Esses pontos devem nascer como subdominios posteriores, sem alterar retroativamente a memoria de calculo ja gravada.
+
 ## Relacao com NF
 
 Nota fiscal e documento fiscal, nao gatilho de pagamento de comissao.
@@ -52,6 +78,7 @@ Regras:
 - `romaneio_id` deve ser nullable no dominio fiscal;
 - recebimento deve poder apontar para pedido, NF ou parcela quando essa informacao existir;
 - se um pagamento cobrir varias NFs/pedidos, a evolucao correta e uma tabela de alocacao, como `fin_recebimento_alocacoes`;
+- `remessa_vinculada` nao deve ser usada como base financeira de pagamento/comissao, porque ela documenta a carga vinculada a uma NF simples pai;
 - comissao e liberada pelo valor recebido alocado na base comissionavel;
 - cancelamento, devolucao ou NF complementar devem afetar a conta corrente de comissao por evento auditado.
 

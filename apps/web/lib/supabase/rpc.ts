@@ -14,13 +14,22 @@ type AuditedRpcOptions = {
   metadata?: Record<string, unknown>;
 };
 
-export type AuditAxis = "own_any" | "change_type" | "field_risk" | "movement_event" | "status_transition";
+export type AuditAxis =
+  | "own_any"
+  | "change_type"
+  | "field_risk"
+  | "movement_event"
+  | "fiscal_event"
+  | "financial_event"
+  | "status_transition";
 
 const AUDIT_AXES = new Set<AuditAxis>([
   "own_any",
   "change_type",
   "field_risk",
   "movement_event",
+  "fiscal_event",
+  "financial_event",
   "status_transition"
 ]);
 

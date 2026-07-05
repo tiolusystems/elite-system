@@ -44,7 +44,9 @@ class WebRpcAuditContractTests(unittest.TestCase):
     def test_typed_audited_rpc_call_requires_contract_metadata(self) -> None:
         text = AUDITED_RPC_HELPER.read_text(encoding="utf-8")
 
-        self.assertIn('export type AuditAxis = "own_any" | "change_type" | "field_risk" | "movement_event" | "status_transition"', text)
+        self.assertIn("export type AuditAxis =", text)
+        for axis in ("own_any", "change_type", "field_risk", "movement_event", "fiscal_event", "financial_event", "status_transition"):
+            self.assertIn(f'"{axis}"', text)
         self.assertIn("const AUDIT_AXES = new Set<AuditAxis>", text)
         self.assertIn("export type AuditedRpcContract", text)
         self.assertIn("export class AuditedRpcCall", text)

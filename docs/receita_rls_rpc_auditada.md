@@ -16,6 +16,8 @@ E passa a incluir a regra de `estoque`: eixo por tipo de evento/movimento, porqu
 
 O dominio de `faturamento` acrescenta a variacao de documento fiscal com ciclo de vida por eventos: a NF tem cabecalho proprio, mas cancelamento, carta de correcao, substituicao e complemento devem ser eventos fiscais auditaveis.
 
+O dominio financeiro acrescenta a variacao de evento financeiro: recebimentos, alocacoes, liberacoes, pagamentos e ajustes de comissao sao fatos historicos. O saldo financeiro e a conta corrente de comissao devem ser derivados desses eventos, nao digitados como saldo editavel.
+
 ## Arvore de decisao
 
 ### 1. Existe dono operacional claro?
@@ -206,6 +208,46 @@ Regras obrigatorias:
 
 Para esse caso, usar `axis = fiscal_event`.
 
+Quando um documento tiver mais de uma referencia hierarquica com semanticas diferentes, usar colunas explicitas por significado, nao uma FK generica. Exemplo validado: `nota_pai_id` e usado apenas para `remessa_vinculada -> simples_faturamento`; `nota_complementada_id` e usado apenas para `complementar -> NF original`.
+
+### 6. O registro e evento financeiro ou conta corrente?
+
+Use eixo por evento financeiro quando a operacao representa dinheiro recebido, dinheiro pago ou saldo derivado de fatos.
+
+Exemplos:
+
+- recebimento de cliente;
+- alocacao de recebimento em um ou varios pedidos/NFs;
+- liberacao proporcional de comissao;
+- pagamento de comissao;
+- estorno por cancelamento/devolucao;
+- ajuste manual autorizado em conta corrente de comissao.
+
+Padrao de action keys:
+
+| Caso | Formato |
+|---|---|
+| Leitura financeira | `<dominio>.receipts.view` e `<dominio>.commissions.view` |
+| Registro de recebimento | `<dominio>.receipts.register` |
+| Estorno financeiro | `<dominio>.receipts.reverse` |
+| Liberacao de comissao | `<dominio>.commissions.release` |
+| Pagamento de comissao | `<dominio>.commissions.pay` |
+| Ajuste manual | `<dominio>.commissions.adjust` |
+
+Regras obrigatorias:
+
+- NF emitida nao libera comissao sozinha;
+- comissao e liberada pelo recebimento alocado na base comissionavel;
+- pagamento unico que cobre varias NFs/pedidos deve gerar uma linha de recebimento e varias alocacoes;
+- bonificacao nao gera base comissionavel;
+- pagamento de comissao e debito em conta corrente, nao mudanca silenciosa da liberacao original;
+- devolucao, cancelamento ou comissao paga indevidamente devem gerar estorno/compensacao futura como novo movimento;
+- ajuste manual exige motivo obrigatorio e alcada especifica;
+- `memoria_calculo_json` deve guardar percentual recebido, valor previsto, valor ja liberado e valor liberado no evento;
+- tabelas de alocacao e conta corrente devem ser append-only quando representarem fatos financeiros.
+
+Para esse caso, usar `axis = financial_event`.
+
 ## Onde validar regras
 
 ### Banco
@@ -297,6 +339,7 @@ Eixos permitidos:
 | `field_risk` | sensibilidade por campo ou grupo de campos |
 | `movement_event` | estado derivado de evento/movimento |
 | `fiscal_event` | documento fiscal com ciclo de vida por eventos |
+| `financial_event` | recebimento, alocacao e conta corrente financeira |
 | `status_transition` | transicao operacional de status sem movimento fisico direto |
 
 O texto legado `event_movement` e normalizado para `movement_event` pelo helper, mas RPC nova deve usar `movement_event`.

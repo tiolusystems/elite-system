@@ -34,6 +34,24 @@ Funcao conferida:
 |---|---:|---:|---:|---:|
 | `gerar_lote_mp_from_imp_nfe_item` | sim | sim | sim | `create_est_lote_mp` |
 
+## Decisao de composicao
+
+Este fluxo tem duas camadas de autorizacao e auditoria:
+
+| Camada | Action key | Resultado esperado |
+|---|---|---|
+| Importacao XML | `importacao.nfe_xml.generate_mp_lot` | Autoriza transformar item XML conferido em lote MP. |
+| Estoque MP | `estoque.mp.lots.create` | Autoriza criar lote MP fisico e movimento de entrada. |
+
+Essa dupla autorizacao e intencional. O usuario precisa das duas alcadas para concluir a operacao.
+
+Os dois logs sao correlacionaveis:
+
+- log externo: `metadata_json.lote_mp_id` e `metadata_json.origem_ref`;
+- log interno de estoque: `entity_id = lote_mp_id` e `metadata_json.origem_ref`.
+
+Para novos fluxos compostos, principalmente `finalizar_pcp_op`, a regra passa a exigir `correlation_id` comum em todos os logs da mesma operacao.
+
 ## Smoke test executado
 
 Arquivo: `.tools/smoke_importacao_xml_0023.sql`.

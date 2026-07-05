@@ -207,6 +207,36 @@ A partir da migration `0020_audited_rpc_contract_helpers.sql`, RPC nova deve pre
 
 Nao criar helper que execute SQL dinamico generico. O banco deve centralizar o contrato de permissao/contexto/log, mas a alteracao de negocio continua explicita dentro de cada RPC, para ser revisavel.
 
+## Composicao de RPCs auditadas
+
+Quando uma RPC de camada superior chama uma RPC de camada inferior que ja segue o contrato auditado, a composicao deve ser explicita.
+
+Regra:
+
+- a operacao exige a uniao das alcadas envolvidas;
+- cada evento de negocio grava seu proprio log;
+- os logs precisam ter correlacao auditavel;
+- a RPC externa deve declarar a action key interna em `permission_context` ou `metadata_json`.
+
+Exemplo validado:
+
+- `gerar_lote_mp_from_imp_nfe_item` exige `importacao.nfe_xml.generate_mp_lot`;
+- a criacao fisica do lote exige `estoque.mp.lots.create`;
+- o log externo usa `metadata_json.lote_mp_id` e `metadata_json.origem_ref`;
+- o log interno de `create_est_lote_mp` usa `entity_id = lote_mp_id` e o mesmo `origem_ref`.
+
+Para novos fluxos compostos, usar um `correlation_id` comum antes da primeira mudanca.
+
+Formato recomendado:
+
+```text
+<dominio>:<entidade>:<id>:<evento>
+```
+
+Esse valor deve aparecer no `permission_context` e no `metadata_json` da RPC externa. Logs internos criados pela mesma operacao devem repetir o `correlation_id`; quando uma RPC interna ainda nao aceitar metadata livre, passar o mesmo valor em `origem_ref` ou campo equivalente.
+
+`finalizar_pcp_op` deve usar `correlation_id = 'pcp_op:' || p_op_id || ':finish'` e propagar esse valor para todos os logs de CQ, consumo, entrada, produtos gerados e movimentos relacionados.
+
 Eixos permitidos:
 
 | Eixo | Uso |

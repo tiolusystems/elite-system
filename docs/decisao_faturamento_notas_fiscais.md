@@ -24,7 +24,8 @@ Campos planejados para `fat_notas_fiscais`:
 - `id`;
 - `pedido_id`;
 - `romaneio_id` nullable;
-- `nota_referenciada_id` nullable;
+- `nota_pai_id` nullable;
+- `nota_complementada_id` nullable;
 - `chave_nfe`;
 - `numero`;
 - `serie`;
@@ -82,10 +83,11 @@ O pedido precisa exibir o dossie fiscal completo:
 Regras de integridade:
 
 - `tipo = simples_faturamento` exige `pedido_id` e `romaneio_id` nulo;
-- `tipo = remessa` exige `pedido_id`, `romaneio_id` e, quando o pedido tiver NF de simples faturamento, `nota_referenciada_id` apontando para essa NF pai;
+- `tipo = remessa` exige `pedido_id`, `romaneio_id` e, quando o pedido tiver NF de simples faturamento, `nota_pai_id` apontando para essa NF pai;
 - NF de remessa deve pertencer ao mesmo `pedido_id` da NF pai;
 - NF de remessa deve ser identificavel no romaneio de carga;
-- `tipo = complementar` deve apontar `nota_referenciada_id` para a NF que esta complementando;
+- `tipo = complementar` deve apontar `nota_complementada_id` para a NF que esta complementando;
+- `nota_pai_id` e `nota_complementada_id` nao devem ser preenchidos ao mesmo tempo;
 - pedido com simples faturamento nao deve perder visibilidade das remessas posteriores;
 - romaneio de carga nao deve ficar fiscalmente solto quando existir NF pai de simples faturamento.
 
@@ -102,7 +104,7 @@ Regra:
 - emissao cria a NF e cria evento `emitida`;
 - cancelamento cria evento `cancelada` e atualiza `status_atual` apenas como cache;
 - carta de correcao cria evento `carta_correcao`;
-- NF complementar cria uma nova linha em `fat_notas_fiscais` com `tipo = complementar` e `nota_referenciada_id` apontando para a NF original;
+- NF complementar cria uma nova linha em `fat_notas_fiscais` com `tipo = complementar` e `nota_complementada_id` apontando para a NF original;
 - substituicao cria evento `substituida` e referencia a nova NF quando aplicavel;
 - correcao de erro deve ser novo evento fiscal, nao edicao silenciosa da linha original;
 - hard-delete de NF/evento fiscal nao faz parte do fluxo operacional.
@@ -126,6 +128,30 @@ Tipos de evento planejados:
 - `substituida`;
 - `inutilizada`;
 - `complementada`.
+
+## Contrato do payload fiscal
+
+`payload_json` nao e texto livre. Ele existe porque cada tipo de evento fiscal tem dados complementares diferentes, mas cada `tipo_evento` deve ter formato esperado documentado e comentado no schema da migration.
+
+Contrato inicial:
+
+| tipo_evento | Campos esperados em `payload_json` |
+|---|---|
+| `emitida` | `protocolo_autorizacao`, `ambiente`, `xml_ref`, `danfe_ref` |
+| `cancelada` | `protocolo_cancelamento`, `justificativa`, `data_cancelamento`, `prazo_legal_validado` |
+| `carta_correcao` | `sequencia_cce`, `protocolo_cce`, `texto_correcao` |
+| `substituida` | `nota_substituta_id`, `motivo_substituicao` |
+| `inutilizada` | `numero_inicial`, `numero_final`, `protocolo_inutilizacao`, `justificativa` |
+| `complementada` | `nota_complementar_id`, `motivo_complemento`, `valor_complementar` |
+
+Regras:
+
+- dados centrais de identificacao da NF ficam em colunas tipadas, nao escondidos no JSON;
+- `payload_json` guarda detalhes fiscais variaveis, protocolo, referencias de arquivo e memoria do evento;
+- motivo obrigatorio continua em coluna propria `motivo` quando o evento exigir justificativa;
+- RPC de evento deve validar no minimo os campos obrigatorios do tipo de evento;
+- migration deve adicionar comentario de coluna explicando este contrato;
+- nenhum fluxo deve aceitar `payload_json` vazio para cancelamento, carta de correcao, substituicao, inutilizacao ou complemento.
 
 ## Relacao com romaneio e estoque
 

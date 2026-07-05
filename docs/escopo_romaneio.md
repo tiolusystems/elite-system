@@ -181,7 +181,7 @@ Regra:
 
 - NF por remessa deve apontar para `pedido_id` e `romaneio_id`;
 - NF por simples faturamento deve apontar para `pedido_id` e deixar `romaneio_id` nullable;
-- quando o pedido tiver NF de simples faturamento, a NF de remessa deve apontar `nota_referenciada_id` para a NF simples pai;
+- quando o pedido tiver NF de simples faturamento, a NF de remessa deve apontar `nota_pai_id` para a NF simples pai;
 - o romaneio de carga deve exibir a NF de remessa e a NF simples pai para rastreabilidade fiscal da carga;
 - NF emitida nao baixa estoque por si so;
 - baixa de PA continua acontecendo pelo romaneio confirmado;

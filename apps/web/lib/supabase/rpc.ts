@@ -71,7 +71,10 @@ export async function auditedRpc<T = unknown>(
   const result = (await supabase.rpc(functionName, args)) as RpcResult<T>;
 
   if (result.error) {
-    await logPermissionDeniedIfNeeded(supabase, functionName, result.error, options);
+    const permissionDeniedLogged = await logPermissionDeniedIfNeeded(supabase, functionName, result.error, options);
+    if (!permissionDeniedLogged) {
+      await logRpcFailedIfPossible(supabase, functionName, result.error, options);
+    }
   }
 
   return result;
@@ -82,10 +85,10 @@ async function logPermissionDeniedIfNeeded(
   functionName: string,
   error: PostgrestError,
   options: AuditedRpcOptions
-) {
+): Promise<boolean> {
   const actionKey = permissionActionKeyFromError(error.message);
   if (!actionKey) {
-    return;
+    return false;
   }
 
   try {
@@ -98,6 +101,45 @@ async function logPermissionDeniedIfNeeded(
       },
       p_origin: options.origin ?? "apps/web/server_action"
     });
+    return true;
+  } catch {
+    // Keep the original RPC error as the user-facing failure.
+    return false;
+  }
+}
+
+async function logRpcFailedIfPossible(
+  supabase: RpcClient,
+  functionName: string,
+  error: PostgrestError,
+  options: AuditedRpcOptions
+) {
+  const metadata = options.metadata ?? {};
+  const actionKey = stringMetadata(metadata, "action_key");
+  const domain = stringMetadata(metadata, "domain");
+  const entity = stringMetadata(metadata, "entity");
+  if (!actionKey || !domain || !entity) {
+    return;
+  }
+
+  try {
+    await supabase.rpc("log_rpc_failed", {
+      p_action: stringMetadata(metadata, "failure_action") ?? `${functionName}.failed`,
+      p_action_key: actionKey,
+      p_domain: domain,
+      p_entity_id: stringMetadata(metadata, "entity_id"),
+      p_entity_type: entity,
+      p_metadata_json: {
+        rpc: functionName,
+        error_message: error.message,
+        ...(options.metadata ?? {})
+      },
+      p_origin: options.origin ?? "apps/web/server_action",
+      p_permission_context: {
+        axis: stringMetadata(metadata, "axis"),
+        correlation_id: stringMetadata(metadata, "correlation_id")
+      }
+    });
   } catch {
     // Keep the original RPC error as the user-facing failure.
   }
@@ -106,6 +148,15 @@ async function logPermissionDeniedIfNeeded(
 function permissionActionKeyFromError(message: string): string | null {
   const match = message.match(/\bnot allowed:\s*([a-z0-9_.:-]+)/i);
   return match?.[1] ?? null;
+}
+
+function stringMetadata(metadata: Record<string, unknown>, key: string): string | null {
+  const value = metadata[key];
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const text = String(value).trim();
+  return text.length > 0 ? text : null;
 }
 
 function validateContract(contract: AuditedRpcContract): AuditedRpcContract {

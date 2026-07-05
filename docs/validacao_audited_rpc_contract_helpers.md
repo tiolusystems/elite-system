@@ -80,12 +80,12 @@ Isso evita repetir o erro encontrado em `create_est_lote_pa` e `estornar_exp_rom
 
 ## Proximo uso recomendado
 
-Migrar os RPCs pendentes do dominio de estoque para o novo template:
-
-- consumo e transformacao em `finalizar_pcp_op`;
+Migrar os RPCs pendentes do dominio de estoque para o novo template.
 
 Os tres criadores de lote `create_est_lote_pa_auto`, `create_est_lote_mp` e `create_est_lote_pi` foram migrados na `0021_estoque_lot_entry_rpc_contract.sql`.
 
 A baixa PA em `confirmar_exp_romaneio` foi migrada na `0022_estoque_romaneio_confirm_contract.sql`.
 
 A geracao de lote MP por XML/NF foi migrada na `0023_importacao_xml_mp_lot_contract.sql`.
+
+O consumo e a transformacao em `finalizar_pcp_op` foram migrados na `0024_pcp_finish_audited_contract.sql`.

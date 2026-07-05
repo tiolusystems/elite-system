@@ -41,6 +41,7 @@ Resumo:
 - OP experimental/desenvolvimento gera lote bloqueado mesmo com CQ aprovado;
 - segunda finalizacao da mesma OP deve falhar sem duplicar consumo ou entrada;
 - todos os logs da finalizacao devem compartilhar `correlation_id = 'pcp_op:' || p_op_id || ':finish'`.
+- lote bloqueado deve ser liberado por CQ, qualidade ou gestor tecnico via `pcp.blocked_lot.release`; a OP permanece `completed`.
 
 ## Estrutura criada
 
@@ -130,9 +131,11 @@ As acoes foram registradas em `permission_actions` com `default_allowed = true`,
 - `pcp.op.finish`
 - `pcp.op.cancel`
 - `pcp.cq.record`
-- `pcp.experimental.release`
+- `pcp.blocked_lot.release`
 
-As alçadas poderao ser restringidas depois por `user_permission_overrides`.
+`pcp.experimental.release` permanece apenas como action key legada de nomenclatura. A regra nova de liberacao de lote bloqueado usa `pcp.blocked_lot.release`, porque o bloqueio pode vir de CQ bloqueado/reprovado, experimental ou desenvolvimento.
+
+As alcadas poderao ser restringidas depois por `user_permission_overrides`.
 
 ## Validacao descartavel
 

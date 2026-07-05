@@ -33,6 +33,14 @@ class WebRpcAuditContractTests(unittest.TestCase):
         self.assertIn("catch", text)
         self.assertIn("error_message", text)
 
+    def test_audited_rpc_logs_business_failures_when_contract_metadata_exists(self) -> None:
+        text = AUDITED_RPC_HELPER.read_text(encoding="utf-8")
+
+        self.assertIn("logRpcFailedIfPossible", text)
+        self.assertIn("log_rpc_failed", text)
+        self.assertIn("action_key", text)
+        self.assertIn("failure_action", text)
+
     def test_typed_audited_rpc_call_requires_contract_metadata(self) -> None:
         text = AUDITED_RPC_HELPER.read_text(encoding="utf-8")
 

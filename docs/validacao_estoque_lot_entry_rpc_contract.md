@@ -83,14 +83,14 @@ Foi adicionado teste estatico em `tests/test_estoque_event_ledger_contract.py`:
 - excecoes antigas precisam ficar declaradas em lista explicita de divida tecnica;
 - qualquer nova RPC de movimento que nascer sem helper falha no teste.
 
-Dividas ainda declaradas:
+Dividas ainda declaradas antes da `0024`:
 
 - pre-helper ja endurecidas: `create_est_lote_pa`, `registrar_est_ajuste_mp`, `registrar_est_ajuste_pa`, `registrar_est_ajuste_pi`, `estornar_exp_romaneio`;
-- pendente de migracao: `finalizar_pcp_op`.
+- pendente de migracao na epoca: `finalizar_pcp_op`.
 
 ## Proximo bloco recomendado
 
-Migrar `finalizar_pcp_op` por ultimo, pois e multi-tabela, multi-familia e mistura consumo de MP/PA/PI com entrada de PA/PI.
+`finalizar_pcp_op` foi migrado na `0024_pcp_finish_audited_contract.sql`.
 
 `confirmar_exp_romaneio` foi migrado na `0022_estoque_romaneio_confirm_contract.sql`.
 

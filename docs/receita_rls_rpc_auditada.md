@@ -300,6 +300,20 @@ Contrato atual:
 
 Limite: acesso direto ao banco fora do Next.js, como SQL editor, script administrativo ou integracao futura, nao fica coberto pelo wrapper. Esse caminho precisa usar RPC auditada ou auditoria propria.
 
+## Falha de regra de negocio
+
+Falha de regra de negocio nao e negativa de permissao.
+
+Exemplos:
+
+- tentar finalizar OP ja finalizada;
+- tentar confirmar entidade em status que nao permite transicao;
+- retry de rede ou duplo clique depois que a primeira chamada ja concluiu.
+
+Esses casos devem ser auditados com `status = failed`, action key da operacao original e metadata suficiente para explicar o motivo (`error_message`, `reason`, `correlation_id`, entidade e RPC).
+
+No app web, o wrapper `auditedRpc` deve chamar `log_rpc_failed(...)` em transacao separada quando a RPC retorna erro que nao e `not allowed` e a chamada informou metadados de contrato (`action_key`, `domain`, `entity`).
+
 ## Soft-delete
 
 Cadastro mestre e dado operacional historico. Nao usar hard-delete como regra normal.

@@ -222,6 +222,7 @@ export async function finishPcpOpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
+  const correlationId = `pcp_op:${opId}:finish`;
   const { error } = await auditedRpc(supabase, "finalizar_pcp_op", {
     p_conferente_mp: conferenteMp,
     p_cq_status: cqStatus,
@@ -235,6 +236,17 @@ export async function finishPcpOpAction(formData: FormData) {
     p_separador_mp: separadorMp,
     p_temperatura_c: temperatura,
     p_volume_l: volume
+  }, {
+    metadata: {
+      action_key: "pcp.op.finish",
+      axis: "movement_event",
+      correlation_id: correlationId,
+      domain: "pcp",
+      entity: "pcp_ordens_producao",
+      entity_id: opId,
+      failure_action: "pcp.op_finish_failed"
+    },
+    origin: "apps/web/pcp.finish"
   });
 
   if (error) {

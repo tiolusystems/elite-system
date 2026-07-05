@@ -87,8 +87,8 @@ As entradas automaticas `create_est_lote_pa_auto`, `create_est_lote_mp` e `creat
 
 Proximo bloco recomendado:
 
-Auditar consumo/transformacao dentro de `finalizar_pcp_op`.
+O consumo/transformacao dentro de `finalizar_pcp_op` foi migrado na `0024_pcp_finish_audited_contract.sql`.
 
 A geracao de lote MP por XML/NF foi migrada na `0023_importacao_xml_mp_lot_contract.sql`.
 
-O fluxo de `finalizar_pcp_op` ja passa por RPC `security definer` e permissoes de negocio em parte dos casos, mas ainda mistura o contrato antigo de auditoria em alguns movimentos. Por isso, deve ser tratado antes de marcar `estoque` como concluido.
+O fluxo de `finalizar_pcp_op` passa por RPC `security definer`, contrato auditado, `correlation_id` e permissoes granulares de estoque por familia.

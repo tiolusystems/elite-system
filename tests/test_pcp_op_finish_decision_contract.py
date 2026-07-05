@@ -35,6 +35,7 @@ class PcpOpFinishDecisionContractTests(unittest.TestCase):
         self.assertIn("nenhum movimento de estoque deve ser duplicado", text)
         self.assertIn("pcp_op:' || p_op_id || ':finish", text)
         self.assertIn("duas tentativas de finalizar a mesma OP nao duplicam estoque", text)
+        self.assertIn("status `failed`", text)
 
     def test_scope_links_to_finish_decision(self) -> None:
         text = PCP_SCOPE_DOC.read_text(encoding="utf-8")
@@ -43,6 +44,7 @@ class PcpOpFinishDecisionContractTests(unittest.TestCase):
         self.assertIn("CQ reprovado ou bloqueado gera lote bloqueado", text)
         self.assertIn("segunda finalizacao da mesma OP deve falhar", text)
         self.assertIn("correlation_id = 'pcp_op:' || p_op_id || ':finish'", text)
+        self.assertIn("lote bloqueado deve ser liberado por CQ", text)
 
     def test_current_foundation_already_has_core_safety_checks(self) -> None:
         text = MIGRATION_0009.read_text(encoding="utf-8")

@@ -80,6 +80,7 @@ Ela deve ser segura contra repeticao:
 - nenhum movimento de estoque deve ser duplicado;
 - nenhum produto gerado deve ser duplicado;
 - nenhum CQ duplicado deve ser criado.
+- a rejeicao de estado deve ser auditada como status `failed`, nao como `denied`.
 
 As travas atuais sao:
 
@@ -88,6 +89,8 @@ As travas atuais sao:
 - a funcao verifica se ja existe CQ para a OP.
 
 A migration auditada deve manter essas travas e o smoke deve testar tentativa de segunda finalizacao.
+
+`denied` fica reservado para falta de alcada. Se o usuario tinha permissao, mas a OP ja estava finalizada, o evento e uma rejeicao de regra de negocio e deve aparecer em `action_logs` como `failed`, com `metadata_json.reason` ou `metadata_json.error_message` suficiente para identificar `op_already_finished`.
 
 ### 5. Correlacao de logs
 
@@ -105,6 +108,22 @@ Esse valor deve aparecer em todos os logs gerados pela mesma finalizacao:
 - logs de entrada PA/PI;
 - logs de produtos gerados.
 
+### 6. Quem libera lote bloqueado
+
+Nao se "libera a OP" depois da finalizacao. A OP permanece `completed`, porque ela registra o fato historico de que a producao foi concluida.
+
+O que fica bloqueado e o lote PA/PI gerado pela OP.
+
+O lote bloqueado deve ser liberado por CQ, qualidade ou gestor tecnico com alcada especifica:
+
+```text
+pcp.blocked_lot.release
+```
+
+A permissao antiga `pcp.experimental.release` fica como legado de nomenclatura. Ela nao representa mais todo o caso de uso, porque lote tambem pode estar bloqueado por CQ `bloqueado` ou `reprovado`, nao apenas por OP experimental/desenvolvimento.
+
+A liberacao deve exigir motivo e atualizar tanto o lote fisico (`est_lotes_pa` ou `est_lotes_pi`) quanto o produto gerado da OP (`pcp_op_produtos_gerados.status_lote`).
+
 ## Testes obrigatorios da migration
 
 O smoke da migration de `finalizar_pcp_op` deve validar:
@@ -117,6 +136,8 @@ O smoke da migration de `finalizar_pcp_op` deve validar:
 6. todos os logs da finalizacao com o mesmo `correlation_id`;
 7. negativa de permissao interna de estoque sem alteracao persistida;
 8. concorrencia simples: duas tentativas de finalizar a mesma OP nao duplicam estoque.
+9. tentativa repetida registra falha de negocio como `failed`, nao como `denied`;
+10. liberacao de lote bloqueado exige `pcp.blocked_lot.release` e atualiza `pcp_op_produtos_gerados.status_lote`.
 
 ## O que nao fazer
 

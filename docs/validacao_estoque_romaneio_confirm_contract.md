@@ -91,4 +91,4 @@ O status final do pedido segue como melhoria opcional de metadata. O RPC atualiz
 
 ## Proximo bloco recomendado
 
-Migrar `finalizar_pcp_op` por ultimo, pois e multi-tabela, multi-familia e mistura consumo de MP/PA/PI com entrada de PA/PI.
+`finalizar_pcp_op` foi migrado na `0024_pcp_finish_audited_contract.sql`, com `correlation_id` e action keys granulares para consumo/entrada por familia.

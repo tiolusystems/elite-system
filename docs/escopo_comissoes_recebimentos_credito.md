@@ -18,6 +18,8 @@ Estados previstos:
 - `liberada`: comissao liberada por recebimento parcial ou integral.
 - `paga`: comissao efetivamente paga ao comissionado.
 - `estornada`: comissao anulada por cancelamento, devolucao ou correcao.
+- `bloqueada`: comissao temporariamente travada por credito, revisao ou fluxo operacional.
+- `cancelada`: comissao definitivamente anulada por cancelamento de pedido antes de pagamento.
 - `compensacao_futura`: valor negativo a abater de comissoes futuras.
 
 ## Regra de recebimento
@@ -190,6 +192,40 @@ Cada campanha deve ter:
 - prioridade ou acumulabilidade;
 - tipo de premio;
 - auditoria de criacao/alteracao.
+
+## Ledger de metas e faixas
+
+Meta e faixa de comissao sao subdominios diferentes da liberacao financeira.
+
+Regra decidida:
+
+- base de meta/faixa e vendido ativo, nao recebido;
+- recebimento controla quando a comissao e liberada financeiramente;
+- pedido so entra na meta quando estiver `open`;
+- mesmo que a aprovacao ocorra depois, o periodo de meta e definido pela data do pedido;
+- periodo de meta e periodo customizado da empresa, nao necessariamente mes calendario;
+- cancelamento sempre abate meta no periodo em que o cancelamento acontece, sem reabrir periodo original;
+- devolucao abate meta no periodo vigente, sem efeito retroativo no periodo original;
+- devolucao com `motivo_devolucao = qualidade` nao penaliza vendedor;
+- demais motivos de devolucao abatem meta por indicarem falha comercial, operacional ou negociacao;
+- cancelamento por qualidade antes da baixa ainda e ponto pendente: decidir se segue a excecao de qualidade da devolucao ou se todo cancelamento abate sem excecao.
+
+O ledger append-only de meta deve registrar:
+
+- venda aberta gera evento positivo;
+- cancelamento gera evento negativo;
+- devolucao gera evento negativo, salvo motivo de qualidade;
+- ajuste manual de meta exige motivo, alcada e auditoria.
+
+Faixa por volume acumulado usa fracionamento por volume acumulado. Exemplo: se a faixa muda em 500k, a parte ate 500k usa a taxa anterior e a parte acima usa a taxa nova.
+
+Faixa por grupo ou linha de produto nao usa o mesmo fracionamento: cada item busca sua taxa pela classificacao propria.
+
+Faixa combinada por grupo + meta so deve ser implementada quando existir necessidade real, porque mistura lookup por item com fracionamento por acumulado.
+
+A taxa congelada no momento da criacao do pedido deve ficar gravada em `com_pedido_comissionados`, usando o acumulado imediatamente anterior ao pedido. Cancelamentos e devolucoes posteriores de outros pedidos nao recalculam retroativamente pedidos ja criados; afetam apenas o proximo calculo.
+
+Para evitar concorrencia perto da fronteira de faixa, o calculo deve usar lock por vendedor + periodo, por exemplo linha de resumo por vendedor/periodo com `for update` ou advisory lock equivalente. O lock precisa existir antes do motor de fracionamento virar operacional.
 
 ## Pedido inserido por vendedor
 

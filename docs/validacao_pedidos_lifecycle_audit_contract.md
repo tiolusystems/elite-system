@@ -83,7 +83,49 @@ Status inicial:
 
 ## Fora desta etapa
 
-- alçadas administrativas de `seguranca`;
+- alcadas administrativas de `seguranca`;
 - visibilidade final por carteira/gerente/area;
 - motor completo de campanhas e metas;
 - cancelamento com estorno automatico em cadeia.
+
+## Correcao complementar 0029
+
+Migration: `supabase/migrations/0029_pedidos_cancel_commission_guards.sql`.
+
+Escopo:
+
+- devolucao nao gera comissionado, porque criacao de comissao passou a exigir `p_tipo_pedido = 'venda'`;
+- `com_pedido_comissionados.status` ganhou `cancelada`, separada de `bloqueada`;
+- cancelamento muda comissao `prevista` ou `bloqueada` para `cancelada`;
+- comissao `paga` bloqueia cancelamento e direciona para fluxo futuro de estorno pos-pagamento;
+- OP ativa vinculada bloqueia cancelamento;
+- `pcp_ordens_producao.pedido_id` foi criada para permitir o vinculo pedido -> OP.
+
+Validacao executada:
+
+```text
+python -m unittest tests.test_pedidos_cancel_commission_guards
+python -m unittest discover -s tests -p "test*.py"
+pnpm --dir apps/web lint
+pnpm --dir apps/web build
+```
+
+Status:
+
+- `python -m unittest tests.test_pedidos_cancel_commission_guards`: OK, 7 testes.
+- `python -m unittest discover -s tests -p "test*.py"`: OK, 128 testes.
+- `pnpm --dir apps/web lint`: OK.
+- `pnpm --dir apps/web build`: OK.
+
+Validacao em PostgreSQL descartavel:
+
+```text
+PG_VALIDATE_0029_WITH_SMOKE_OK
+```
+
+Smoke `.tools/smoke_pedidos_0029.sql` validou:
+
+- pedido `devolucao` nao gera comissionado;
+- cancelamento de pedido sem efeitos ativos move comissao `prevista` para `cancelada`;
+- pedido com comissao paga nao pode ser cancelado por `cancelar_com_pedido`;
+- pedido com OP ativa vinculada nao pode ser cancelado por `cancelar_com_pedido`.

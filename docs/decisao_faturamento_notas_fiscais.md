@@ -17,6 +17,7 @@ O dominio deve nascer como `faturamento`, com tabela propria de documento fiscal
 Tabelas planejadas:
 
 - `fat_notas_fiscais`: documento fiscal emitido ou registrado no sistema.
+- `fat_nota_fiscal_itens`: itens/quantidades fiscais vinculados a pedido, item de pedido e romaneio quando aplicavel.
 - `fat_nota_fiscal_eventos`: eventos do ciclo de vida da NF.
 
 Campos planejados para `fat_notas_fiscais`:
@@ -37,12 +38,27 @@ Campos planejados para `fat_notas_fiscais`:
 - `created_at`;
 - `updated_at`.
 
+Campos planejados para `fat_nota_fiscal_itens`:
+
+- `id`;
+- `nota_fiscal_id`;
+- `pedido_id`;
+- `pedido_item_id`;
+- `romaneio_id` nullable;
+- `romaneio_item_id` nullable;
+- `produto_embalagem_id`;
+- `quantidade`;
+- `valor_item`;
+- `created_at`.
+
+Essa tabela permite reconciliar pedido, NF, romaneio e item/quantidade sem duplicar campos fiscais em `com_pedidos`.
+
 Tipos iniciais:
 
-- `normal`;
-- `complementar`;
-- `remessa`;
-- `simples_faturamento`.
+- `remessa_total`;
+- `simples_faturamento`;
+- `remessa_vinculada`;
+- `complementar`.
 
 Status iniciais:
 
@@ -53,20 +69,25 @@ Status iniciais:
 
 O campo `status_atual` pode existir como cache operacional, mas a fonte auditavel do ciclo de vida deve ser `fat_nota_fiscal_eventos`.
 
-## Simples faturamento
+## Modalidades fiscais
 
-`simples_faturamento` convive com NF por romaneio.
+O sistema deve aceitar NF nas duas modalidades principais:
 
-Regra:
+1. `remessa_total`: a NF da venda/remessa acompanha a carga. Ela aponta para `pedido_id` e `romaneio_id`, nao tem `nota_pai_id`, e pode encerrar a entrega fiscal/fisica do pedido quando o romaneio for total.
+2. `simples_faturamento`: a NF fiscal nasce direto no pedido, sem romaneio e sem baixa de estoque. Depois, cada romaneio de carga sai com uma NF de `remessa_vinculada`, que aponta para a NF pai em `nota_pai_id`.
 
-- NF por romaneio aponta para `pedido_id` e `romaneio_id`;
+A modalidade fiscal deve ser registrada na NF, nao como um unico campo rigido em `com_pedidos`. Se um pedido futuramente tiver itens ou quantidades em modalidades diferentes, a reconciliacao deve acontecer por item/quantidade em `fat_nota_fiscal_itens`, nunca por duplicacao de campos fiscais no pedido.
+
+Regras:
+
+- NF de remessa total aponta para `pedido_id` e `romaneio_id`, sem NF pai;
 - NF de simples faturamento aponta para `pedido_id` e deixa `romaneio_id` nulo;
 - `romaneio_id` deve ser nullable porque nem toda NF nasce de remessa fisica;
 - simples faturamento nao baixa estoque, nao reserva lote e nao substitui romaneio;
 - se houver entrega fisica posterior, a baixa de PA continua sendo feita por romaneio confirmado;
-- a NF simples e um fato fiscal/financeiro, nao um fato de estoque.
+- a NF simples e um fato fiscal/financeiro, nao um fato de estoque;
 - quando um pedido for de simples faturamento, a NF de simples faturamento vira o documento fiscal pai do pedido;
-- cada romaneio de carga posterior deve sair com uma NF de remessa filha, vinculada ao mesmo pedido, ao romaneio e a NF de simples faturamento.
+- cada romaneio de carga posterior deve sair com uma NF de remessa vinculada, ligada ao mesmo pedido, ao romaneio e a NF de simples faturamento.
 
 Consequencia: nao deve existir campo como `numero_nf`, `chave_nfe`, `valor_nf` ou `status_nf` dentro de `com_pedidos` como fonte da verdade.
 
@@ -75,25 +96,27 @@ Consequencia: nao deve existir campo como `numero_nf`, `chave_nfe`, `valor_nf` o
 O pedido precisa exibir o dossie fiscal completo:
 
 - NF de simples faturamento do pedido, quando existir;
-- NFs de remessa dependentes da NF de simples faturamento;
-- NFs normais por romaneio quando nao houver simples faturamento;
+- NFs de remessa total por romaneio quando a modalidade fiscal for remessa total;
+- NFs de remessa vinculada dependentes da NF de simples faturamento;
 - NFs complementares vinculadas a NF original;
 - eventos fiscais de cancelamento, carta de correcao, substituicao e inutilizacao.
 
 Regras de integridade:
 
+- `tipo = remessa_total` exige `pedido_id`, `romaneio_id`, `nota_pai_id` nulo e `nota_complementada_id` nulo;
 - `tipo = simples_faturamento` exige `pedido_id` e `romaneio_id` nulo;
-- `tipo = remessa` exige `pedido_id`, `romaneio_id` e, quando o pedido tiver NF de simples faturamento, `nota_pai_id` apontando para essa NF pai;
-- NF de remessa deve pertencer ao mesmo `pedido_id` da NF pai;
-- NF de remessa deve ser identificavel no romaneio de carga;
+- `tipo = remessa_vinculada` exige `pedido_id`, `romaneio_id` e `nota_pai_id` apontando para a NF simples pai;
+- NF de remessa vinculada deve pertencer ao mesmo `pedido_id` da NF pai;
+- NF de remessa total e NF de remessa vinculada devem ser identificaveis no romaneio de carga;
 - `tipo = complementar` deve apontar `nota_complementada_id` para a NF que esta complementando;
 - `nota_pai_id` e `nota_complementada_id` nao devem ser preenchidos ao mesmo tempo;
 - pedido com simples faturamento nao deve perder visibilidade das remessas posteriores;
-- romaneio de carga nao deve ficar fiscalmente solto quando existir NF pai de simples faturamento.
+- romaneio de carga nao deve ficar fiscalmente solto quando existir NF pai de simples faturamento;
+- a mesma quantidade/item nao deve ser coberta duas vezes por `remessa_total` e `simples_faturamento`; a reconciliacao deve usar `fat_nota_fiscal_itens`.
 
 View planejada:
 
-- `fat_pedido_dossie_fiscal`: consolida pedido, NF pai de simples faturamento, NFs de remessa por romaneio, NFs complementares e eventos fiscais relevantes.
+- `fat_pedido_dossie_fiscal`: consolida pedido, NF de remessa total, NF pai de simples faturamento, NFs de remessa vinculada por romaneio, NFs complementares e eventos fiscais relevantes.
 
 ## Ciclo de vida fiscal
 
@@ -162,10 +185,10 @@ Regras:
 - pedido aberto nao baixa estoque;
 - NF emitida nao baixa estoque por si so;
 - romaneio confirmado baixa PA;
-- NF por romaneio registra o fato fiscal associado a uma remessa confirmada;
+- NF de remessa total registra o fato fiscal associado a uma remessa confirmada sem depender de NF pai;
 - NF simples registra o fato fiscal direto do pedido, sem movimento fisico;
-- NF de remessa registra o fato fiscal da carga e referencia a NF simples quando o pedido foi faturado por simples faturamento;
-- romaneio de carga deve exibir a NF de remessa e, quando aplicavel, a NF simples pai;
+- NF de remessa vinculada registra o fato fiscal da carga e referencia a NF simples quando o pedido foi faturado por simples faturamento;
+- romaneio de carga deve exibir a NF de remessa total ou a NF de remessa vinculada e, quando aplicavel, a NF simples pai;
 - divergencia entre valor fiscal e quantidade fisica deve virar reconciliacao, nao ajuste manual de saldo.
 
 ## Relacao com recebimentos e comissoes
@@ -213,10 +236,10 @@ Cancelamento, correcao e complemento exigem motivo obrigatorio e log auditavel.
 
 ## Fluxos canonicos
 
-NF normal por romaneio:
+Remessa total:
 
 ```text
-pedido aberto -> romaneio confirmado -> baixa PA -> NF normal -> recebimento -> comissao proporcional
+pedido aberto -> romaneio total confirmado -> baixa PA -> NF remessa_total -> recebimento -> comissao proporcional
 ```
 
 Simples faturamento:
@@ -228,7 +251,7 @@ pedido aberto -> NF simples faturamento pai -> recebimento -> comissao proporcio
 Romaneio de carga posterior ao simples faturamento:
 
 ```text
-pedido ja faturado -> romaneio de carga -> NF de remessa filha -> baixa PA no romaneio confirmado -> rastreabilidade pedido/NF pai/NF remessa
+pedido ja faturado -> romaneio de carga -> NF remessa_vinculada -> baixa PA no romaneio confirmado -> rastreabilidade pedido/NF pai/NF remessa
 ```
 
 NF complementar:

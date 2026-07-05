@@ -80,9 +80,9 @@ Expedicao:
 
 Faturamento:
 
-- NF por romaneio;
+- NF de remessa total por romaneio;
 - NF por simples faturamento direto do pedido;
-- NF de remessa dependente da NF de simples faturamento quando o pedido usar esse fluxo;
+- NF de remessa vinculada dependente da NF de simples faturamento quando o pedido usar esse fluxo;
 - dossie fiscal no corpo do pedido por relacionamento/view, sem duplicar campos fiscais em `com_pedidos`;
 - cancelamento, carta de correcao, substituicao e NF complementar por eventos;
 - `romaneio_id` nullable quando nao houver remessa fisica associada;

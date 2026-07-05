@@ -63,7 +63,8 @@ Faturamento:
 - recebe o romaneio confirmado como base da quantidade faturavel.
 - gera ou vincula NF em dominio proprio de faturamento, nao em campo editavel do pedido.
 - pode existir NF sem `romaneio_id` quando o fluxo for `simples_faturamento`.
-- em pedido com simples faturamento, cada romaneio de carga deve identificar a NF de remessa filha e a NF simples pai.
+- na modalidade `remessa_total`, o romaneio de carga deve identificar sua propria NF de remessa total, sem NF pai.
+- na modalidade `simples_faturamento`, cada romaneio de carga deve identificar a NF de `remessa_vinculada` e a NF simples pai.
 - a decisao fiscal canonica esta em `docs/decisao_faturamento_notas_fiscais.md`.
 
 Expedicao:
@@ -179,10 +180,10 @@ O romaneio informa o que pode ser faturado e expedido, mas nao deve armazenar a 
 
 Regra:
 
-- NF por remessa deve apontar para `pedido_id` e `romaneio_id`;
+- NF de `remessa_total` deve apontar para `pedido_id` e `romaneio_id`, sem `nota_pai_id`;
 - NF por simples faturamento deve apontar para `pedido_id` e deixar `romaneio_id` nullable;
-- quando o pedido tiver NF de simples faturamento, a NF de remessa deve apontar `nota_pai_id` para a NF simples pai;
-- o romaneio de carga deve exibir a NF de remessa e a NF simples pai para rastreabilidade fiscal da carga;
+- quando o pedido tiver NF de simples faturamento, a NF de `remessa_vinculada` deve apontar `nota_pai_id` para a NF simples pai;
+- o romaneio de carga deve exibir a NF de remessa total ou a NF de remessa vinculada e, quando aplicavel, a NF simples pai para rastreabilidade fiscal da carga;
 - NF emitida nao baixa estoque por si so;
 - baixa de PA continua acontecendo pelo romaneio confirmado;
 - cancelamento, carta de correcao e NF complementar pertencem ao dominio de faturamento.

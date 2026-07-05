@@ -163,9 +163,9 @@ Use eixo por evento fiscal quando o documento principal precisa existir como ent
 
 Exemplos:
 
-- NF emitida por romaneio;
+- NF de `remessa_total` emitida por romaneio;
 - NF de simples faturamento direta no pedido;
-- NF de remessa vinculada ao romaneio de carga e dependente da NF simples pai;
+- NF de `remessa_vinculada` ao romaneio de carga e dependente da NF simples pai;
 - cancelamento de NF;
 - carta de correcao;
 - NF complementar;
@@ -187,8 +187,10 @@ Regras obrigatorias:
 - NF nao deve virar campo de `com_pedidos`;
 - pedido pode ter zero, uma ou varias NFs;
 - `romaneio_id` deve ser nullable para permitir `simples_faturamento`;
-- `tipo = remessa` deve apontar para `romaneio_id` e, quando houver simples faturamento, para `nota_pai_id`;
-- NF de remessa deve pertencer ao mesmo pedido da NF simples pai;
+- `tipo = remessa_total` deve apontar para `romaneio_id` e nao deve ter `nota_pai_id`;
+- `tipo = remessa_vinculada` deve apontar para `romaneio_id` e `nota_pai_id`;
+- NF de remessa vinculada deve pertencer ao mesmo pedido da NF simples pai;
+- `fat_nota_fiscal_itens` deve reconciliar item/quantidade fiscal para impedir dupla cobertura por modalidades diferentes;
 - `tipo = complementar` deve apontar para `nota_complementada_id`;
 - `nota_pai_id` e `nota_complementada_id` nao devem ser preenchidos ao mesmo tempo;
 - o corpo do pedido deve exibir dossie fiscal por relacionamento/view, sem duplicar campos fiscais em `com_pedidos`;

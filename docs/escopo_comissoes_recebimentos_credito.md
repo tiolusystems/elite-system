@@ -47,8 +47,8 @@ Nota fiscal e documento fiscal, nao gatilho de pagamento de comissao.
 Regras:
 
 - pedido pode ter varias NFs;
-- uma NF pode nascer de romaneio confirmado ou de simples faturamento direto do pedido;
-- em pedido de simples faturamento, cada romaneio de carga pode gerar NF de remessa filha vinculada a NF simples pai;
+- uma NF pode nascer como `remessa_total` por romaneio confirmado ou como `simples_faturamento` direto do pedido;
+- em pedido de simples faturamento, cada romaneio de carga pode gerar NF de `remessa_vinculada` vinculada a NF simples pai;
 - `romaneio_id` deve ser nullable no dominio fiscal;
 - recebimento deve poder apontar para pedido, NF ou parcela quando essa informacao existir;
 - se um pagamento cobrir varias NFs/pedidos, a evolucao correta e uma tabela de alocacao, como `fin_recebimento_alocacoes`;

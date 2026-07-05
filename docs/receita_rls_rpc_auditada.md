@@ -199,10 +199,36 @@ Toda RPC de escrita critica deve:
 7. chamar `log_audit_event(...)`;
 8. retornar o ID da entidade alterada.
 
+A partir da migration `0020_audited_rpc_contract_helpers.sql`, RPC nova deve preferir os helpers de contrato:
+
+1. chamar `begin_audited_rpc(...)` no inicio para validar a alcada e montar `permission_context`;
+2. executar a regra de negocio;
+3. chamar `log_audited_rpc_change(...)` no final para validar o contexto e gravar `log_audit_event(...)`.
+
+Nao criar helper que execute SQL dinamico generico. O banco deve centralizar o contrato de permissao/contexto/log, mas a alteracao de negocio continua explicita dentro de cada RPC, para ser revisavel.
+
+Eixos permitidos:
+
+| Eixo | Uso |
+|---|---|
+| `own_any` | registro com dono operacional claro |
+| `change_type` | sensibilidade por tipo de mudanca de negocio |
+| `field_risk` | sensibilidade por campo ou grupo de campos |
+| `movement_event` | estado derivado de evento/movimento |
+| `status_transition` | transicao operacional de status sem movimento fisico direto |
+
+O texto legado `event_movement` e normalizado para `movement_event` pelo helper, mas RPC nova deve usar `movement_event`.
+
 Exemplo estrutural:
 
 ```sql
-perform public.require_current_user_permission('<action_key>');
+v_permission_context := public.begin_audited_rpc(
+  '<action_key>',
+  '<dominio>',
+  '<tabela>',
+  '<eixo>',
+  jsonb_build_object('scope', '<escopo opcional>')
+);
 
 select to_jsonb(t)
   into v_before
@@ -217,18 +243,17 @@ select to_jsonb(t)
   from public.<tabela> t
  where t.id = p_id;
 
-perform public.log_audit_event(
+perform public.log_audited_rpc_change(
   '<dominio>',
   '<tabela>',
   p_id::text,
   '<acao_auditavel>',
   '<action_key>',
-  'success',
+  v_permission_context,
   v_before,
   v_after,
-  jsonb_build_object('alcada_usada', '<action_key>', 'axis', '<eixo>'),
-  'database_rpc',
-  jsonb_build_object('source', '<nome_da_funcao>', 'motivo', trim(p_motivo))
+  jsonb_build_object('source', '<nome_da_funcao>', 'motivo', trim(p_motivo)),
+  'database_rpc'
 );
 ```
 

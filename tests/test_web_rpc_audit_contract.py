@@ -33,6 +33,23 @@ class WebRpcAuditContractTests(unittest.TestCase):
         self.assertIn("catch", text)
         self.assertIn("error_message", text)
 
+    def test_typed_audited_rpc_call_requires_contract_metadata(self) -> None:
+        text = AUDITED_RPC_HELPER.read_text(encoding="utf-8")
+
+        self.assertIn('export type AuditAxis = "own_any" | "change_type" | "field_risk" | "movement_event" | "status_transition"', text)
+        self.assertIn("const AUDIT_AXES = new Set<AuditAxis>", text)
+        self.assertIn("export type AuditedRpcContract", text)
+        self.assertIn("export class AuditedRpcCall", text)
+        self.assertIn("actionKey: string", text)
+        self.assertIn("domain: string", text)
+        self.assertIn("entity: string", text)
+        self.assertIn("axis: AuditAxis", text)
+        self.assertIn("execute(args", text)
+        self.assertIn("validateContract", text)
+        self.assertIn("Audited RPC contract requires", text)
+        self.assertIn("AUDIT_AXES.has(contract.axis)", text)
+        self.assertIn("Audited RPC contract requires valid axis", text)
+
     def test_server_actions_map_not_allowed_to_permission_denied(self) -> None:
         offenders: list[str] = []
 

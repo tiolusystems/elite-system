@@ -70,6 +70,14 @@ export async function createPedidoRascunhoAction(formData: FormData) {
     p_tipo_pedido: tipoPedido,
     p_valor_unitario: valorUnitario,
     p_vendedor_id: vendedorId
+  }, {
+    metadata: {
+      action_key: "pedidos.create",
+      axis: "own_any",
+      domain: "pedidos",
+      entity: "com_pedidos",
+      failure_action: "pedidos.create_failed"
+    }
   });
 
   if (error) {
@@ -119,6 +127,15 @@ export async function registrarCreditoPedidoAction(formData: FormData) {
     p_motivo: motivo,
     p_observacao: optionalField(formData, "observacao_credito"),
     p_pedido_id: pedidoId
+  }, {
+    metadata: {
+      action_key: "pedidos.credit.review",
+      axis: "status_transition",
+      domain: "pedidos",
+      entity: "com_pedido_credito_decisoes",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.credit_review_failed"
+    }
   });
 
   if (error) {

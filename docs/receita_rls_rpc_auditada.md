@@ -18,6 +18,8 @@ O dominio de `faturamento` acrescenta a variacao de documento fiscal com ciclo d
 
 O dominio financeiro acrescenta a variacao de evento financeiro: recebimentos, alocacoes, liberacoes, pagamentos e ajustes de comissao sao fatos historicos. O saldo financeiro e a conta corrente de comissao devem ser derivados desses eventos, nao digitados como saldo editavel.
 
+O dominio de `pedidos` acrescenta a variacao de ciclo de vida por transicao de status: o pedido continua sendo entidade operacional, mas criacao, revisao de credito e cancelamento devem passar por RPC auditada e tabela de transicoes permitidas.
+
 ## Arvore de decisao
 
 ### 1. Existe dono operacional claro?
@@ -249,6 +251,37 @@ Regras obrigatorias:
 - tabelas de alocacao e conta corrente devem ser append-only quando representarem fatos financeiros.
 
 Para esse caso, usar `axis = financial_event`.
+
+### 7. O registro tem ciclo de vida operacional por status?
+
+Use eixo por transicao de status quando a entidade continua sendo um registro operacional editavel por eventos governados, mas cada mudanca de status precisa ser validada contra uma matriz explicita.
+
+Exemplos:
+
+- revisao de credito do pedido;
+- cancelamento de pedido sem efeito fisico, fiscal ou financeiro ativo;
+- fechamento operacional de pedido por romaneio confirmado;
+- bloqueio operacional por inadimplencia ou pendencia de aprovacao.
+
+Padrao de action keys:
+
+| Caso | Formato |
+|---|---|
+| Leitura operacional | `<dominio>.view` |
+| Criacao com escopo | `<dominio>.create.own` e `<dominio>.create.any` |
+| Transicao generica governada | `<dominio>.status.transition` |
+| Evento especifico de alto risco | `<dominio>.<evento>` |
+
+Regras obrigatorias:
+
+- transicoes permitidas devem estar em tabela versionada de status/evento;
+- RPC deve travar a entidade com `for update` antes de validar status atual;
+- `before_json` e `after_json` devem incluir a entidade e dependencias diretas relevantes;
+- cancelamento nao pode desfazer efeito fisico, fiscal ou financeiro ativo; nesses casos, chamar o estorno do dominio responsavel;
+- falha por estado invalido deve ser tratada como `failed`, nao como permissao negada;
+- escrita direta em tabela operacional deve ser bloqueada para `authenticated`.
+
+Para esse caso, usar `axis = status_transition`.
 
 ## Onde validar regras
 

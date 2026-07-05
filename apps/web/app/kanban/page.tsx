@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { getKanbanDashboard, type KanbanOrder } from "@/lib/kanban";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -15,7 +17,7 @@ export default async function KanbanPage() {
           <span>Kanban comercial</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/">Inicio</a>
+          <Link href="/">Inicio</Link>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban" aria-current="page">

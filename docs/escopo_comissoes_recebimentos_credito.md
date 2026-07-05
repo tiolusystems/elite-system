@@ -66,6 +66,29 @@ Nao entregue nesta etapa:
 
 Esses pontos devem nascer como subdominios posteriores, sem alterar retroativamente a memoria de calculo ja gravada.
 
+## Entrega tecnica 0027
+
+A migration `supabase/migrations/0027_finance_commission_idempotency_contract.sql` endurece a idempotencia e os ajustes manuais.
+
+Regras fechadas:
+
+- liberacao de comissao e incremental por evento de alocacao, nao recalc total retroativo;
+- cada par `alocacao_id + comissionado_id` so pode gerar uma liberacao `liberada`;
+- cada `liberacao_id` so pode gerar um movimento `credito_liberacao`;
+- reprocessar a liberacao do mesmo recebimento deve falhar com `comissao_ja_liberada_para_este_recebimento`;
+- a trava de reprocessamento fica no recebimento/alocacao, nao no pedido inteiro;
+- a Server Action de recebimento envia metadata de contrato para registrar `failed` em erro de negocio.
+
+Motivos padronizados para ajuste manual de comissao:
+
+- `correcao_calculo`;
+- `estorno_devolucao`;
+- `acordo_comercial`;
+- `compensacao_futura`;
+- `outro`, exigindo `motivo_detalhe`.
+
+Ajuste manual de comissao nao deve aceitar texto livre como unica justificativa.
+
 ## Relacao com NF
 
 Nota fiscal e documento fiscal, nao gatilho de pagamento de comissao.

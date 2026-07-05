@@ -20,7 +20,7 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "eslint": "latest",
+    "eslint": "^9.39.4",
     "eslint-config-next": "latest",
     "typescript": "latest"
   }

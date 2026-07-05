@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   createClienteAction,
   createConversaoUnidadeMpAction,
@@ -29,7 +31,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           <span>Cadastros mestres</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/">Inicio</a>
+          <Link href="/">Inicio</Link>
           <a href="/cadastros" aria-current="page">
             Cadastros
           </a>

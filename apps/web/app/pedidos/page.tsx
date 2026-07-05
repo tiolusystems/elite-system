@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   createPedidoRascunhoAction,
   registrarCreditoPedidoAction,
@@ -24,7 +26,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
           <span>Pedidos</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/">Inicio</a>
+          <Link href="/">Inicio</Link>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos" aria-current="page">
             Pedidos

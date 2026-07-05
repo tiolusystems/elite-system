@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { getAuthStatus } from "@/lib/auth";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getOrdersDashboard } from "@/lib/orders";
@@ -84,9 +86,9 @@ export default async function HomePage() {
           <span>Painel operacional</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/" aria-current="page">
+          <Link href="/" aria-current="page">
             Inicio
-          </a>
+          </Link>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>

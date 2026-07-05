@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   addRomaneioItemAction,
   cancelRomaneioAction,
@@ -8,7 +10,6 @@ import {
 } from "@/app/romaneios/actions";
 import {
   getRomaneioDashboard,
-  type RomaneioAvailableLot,
   type RomaneioItem,
   type RomaneioLookupOption,
   type RomaneioLookups,
@@ -34,7 +35,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: S
           <span>Romaneio</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/">Inicio</a>
+          <Link href="/">Inicio</Link>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>

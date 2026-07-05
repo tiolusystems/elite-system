@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   activatePcpFormulaAction,
   cancelPcpOpAction,
@@ -35,7 +37,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           <span>PCP e producao</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/">Inicio</a>
+          <Link href="/">Inicio</Link>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>

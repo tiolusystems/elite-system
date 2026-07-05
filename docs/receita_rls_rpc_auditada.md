@@ -243,7 +243,9 @@ Regras obrigatorias:
 - pagamento de comissao e debito em conta corrente, nao mudanca silenciosa da liberacao original;
 - devolucao, cancelamento ou comissao paga indevidamente devem gerar estorno/compensacao futura como novo movimento;
 - ajuste manual exige motivo obrigatorio e alcada especifica;
-- `memoria_calculo_json` deve guardar percentual recebido, valor previsto, valor ja liberado e valor liberado no evento;
+- ajuste manual financeiro deve usar motivo padronizado; `outro` exige detalhe;
+- liberação incremental de comissao precisa de chave de idempotencia por evento de alocacao, nao apenas por pedido/NF;
+- `memoria_calculo_json` deve guardar modelo de calculo, percentual recebido, valor previsto, valor alocado e valor liberado no evento;
 - tabelas de alocacao e conta corrente devem ser append-only quando representarem fatos financeiros.
 
 Para esse caso, usar `axis = financial_event`.

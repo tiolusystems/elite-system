@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   confirmNfeItemMatchAction,
   generateMpLotFromNfeItemAction,
@@ -30,7 +32,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
           <span>Importacao XML</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/">Inicio</a>
+          <Link href="/">Inicio</Link>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>

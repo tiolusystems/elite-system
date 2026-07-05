@@ -156,6 +156,15 @@ export async function registrarRecebimentoPedidoAction(formData: FormData) {
     p_observacao: optionalField(formData, "observacao_recebimento"),
     p_pedido_id: pedidoId,
     p_valor_recebido: valorRecebido
+  }, {
+    metadata: {
+      action_key: "financeiro.receipts.register",
+      axis: "financial_event",
+      domain: "financeiro",
+      entity: "com_recebimentos",
+      entity_id: String(pedidoId),
+      failure_action: "financeiro.recebimento_failed"
+    }
   });
 
   if (error) {

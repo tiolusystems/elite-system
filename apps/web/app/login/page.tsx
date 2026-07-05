@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { loginAction, logoutAction } from "@/app/login/actions";
 import { getAuthStatus } from "@/lib/auth";
 import { getRuntimeStatus } from "@/lib/runtime";
@@ -20,7 +22,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Searc
           <span>Login</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/">Inicio</a>
+          <Link href="/">Inicio</Link>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
@@ -50,9 +52,9 @@ export default async function LoginPage({ searchParams }: { searchParams?: Searc
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de login">
-            <a className="secondary-button" href="/">
+            <Link className="secondary-button" href="/">
               Painel
-            </a>
+            </Link>
           </div>
         </div>
 

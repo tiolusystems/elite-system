@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   getReportsDashboard,
   type ReprocessamentoRow,
@@ -19,7 +21,7 @@ export default async function RelatoriosPage() {
           <span>Relatorios</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
-          <a href="/">Inicio</a>
+          <Link href="/">Inicio</Link>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>

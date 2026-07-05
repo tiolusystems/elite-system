@@ -86,11 +86,12 @@ Foi adicionado teste estatico em `tests/test_estoque_event_ledger_contract.py`:
 Dividas ainda declaradas:
 
 - pre-helper ja endurecidas: `create_est_lote_pa`, `registrar_est_ajuste_mp`, `registrar_est_ajuste_pa`, `registrar_est_ajuste_pi`, `estornar_exp_romaneio`;
-- pendentes de migracao: `confirmar_exp_romaneio`, `finalizar_pcp_op`.
+- pendente de migracao: `finalizar_pcp_op`.
 
 ## Proximo bloco recomendado
 
-1. Migrar geracao de lote MP por XML/NF para contrato auditado proprio, mesmo que a entrada de lote ja use `create_est_lote_mp`.
-2. Migrar `finalizar_pcp_op` por ultimo, pois e multi-tabela, multi-familia e mistura consumo de MP/PA/PI com entrada de PA/PI.
+Migrar `finalizar_pcp_op` por ultimo, pois e multi-tabela, multi-familia e mistura consumo de MP/PA/PI com entrada de PA/PI.
 
 `confirmar_exp_romaneio` foi migrado na `0022_estoque_romaneio_confirm_contract.sql`.
+
+A geracao de lote MP por XML/NF foi migrada na `0023_importacao_xml_mp_lot_contract.sql`.

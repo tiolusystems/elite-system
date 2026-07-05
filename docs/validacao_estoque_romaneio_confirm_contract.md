@@ -83,7 +83,12 @@ Consulta resumida em `action_logs`:
 
 O contrato novo registra a parte que faltava para auditoria operacional: a reserva PA aparece ativa no `before_json`, baixada no `after_json`, e o saldo fisico cai enquanto o saldo disponivel permanece coerente.
 
+## Revisao posterior
+
+A migration `0023_importacao_xml_mp_lot_contract.sql` adicionou um comentario SQL em `confirmar_exp_romaneio(bigint, text)` documentando a invariante de concorrencia: reservas PA de um item de romaneio devem ser alteradas apenas por RPCs que travam antes a linha pai em `exp_romaneio_itens`.
+
+O status final do pedido segue como melhoria opcional de metadata. O RPC atualiza `com_pedidos.status` quando o pedido fica completo, mas o snapshot principal continua focado em romaneio, reservas e saldos. Na proxima alteracao funcional desse RPC, adicionar `pedido_status_after` em `metadata_json` se a auditoria precisar identificar diretamente qual confirmacao fechou o pedido.
+
 ## Proximo bloco recomendado
 
-1. Auditar geracao de lote MP por XML/NF com contrato proprio, alem da chamada a `create_est_lote_mp`.
-2. Migrar `finalizar_pcp_op` por ultimo, pois e multi-tabela, multi-familia e mistura consumo de MP/PA/PI com entrada de PA/PI.
+Migrar `finalizar_pcp_op` por ultimo, pois e multi-tabela, multi-familia e mistura consumo de MP/PA/PI com entrada de PA/PI.

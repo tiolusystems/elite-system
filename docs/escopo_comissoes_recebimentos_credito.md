@@ -144,6 +144,23 @@ Regras:
 - devolucao parcial abate proporcionalmente;
 - toda devolucao deve apontar pedido, item, cliente e motivo.
 
+## Estorno pos-pagamento
+
+Quando a comissao ja foi paga, o pedido nao deve ser cancelado pelo fluxo `cancelar_com_pedido`. O pedido permanece `fulfilled`, pois a venda, o faturamento, a expedicao e o pagamento de comissao ja sao fatos historicos.
+
+Nesse caso, a devolucao pos-pagamento deve gerar documento fiscal de devolucao e retorno de estoque PA como novo movimento append-only, sem alterar comissao paga e sem alterar o status do pedido.
+
+Regra decidida:
+
+- exige pedido `fulfilled`;
+- exige evidencia direta de comissao paga;
+- emite NF de devolucao vinculada a NF original;
+- item fiscal de devolucao aponta para o item fiscal original;
+- retorno de PA entra como movimento `estorno_saida` no lote informado;
+- pedido continua `fulfilled`;
+- comissionados e conta corrente de comissao nao sao alterados por essa RPC;
+- abatimento de meta vira evento do futuro ledger de metas, nao recalculo retroativo da comissao paga.
+
 ## Conta corrente de comissao
 
 Cada comissionado deve ter uma conta corrente de comissoes.

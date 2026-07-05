@@ -174,3 +174,46 @@ Smoke `.tools/smoke_pedidos_0030.sql` validou:
 - `create_com_pedido_troca` cria pedido `troca` com vinculo ao pedido e item de origem;
 - troca nao gera comissionado previsto;
 - troca acima da quantidade original do item e bloqueada.
+
+## Estorno pos-pagamento 0031
+
+Migration: `supabase/migrations/0031_pedidos_post_payment_reversal_contract.sql`.
+
+Escopo:
+
+- adiciona NF de `devolucao` com `nota_devolvida_id`;
+- adiciona item fiscal de devolucao com `nota_item_devolvido_id`;
+- cria RPC `registrar_com_pedido_estorno_pos_pagamento(...)`;
+- RPC exige pedido `fulfilled` e evidencia direta de comissao paga;
+- RPC gera NF de devolucao vinculada a NF original;
+- RPC gera movimento PA `estorno_saida` no lote informado;
+- RPC nao altera `com_pedidos.status`;
+- RPC nao altera `com_pedido_comissionados`;
+- RPC nao insere movimento em `fin_comissao_movimentos`;
+- abatimento de meta fica para o futuro ledger de metas.
+
+Validacao executada:
+
+```text
+python -m unittest tests.test_pedidos_post_payment_reversal_contract
+python -m unittest discover -s tests -p "test*.py"
+pnpm --dir apps/web lint
+pnpm --dir apps/web build
+```
+
+Validacao em PostgreSQL descartavel:
+
+```text
+PG_VALIDATE_0031_WITH_SMOKE_OK
+```
+
+Smoke `.tools/smoke_pedidos_0031.sql` validou:
+
+- pedido `fulfilled` com comissao `paga` aceita estorno pos-pagamento;
+- NF de devolucao fica vinculada a NF original;
+- item fiscal de devolucao fica vinculado ao item fiscal original;
+- movimento PA `estorno_saida` e criado no lote informado;
+- pedido permanece `fulfilled`;
+- comissionado permanece `paga`;
+- nenhuma linha de `fin_comissao_movimentos` e criada pela RPC;
+- segunda devolucao acima da quantidade original e bloqueada.

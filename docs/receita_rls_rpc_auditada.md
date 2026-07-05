@@ -14,6 +14,8 @@ Esta receita nasce de tres exemplos validados:
 
 E passa a incluir a regra de `estoque`: eixo por tipo de evento/movimento, porque saldo nao deve ser editado diretamente.
 
+O dominio de `faturamento` acrescenta a variacao de documento fiscal com ciclo de vida por eventos: a NF tem cabecalho proprio, mas cancelamento, carta de correcao, substituicao e complemento devem ser eventos fiscais auditaveis.
+
 ## Arvore de decisao
 
 ### 1. Existe dono operacional claro?
@@ -155,6 +157,43 @@ Para RPCs de movimento, `before_json` e `after_json` nao representam uma edicao 
 
 Assim, o log explica por que o saldo mudou sem transformar saldo em estado editavel.
 
+### 5. O registro e documento fiscal com ciclo de vida proprio?
+
+Use eixo por evento fiscal quando o documento principal precisa existir como entidade propria, mas seu ciclo de vida nao deve ser sobrescrito silenciosamente.
+
+Exemplos:
+
+- NF emitida por romaneio;
+- NF de simples faturamento direta no pedido;
+- cancelamento de NF;
+- carta de correcao;
+- NF complementar;
+- substituicao fiscal.
+
+Padrao de action keys:
+
+| Caso | Formato |
+|---|---|
+| Leitura fiscal | `<dominio>.nf.view` |
+| Emissao/registro | `<dominio>.nf.issue` |
+| Cancelamento | `<dominio>.nf.cancel` |
+| Carta de correcao | `<dominio>.nf.correct` |
+| NF complementar | `<dominio>.nf.complement` |
+| Substituicao | `<dominio>.nf.substitute` |
+
+Regras obrigatorias:
+
+- NF nao deve virar campo de `com_pedidos`;
+- pedido pode ter zero, uma ou varias NFs;
+- `romaneio_id` deve ser nullable para permitir `simples_faturamento`;
+- NF emitida nao baixa estoque por si so;
+- NF emitida nao libera comissao sozinha;
+- cancelamento, carta de correcao, complemento e substituicao devem criar eventos em tabela de eventos fiscais;
+- hard-delete de NF/evento fiscal nao faz parte do fluxo operacional;
+- `status_atual` pode ser cache, mas a fonte auditavel deve ser a tabela de eventos.
+
+Para esse caso, usar `axis = fiscal_event`.
+
 ## Onde validar regras
 
 ### Banco
@@ -245,6 +284,7 @@ Eixos permitidos:
 | `change_type` | sensibilidade por tipo de mudanca de negocio |
 | `field_risk` | sensibilidade por campo ou grupo de campos |
 | `movement_event` | estado derivado de evento/movimento |
+| `fiscal_event` | documento fiscal com ciclo de vida por eventos |
 | `status_transition` | transicao operacional de status sem movimento fisico direto |
 
 O texto legado `event_movement` e normalizado para `movement_event` pelo helper, mas RPC nova deve usar `movement_event`.

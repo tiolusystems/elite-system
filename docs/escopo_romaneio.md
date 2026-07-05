@@ -61,6 +61,9 @@ Estoque PA:
 Faturamento:
 
 - recebe o romaneio confirmado como base da quantidade faturavel.
+- gera ou vincula NF em dominio proprio de faturamento, nao em campo editavel do pedido.
+- pode existir NF sem `romaneio_id` quando o fluxo for `simples_faturamento`.
+- a decisao fiscal canonica esta em `docs/decisao_faturamento_notas_fiscais.md`.
 
 Expedicao:
 
@@ -168,6 +171,18 @@ Nao implementar como parte do romaneio inicial, salvo se estiver na planilha `RO
 - financeiro;
 - emissao fiscal completa;
 - qualquer segunda planilha chamada romaneio sem mapeamento aprovado.
+
+## Fronteira com faturamento
+
+O romaneio informa o que pode ser faturado e expedido, mas nao deve armazenar a nota fiscal como estado principal.
+
+Regra:
+
+- NF por remessa deve apontar para `pedido_id` e `romaneio_id`;
+- NF por simples faturamento deve apontar para `pedido_id` e deixar `romaneio_id` nullable;
+- NF emitida nao baixa estoque por si so;
+- baixa de PA continua acontecendo pelo romaneio confirmado;
+- cancelamento, carta de correcao e NF complementar pertencem ao dominio de faturamento.
 
 ## Criterio de aceite
 

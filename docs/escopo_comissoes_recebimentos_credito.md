@@ -8,6 +8,8 @@ O Elite System deve ter uma ferramenta propria para calcular comissoes no moment
 
 A comissao pode ser gerada no pedido, mas so deve ser liberada conforme recebimento parcial ou integral. O calculo precisa considerar proporcionalidade, bonificacoes, devolucoes, comissoes ja pagas, campanhas vigentes, metas, gerente, vendedor/gerente e alcadas.
 
+NF emitida nao libera comissao sozinha. A decisao de faturamento esta em `docs/decisao_faturamento_notas_fiscais.md`: nota fiscal e relacao um-para-muitos do pedido e pode ajudar a identificar a base fiscal/parcela recebida, mas o gatilho de liberacao continua sendo o recebimento.
+
 ## Estados da comissao
 
 Estados previstos:
@@ -37,6 +39,20 @@ comissao_liberavel = comissao_prevista_total * proporcao_recebida - comissao_ja_
 ```
 
 A formula final pode mudar por campanha, gerente, tipo de comissionado ou regra especifica, mas toda alteracao deve ficar versionada.
+
+## Relacao com NF
+
+Nota fiscal e documento fiscal, nao gatilho de pagamento de comissao.
+
+Regras:
+
+- pedido pode ter varias NFs;
+- uma NF pode nascer de romaneio confirmado ou de simples faturamento direto do pedido;
+- `romaneio_id` deve ser nullable no dominio fiscal;
+- recebimento deve poder apontar para pedido, NF ou parcela quando essa informacao existir;
+- se um pagamento cobrir varias NFs/pedidos, a evolucao correta e uma tabela de alocacao, como `fin_recebimento_alocacoes`;
+- comissao e liberada pelo valor recebido alocado na base comissionavel;
+- cancelamento, devolucao ou NF complementar devem afetar a conta corrente de comissao por evento auditado.
 
 ## Bonificacao
 

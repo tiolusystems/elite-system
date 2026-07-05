@@ -21,12 +21,13 @@ O sistema nasce dos cadastros e segue ate pedido, formulacao, CQ, baixas, romane
 9. Baixa de insumos.
 10. Romaneio e entregador.
 11. Baixa de produtos.
-12. Atualizacao de status de todas as dependencias.
-13. Recebimentos e comissoes.
-14. Simulador de producao com base em historico ou alimentacao manual.
-15. Estoque regulador de PA, PI e MP.
-16. Relatorios de vendas por vendedor, periodo, cliente e produto.
-17. Rastreabilidade de lotes MP, PA e PI.
+12. Faturamento e NF.
+13. Atualizacao de status de todas as dependencias.
+14. Recebimentos e comissoes.
+15. Simulador de producao com base em historico ou alimentacao manual.
+16. Estoque regulador de PA, PI e MP.
+17. Relatorios de vendas por vendedor, periodo, cliente e produto.
+18. Rastreabilidade de lotes MP, PA e PI.
 
 ## Dependencias de construcao
 
@@ -77,6 +78,14 @@ Expedicao:
 - baixa de produto acabado;
 - status de entrega.
 
+Faturamento:
+
+- NF por romaneio;
+- NF por simples faturamento direto do pedido;
+- cancelamento, carta de correcao, substituicao e NF complementar por eventos;
+- `romaneio_id` nullable quando nao houver remessa fisica associada;
+- decisao canonica em `docs/decisao_faturamento_notas_fiscais.md`.
+
 Financeiro:
 
 - recebimento parcial ou integral;
@@ -115,8 +124,9 @@ A proxima codificacao deve priorizar as telas e fluxos que destravam esta ordem:
 6. PCP/formulacao/CQ.
 7. Romaneio com entregador e baixa de produto.
 8. Atualizacao de status encadeada.
-9. Recebimentos/comissoes.
-10. Simulador e estoque regulador.
-11. Relatorios de venda e rastreabilidade.
+9. Faturamento/NF como evento fiscal auditavel.
+10. Recebimentos/comissoes.
+11. Simulador e estoque regulador.
+12. Relatorios de venda e rastreabilidade.
 
 Essa sequencia passa a ser a referencia para decidir proximos passos e evitar construir telas fora da ordem operacional.

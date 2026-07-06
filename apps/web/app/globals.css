@@ -697,6 +697,50 @@ h1 {
   font-size: 14px;
 }
 
+.security-profile-table {
+  min-width: 1080px;
+}
+
+.security-permission-table {
+  min-width: 1180px;
+}
+
+.security-user-picker,
+.permission-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.security-user-picker select {
+  min-height: 40px;
+  min-width: 280px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+.permission-actions {
+  flex-wrap: wrap;
+}
+
+.permission-actions form {
+  margin: 0;
+}
+
+.permission-actions button {
+  min-width: 92px;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.permission-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .table-subtext {
   display: block;
   margin-top: 3px;

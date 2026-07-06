@@ -45,6 +45,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: S
             Romaneio
           </a>
           <a href="/relatorios">Relatorios</a>
+          <a href="/seguranca">Seguranca</a>
           <a href="/login">Login</a>
         </nav>
       </header>

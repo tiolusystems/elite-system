@@ -9,6 +9,7 @@ import { getImportacaoXmlDashboard } from "@/lib/importacao-xml";
 import { getKanbanDashboard } from "@/lib/kanban";
 import { getPcpDashboard } from "@/lib/pcp";
 import { getRomaneioDashboard } from "@/lib/romaneios";
+import { getSecurityDashboard } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,11 @@ const FLOW_STEPS = [
     title: "Relatorios",
     status: "em uso",
     detail: "Vencimento de PA/PI/MP, candidatos a reprocessamento e catalogo inicial."
+  },
+  {
+    title: "Seguranca",
+    status: "em uso",
+    detail: "Perfis, usuarios e checks de alcada com RPC auditada."
   }
 ];
 
@@ -63,7 +69,7 @@ const AUDIT_STEPS = [
 
 export default async function HomePage() {
   const runtime = getRuntimeStatus();
-  const [auth, cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios] = await Promise.all([
+  const [auth, cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios, seguranca] = await Promise.all([
     getAuthStatus(),
     getMasterDataDashboard(),
     getOrdersDashboard(),
@@ -71,7 +77,8 @@ export default async function HomePage() {
     getImportacaoXmlDashboard(),
     getKanbanDashboard(),
     getPcpDashboard(),
-    getRomaneioDashboard()
+    getRomaneioDashboard(),
+    getSecurityDashboard()
   ]);
   const cadastrosProntos = cadastros.modules.filter((module) => module.status === "ready").length;
   const pedidosAbertos = pedidos.metrics.abertos;
@@ -96,6 +103,7 @@ export default async function HomePage() {
           <a href="/pcp">PCP</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
+          <a href="/seguranca">Seguranca</a>
           <a href="/login">Login</a>
         </nav>
       </header>
@@ -270,6 +278,13 @@ export default async function HomePage() {
                   <span style={{ width: auth.isAuthenticated ? "70%" : "24%" }}></span>
                 </div>
               </a>
+              <a className="module-tile" href="/seguranca">
+                <strong>Seguranca</strong>
+                <span>{valueOrDash(seguranca.metrics.activeProfiles)} perfil(is) ativo(s)</span>
+                <div className="progress-rail">
+                  <span style={{ width: seguranca.source === "supabase" ? "58%" : "20%" }}></span>
+                </div>
+              </a>
             </div>
           </article>
 
@@ -293,6 +308,7 @@ export default async function HomePage() {
           kanban.error ||
           pcp.error ||
           romaneios.error ||
+          seguranca.error ||
           auth.error) && (
           <section className="notice-panel warning" role="status">
             <strong>Conexao parcial</strong>
@@ -304,6 +320,7 @@ export default async function HomePage() {
                 kanban.error ??
                 pcp.error ??
                 romaneios.error ??
+                seguranca.error ??
                 auth.error}
             </span>
           </section>

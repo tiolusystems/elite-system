@@ -30,6 +30,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Searc
           <a href="/pcp">PCP</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
+          <a href="/seguranca">Seguranca</a>
           <a href="/login" aria-current="page">
             Login
           </a>

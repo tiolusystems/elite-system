@@ -47,3 +47,12 @@ Smoke `.tools/smoke_seguranca_0035.sql` validou:
 - Como o usuario real sera criado no Supabase Auth: painel, script administrativo ou tela futura.
 - Se os papeis atuais sao suficientes para a Elite.
 - Quando iniciar o flip gradual de `default_allowed` por dominio.
+
+## Evolucao 0036
+
+Validacao adicional planejada/executada para a tela inicial `/seguranca`:
+
+- `list_security_user_profiles()` e `list_security_effective_permissions(...)` alimentam a tela sem liberar leitura ampla por RLS;
+- Server Actions da tela usam `auditedRpc(...)`, nao `.rpc(...)` direto;
+- a tela mostra perfis, usuario selecionado e matriz efetiva de alçadas;
+- as decisoes pendentes continuam: criacao do Auth user e momento do flip gradual de `default_allowed`.

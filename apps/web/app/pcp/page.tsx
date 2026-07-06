@@ -47,6 +47,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           </a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
+          <a href="/seguranca">Seguranca</a>
           <a href="/login">Login</a>
         </nav>
       </header>

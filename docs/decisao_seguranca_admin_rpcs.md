@@ -52,6 +52,17 @@ Alteracao operacional deve passar pelas RPCs auditadas.
 
 Todas usam `begin_audited_rpc(...)` e `log_audited_rpc_change(...)`.
 
+## Evolucao 0036 - leitura administrativa e tela inicial
+
+A migration `0036_security_admin_read_rpcs.sql` adiciona RPCs de leitura para alimentar a tela `/seguranca` sem abrir RLS de leitura ampla diretamente nas tabelas:
+
+- `list_security_user_profiles()`;
+- `list_security_effective_permissions(user_id)`.
+
+Essas RPCs exigem `security.manage_users` e `security.manage_permissions`, respectivamente. A tela usa essas leituras para listar perfis, selecionar usuario e mostrar `default_allowed`, override e permissao efetiva.
+
+Escritas continuam passando por `upsert_security_user_profile(...)`, `set_security_permission_override(...)` e `clear_security_permission_override(...)`.
+
 ## Decisoes pendentes para Luciano
 
 - Definir se o cadastro de usuario no Supabase Auth sera feito manualmente no painel, por script administrativo, ou por futura tela interna.

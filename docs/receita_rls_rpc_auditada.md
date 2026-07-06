@@ -314,7 +314,9 @@ Regras obrigatorias:
 - periodo e customizado pela empresa;
 - venda aberta usa a data do pedido para escolher periodo;
 - cancelamento e devolucao abatem no periodo do evento, sem reabrir periodo original;
+- cancelamento sempre abate meta, sem excecao de qualidade. A excecao de qualidade existe apenas em devolucao, porque defeito de produto normalmente so e constatado depois que o produto ja saiu;
 - devolucao por qualidade nao penaliza vendedor;
+- devolucao sem `venda_aberta` previa, caso tipico de dado historico ou legado, nao deve bloquear NF nem estoque. A RPC de meta deve registrar `itens_sem_venda_aberta` em auditoria e seguir sem movimento de abatimento para esses itens;
 - ajuste manual exige motivo padronizado; `outro` exige detalhe;
 - calculo futuro de faixa deve travar pessoa + periodo antes de ler acumulado;
 - tabela de lock nao deve armazenar saldo editavel.

@@ -240,7 +240,7 @@ Regra decidida:
 - devolucao abate meta no periodo vigente, sem efeito retroativo no periodo original;
 - devolucao com `motivo_devolucao = qualidade` nao penaliza vendedor;
 - demais motivos de devolucao abatem meta por indicarem falha comercial, operacional ou negociacao;
-- cancelamento por qualidade antes da baixa ainda e ponto pendente: decidir se segue a excecao de qualidade da devolucao ou se todo cancelamento abate sem excecao.
+- cancelamento sempre abate meta, sem excecao de qualidade. A excecao de qualidade existe apenas em devolucao, porque defeito de produto normalmente so e constatado depois que o produto ja saiu.
 
 O ledger append-only de meta deve registrar:
 
@@ -273,6 +273,24 @@ Nao acoplado automaticamente nesta etapa:
 - motor de faixa de comissao ainda nao calcula percentual congelado.
 
 Motivo: primeiro e necessario configurar os periodos customizados. Depois disso, os fluxos de pedido/devolucao podem chamar as RPCs de meta sem risco de quebrar criacao de pedido por ausencia de periodo configurado.
+
+## Entrega tecnica 0033 - acoplamento automatico de metas
+
+A migration `supabase/migrations/0033_metas_coupling_legacy_skip.sql` acopla o ledger de metas aos fatos operacionais que ja existem.
+
+Entregue:
+
+- `cancelar_com_pedido(...)` chama `registrar_com_meta_cancelamento_pedido(...)` na mesma transacao somente quando o pedido ja possui movimento `venda_aberta`;
+- pedidos legados ou pedidos que nunca entraram no ledger de metas continuam cancelando normalmente, com `meta_skip_reason = sem_venda_aberta_no_ledger` no log do cancelamento;
+- por compatibilidade, `cancelar_com_pedido(...)` mantem a assinatura atual. O texto livre `p_motivo` vira `motivo_detalhe` no ledger de metas e o `motivo_codigo` usado e `cancelamento_pedido`;
+- `registrar_com_pedido_estorno_pos_pagamento(...)` chama `registrar_com_meta_devolucao_nf(...)` depois de criar a NF de devolucao e o evento fiscal `emitida`;
+- a RPC de estorno passa somente `nota_fiscal_devolucao_id` para metas, sem repetir item, quantidade ou motivo;
+- `registrar_com_meta_devolucao_nf(...)` nao aborta mais quando item devolvido nao tem `venda_aberta` correspondente. Esses itens entram em `itens_sem_venda_aberta` no log, sem bloquear NF, estoque ou auditoria fiscal.
+
+O acoplamento automatico passa a exigir a uniao de alcadas quando houver movimento de meta a registrar:
+
+- cancelamento com venda aberta: `pedidos.cancel` + `metas.cancellations.register`;
+- estorno pos-pagamento: `pedidos.post_payment_reversal` + `metas.returns.register`.
 
 Faixa por volume acumulado usa fracionamento por volume acumulado. Exemplo: se a faixa muda em 500k, a parte ate 500k usa a taxa anterior e a parte acima usa a taxa nova.
 

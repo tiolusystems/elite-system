@@ -543,6 +543,26 @@ Para cada dominio:
 | Role `anon` bloqueada | Sim |
 | Validacao negativa de dominio | Quando houver regra de formato/faixa |
 
+## Sweep zero-grant
+
+Depois que um grupo de dominios operacionais estiver maduro, rodar um sweep de fechamento com ator ativo sem overrides e sem `default_allowed` no escopo validado. Esse teste prova que a permissao efetiva nasce negada quando nenhuma concessao existe.
+
+Contrato do sweep:
+
+- usar banco PostgreSQL descartavel, nunca banco real ou banco oficial de teste;
+- criar ator operacional ativo exclusivo do sweep;
+- remover qualquer override desse ator;
+- forcar `default_allowed = false` apenas para os modulos do escopo do sweep;
+- descobrir RPCs por catalogo (`pg_proc`), por action keys dos dominios e por uso de `begin_audited_rpc(...)` ou `require_current_user_permission(...)`;
+- chamar cada RPC com argumentos dummy tipados;
+- exigir erro `not allowed: <action_key>`;
+- chamar `log_permission_denied(...)` depois de capturar a excecao;
+- confirmar que o log `denied` persistiu;
+- confirmar que nenhuma tabela operacional teve contagem alterada pela tentativa negada;
+- falhar de forma barulhenta quando uma RPC retorna sucesso ou valida regra de dominio antes de negar permissao.
+
+O sweep inicial cobre `cadastros`, `estoque`, `pcp`, `faturamento`, `financeiro` e `pedidos`, incluindo action keys satelites ja acopladas a esses fluxos (`romaneios`, `importacao` e `metas`). O dominio `seguranca` fica explicitamente fora desse sweep ate o fechamento proprio do dominio.
+
 ## Ordem recomendada apos cadastros
 
 Priorizar `estoque` antes de `seguranca`.

@@ -19,6 +19,12 @@ A migration `0035_security_admin_rpcs.sql` cria RPCs auditadas para administrar:
 
 Ela nao cria senha, nao confirma email e nao altera credenciais. Isso evita acoplar o schema operacional ao contrato interno do Supabase Auth.
 
+### Convite por email, sem senha temporaria
+
+Quando a criacao de usuario passar para uma rotina interna, o fluxo aprovado e convite por email via Supabase Auth, nao senha temporaria.
+
+A aplicacao deve primeiro validar a alcada por RPC auditada. Depois disso, chama `inviteUserByEmail` no boundary administrativo do Supabase. O log deve registrar somente que o convite foi enviado para o email informado, com ator, data e origem da chamada. Nenhuma senha, token de convite ou credencial deve ser gravada em `action_logs`, metadata ou documento operacional.
+
 ### Perfil operacional e separado de ator de sistema
 
 Perfis com `is_system_actor = true`, como `Migracao Historica`, nao podem ser alterados pelas RPCs normais de usuario.

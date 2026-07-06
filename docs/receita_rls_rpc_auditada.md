@@ -499,6 +499,14 @@ Padrao:
 
 Hard-delete so pode existir em rotina tecnica excepcional, documentada, restrita e fora do fluxo operacional comum.
 
+## Dados historicos importados
+
+Novas regras de negocio nao devem assumir implicitamente que todo registro nasceu por uma RPC ao vivo. Antes de tornar um campo `NOT NULL` ou exigir uma transicao de status governada retroativamente, considerar se dado historico legitimo, a importar do Excel, plausivelmente teria essa informacao.
+
+Quando o dado historico nao tiver essa informacao, o campo deve ser opcional ou ter um valor-padrao de importacao claramente identificado. O sistema nao deve inventar silenciosamente data, origem, usuario ou status para fazer o dado antigo caber em uma regra nova.
+
+Registros importados do Excel devem apontar para ator de sistema nao-humano, como `Migracao Historica`, em vez de atribuir a venda original ao usuario que apenas operou a importacao.
+
 ## Checklist de migration
 
 Antes de considerar uma migration pronta:

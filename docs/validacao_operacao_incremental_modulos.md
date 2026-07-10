@@ -65,3 +65,7 @@ Marcadores aprovados:
 - nenhuma migration foi aplicada em Supabase cloud real;
 - nenhum dado comercial foi usado;
 - homologacao visual autenticada depende do projeto Supabase de teste configurado.
+
+## Complemento 0042
+
+A migration `0042_first_admin_operational_bootstrap.sql` adiciona indices explicitos para as FKs `actor_id` dos dois ledgers e para `sys_module_rollout_events.module_key`. O complemento evita varredura da tabela filha em manutencao das referencias e passa a fazer parte do smoke do primeiro administrador.

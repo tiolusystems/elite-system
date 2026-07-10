@@ -69,15 +69,13 @@ python -m elite_system.cli admin --db .\data\elite.sqlite --port 8765
 
 Quando essa tela operar com banco local, temporario ou descartavel, ela exibe aviso visual e resumo analitico do ambiente. Essa regra evita confundir teste com banco operacional.
 
-Preparar app web Next.js:
+Iniciar o ambiente web e o Supabase local:
 
 ```powershell
-cd .\apps\web
-npm install
-npm run dev
+.\iniciar-elite-local.cmd
 ```
 
-Antes disso, copie `.env.example` para `.env.local` e configure as variaveis do Supabase.
+O script gera `apps/web/.env.local` somente com as chaves locais e espera o health-check antes de informar sucesso. O bootstrap auditado do primeiro administrador esta documentado em `docs/operacao_local_modulos.md`.
 
 ## Supabase/PostgreSQL
 
@@ -89,7 +87,7 @@ Verificar CLI local:
 .\.tools\supabase-cli\supabase.exe --version
 ```
 
-O projeto Supabase fica configurado em `supabase/config.toml` e as migrations ficam em `supabase/migrations`.
+O projeto Supabase fica configurado em `supabase/config.toml` e as migrations ficam em `supabase/migrations`. O banco novo nasce fechado em `unconfigured`; modulos sao liberados por ambiente na tela `/modulos`.
 
 Validacao estrutural sem dados reais:
 

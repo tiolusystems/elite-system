@@ -11,15 +11,13 @@ Aplicacao Next.js do Elite System.
 
 ## Configuracao local
 
-Copie `.env.example` para `.env.local` e configure as variaveis do projeto Supabase.
+Na raiz do repositorio, use o iniciador controlado:
 
 ```powershell
-corepack enable
-pnpm install --frozen-lockfile
-pnpm dev
+.\iniciar-elite-local.cmd
 ```
 
-Abra `http://localhost:3000`.
+Ele inicia Supabase, gera `.env.local` sem versionar chaves e valida `/api/health`. O primeiro administrador e criado pelo procedimento de `docs/operacao_local_modulos.md`. Abra `http://127.0.0.1:3000`.
 
 ## Telas
 

@@ -16,6 +16,8 @@ Colocar modulos tecnicamente prontos em teste e homologacao enquanto outros cont
 
 ## Primeira inicializacao
 
+O procedimento repetivel para subir Supabase, gerar o ambiente local ignorado pelo Git e criar o primeiro administrador esta em `operacao_local_modulos.md`.
+
 Um banco novo nasce em `unconfigured`. Nesse estado:
 
 - login, troca de senha, seguranca, inicio e `/modulos` continuam acessiveis;

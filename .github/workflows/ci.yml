@@ -60,6 +60,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/module_rollout_runtime.sql
+      - name: Run first administrator bootstrap smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/first_admin_operational_bootstrap.sql
       - uses: actions/upload-artifact@v4
         with:
           name: elite-database-types

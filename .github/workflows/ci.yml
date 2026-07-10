@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  tests:
+  python-tests:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,3 +14,53 @@ jobs:
           python-version: "3.12"
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+
+  web-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Enable pinned pnpm
+        run: corepack enable && corepack prepare pnpm@11.11.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint web application
+        run: pnpm lint
+      - name: Build web application
+        run: pnpm build
+
+  database-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+      - name: Start disposable Supabase
+        run: supabase start
+      - name: Rebuild database from every migration
+        run: supabase db reset
+      - name: Lint PostgreSQL schema
+        run: supabase db lint --local --level warning
+      - name: Generate database TypeScript contract
+        run: |
+          mkdir -p artifacts
+          supabase gen types --local --schema public > artifacts/database.types.ts
+          grep -q "export type Database" artifacts/database.types.ts
+      - name: Run architecture integrity smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/architecture_integrity_gate.sql
+      - uses: actions/upload-artifact@v4
+        with:
+          name: elite-database-types
+          path: artifacts/database.types.ts
+          if-no-files-found: error
+      - name: Stop disposable Supabase
+        if: always()
+        run: supabase stop --no-backup

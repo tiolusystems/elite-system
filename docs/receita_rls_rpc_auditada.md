@@ -548,6 +548,19 @@ Antes de considerar uma migration pronta:
 11. smoke em PostgreSQL descartavel limpo;
 12. documento de validacao.
 
+Bloqueio de escrita inclui `TRUNCATE`, que nao passa por RLS, alem de `INSERT`, `UPDATE` e `DELETE`. Roles web tambem nao recebem `REFERENCES` ou `TRIGGER` em tabelas operacionais. Toda tabela nova deve nascer com esses privilegios revogados.
+
+## Normalizacao e JSON
+
+Relacionamento operacional deve usar FK tipada e tabela filha. JSON e permitido para fonte bruta, snapshot, metadata e memoria de calculo, mas nao como unica fonte de verdade de uma lista operacional.
+
+Redundancia deliberada em ledger/evento so e aceita quando:
+
+- melhora rastreabilidade historica ou consulta;
+- a fonte canonica esta documentada;
+- FK composta, `CHECK` ou trigger impede combinacoes contraditorias;
+- a tabela e append-only quando representa fato historico.
+
 Para estoque, o teste estatico tambem deve impedir nova funcao SQL com `insert into public.est_movimentos_*` sem `begin_audited_rpc(...)`, salvo divida tecnica declarada explicitamente.
 
 ## Smoke minimo
@@ -578,6 +591,7 @@ Contrato do sweep:
 - remover qualquer override desse ator;
 - forcar `default_allowed = false` apenas para os modulos do escopo do sweep;
 - descobrir RPCs por catalogo (`pg_proc`), por action keys dos dominios e por uso de `begin_audited_rpc(...)` ou `require_current_user_permission(...)`;
+- seguir helpers `resolve_*_action_key` para nao perder wrappers cuja action key e resolvida indiretamente;
 - chamar cada RPC com argumentos dummy tipados;
 - exigir erro `not allowed: <action_key>`;
 - chamar `log_permission_denied(...)` depois de capturar a excecao;

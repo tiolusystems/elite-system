@@ -12,12 +12,17 @@ Data: 2026-07-10
 
 ## Validacoes aprovadas
 
-- `pnpm lint`: aprovado antes deste bloco de scripts, sem mudanca posterior em TypeScript;
+- `pnpm lint`: aprovado depois da conclusao dos scripts;
 - `pnpm build`: aprovado com Next.js 16.2.10 e TypeScript;
 - parser PowerShell: `start-local.ps1`, `stop-local.ps1` e `bootstrap-local-admin.ps1` sem erro sintatico;
 - smoke `PG_MODULE_ROLLOUT_RUNTIME_OK` aprovado;
 - smoke isolado `PG_FIRST_ADMIN_OPERATIONAL_BOOTSTRAP_OK` aprovado;
 - marcador `PG_0042_REUSED_DB_ISOLATED_SMOKE_OK` aprovado.
+- cadeia limpa `0001` a `0043` reconstruida com seed no Supabase local descartavel;
+- `/api/health` respondeu `status=ok` e `backendConfigured=true`;
+- login real do primeiro administrador aceito e redirecionado para a troca obrigatoria de senha;
+- ambiente autoritativo ativado como `test` pela RPC auditada;
+- 13 modulos retornaram `available=true` no catalogo local, sendo os de negocio ainda classificados como `technical_validation`.
 
 O smoke 0042 confirmou:
 
@@ -31,31 +36,35 @@ O smoke 0042 confirmou:
 
 ## Suite Python
 
-A suite existente passou antes da edicao deste bloco:
+A suite completa passou depois da edicao deste bloco:
 
 ```text
-Ran 192 tests
+Ran 201 tests
 OK
 ```
 
-O novo teste `test_operational_bootstrap_contract.py` foi adicionado ao discovery e ao CI. A repeticao local depois da edicao ficou pendente porque a ferramenta externa atingiu limite temporario de execucao; isso nao deve ser descrito como teste aprovado ate uma nova execucao real.
+O teste `test_operational_bootstrap_contract.py` e o novo contrato `test_schema_lint_hardening_contract.py` fazem parte do discovery e do CI.
 
 ## Supabase local
 
-Todas as imagens do stack foram baixadas. Duas tentativas longas e concorrentes deixaram o container local `supabase_db_elite-system` com nome reservado, e a CLI recusou substituir esse container automaticamente.
+O container antigo autorizado nao existia mais e nenhum volume operacional foi encontrado. Nada foi removido. O banco foi reconstruido do zero pelo fluxo oficial `supabase db reset --local`.
 
-O container deve ser inspecionado e removido somente depois de confirmar que pertence ao stack local incompleto. Nao foi usado comando de remocao destrutiva e nenhum volume foi descartado nesta validacao.
+No Windows, o runtime local usa o perfil minimo necessario: PostgreSQL, Auth, PostgREST e gateway. Os servicos opcionais que falharam no health-check (Studio, Storage, Realtime, Analytics, Edge Runtime e Mailpit) ficam excluidos pelo script local, sem alterar o stack completo do CI.
 
-## Reconstrucao limpa pendente
+## Reconstrucao limpa concluida
 
-A cadeia exata `0001` a `0042` ainda precisa ser reconstruida em Supabase descartavel limpo depois da limpeza controlada do container. A instancia PostgreSQL antiga disponivel em `.tools` nao e prova substituta: ela ja estava incompleta em relacao aos indices da 0040.
+A cadeia exata `0001` a `0043` foi reconstruida em Supabase descartavel limpo, com seed e sem reaproveitar estado anterior.
 
-So apos essa reconstrucao podem ser marcados:
+Marcadores aprovados depois da reconstrucao:
 
-- `PG_FULL_CHAIN_WITH_SEED_OK` para `0001` a `0042`;
-- smoke do primeiro admin no Supabase completo;
-- login real e troca obrigatoria de senha;
-- aplicacao local com `/api/health` e `/modulos` autenticados.
+- `PG_FULL_CHAIN_0001_0043_SMOKES_OK`;
+- `PG_ARCHITECTURE_INTEGRITY_GATE_OK`;
+- `PG_MODULE_ROLLOUT_RUNTIME_OK`;
+- `PG_FIRST_ADMIN_OPERATIONAL_BOOTSTRAP_OK`;
+- `PG_SCHEMA_LINT_HARDENING_OK`;
+- `supabase db lint --local --level warning` sem resultados.
+
+A troca da senha temporaria e deliberadamente uma acao do administrador humano. Ate ela ser concluida, o guard redireciona a sessao autenticada para `/login/trocar-senha` e nao libera navegacao operacional.
 
 ## Dados e segredos
 

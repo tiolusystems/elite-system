@@ -304,7 +304,7 @@ Entregas:
 
 Status de fundacao em 2026-07-10:
 
-- migrations `0001` a `0042` preparadas para reconstrucao com seed em PostgreSQL descartavel;
+- migrations `0001` a `0043` preparadas para reconstrucao com seed em PostgreSQL descartavel;
 - gate global remove escrita direta e `TRUNCATE` das roles web;
 - schema medido com 82 tabelas, todas com PK, 292 FKs e nenhuma constraint pendente;
 - papeis comerciais e participantes CQ ganharam representacao relacional;

@@ -13,6 +13,7 @@ $ToolsRoot = Join-Path $RepoRoot '.tools'
 $RuntimeRoot = Join-Path $ToolsRoot 'runtime'
 $Supabase = Join-Path $ToolsRoot 'supabase-cli\supabase.exe'
 $EnvFile = Join-Path $WebRoot '.env.local'
+$SupabaseExcludedServices = 'logflare,storage-api,studio,imgproxy,edge-runtime,postgres-meta,realtime,mailpit,vector'
 
 New-Item -ItemType Directory -Force -Path $RuntimeRoot | Out-Null
 
@@ -43,8 +44,15 @@ function Start-DockerEngine {
 }
 
 function Get-SupabaseEnvironment {
-  $status = & $Supabase status -o env 2>$null
-  if ($LASTEXITCODE -ne 0) {
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $status = & $Supabase status -o env 2>$null
+    $statusExitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+  if ($statusExitCode -ne 0) {
     throw 'Supabase local nao esta ativo.'
   }
 
@@ -89,7 +97,7 @@ if (-not (Test-Path (Join-Path $WebRoot 'node_modules\next\dist\bin\next'))) {
 Start-DockerEngine
 if (-not $SkipSupabaseStart) {
   $env:SUPABASE_TELEMETRY_DISABLED = '1'
-  & $Supabase start | Out-Null
+  & $Supabase start -x $SupabaseExcludedServices | Out-Null
   if ($LASTEXITCODE -ne 0) {
     throw 'Falha ao iniciar Supabase local.'
   }
@@ -150,7 +158,9 @@ for ($attempt = 0; $attempt -lt 60; $attempt += 1) {
     if ($health.status -eq 'ok') {
       Write-Output 'ELITE_LOCAL_RUNTIME_OK'
       Write-Output "Aplicacao: http://127.0.0.1:$Port"
-      Write-Output "Supabase Studio: $($supabaseEnvironment['STUDIO_URL'])"
+      if ($supabaseEnvironment['STUDIO_URL']) {
+        Write-Output "Supabase Studio: $($supabaseEnvironment['STUDIO_URL'])"
+      }
       Write-Output 'Banco identificado visualmente como local/dados de teste.'
       return
     }

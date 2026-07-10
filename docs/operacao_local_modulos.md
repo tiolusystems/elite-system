@@ -27,10 +27,12 @@ Na raiz do repositorio:
 O script:
 
 1. inicia o Docker Desktop se necessario;
-2. inicia o Supabase local e aplica migrations;
+2. inicia o perfil minimo do Supabase local (PostgreSQL, Auth, API REST e gateway) e aplica migrations;
 3. gera `apps/web/.env.local` com chaves locais, sem versiona-las;
 4. inicia Next.js em `http://127.0.0.1:3000`;
 5. so termina com sucesso quando `/api/health` responde.
+
+Servicos opcionais que nao participam deste fluxo (Studio, Storage, Realtime, Analytics, Edge Runtime e Mailpit) ficam desativados no Windows local. Isso reduz falhas de health-check sem reduzir o contrato usado pela aplicacao. O CI continua reconstruindo o stack descartavel completo.
 
 ## Primeiro administrador
 

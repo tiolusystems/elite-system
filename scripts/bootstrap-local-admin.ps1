@@ -14,8 +14,15 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Supabase = Join-Path $RepoRoot '.tools\supabase-cli\supabase.exe'
 
 function Get-SupabaseEnvironment {
-  $status = & $Supabase status -o env 2>$null
-  if ($LASTEXITCODE -ne 0) {
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $status = & $Supabase status -o env 2>$null
+    $statusExitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+  if ($statusExitCode -ne 0) {
     throw 'Supabase local nao esta ativo.'
   }
 

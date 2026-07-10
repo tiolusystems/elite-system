@@ -302,6 +302,15 @@ Entregas:
 - Login multiusuario validado contra ambiente cloud.
 - `action_logs` protegido por permissao e backup.
 
+Status de fundacao em 2026-07-10:
+
+- migrations `0001` a `0040` reconstruidas com seed em PostgreSQL descartavel;
+- gate global remove escrita direta e `TRUNCATE` das roles web;
+- schema medido com 77 tabelas, todas com PK, 285 FKs e nenhuma constraint pendente;
+- papeis comerciais e participantes CQ ganharam representacao relacional;
+- CI ampliado para Python, Next.js e Supabase descartavel;
+- pendente: aplicar no projeto Supabase cloud de teste, testar backup/restore e incorporar tipos gerados ao cliente.
+
 ## Bloco 9 - App operacional
 
 Objetivo: entregar o sistema para uso diario.

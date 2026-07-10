@@ -102,12 +102,35 @@ begin
       ) as dummy_args,
       coalesce(
         (
-          select array_agg(distinct match[1] order by match[1])
-          from regexp_matches(
-            pg_get_functiondef(proc.oid),
-            '''((?:cadastros|estoque|pcp|faturamento|financeiro|pedidos|romaneios|importacao|metas)\.[a-z0-9_.]+)''',
-            'g'
-          ) as match
+          select array_agg(distinct discovered.action_key order by discovered.action_key)
+          from (
+            select direct_match[1] as action_key
+            from regexp_matches(
+              pg_get_functiondef(proc.oid),
+              '''((?:cadastros|estoque|pcp|faturamento|financeiro|pedidos|romaneios|importacao|metas)\.[a-z0-9_.]+)''',
+              'g'
+            ) as direct_match
+
+            union all
+
+            select helper_match[1] as action_key
+            from regexp_matches(
+              pg_get_functiondef(proc.oid),
+              'public\.(resolve_[a-z0-9_]+_action_key)\s*\(',
+              'g'
+            ) as resolver_call
+            join pg_proc resolver_proc
+              on resolver_proc.proname = resolver_call[1]
+             and resolver_proc.prokind = 'f'
+            join pg_namespace resolver_nsp
+              on resolver_nsp.oid = resolver_proc.pronamespace
+             and resolver_nsp.nspname = 'public'
+            cross join lateral regexp_matches(
+              pg_get_functiondef(resolver_proc.oid),
+              '''((?:cadastros|estoque|pcp|faturamento|financeiro|pedidos|romaneios|importacao|metas)\.[a-z0-9_.]+)''',
+              'g'
+            ) as helper_match
+          ) as discovered
         ),
         '{}'::text[]
       ) as action_keys

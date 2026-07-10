@@ -20,6 +20,8 @@ class ZeroGrantDefaultDenySweepTests(unittest.TestCase):
         self.assertIn("pg_get_functiondef", sql)
         self.assertIn("regexp_matches", sql)
         self.assertIn("zero_grant_sweep_targets", sql)
+        self.assertIn("resolve_[a-z0-9_]+_action_key", sql)
+        self.assertIn("helper_match", sql)
         self.assertNotIn("array['create_cad_cliente'", sql)
         self.assertIn("proname not like '%_impl_0037'", sql)
 

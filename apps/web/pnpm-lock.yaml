@@ -9,38 +9,38 @@ importers:
   .:
     dependencies:
       '@supabase/ssr':
-        specifier: latest
+        specifier: 0.12.0
         version: 0.12.0(@supabase/supabase-js@2.110.0)
       '@supabase/supabase-js':
-        specifier: latest
+        specifier: 2.110.0
         version: 2.110.0
       next:
-        specifier: latest
+        specifier: 16.2.10
         version: 16.2.10(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
-        specifier: latest
+        specifier: 19.2.7
         version: 19.2.7
       react-dom:
-        specifier: latest
+        specifier: 19.2.7
         version: 19.2.7(react@19.2.7)
     devDependencies:
       '@types/node':
-        specifier: latest
+        specifier: 26.1.0
         version: 26.1.0
       '@types/react':
-        specifier: latest
+        specifier: 19.2.17
         version: 19.2.17
       '@types/react-dom':
-        specifier: latest
+        specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
       eslint:
-        specifier: ^9.39.4
+        specifier: 9.39.4
         version: 9.39.4
       eslint-config-next:
-        specifier: latest
+        specifier: 16.2.10
         version: 16.2.10(@typescript-eslint/parser@8.62.1(eslint@9.39.4)(typescript@6.0.3))(eslint@9.39.4)(typescript@6.0.3)
       typescript:
-        specifier: latest
+        specifier: 6.0.3
         version: 6.0.3
 
 packages:

@@ -81,7 +81,7 @@ class ZeroGrantDefaultDenySweepTests(unittest.TestCase):
         self.assertIn("perform public.require_current_user_permission('pcp.op.finish')", sql)
         self.assertIn("perform public.require_current_user_permission('financeiro.receipts.register')", sql)
 
-    def test_docs_record_sweep_contract_and_security_invite_decision(self) -> None:
+    def test_docs_record_sweep_contract_and_security_email_temp_password_decision(self) -> None:
         docs = "\n".join(
             (
                 VALIDATION_DOC.read_text(encoding="utf-8"),
@@ -93,9 +93,10 @@ class ZeroGrantDefaultDenySweepTests(unittest.TestCase):
         self.assertIn("zero grant", docs.lower())
         self.assertIn("`seguranca` fica fora", docs)
         self.assertIn("PostgreSQL descartavel", docs)
-        self.assertIn("inviteUserByEmail", docs)
-        self.assertIn("nao senha temporaria", docs)
-        self.assertIn("Nenhuma senha, token de convite ou credencial", docs)
+        self.assertIn("senha temporaria", docs.lower())
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY", docs)
+        self.assertIn("ELITE_TEMP_PASSWORD_EMAIL_WEBHOOK_URL", docs)
+        self.assertIn("Nenhuma senha temporaria, token, service role key ou credencial", docs)
 
 
 if __name__ == "__main__":

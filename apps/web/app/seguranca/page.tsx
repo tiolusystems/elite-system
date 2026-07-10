@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import {
   clearSecurityPermissionOverrideAction,
+  createSecurityAuthUserWithTemporaryPasswordAction,
   setSecurityPermissionOverrideAction,
   upsertSecurityUserProfileAction
 } from "@/app/seguranca/actions";
@@ -64,6 +65,9 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: S
             <a className="secondary-button" href="/login">
               Login
             </a>
+            <a className="secondary-button" href="#novo-acesso">
+              Novo acesso
+            </a>
             <a className="primary-button" href="#perfil">
               Perfil
             </a>
@@ -104,6 +108,48 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: S
         ) : null}
 
         <section className="two-column">
+          <section className="panel form-panel" id="novo-acesso" aria-labelledby="novo-acesso-title">
+            <div className="panel-header">
+              <h2 id="novo-acesso-title">Novo acesso por email</h2>
+              <span className="pill">{runtime.supabaseConfigured ? "Auth + auditoria" : "aguardando Supabase"}</span>
+            </div>
+            <form action={createSecurityAuthUserWithTemporaryPasswordAction}>
+              <div className="form-grid">
+                <label className="wide-field">
+                  Email
+                  <input name="email" type="email" placeholder="usuario@empresa.com" required />
+                </label>
+                <label className="wide-field">
+                  Nome
+                  <input name="display_name" placeholder="Nome exibido no sistema" required />
+                </label>
+                <label>
+                  Papel
+                  <select name="role" defaultValue="comercial">
+                    {ROLES.map((role) => (
+                      <option value={role} key={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select name="status" defaultValue="active">
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                </label>
+              </div>
+              <div className="form-footer">
+                <span>Senha temporaria enviada pelo canal configurado. Credenciais nao entram no log.</span>
+                <button className="primary-button" type="submit">
+                  Criar e enviar
+                </button>
+              </div>
+            </form>
+          </section>
+
           <section className="panel form-panel" id="perfil" aria-labelledby="perfil-title">
             <div className="panel-header">
               <h2 id="perfil-title">Perfil operacional</h2>
@@ -371,12 +417,22 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
   switch (result) {
     case "profile_saved":
       return { kind: "ok", title: "Perfil salvo", detail: "O perfil operacional foi gravado com auditoria." };
+    case "auth_user_created":
+      return { kind: "ok", title: "Acesso criado", detail: "O usuario Auth foi criado e a senha temporaria foi enviada pelo canal configurado." };
     case "permission_saved":
       return { kind: "ok", title: "Alcada atualizada", detail: "O override de permissao foi registrado." };
     case "permission_cleared":
       return { kind: "ok", title: "Override removido", detail: "O usuario voltou ao default da action key." };
     case "not_configured":
       return { kind: "warning", title: "Supabase nao configurado", detail: "Configure o ambiente antes de gravar." };
+    case "service_role_missing":
+      return { kind: "warning", title: "Service role ausente", detail: "Configure SUPABASE_SERVICE_ROLE_KEY somente no servidor." };
+    case "temp_password_mailer_missing":
+      return { kind: "warning", title: "Envio nao configurado", detail: "Configure ELITE_TEMP_PASSWORD_EMAIL_WEBHOOK_URL antes de criar senha temporaria." };
+    case "temp_password_email_failed":
+      return { kind: "warning", title: "Envio falhou", detail: "A senha temporaria nao foi entregue pelo canal configurado." };
+    case "auth_user_create_failed":
+      return { kind: "warning", title: "Auth nao criado", detail: "O Supabase Auth recusou a criacao do usuario." };
     case "permission_denied":
       return { kind: "warning", title: "Permissao negada", detail: "Seu perfil nao tem alcada para esta operacao." };
     case "auth_user_missing":
@@ -389,11 +445,14 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
       return { kind: "warning", title: "Perfil nao encontrado", detail: "Selecione um perfil existente." };
     case "invalid_uuid":
       return { kind: "warning", title: "UUID invalido", detail: "Informe um identificador valido do Supabase Auth." };
+    case "invalid_email":
+      return { kind: "warning", title: "Email invalido", detail: "Informe um email valido para login." };
     case "invalid_role":
       return { kind: "warning", title: "Papel invalido", detail: "Escolha um papel permitido." };
     case "invalid_status":
       return { kind: "warning", title: "Status invalido", detail: "Escolha active ou inactive." };
     case "missing_profile_required":
+    case "missing_auth_user_required":
     case "missing_permission_required":
       return { kind: "warning", title: "Campos obrigatorios", detail: "Preencha os campos exigidos." };
     case "security_error":

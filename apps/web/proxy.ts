@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = new Set(["/login", "/health", "/api/health"]);
+const TEMP_PASSWORD_CHANGE_ROUTE = "/login/trocar-senha";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -57,6 +58,14 @@ export async function proxy(request: NextRequest) {
 
   if (profileResult.error || !profileResult.data || profileResult.data.status !== "active") {
     return redirectToLogin(request, "profile_required");
+  }
+
+  if (user.user_metadata?.temporary_password_bootstrap === true && pathname !== TEMP_PASSWORD_CHANGE_ROUTE) {
+    const changeUrl = request.nextUrl.clone();
+    changeUrl.pathname = TEMP_PASSWORD_CHANGE_ROUTE;
+    changeUrl.search = "";
+    changeUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(changeUrl);
   }
 
   return response;

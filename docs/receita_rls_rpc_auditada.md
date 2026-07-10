@@ -507,6 +507,30 @@ Quando o dado historico nao tiver essa informacao, o campo deve ser opcional ou 
 
 Registros importados do Excel devem apontar para ator de sistema nao-humano, como `Migracao Historica`, em vez de atribuir a venda original ao usuario que apenas operou a importacao.
 
+## Credenciais e boundary administrativo
+
+Credenciais nunca fazem parte do estado auditavel do sistema operacional. Senha temporaria, token de convite, service role key e qualquer segredo equivalente nao podem ser gravados em `action_logs`, metadata, URL, documento operacional, screenshot de validacao ou output de teste.
+
+Quando um fluxo precisar tocar Supabase Auth por boundary administrativo, a ordem obrigatoria e:
+
+1. validar alcada por RPC auditada usando usuario logado;
+2. executar a chamada administrativa server-only;
+3. registrar apenas o fato operacional sem segredo, preferindo hash para email quando a identificacao completa nao for necessaria;
+4. documentar explicitamente qualquer falha que deixe Auth e perfil operacional em estados diferentes.
+
+O fluxo de senha temporaria aprovado na 0038 usa `SUPABASE_SERVICE_ROLE_KEY` somente no servidor e entrega a senha por `ELITE_TEMP_PASSWORD_EMAIL_WEBHOOK_URL`. A senha existe apenas em memoria durante a Server Action e no payload enviado ao provedor de email configurado.
+
+Senha temporaria deve exigir troca no primeiro acesso. Enquanto `user_metadata.temporary_password_bootstrap = true`, o proxy deve redirecionar para tela de troca antes de qualquer modulo operacional. A troca registra somente o fato auditavel, nunca a senha nova.
+
+## Leitura minima antes de guard
+
+Algumas wrappers precisam resolver a action key antes de negar permissao, por exemplo `pedidos.create.own` vs `pedidos.create.any` ou `pcp.formula.create` vs `pcp.formula.change`. Essa leitura pre-guard so e permitida quando:
+
+- nao retorna dados operacionais ao usuario;
+- existe apenas para escolher a action key correta;
+- esta centralizada em helper nomeado (`resolve_*_action_key`);
+- a wrapper nega por `require_current_user_permission(...)` antes de qualquer validacao de dominio ou escrita.
+
 ## Checklist de migration
 
 Antes de considerar uma migration pronta:

@@ -180,6 +180,12 @@ Ferramentas locais:
 
 O gate `0039/0040` e sua matriz de propriedade estao documentados em `docs/decisao_gate_arquitetura_integridade.md` e `docs/matriz_propriedade_modulos.md`.
 
+## Operacao incremental
+
+A migration `0041` permite homologar e liberar modulos de forma independente. O banco guarda ambiente, maturidade, acesso e dependencias; o frontend nao decide sozinho se um modulo esta pronto.
+
+Banco novo nasce `unconfigured`. Rotas autenticadas sao vinculadas a modulos, action keys declaram leitura ou escrita e os ledgers de rollout sao append-only. Detalhes: `docs/decisao_operacao_incremental_modulos.md` e `docs/operacao_gradual_modulos.md`.
+
 ## Perfis de usuario previstos
 
 - Administrador

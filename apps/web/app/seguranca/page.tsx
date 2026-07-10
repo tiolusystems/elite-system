@@ -33,6 +33,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: S
         </div>
         <nav className="topnav" aria-label="Modulos principais">
           <Link href="/">Inicio</Link>
+          <a href="/modulos">Modulos</a>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>

@@ -28,6 +28,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Sea
         </div>
         <nav className="topnav" aria-label="Modulos principais">
           <Link href="/">Inicio</Link>
+          <a href="/modulos">Modulos</a>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos" aria-current="page">
             Pedidos

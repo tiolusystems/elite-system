@@ -32,6 +32,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
         </div>
         <nav className="topnav" aria-label="Modulos principais">
           <Link href="/">Inicio</Link>
+          <a href="/modulos">Modulos</a>
           <a href="/cadastros" aria-current="page">
             Cadastros
           </a>

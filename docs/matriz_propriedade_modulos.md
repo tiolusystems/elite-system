@@ -26,6 +26,21 @@ Data: 2026-07-10
 5. Mudanca de schema deve preservar assinatura publica ou publicar migration de contrato e atualizar consumidores no mesmo bloco.
 6. Excecao temporaria deve estar listada na decisao de arquitetura e protegida por teste de regressao.
 7. SQL editor, script administrativo e integracao externa seguem as mesmas RPCs; service role nao e atalho operacional.
+8. Toda action key declara `runtime_module_key` e `runtime_access_kind`; permissao sem dono nao entra no schema.
+9. Toda rota autenticada declara modulo em `sys_module_routes`; rota nova sem registro e negada.
+10. Dependencia de rollout nao concede escrita cruzada: cada dominio continua dono de suas RPCs.
+
+## Runtime e rollout
+
+A migration `0041` materializa esta matriz em `sys_modules`, `sys_module_routes` e `sys_module_dependencies`. Ambiente e promocao sao ledgers append-only, consultados pelo gate central de permissoes.
+
+O acesso efetivo exige simultaneamente:
+
+- perfil ativo;
+- action key permitida;
+- modulo liberado no ambiente autoritativo;
+- maturidade compativel com o ambiente;
+- dependencias obrigatorias disponiveis.
 
 ## Proxima extracao de contrato
 

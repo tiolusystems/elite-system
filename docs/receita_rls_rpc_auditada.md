@@ -536,6 +536,7 @@ Algumas wrappers precisam resolver a action key antes de negar permissao, por ex
 Antes de considerar uma migration pronta:
 
 1. action keys novas em `permission_actions`;
+   - declarar `runtime_module_key` e `runtime_access_kind` (`read` ou `write`);
 2. uma RPC por eixo real de alcada;
 3. `revoke all on function ... from public`;
 4. `grant execute ... to authenticated`;
@@ -547,6 +548,8 @@ Antes de considerar uma migration pronta:
 10. teste estatico contra regressao relevante;
 11. smoke em PostgreSQL descartavel limpo;
 12. documento de validacao.
+
+Uma action key sem modulo proprietario ou tipo de acesso deve falhar na migration. O gate de rollout fica dentro de `require_current_user_permission`, depois da decisao de alcada, e nao em condicionais de tela.
 
 Bloqueio de escrita inclui `TRUNCATE`, que nao passa por RLS, alem de `INSERT`, `UPDATE` e `DELETE`. Roles web tambem nao recebem `REFERENCES` ou `TRIGGER` em tabelas operacionais. Toda tabela nova deve nascer com esses privilegios revogados.
 

@@ -39,6 +39,12 @@ Todas as demais rotas nascem protegidas por allowlist: rota nova exige sessao po
 | auditoria | auditoria/admin ve logs, reconciliacoes e relatorios | execucao de reconciliacao e registro de metricas por RPC | sim | `audit.view`, `audit.reconciliation.run` | logs append-only; leitura completa apenas auditoria/admin |
 | relatorios | leitura conforme dados permitidos por dominio | sem escrita operacional, exceto parametros/snapshots auditados | parcial | `audit.view` e futuras alcadas de relatorio | views filtradas por perfil e escopo |
 
+## Gate global de escrita direta
+
+A migration `0039_rls_direct_write_gate.sql` fecha as policies legadas `FOR ALL` de PCP, romaneio, importacao e auditoria. Ela tambem revoga de `authenticated`, em todas as tabelas publicas, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES` e `TRIGGER`.
+
+Esse gate nao altera a decisao de autonomia inicial das action keys. Usuario pode ter a acao liberada por padrao ou checkbox, mas a executa por RPC auditada; nunca por DML direto. Tabelas novas herdam o mesmo default restritivo.
+
 ## Contrato de RPC auditada
 
 Toda RPC de escrita critica deve seguir este formato:

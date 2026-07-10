@@ -22,6 +22,8 @@ A receita operacional para escolher eixo de alcada, validar dominio no banco, es
 
 Todas as demais rotas nascem protegidas por allowlist: rota nova exige sessao por padrao.
 
+A partir da `0041`, exigir sessao nao basta: toda rota autenticada tambem precisa existir em `sys_module_routes`. Rota sem proprietario ou modulo indisponivel e redirecionada para `/modulo-indisponivel`. O proxy fecha o acesso se o contrato de runtime nao responder.
+
 ## Matriz por dominio
 
 | Dominio | Leitura inicial | Escrita inicial | RPC existente? | Alcadas iniciais | Endurecimento RLS |

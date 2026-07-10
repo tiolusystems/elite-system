@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { getAuthStatus } from "@/lib/auth";
 import { getMasterDataDashboard } from "@/lib/master-data";
+import { getModuleRuntimeDashboard } from "@/lib/modules";
 import { getOrdersDashboard } from "@/lib/orders";
 import { getReportsDashboard } from "@/lib/reports";
 import { getRuntimeStatus } from "@/lib/runtime";
@@ -13,49 +14,6 @@ import { getSecurityDashboard } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
-const FLOW_STEPS = [
-  {
-    title: "Cadastros",
-    status: "em uso",
-    detail: "Clientes, pessoas comerciais, MP, produtos, embalagens, credito e conversoes."
-  },
-  {
-    title: "Pedidos",
-    status: "codando",
-    detail: "Cliente, propriedade, sequencia propria, credito, recebimento e comissao proporcional."
-  },
-  {
-    title: "XML MP",
-    status: "em uso",
-    detail: "Importacao semiautomatica, match de MP, conversao e lote apenas apos conferencia."
-  },
-  {
-    title: "Kanban",
-    status: "em uso",
-    detail: "Status visual por vendedor, gerente vinculado e area comercial."
-  },
-  {
-    title: "PCP",
-    status: "em uso",
-    detail: "Formula versionada, OP, reserva de componentes, CQ e geracao de PA/PI."
-  },
-  {
-    title: "Romaneio",
-    status: "em uso",
-    detail: "Separacao parcial ou total, multi-item, reserva multilote e confirmacao para baixa de PA."
-  },
-  {
-    title: "Relatorios",
-    status: "em uso",
-    detail: "Vencimento de PA/PI/MP, candidatos a reprocessamento e catalogo inicial."
-  },
-  {
-    title: "Seguranca",
-    status: "em uso",
-    detail: "Perfis, usuarios e checks de alcada com RPC auditada."
-  }
-];
-
 const AUDIT_STEPS = [
   "Cada gravacao critica passa por funcao SQL auditavel.",
   "Banco operacional, teste e homologacao aparecem no topo da tela.",
@@ -64,12 +22,12 @@ const AUDIT_STEPS = [
   "PCP baixa estoque apenas na finalizacao de OP com CQ.",
   "Romaneio baixa PA apenas na confirmacao com reserva fechada.",
   "Login Supabase identifica o usuario por sessao e perfil.",
-  "Proxima etapa: status encadeado e financeiro/comissoes."
+  "Rollout de modulos e dependencias e governado no PostgreSQL."
 ];
 
 export default async function HomePage() {
   const runtime = getRuntimeStatus();
-  const [auth, cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios, seguranca] = await Promise.all([
+  const [auth, cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios, seguranca, moduleRuntime] = await Promise.all([
     getAuthStatus(),
     getMasterDataDashboard(),
     getOrdersDashboard(),
@@ -78,12 +36,14 @@ export default async function HomePage() {
     getKanbanDashboard(),
     getPcpDashboard(),
     getRomaneioDashboard(),
-    getSecurityDashboard()
+    getSecurityDashboard(),
+    getModuleRuntimeDashboard()
   ]);
   const cadastrosProntos = cadastros.modules.filter((module) => module.status === "ready").length;
   const pedidosAbertos = pedidos.metrics.abertos;
   const pendentesXml = importacaoXml.metrics.itensPendentes;
   const opsAbertas = pcp.metrics.opsAbertas;
+  const rolloutModules = moduleRuntime.modules.filter((module) => !module.isCore);
 
   return (
     <main className="app-shell">
@@ -96,6 +56,7 @@ export default async function HomePage() {
           <Link href="/" aria-current="page">
             Inicio
           </Link>
+          <a href="/modulos">Modulos</a>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
@@ -169,15 +130,15 @@ export default async function HomePage() {
               <span className="pill">passo a passo</span>
             </div>
             <div className="flow-board">
-              {FLOW_STEPS.map((step, index) => (
-                <div className="flow-step" key={step.title}>
+              {rolloutModules.map((step, index) => (
+                <div className="flow-step" key={step.moduleKey}>
                   <div className="flow-marker">{index + 1}</div>
                   <div>
                     <div className="flow-title">
-                      <strong>{step.title}</strong>
-                      <span>{step.status}</span>
+                      <strong>{step.displayName}</strong>
+                      <span>{step.effectiveAccess === "read_write" ? "operacao" : step.effectiveAccess === "read_only" ? "leitura" : "bloqueado"}</span>
                     </div>
-                    <p>{step.detail}</p>
+                    <p>{step.description} · {step.lifecycle ?? "sem rollout"}</p>
                   </div>
                 </div>
               ))}
@@ -219,9 +180,16 @@ export default async function HomePage() {
           <article className="panel">
             <div className="panel-header">
               <h2>Modulos ativos</h2>
-              <span className="pill">{cadastros.source === "supabase" ? "Supabase" : "preview"}</span>
+              <span className="pill">{moduleRuntime.metrics.available}/{moduleRuntime.metrics.total}</span>
             </div>
             <div className="module-radar">
+              <a className="module-tile" href="/modulos">
+                <strong>Implantacao</strong>
+                <span>{moduleRuntime.metrics.readWrite} modulo(s) com escrita</span>
+                <div className="progress-rail">
+                  <span style={{ width: `${moduleRuntime.metrics.total === 0 ? 0 : Math.round((moduleRuntime.metrics.available / moduleRuntime.metrics.total) * 100)}%` }}></span>
+                </div>
+              </a>
               <a className="module-tile" href="/cadastros">
                 <strong>Cadastros</strong>
                 <span>{cadastrosProntos} blocos prontos</span>
@@ -309,6 +277,7 @@ export default async function HomePage() {
           pcp.error ||
           romaneios.error ||
           seguranca.error ||
+          moduleRuntime.error ||
           auth.error) && (
           <section className="notice-panel warning" role="status">
             <strong>Conexao parcial</strong>
@@ -321,6 +290,7 @@ export default async function HomePage() {
                 pcp.error ??
                 romaneios.error ??
                 seguranca.error ??
+                moduleRuntime.error ??
                 auth.error}
             </span>
           </section>

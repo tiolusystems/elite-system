@@ -56,6 +56,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/architecture_integrity_gate.sql
+      - name: Run progressive module rollout smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/module_rollout_runtime.sql
       - uses: actions/upload-artifact@v4
         with:
           name: elite-database-types

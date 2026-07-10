@@ -304,10 +304,11 @@ Entregas:
 
 Status de fundacao em 2026-07-10:
 
-- migrations `0001` a `0040` reconstruidas com seed em PostgreSQL descartavel;
+- migrations `0001` a `0041` reconstruidas com seed em PostgreSQL descartavel;
 - gate global remove escrita direta e `TRUNCATE` das roles web;
-- schema medido com 77 tabelas, todas com PK, 285 FKs e nenhuma constraint pendente;
+- schema medido com 82 tabelas, todas com PK, 292 FKs e nenhuma constraint pendente;
 - papeis comerciais e participantes CQ ganharam representacao relacional;
+- runtime modular criado com ambiente fail-closed, dependencias e rollout append-only;
 - CI ampliado para Python, Next.js e Supabase descartavel;
 - pendente: aplicar no projeto Supabase cloud de teste, testar backup/restore e incorporar tipos gerados ao cliente.
 
@@ -332,6 +333,14 @@ Direcao visual:
 - Layout principal deve ser moderno, operacional e previsivel, com menus, icones nomeados, busca, filtros e tabelas.
 - Recursos 3D com estruturas moleculares sao viaveis como identidade visual, dashboard, visualizacao de formulas/PCP e modo apresentacao.
 - O 3D nao deve ser a navegacao principal de rotinas criticas como pedido, romaneio, CQ, estoque, recebimento e auditoria.
+
+Status de operacao incremental:
+
+- `/modulos` criado para consultar e promover modulos por ambiente;
+- proxy bloqueia rota sem modulo ou modulo indisponivel;
+- `require_current_user_permission` bloqueia escrita quando modulo esta somente leitura;
+- `/health` e `/api/health` criados para liveness;
+- pendente: aplicar no Supabase cloud de teste e iniciar homologacao modulo a modulo.
 
 ## Sequencia imediata
 

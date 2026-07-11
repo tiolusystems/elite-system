@@ -9,7 +9,7 @@ import {
   createProdutoBaseAction,
   createProdutoEmbalagemAction
 } from "@/app/cadastros/actions";
-import { getMasterDataDashboard, type LookupOption, type MasterDataLookups } from "@/lib/master-data";
+import { getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -39,7 +39,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
+          <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
           <a href="/seguranca">Seguranca</a>
@@ -106,8 +106,6 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
             <span>{formMessage.detail}</span>
           </section>
         ) : null}
-
-        <LookupDatalists lookups={lookups} />
 
         <section className="two-column">
           <section className="panel" aria-labelledby="modulos-title">
@@ -261,11 +259,12 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
               </label>
               <label>
                 Vendedor responsavel
-                <input
-                  name="vendedor_responsavel_id"
-                  list="pessoas-comerciais-options"
-                  placeholder="Buscar por ID, nome ou tipo"
-                />
+                <select name="vendedor_responsavel_id" defaultValue="">
+                  <option value="">Nenhum</option>
+                  {lookups.pessoasComerciais.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
+                  ))}
+                </select>
               </label>
               <label className="wide-field">
                 Apelidos
@@ -471,11 +470,12 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
               </label>
               <label>
                 MP vinculada
-                <input
-                  name="materia_prima_id"
-                  list="materias-primas-options"
-                  placeholder="Obrigatoria se controlar estoque"
-                />
+                <select name="materia_prima_id" defaultValue="">
+                  <option value="">Nenhuma</option>
+                  {lookups.materiasPrimas.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
+                  ))}
+                </select>
               </label>
               <label className="checkbox-line">
                 <input name="controla_estoque" type="checkbox" value="1" />
@@ -500,11 +500,21 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
             <div className="form-grid">
               <label>
                 Produto
-                <input name="produto_id" list="produtos-options" placeholder="Buscar produto-base" required />
+                <select name="produto_id" defaultValue="" required>
+                  <option value="">Selecione</option>
+                  {lookups.produtos.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
+                  ))}
+                </select>
               </label>
               <label>
                 Embalagem
-                <input name="embalagem_id" list="embalagens-options" placeholder="Buscar embalagem" required />
+                <select name="embalagem_id" defaultValue="" required>
+                  <option value="">Selecione</option>
+                  {lookups.embalagens.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
+                  ))}
+                </select>
               </label>
               <label>
                 Codigo do item
@@ -537,7 +547,12 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
             <div className="form-grid">
               <label>
                 Materia-prima
-                <input name="materia_prima_id" list="materias-primas-options" placeholder="Buscar MP cadastrada" required />
+                <select name="materia_prima_id" defaultValue="" required>
+                  <option value="">Selecione</option>
+                  {lookups.materiasPrimas.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
+                  ))}
+                </select>
               </label>
               <label>
                 Unidade origem
@@ -596,31 +611,6 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
       </section>
     </main>
   );
-}
-
-function LookupDatalists({ lookups }: { lookups: MasterDataLookups }) {
-  return (
-    <>
-      <LookupDatalist id="materias-primas-options" options={lookups.materiasPrimas} />
-      <LookupDatalist id="produtos-options" options={lookups.produtos} />
-      <LookupDatalist id="embalagens-options" options={lookups.embalagens} />
-      <LookupDatalist id="pessoas-comerciais-options" options={lookups.pessoasComerciais} />
-    </>
-  );
-}
-
-function LookupDatalist({ id, options }: { id: string; options: LookupOption[] }) {
-  return (
-    <datalist id={id}>
-      {options.map((option) => (
-        <option key={option.id} value={lookupValue(option)} />
-      ))}
-    </datalist>
-  );
-}
-
-function lookupValue(option: LookupOption): string {
-  return option.detail ? `${option.id} | ${option.label} | ${option.detail}` : `${option.id} | ${option.label}`;
 }
 
 function singleValue(value: string | string[] | undefined): string | undefined {

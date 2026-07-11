@@ -91,6 +91,9 @@ Romaneio:
 - `finalizar_pcp_op`: registra CQ, baixa consumos e gera PA/PI.
 - `cancelar_pcp_op`: cancela OP planejada e libera reservas.
 - `liberar_pcp_lote_bloqueado`: libera lote PA/PI bloqueado por experimental/desenvolvimento/CQ.
+- `registrar_pcp_garantia_produto`: registra nova versao da garantia declarada do produto.
+- `registrar_pcp_garantia_lote_mp`: registra nova versao da garantia analisada do lote de MP.
+- `calcular_pcp_garantias_op`: calcula e congela garantia por produto gerado e consumo real de lotes.
 - `registrar_est_reserva_pa`: reserva PA multilote para romaneio.
 - `confirmar_exp_romaneio`: confirma romaneio e baixa cada lote reservado.
 
@@ -101,8 +104,10 @@ Arquivos:
 - `apps/web/lib/pcp.ts`
 - `apps/web/app/pcp/actions.ts`
 - `apps/web/app/pcp/page.tsx`
+- `apps/web/app/pcp/production-editors.tsx`
+- `apps/web/app/producao/page.tsx`
 
-Funcionalidades da tela `/pcp`:
+Funcionalidades da tela `/producao` (`/pcp` e alias):
 
 - Painel visual/analitico de formulas versionadas, formulas ativas, OP abertas, OP em processo e lotes bloqueados.
 - Criacao de nova versao de formula por produto e tipo de receita, com ate seis componentes MP/PA/PI por lancamento.
@@ -114,8 +119,13 @@ Funcionalidades da tela `/pcp`:
 - Cancelamento de OP planejada com motivo.
 - Finalizacao da OP com CQ completo, baixa de componentes reservados e geracao de ate tres outputs PA/PI com lote automatico.
 - Tabela de lotes MP/PA/PI disponiveis para apoio a reserva.
+- Garantias versionadas de produto e de lote de MP, sem edicao do historico.
+- Calculo ponderado de garantias da OP com status de conformidade e memoria por lote consumido.
+- Fila de transformacao/reprocessamento para PA, PI e MP.
+- Liberacao auditada de lote PA/PI bloqueado.
+- Seletores por ID estruturado para produto, componente, lote e equipe de producao.
 
-Status: implementada no Next.js e validada por `pnpm run build`. Ainda precisa ser homologada contra Supabase configurado com usuario logado e dados de teste.
+Status: implementada no Next.js, validada por build e smoke SQL, pronta para validacao de negocio no ambiente `test`.
 
 ## Permissoes
 
@@ -132,6 +142,9 @@ As acoes foram registradas em `permission_actions` com `default_allowed = true`,
 - `pcp.op.cancel`
 - `pcp.cq.record`
 - `pcp.blocked_lot.release`
+- `pcp.guarantee.product.register`
+- `pcp.guarantee.mp_lot.register`
+- `pcp.guarantee.calculate`
 
 `pcp.experimental.release` permanece apenas como action key legada de nomenclatura. A regra nova de liberacao de lote bloqueado usa `pcp.blocked_lot.release`, porque o bloqueio pode vir de CQ bloqueado/reprovado, experimental ou desenvolvimento.
 
@@ -183,7 +196,6 @@ Resultado: passou.
 
 - Calculo de custo de producao.
 - Simulador de compra/necessidade MP.
-- Garantias calculadas por lote de MP.
 - Refinamento estetico final e usabilidade avancada do PCP.
 - Integracao fiscal/faturamento completa.
 - Deploy Supabase/Vercel.

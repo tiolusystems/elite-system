@@ -38,7 +38,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: S
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
+          <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
           <a href="/seguranca" aria-current="page">

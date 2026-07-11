@@ -40,7 +40,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
           <a href="/importacao-xml" aria-current="page">
             XML MP
           </a>
-          <a href="/pcp">PCP</a>
+          <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
           <a href="/seguranca">Seguranca</a>

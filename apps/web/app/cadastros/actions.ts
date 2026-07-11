@@ -828,11 +828,8 @@ function optionalInteger(formData: FormData, name: string): number | null {
   if (value === null) {
     return null;
   }
-  const idPrefix = value.match(/^\s*(\d+)/);
-  if (idPrefix) {
-    return Number(idPrefix[1]);
-  }
-  return Number(value);
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && String(parsed) === value ? parsed : null;
 }
 
 function splitLines(value: string | null): string[] {

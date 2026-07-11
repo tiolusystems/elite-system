@@ -19,7 +19,7 @@ const AUDIT_STEPS = [
   "Banco operacional, teste e homologacao aparecem no topo da tela.",
   "Recebimentos e comissoes guardam snapshot proporcional.",
   "NF XML entra em staging e so gera lote depois de confirmacao.",
-  "PCP baixa estoque apenas na finalizacao de OP com CQ.",
+  "Producao baixa estoque apenas na finalizacao de OP com CQ.",
   "Romaneio baixa PA apenas na confirmacao com reserva fechada.",
   "Login Supabase identifica o usuario por sessao e perfil.",
   "Rollout de modulos e dependencias e governado no PostgreSQL."
@@ -61,7 +61,7 @@ export default async function HomePage() {
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
+          <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
           <a href="/seguranca">Seguranca</a>
@@ -119,7 +119,7 @@ export default async function HomePage() {
           <article className="kpi-card accent-red">
             <span>OP abertas</span>
             <strong>{valueOrDash(opsAbertas)}</strong>
-            <p>PCP em rascunho, planejado ou em processo.</p>
+            <p>Producao em rascunho, planejada ou em processo.</p>
           </article>
         </section>
 
@@ -161,7 +161,7 @@ export default async function HomePage() {
               <div className="queue-row">
                 <span className="queue-status ok"></span>
                 <div>
-                  <strong>PCP</strong>
+                  <strong>Producao</strong>
                   <p>Tela inicial codada para formula, OP, reserva, CQ e geracao de PA/PI.</p>
                 </div>
               </div>
@@ -218,8 +218,8 @@ export default async function HomePage() {
                   <span style={{ width: "44%" }}></span>
                 </div>
               </a>
-              <a className="module-tile" href="/pcp">
-                <strong>PCP</strong>
+              <a className="module-tile" href="/producao">
+                <strong>Producao</strong>
                 <span>{valueOrDash(pcp.metrics.opsAbertas)} OP(s) aberta(s)</span>
                 <div className="progress-rail">
                   <span style={{ width: "48%" }}></span>

@@ -27,7 +27,7 @@ export default async function RelatoriosPage() {
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
+          <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios" aria-current="page">
             Relatorios
@@ -77,7 +77,7 @@ export default async function RelatoriosPage() {
           <article className="kpi-card accent-amber">
             <span>Vencem em 30 dias</span>
             <strong>{valueOrDash(dashboard.metrics.vencendo30Dias)}</strong>
-            <p>Saldo disponivel que pode exigir decisao comercial, CQ ou PCP.</p>
+            <p>Saldo disponivel que pode exigir decisao comercial, CQ ou producao.</p>
           </article>
           <article className="kpi-card accent-green">
             <span>Candidatos a reprocessar</span>

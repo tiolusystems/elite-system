@@ -57,7 +57,7 @@ const FALLBACK_MODULES: Array<Pick<ModuleRuntime, "moduleKey" | "displayName" | 
   { moduleKey: "cadastros", displayName: "Cadastros", description: "Cadastros mestres", ownerDomain: "cadastros", isCore: false, sortOrder: 100 },
   { moduleKey: "pedidos", displayName: "Pedidos", description: "Ciclo comercial", ownerDomain: "pedidos", isCore: false, sortOrder: 200 },
   { moduleKey: "estoque", displayName: "Estoque", description: "Lotes, movimentos e saldos", ownerDomain: "estoque", isCore: false, sortOrder: 300 },
-  { moduleKey: "pcp", displayName: "PCP e CQ", description: "Formula, OP e CQ", ownerDomain: "pcp", isCore: false, sortOrder: 400 },
+  { moduleKey: "pcp", displayName: "Producao", description: "Cadastros tecnicos, formulas, garantias, OP, CQ e transformacoes", ownerDomain: "pcp", isCore: false, sortOrder: 400 },
   { moduleKey: "expedicao", displayName: "Romaneio e expedicao", description: "Separacao e baixa de PA", ownerDomain: "expedicao", isCore: false, sortOrder: 500 },
   { moduleKey: "importacao", displayName: "Importacao XML", description: "Conferencia de NF XML", ownerDomain: "importacao", isCore: false, sortOrder: 600 },
   { moduleKey: "faturamento", displayName: "Faturamento", description: "Documentos e eventos fiscais", ownerDomain: "faturamento", isCore: false, sortOrder: 700 },

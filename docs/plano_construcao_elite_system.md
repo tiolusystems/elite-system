@@ -205,9 +205,10 @@ Status atual:
 - Validacao descartavel passou com OP estoque, OP experimental, OP reprocessamento, OP MAPA documental, CQ obrigatorio, append-only e romaneio multilote.
 - PA e PI podem herdar validade automatica do `prazo_validade_meses` do produto quando o lote tem data de fabricacao e nao recebeu validade manual.
 - Camada web PCP criada em `apps/web/lib/pcp.ts`, `apps/web/app/pcp/actions.ts` e `apps/web/app/pcp/page.tsx`.
-- Tela `/pcp` criada para consultar formulas, formulas ativas, OPs, componentes planejados, reservas, produtos gerados e lotes disponiveis de MP/PA/PI.
-- Tela `/pcp` permite criar nova versao de formula, ativar formula, abrir OP, reservar componente, iniciar OP, cancelar OP planejada e finalizar OP com dados de CQ e geracao de PA/PI via funcoes PostgreSQL auditaveis.
-- Pendencia: homologar `/pcp` contra Supabase configurado com usuario logado e dados de teste antes de uso operacional.
+- Rota `/producao` publicada para integrar cadastros tecnicos, formulas, garantias, OPs, CQ, lotes e transformacoes; `/pcp` permanece como alias.
+- Migration `0044_production_module_release.sql` adicionou garantias append-only de produto/lote, calculo ponderado por consumo real da OP e snapshots de resultado.
+- A tela permite criar/ativar formula, abrir OP, reservar componente, iniciar, cancelar, finalizar com CQ, calcular garantias, liberar lote bloqueado e abrir transformacao por reprocessamento.
+- Status: pronta para validacao de negocio no ambiente `test`; ainda nao autorizada para banco operacional.
 
 ## Bloco 6 - Romaneio
 
@@ -304,7 +305,7 @@ Entregas:
 
 Status de fundacao em 2026-07-10:
 
-- migrations `0001` a `0043` preparadas para reconstrucao com seed em PostgreSQL descartavel;
+- migrations `0001` a `0044` preparadas para reconstrucao com seed em PostgreSQL descartavel;
 - gate global remove escrita direta e `TRUNCATE` das roles web;
 - schema medido com 82 tabelas, todas com PK, 292 FKs e nenhuma constraint pendente;
 - papeis comerciais e participantes CQ ganharam representacao relacional;
@@ -350,8 +351,8 @@ Referencia de ordem: `docs/fluxo_operacional_elite_system.md`.
 
 1. Homologar `/login` contra Supabase Auth configurado e usuario com `user_profiles` ativo.
 2. Criar telas operacionais de cadastros tecnicos: MP, embalagens, PA e PI.
-3. Homologar tela `/pcp` de formulas PA/PI contra Supabase configurado.
-4. Homologar tela `/pcp` para formulacao, reserva de insumos, CQ e baixa de insumos.
+3. Homologar `/producao` para formulas PA/PI, garantias de produto/lote e calculo por consumo real.
+4. Homologar `/producao` para reserva de insumos, CQ, baixa, transformacao e liberacao de lote bloqueado.
 5. Homologar tela `/romaneios` com separacao por lote e baixa de produtos.
 6. Definir e implementar entregador no romaneio, se o campo existir na planilha canonica.
 7. Implementar atualizacao encadeada de status de pedido, OP, estoque, romaneio, financeiro e comissoes.

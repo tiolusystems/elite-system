@@ -44,6 +44,11 @@ class SchemaLintHardeningContractTest(unittest.TestCase):
         self.assertIn("storage-api", script)
         self.assertIn("$statusExitCode = $LASTEXITCODE", script)
         self.assertIn("$ErrorActionPreference = 'Continue'", script)
+        self.assertIn("$dockerExitCode = $LASTEXITCODE", script)
+        self.assertIn("function Wait-SupabaseEnvironment", script)
+        self.assertIn("$supabaseStartExitCode = $LASTEXITCODE", script)
+        self.assertIn("$supabaseEnvironment = Wait-SupabaseEnvironment -StartExitCode $supabaseStartExitCode", script)
+        self.assertNotIn("throw 'Falha ao iniciar Supabase local.'", script)
 
         bootstrap_script = BOOTSTRAP_SCRIPT.read_text(encoding="utf-8")
         self.assertIn("$statusExitCode = $LASTEXITCODE", bootstrap_script)

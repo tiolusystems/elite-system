@@ -13,10 +13,59 @@ export type PcpLookups = {
   produtos: PcpLookupOption[];
   materiasPrimas: PcpLookupOption[];
   produtoEmbalagens: PcpLookupOption[];
-  componentTargets: PcpLookupOption[];
-  outputTargets: PcpLookupOption[];
+  pessoas: PcpLookupOption[];
   formulas: PcpLookupOption[];
-  ops: PcpLookupOption[];
+};
+
+export type PcpProductGuarantee = {
+  id: number;
+  produtoId: number;
+  produtoLabel: string;
+  nutriente: string;
+  tipoLimite: string;
+  valor: number;
+  valorMaximo: number | null;
+  unidade: string;
+  fonte: string;
+  vigenciaInicio: string | null;
+  vigenciaFim: string | null;
+  documentoReferencia: string | null;
+  justificativa: string | null;
+  createdAt: string;
+};
+
+export type PcpMpLotGuarantee = {
+  id: number;
+  materiaPrimaId: number;
+  loteMpId: number;
+  loteLabel: string;
+  nutriente: string;
+  valor: number;
+  unidade: string;
+  fonte: string;
+  dataReferencia: string | null;
+  documentoReferencia: string | null;
+  justificativa: string | null;
+  createdAt: string;
+};
+
+export type PcpOpGuaranteeResult = {
+  id: number;
+  opId: number;
+  produtoGeradoId: number;
+  produtoId: number;
+  produtoLabel: string;
+  calculoVersao: number;
+  nutriente: string;
+  unidade: string;
+  valorCalculado: number | null;
+  tipoLimite: string | null;
+  valorReferencia: number | null;
+  valorMaximoReferencia: number | null;
+  statusResultado: string;
+  atende: boolean | null;
+  justificativa: string;
+  createdAt: string;
 };
 
 export type PcpFormulaComponent = {
@@ -108,6 +157,7 @@ export type PcpRecentOp = {
   completedAt: string | null;
   components: PcpOpComponent[];
   outputs: PcpOpOutput[];
+  guaranteeResults: PcpOpGuaranteeResult[];
 };
 
 export type PcpAvailableLot = {
@@ -133,12 +183,16 @@ export type PcpDashboard = {
     opsEmProcesso: number | null;
     componentesPendentes: number | null;
     lotesBloqueados: number | null;
+    garantiasVigentes: number | null;
+    transformacoesAbertas: number | null;
   };
   lookups: PcpLookups;
   activeFormulas: PcpActiveFormula[];
   formulaVersions: PcpFormulaVersion[];
   recentOps: PcpRecentOp[];
   availableLots: PcpAvailableLot[];
+  productGuarantees: PcpProductGuarantee[];
+  mpLotGuarantees: PcpMpLotGuarantee[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -147,10 +201,8 @@ const EMPTY_LOOKUPS: PcpLookups = {
   produtos: [],
   materiasPrimas: [],
   produtoEmbalagens: [],
-  componentTargets: [],
-  outputTargets: [],
-  formulas: [],
-  ops: []
+  pessoas: [],
+  formulas: []
 };
 
 export async function getPcpDashboard(): Promise<PcpDashboard> {
@@ -174,7 +226,11 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       opOutputs,
       lotesMp,
       lotesPa,
-      lotesPi
+      lotesPi,
+      pessoas,
+      productGuarantees,
+      mpLotGuarantees,
+      opGuaranteeResults
     ] = await Promise.all([
       supabase
         .from("cad_produtos_base")
@@ -258,7 +314,35 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
           "lote_pi_id,produto_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,updated_at"
         )
         .order("updated_at", { ascending: false })
-        .limit(300)
+        .limit(300),
+      supabase
+        .from("cad_pessoas_comerciais")
+        .select("id,nome,tipo_comercial,status")
+        .eq("status", "active")
+        .order("nome", { ascending: true })
+        .limit(300),
+      supabase
+        .from("cad_garantias_produto_mapa_atuais")
+        .select(
+          "id,produto_id,nutriente,tipo_limite,valor,valor_maximo,unidade,fonte,vigencia_inicio,vigencia_fim,documento_referencia,justificativa,created_at"
+        )
+        .order("produto_id", { ascending: true })
+        .order("nutriente", { ascending: true })
+        .limit(500),
+      supabase
+        .from("cad_garantias_lote_mp_atuais")
+        .select(
+          "id,materia_prima_id,lote_mp_id,nutriente,valor,unidade,fonte,data_referencia,documento_referencia,justificativa,created_at"
+        )
+        .order("data_referencia", { ascending: false })
+        .limit(800),
+      supabase
+        .from("pcp_op_garantia_resultados_atuais")
+        .select(
+          "id,op_id,produto_gerado_id,produto_id,calculo_versao,nutriente,unidade,valor_calculado,tipo_limite,valor_referencia,valor_maximo_referencia,status_resultado,atende,justificativa,created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(800)
     ]);
 
     const produtoRows = rows(produtos);
@@ -271,6 +355,10 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     const opComponentRows = rows(opComponents);
     const opReservationRows = rows(opReservations);
     const opOutputRows = rows(opOutputs);
+    const personRows = rows(pessoas);
+    const productGuaranteeRows = rows(productGuarantees);
+    const mpLotGuaranteeRows = rows(mpLotGuarantees);
+    const opGuaranteeResultRows = rows(opGuaranteeResults);
 
     const produtoMap = new Map<number, string>(
       produtoRows.map((row) => [Number(row.id), productLabel(row)])
@@ -352,6 +440,11 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       (output) => output.opId
     );
 
+    const guaranteeResultsByOp = groupBy(
+      opGuaranteeResultRows.map((row) => mapOpGuaranteeResult(row, produtoMap)),
+      (result) => result.opId
+    );
+
     const recentOps = opRows.map((row) => {
       const id = Number(row.id);
       const formula = formulaById.get(Number(row.formula_versao_id));
@@ -370,9 +463,13 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         startedAt: nullableString(row.started_at),
         completedAt: nullableString(row.completed_at),
         components: componentsByOp.get(id) ?? [],
-        outputs: outputsByOp.get(id) ?? []
+        outputs: outputsByOp.get(id) ?? [],
+        guaranteeResults: guaranteeResultsByOp.get(id) ?? []
       } satisfies PcpRecentOp;
     });
+
+    const currentProductGuarantees = productGuaranteeRows.map((row) => mapProductGuarantee(row, produtoMap));
+    const currentMpLotGuarantees = mpLotGuaranteeRows.map((row) => mapMpLotGuarantee(row, lotMap));
 
     const lookups: PcpLookups = {
       produtos: produtoRows.map((row) => ({
@@ -390,47 +487,16 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         label: packageLabel(row),
         detail: `${row.status ?? "sem status"}`
       })),
-      componentTargets: [
-        ...materiaPrimaRows.map((row) => ({
-          id: Number(row.id),
-          label: `MP - ${materialLabel(row)}`,
-          detail: `${row.unidade_base_estoque ?? "sem unidade"} / ${row.status ?? "sem status"}`
-        })),
-        ...produtoEmbalagemRows.map((row) => ({
-          id: Number(row.id),
-          label: `PA - ${packageLabel(row)}`,
-          detail: `${row.status ?? "sem status"}`
-        })),
-        ...produtoRows.map((row) => ({
-          id: Number(row.id),
-          label: `PI - ${productLabel(row)}`,
-          detail: `${row.status ?? "sem status"}`
-        }))
-      ],
-      outputTargets: [
-        ...produtoEmbalagemRows.map((row) => ({
-          id: Number(row.id),
-          label: `PA - ${packageLabel(row)}`,
-          detail: `${row.status ?? "sem status"}`
-        })),
-        ...produtoRows.map((row) => ({
-          id: Number(row.id),
-          label: `PI - ${productLabel(row)}`,
-          detail: `${row.status ?? "sem status"}`
-        }))
-      ],
+      pessoas: personRows.map((row) => ({
+        id: Number(row.id),
+        label: String(row.nome),
+        detail: `${row.tipo_comercial ?? "sem tipo"}`
+      })),
       formulas: formulaVersions.map((formula) => ({
         id: formula.id,
         label: `${formula.produtoLabel} / ${formula.tipoReceita} v${formula.versao}`,
         detail: `${formula.isActive ? "ativa" : "versao"} / ${formula.components.length} componente(s)`
-      })),
-      ops: recentOps
-        .filter((op) => ["draft", "planned", "in_process"].includes(op.status))
-        .map((op) => ({
-          id: op.id,
-          label: `${op.codigoOp} - ${op.produtoLabel}`,
-          detail: `${op.tipoOp} / ${op.status}`
-        }))
+      }))
     };
 
     const openOps = recentOps.filter((op) => ["draft", "planned", "in_process"].includes(op.status));
@@ -447,7 +513,11 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       opOutputs,
       lotesMp,
       lotesPa,
-      lotesPi
+      lotesPi,
+      pessoas,
+      productGuarantees,
+      mpLotGuarantees,
+      opGuaranteeResults
     ]);
 
     return {
@@ -457,19 +527,89 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         opsAbertas: openOps.length,
         opsEmProcesso: recentOps.filter((op) => op.status === "in_process").length,
         componentesPendentes: openOps.flatMap((op) => op.components).filter((component) => component.status !== "reserved").length,
-        lotesBloqueados: availableLots.filter((lot) => lot.status === "bloqueado").length
+        lotesBloqueados: availableLots.filter((lot) => lot.status === "bloqueado").length,
+        garantiasVigentes: currentProductGuarantees.length + currentMpLotGuarantees.length,
+        transformacoesAbertas: openOps.filter((op) => op.tipoOp === "reprocessamento").length
       },
       lookups,
       activeFormulas: active,
       formulaVersions,
       recentOps,
       availableLots,
+      productGuarantees: currentProductGuarantees,
+      mpLotGuarantees: currentMpLotGuarantees,
       source: firstError ? "error" : "supabase",
       error: firstError
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
   }
+}
+
+function mapProductGuarantee(
+  row: Record<string, unknown>,
+  produtoMap: Map<number, string>
+): PcpProductGuarantee {
+  const produtoId = Number(row.produto_id);
+  return {
+    id: Number(row.id),
+    produtoId,
+    produtoLabel: produtoMap.get(produtoId) ?? `produto ${produtoId}`,
+    nutriente: String(row.nutriente),
+    tipoLimite: String(row.tipo_limite),
+    valor: Number(row.valor),
+    valorMaximo: nullableNumber(row.valor_maximo),
+    unidade: String(row.unidade),
+    fonte: String(row.fonte),
+    vigenciaInicio: nullableString(row.vigencia_inicio),
+    vigenciaFim: nullableString(row.vigencia_fim),
+    documentoReferencia: nullableString(row.documento_referencia),
+    justificativa: nullableString(row.justificativa),
+    createdAt: String(row.created_at)
+  };
+}
+
+function mapMpLotGuarantee(row: Record<string, unknown>, lotMap: Map<string, string>): PcpMpLotGuarantee {
+  const loteMpId = Number(row.lote_mp_id);
+  return {
+    id: Number(row.id),
+    materiaPrimaId: Number(row.materia_prima_id),
+    loteMpId,
+    loteLabel: lotMap.get(`MP:${loteMpId}`) ?? `lote MP ${loteMpId}`,
+    nutriente: String(row.nutriente),
+    valor: Number(row.valor),
+    unidade: String(row.unidade),
+    fonte: String(row.fonte),
+    dataReferencia: nullableString(row.data_referencia),
+    documentoReferencia: nullableString(row.documento_referencia),
+    justificativa: nullableString(row.justificativa),
+    createdAt: String(row.created_at)
+  };
+}
+
+function mapOpGuaranteeResult(
+  row: Record<string, unknown>,
+  produtoMap: Map<number, string>
+): PcpOpGuaranteeResult {
+  const produtoId = Number(row.produto_id);
+  return {
+    id: Number(row.id),
+    opId: Number(row.op_id),
+    produtoGeradoId: Number(row.produto_gerado_id),
+    produtoId,
+    produtoLabel: produtoMap.get(produtoId) ?? `produto ${produtoId}`,
+    calculoVersao: Number(row.calculo_versao),
+    nutriente: String(row.nutriente),
+    unidade: String(row.unidade),
+    valorCalculado: nullableNumber(row.valor_calculado),
+    tipoLimite: nullableString(row.tipo_limite),
+    valorReferencia: nullableNumber(row.valor_referencia),
+    valorMaximoReferencia: nullableNumber(row.valor_maximo_referencia),
+    statusResultado: String(row.status_resultado),
+    atende: row.atende === null || row.atende === undefined ? null : Boolean(row.atende),
+    justificativa: String(row.justificativa),
+    createdAt: String(row.created_at)
+  };
 }
 
 function mapFormulaComponent(
@@ -674,13 +814,17 @@ function emptyDashboard(source: PcpDashboard["source"], error: string | null): P
       opsAbertas: null,
       opsEmProcesso: null,
       componentesPendentes: null,
-      lotesBloqueados: null
+      lotesBloqueados: null,
+      garantiasVigentes: null,
+      transformacoesAbertas: null
     },
     lookups: EMPTY_LOOKUPS,
     activeFormulas: [],
     formulaVersions: [],
     recentOps: [],
     availableLots: [],
+    productGuarantees: [],
+    mpLotGuarantees: [],
     source,
     error
   };

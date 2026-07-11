@@ -54,7 +54,7 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Sea
           <a href="/modulos" aria-current="page">Modulos</a>
           <a href="/cadastros">Cadastros</a>
           <a href="/pedidos">Pedidos</a>
-          <a href="/pcp">PCP</a>
+          <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
           <a href="/seguranca">Seguranca</a>

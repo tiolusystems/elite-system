@@ -50,8 +50,23 @@ begin
     raise exception 'required module dependency cycle survived';
   end if;
 
-  if (select count(*) from public.sys_module_routes) <> 12 then
-    raise exception 'unexpected registered route count';
+  if exists (
+    select route_prefix
+      from public.sys_module_routes
+     group by route_prefix
+    having count(*) > 1
+  ) then
+    raise exception 'duplicate module route registration';
+  end if;
+
+  if not exists (
+    select 1
+      from public.sys_module_routes
+     where route_prefix = '/producao'
+       and module_key = 'pcp'
+       and match_children
+  ) then
+    raise exception 'production route is not owned by PCP';
   end if;
 
   if public.current_system_environment() <> 'unconfigured' then
@@ -119,6 +134,13 @@ begin
     from public.get_current_route_module_access('/pcp') route_status;
   if not coalesce((v_route_status->>'available')::boolean, false) or v_route_status->>'module_key' <> 'pcp' then
     raise exception 'PCP route did not resolve to available module: %', v_route_status;
+  end if;
+
+  select to_jsonb(route_status)
+    into v_route_status
+    from public.get_current_route_module_access('/producao') route_status;
+  if not coalesce((v_route_status->>'available')::boolean, false) or v_route_status->>'module_key' <> 'pcp' then
+    raise exception 'production route did not resolve to available module: %', v_route_status;
   end if;
 
   select to_jsonb(route_status)

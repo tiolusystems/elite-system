@@ -41,7 +41,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: S
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
+          <a href="/producao">Producao</a>
           <a href="/romaneios" aria-current="page">
             Romaneio
           </a>

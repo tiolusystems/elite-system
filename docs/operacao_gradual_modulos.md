@@ -8,7 +8,7 @@ Colocar modulos tecnicamente prontos em teste e homologacao enquanto outros cont
 
 ## Pre-requisitos
 
-1. migrations `0001` a `0041` aplicadas no projeto Supabase de teste;
+1. migrations `0001` a `0044` aplicadas no projeto Supabase de teste;
 2. usuario Supabase Auth com `user_profiles.status = 'active'`;
 3. administrador com `system.admin`;
 4. variaveis server-side e publicas configuradas no Next.js;
@@ -50,6 +50,25 @@ A linha de base de `test` permite escrita nos modulos ja codificados, todos aind
 11. `relatorios` e `auditoria`
 
 O banco valida dependencias. Por exemplo, PCP nao pode receber escrita em homologacao se estoque estiver bloqueado; romaneio depende de pedidos e estoque.
+
+## Validacao de negocio do modulo Producao
+
+A rota operacional e `/producao`; `/pcp` permanece como alias de compatibilidade. A publicacao inicial acontece somente no ambiente `test`, com `cadastros`, `estoque` e `pcp` em `business_validation` + `read_write`.
+
+Executar na ordem:
+
+1. cadastrar MP, produto-base, embalagem e produto+embalagem em `cadastros`;
+2. criar lote de MP com saldo de teste;
+3. registrar garantias declaradas do produto e garantias analisadas do lote de MP;
+4. criar e ativar formula de producao;
+5. abrir OP, reservar lotes compativeis e iniciar;
+6. finalizar com equipe cadastrada, dados de CQ e saidas PA/PI;
+7. calcular as garantias da OP e conferir o snapshot dos lotes consumidos;
+8. para CQ bloqueado/reprovado, manter o lote bloqueado ate liberacao auditada;
+9. testar PA para PI, PI para PA, reenvasamento e reprocessamento por OP do tipo `reprocessamento`;
+10. reconciliar movimentos e saldos; nunca editar saldo ou movimento diretamente.
+
+O aceite precisa cobrir caminho feliz, falta de garantia de lote, unidade incompativel, nova versao MAPA, retry de calculo, lote bloqueado e transformacao com mais de um lote de entrada.
 
 ## Preparar ambiente futuro sem troca-lo
 

@@ -7,6 +7,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0041_module_rollout_runtime.sql"
+MIGRATIONS_DIR = ROOT / "supabase" / "migrations"
 PROXY = ROOT / "apps" / "web" / "proxy.ts"
 MODULE_ACTIONS = ROOT / "apps" / "web" / "app" / "modulos" / "actions.ts"
 HOME = ROOT / "apps" / "web" / "app" / "page.tsx"
@@ -70,7 +71,10 @@ class ModuleRolloutRuntimeContractTest(unittest.TestCase):
         self.assertIn("module unavailable:", body)
 
     def test_authenticated_app_routes_are_registered_or_explicitly_public(self) -> None:
-        sql = MIGRATION.read_text(encoding="utf-8")
+        sql = "\n".join(
+            migration.read_text(encoding="utf-8")
+            for migration in sorted(MIGRATIONS_DIR.glob("*.sql"))
+        )
         registered = set(re.findall(r"\('(/[a-z0-9/-]*)',\s*'[a-z_]+'", sql))
         public_routes = {"/login", "/health", "/api/health"}
         recovery_routes = {"/modulo-indisponivel"}

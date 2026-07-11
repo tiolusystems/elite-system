@@ -18,8 +18,15 @@ $SupabaseExcludedServices = 'logflare,storage-api,studio,imgproxy,edge-runtime,p
 New-Item -ItemType Directory -Force -Path $RuntimeRoot | Out-Null
 
 function Test-DockerEngine {
-  & docker version --format '{{.Server.Version}}' *> $null
-  return $LASTEXITCODE -eq 0
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & docker version --format '{{.Server.Version}}' *> $null
+    $dockerExitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+  return $dockerExitCode -eq 0
 }
 
 function Start-DockerEngine {
@@ -65,6 +72,24 @@ function Get-SupabaseEnvironment {
   return $values
 }
 
+function Wait-SupabaseEnvironment {
+  param(
+    [int]$Attempts = 60,
+    [int]$DelaySeconds = 2,
+    [int]$StartExitCode = 0
+  )
+
+  for ($attempt = 0; $attempt -lt $Attempts; $attempt += 1) {
+    try {
+      return Get-SupabaseEnvironment
+    } catch {
+      Start-Sleep -Seconds $DelaySeconds
+    }
+  }
+
+  throw "Supabase local nao ficou pronto dentro do prazo. Codigo retornado por start: $StartExitCode."
+}
+
 function Resolve-NodeExecutable {
   $command = Get-Command node -ErrorAction SilentlyContinue
   if ($command) {
@@ -95,15 +120,20 @@ if (-not (Test-Path (Join-Path $WebRoot 'node_modules\next\dist\bin\next'))) {
 }
 
 Start-DockerEngine
+$supabaseStartExitCode = 0
 if (-not $SkipSupabaseStart) {
   $env:SUPABASE_TELEMETRY_DISABLED = '1'
-  & $Supabase start -x $SupabaseExcludedServices | Out-Null
-  if ($LASTEXITCODE -ne 0) {
-    throw 'Falha ao iniciar Supabase local.'
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & $Supabase start -x $SupabaseExcludedServices | Out-Null
+    $supabaseStartExitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
   }
 }
 
-$supabaseEnvironment = Get-SupabaseEnvironment
+$supabaseEnvironment = Wait-SupabaseEnvironment -StartExitCode $supabaseStartExitCode
 $apiUrl = $supabaseEnvironment['API_URL']
 $publicKey = $supabaseEnvironment['PUBLISHABLE_KEY']
 if (-not $publicKey) {

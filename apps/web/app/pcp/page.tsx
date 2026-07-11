@@ -2,18 +2,22 @@ import Link from "next/link";
 
 import {
   activatePcpFormulaAction,
+  calculateOpGuaranteesAction,
   cancelPcpOpAction,
   createPcpFormulaAction,
   createPcpOpAction,
   finishPcpOpAction,
+  registerMpLotGuaranteeAction,
+  registerProductGuaranteeAction,
+  releaseBlockedLotAction,
   reservePcpComponentAction,
   startPcpOpAction
 } from "@/app/pcp/actions";
+import { FormulaComponentRows, OutputRows } from "@/app/pcp/production-editors";
 import {
   getPcpDashboard,
   type PcpAvailableLot,
   type PcpFormulaVersion,
-  type PcpLookupOption,
   type PcpLookups,
   type PcpOpComponent,
   type PcpRecentOp
@@ -28,13 +32,14 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
   const dashboard = await getPcpDashboard();
   const result = singleValue(params.result);
   const formMessage = messageForResult(result);
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <main className="app-shell">
       <header className="topbar">
         <div className="brand">
           <strong>Elite System</strong>
-          <span>PCP e producao</span>
+          <span>Producao</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
           <Link href="/">Inicio</Link>
@@ -43,8 +48,8 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp" aria-current="page">
-            PCP
+          <a href="/producao" aria-current="page">
+            Producao
           </a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
@@ -63,13 +68,13 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
         <div className="dashboard-header">
           <div>
             <span className="eyebrow">producao auditavel</span>
-            <h1>PCP, formulas, OP e CQ</h1>
+            <h1>Producao</h1>
             <p className="muted">
               Formula versionada, OP operacional ou MAPA documental, reserva de MP/PA/PI, baixa no encerramento e
               geracao de lotes PA/PI.
             </p>
           </div>
-          <div className="toolbar-actions" aria-label="Acoes do PCP">
+          <div className="toolbar-actions" aria-label="Acoes de producao">
             <a className="secondary-button" href="#nova-formula">
               Nova formula
             </a>
@@ -82,9 +87,16 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           </div>
         </div>
 
-        <LookupDatalists lookups={dashboard.lookups} availableLots={dashboard.availableLots} />
+        <nav className="production-nav" aria-label="Fluxo do modulo Producao">
+          <a href="#base-tecnica">Base tecnica</a>
+          <a href="#formulas">Formulas</a>
+          <a href="#garantias">Garantias</a>
+          <a href="#ops">Ordens</a>
+          <a href="#transformacoes">Transformacoes</a>
+          <a href="#lotes">CQ e lotes</a>
+        </nav>
 
-        <section className="kpi-grid" aria-label="Resumo PCP">
+        <section className="kpi-grid" aria-label="Resumo da producao">
           <article className="kpi-card accent-blue">
             <span>Formulas versionadas</span>
             <strong>{valueOrDash(dashboard.metrics.formulasVersionadas)}</strong>
@@ -103,8 +115,21 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           <article className="kpi-card accent-red">
             <span>Lotes bloqueados</span>
             <strong>{valueOrDash(dashboard.metrics.lotesBloqueados)}</strong>
-            <p>PA, PI ou MP que pedem decisao de CQ/PCP.</p>
+            <p>PA, PI ou MP que pedem decisao de CQ/producao.</p>
           </article>
+        </section>
+
+        <section className="production-flow" id="base-tecnica" aria-labelledby="base-tecnica-title">
+          <div>
+            <span className="eyebrow">fontes unicas</span>
+            <h2 id="base-tecnica-title">Base tecnica da producao</h2>
+          </div>
+          <div className="production-flow-links">
+            <a href="/cadastros#nova-mp">Materias-primas</a>
+            <a href="/cadastros#novo-produto">Produtos PA e PI</a>
+            <a href="/cadastros#nova-embalagem">Embalagens</a>
+            <a href="/cadastros#novo-item-vendavel">Produto e embalagem</a>
+          </div>
         </section>
 
         {dashboard.error ? (
@@ -131,7 +156,14 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
               <div className="form-grid">
                 <label className="wide-field">
                   Produto PA/PI
-                  <input name="produto_id" list="pcp-produtos-options" placeholder="Buscar produto" required />
+                  <select name="produto_id" defaultValue="" required>
+                    <option value="">Selecione o produto</option>
+                    {dashboard.lookups.produtos.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Tipo receita
@@ -149,11 +181,13 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
                   <input name="observacao" placeholder="Opcional" />
                 </label>
               </div>
-              <div className="pcp-component-editor" aria-label="Componentes da formula">
-                {Array.from({ length: 6 }, (_, index) => (
-                  <FormulaComponentRow key={index + 1} index={index + 1} />
-                ))}
-              </div>
+              <FormulaComponentRows
+                targets={{
+                  materiasPrimas: dashboard.lookups.materiasPrimas,
+                  produtos: dashboard.lookups.produtos,
+                  produtoEmbalagens: dashboard.lookups.produtoEmbalagens
+                }}
+              />
               <div className="form-footer">
                 <span>Formula de producao exige componente. Formula MAPA pode ser apenas documental.</span>
                 <button className="primary-button" type="submit">
@@ -193,7 +227,14 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
               <div className="form-grid">
                 <label className="wide-field">
                   Formula
-                  <input name="formula_versao_id" list="pcp-formulas-options" placeholder="Buscar formula" required />
+                  <select name="formula_versao_id" defaultValue="" required>
+                    <option value="">Selecione a formula</option>
+                    {dashboard.lookups.formulas.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label} - {option.detail}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Tipo OP
@@ -255,6 +296,152 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           </section>
         </section>
 
+        <section className="panel" id="garantias" aria-labelledby="garantias-title">
+          <div className="panel-header">
+            <h2 id="garantias-title">Garantias e conformidade</h2>
+            <span className="pill">{valueOrDash(dashboard.metrics.garantiasVigentes)} vigente(s)</span>
+          </div>
+          <div className="two-column production-forms">
+            <form className="production-form" action={registerProductGuaranteeAction}>
+              <h3>Garantia declarada do produto</h3>
+              <div className="form-grid">
+                <label className="wide-field">
+                  Produto
+                  <select name="produto_id" defaultValue="" required>
+                    <option value="">Selecione</option>
+                    {dashboard.lookups.produtos.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Nutriente
+                  <input name="nutriente" placeholder="N, P2O5, K2O" required />
+                </label>
+                <label>
+                  Limite
+                  <select name="tipo_limite" defaultValue="minimo">
+                    <option value="minimo">minimo</option>
+                    <option value="maximo">maximo</option>
+                    <option value="faixa">faixa</option>
+                    <option value="declarado">declarado</option>
+                  </select>
+                </label>
+                <label>
+                  Valor
+                  <input name="valor" inputMode="decimal" required />
+                </label>
+                <label>
+                  Maximo da faixa
+                  <input name="valor_maximo" inputMode="decimal" />
+                </label>
+                <label>
+                  Unidade
+                  <input name="unidade" placeholder="%, g/L" required />
+                </label>
+                <label>
+                  Fonte
+                  <select name="fonte" defaultValue="mapa">
+                    <option value="mapa">MAPA</option>
+                    <option value="laboratorio">laboratorio</option>
+                    <option value="manual">manual</option>
+                    <option value="fornecedor">fornecedor</option>
+                    <option value="calculado">calculado</option>
+                  </select>
+                </label>
+                <label>
+                  Vigencia inicial
+                  <input name="vigencia_inicio" type="date" defaultValue={today} />
+                </label>
+                <label>
+                  Vigencia final
+                  <input name="vigencia_fim" type="date" />
+                </label>
+                <label className="wide-field">
+                  Documento
+                  <input name="documento_referencia" placeholder="Registro MAPA ou laudo" />
+                </label>
+                <label className="full-field">
+                  Justificativa
+                  <input name="justificativa" placeholder="Motivo desta versao" required />
+                </label>
+              </div>
+              <button className="primary-button" type="submit">Registrar versao</button>
+            </form>
+
+            <form className="production-form" action={registerMpLotGuaranteeAction}>
+              <h3>Garantia analisada do lote de MP</h3>
+              <div className="form-grid">
+                <label className="wide-field">
+                  Lote de MP
+                  <select name="lote_mp_id" defaultValue="" required>
+                    <option value="">Selecione</option>
+                    {dashboard.availableLots.filter((lot) => lot.tipo === "MP").map((lot) => (
+                      <option key={lot.id} value={lot.id}>{lot.codigoLote} - {lot.targetLabel}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Nutriente
+                  <input name="nutriente" placeholder="N, P2O5, K2O" required />
+                </label>
+                <label>
+                  Valor
+                  <input name="valor" inputMode="decimal" required />
+                </label>
+                <label>
+                  Unidade
+                  <input name="unidade" placeholder="%, g/L" required />
+                </label>
+                <label>
+                  Fonte
+                  <select name="fonte" defaultValue="laboratorio">
+                    <option value="laboratorio">laboratorio</option>
+                    <option value="fornecedor">fornecedor</option>
+                    <option value="manual">manual</option>
+                    <option value="mapa">MAPA</option>
+                    <option value="calculado">calculado</option>
+                  </select>
+                </label>
+                <label>
+                  Data de referencia
+                  <input name="data_referencia" type="date" defaultValue={today} required />
+                </label>
+                <label className="wide-field">
+                  Documento
+                  <input name="documento_referencia" placeholder="Laudo ou certificado" />
+                </label>
+                <label className="full-field">
+                  Justificativa
+                  <input name="justificativa" placeholder="Origem e motivo desta versao" required />
+                </label>
+              </div>
+              <button className="primary-button" type="submit">Registrar analise</button>
+            </form>
+          </div>
+
+          <div className="table-scroll production-guarantee-table">
+            <table className="data-table">
+              <thead><tr><th>Origem</th><th>Item</th><th>Nutriente</th><th>Valor</th><th>Regra/Fonte</th><th>Referencia</th></tr></thead>
+              <tbody>
+                {dashboard.productGuarantees.map((guarantee) => (
+                  <tr key={`produto-${guarantee.id}`}>
+                    <td>Produto</td><td>{guarantee.produtoLabel}</td><td>{guarantee.nutriente}</td>
+                    <td>{numberOrDash(guarantee.valor)}{guarantee.valorMaximo === null ? "" : ` a ${numberOrDash(guarantee.valorMaximo)}`} {guarantee.unidade}</td>
+                    <td>{guarantee.tipoLimite} / {guarantee.fonte}</td><td>{guarantee.documentoReferencia ?? "-"}</td>
+                  </tr>
+                ))}
+                {dashboard.mpLotGuarantees.map((guarantee) => (
+                  <tr key={`lote-${guarantee.id}`}>
+                    <td>Lote MP</td><td>{guarantee.loteLabel}</td><td>{guarantee.nutriente}</td>
+                    <td>{numberOrDash(guarantee.valor)} {guarantee.unidade}</td><td>{guarantee.fonte}</td><td>{guarantee.documentoReferencia ?? guarantee.dataReferencia ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section className="panel" id="ops" aria-labelledby="ops-title">
           <div className="panel-header">
             <h2 id="ops-title">Ordens de producao</h2>
@@ -263,7 +450,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           {dashboard.recentOps.length > 0 ? (
             <div className="pcp-op-list">
               {dashboard.recentOps.slice(0, 16).map((op) => (
-                <OpCard key={op.id} op={op} />
+                <OpCard key={op.id} op={op} lookups={dashboard.lookups} availableLots={dashboard.availableLots} />
               ))}
             </div>
           ) : (
@@ -274,9 +461,59 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
           )}
         </section>
 
-        <section className="panel" aria-labelledby="lotes-title">
+        <section className="two-column" id="transformacoes" aria-label="Transformacoes e reprocessamentos">
+          <section className="panel form-panel" aria-labelledby="nova-transformacao-title">
+            <div className="panel-header">
+              <h2 id="nova-transformacao-title">Nova transformacao</h2>
+              <span className="pill">OP de reprocessamento</span>
+            </div>
+            <form action={createPcpOpAction}>
+              <input type="hidden" name="tipo_op" value="reprocessamento" />
+              <div className="form-grid">
+                <label className="wide-field">
+                  Formula de transformacao
+                  <select name="formula_versao_id" defaultValue="" required>
+                    <option value="">Selecione</option>
+                    {dashboard.lookups.formulas.filter((option) => option.label.includes("/ producao ")).map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Quantidade planejada
+                  <input name="quantidade_planejada" inputMode="decimal" />
+                </label>
+                <label className="full-field">
+                  Justificativa operacional
+                  <input name="observacao" placeholder="PA para PI, PI para PA, reenvasamento ou reprocessamento" required />
+                </label>
+              </div>
+              <button className="primary-button" type="submit">Abrir transformacao</button>
+            </form>
+          </section>
+          <section className="panel" aria-labelledby="transformacoes-title">
+            <div className="panel-header">
+              <h2 id="transformacoes-title">Fila de transformacoes</h2>
+              <span className="pill">{valueOrDash(dashboard.metrics.transformacoesAbertas)} aberta(s)</span>
+            </div>
+            <div className="module-list">
+              {dashboard.recentOps.filter((op) => op.tipoOp === "reprocessamento").slice(0, 8).map((op) => (
+                <article className="module-card" key={op.id}>
+                  <div className="module-card-main"><h3>{op.codigoOp}</h3><span>{op.formulaLabel}</span></div>
+                  <div className="module-card-meta"><span>{op.status}</span><strong>{op.id}</strong></div>
+                  <p>{op.observacao ?? "Sem observacao"}</p>
+                </article>
+              ))}
+              {dashboard.recentOps.every((op) => op.tipoOp !== "reprocessamento") ? (
+                <div className="empty-state"><strong>Sem transformacoes</strong><span>Abra uma OP de reprocessamento para consumir PA, PI ou MP e gerar novo PA/PI.</span></div>
+              ) : null}
+            </div>
+          </section>
+        </section>
+
+        <section className="panel" id="lotes" aria-labelledby="lotes-title">
           <div className="panel-header">
-            <h2 id="lotes-title">Lotes disponiveis para PCP</h2>
+            <h2 id="lotes-title">Lotes da producao</h2>
             <span className="pill">{dashboard.availableLots.length} lote(s)</span>
           </div>
           {dashboard.availableLots.length > 0 ? (
@@ -292,6 +529,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
                     <th>Reservado</th>
                     <th>Disponivel</th>
                     <th>Validade</th>
+                    <th>Acao</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -310,6 +548,16 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
                       <td>{numberOrDash(lot.quantidadeReservada)}</td>
                       <td>{numberOrDash(lot.saldoDisponivel)}</td>
                       <td>{lot.dataValidade ?? "-"}</td>
+                      <td>
+                        {lot.status === "bloqueado" && (lot.tipo === "PA" || lot.tipo === "PI") ? (
+                          <form className="compact-action-form" action={releaseBlockedLotAction}>
+                            <input type="hidden" name="tipo_lote" value={lot.tipo} />
+                            <input type="hidden" name="lote_id" value={lot.id} />
+                            <input name="motivo" placeholder="Motivo da liberacao" required />
+                            <button className="secondary-button" type="submit">Liberar</button>
+                          </form>
+                        ) : "-"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -324,43 +572,6 @@ export default async function PcpPage({ searchParams }: { searchParams?: SearchP
         </section>
       </section>
     </main>
-  );
-}
-
-function FormulaComponentRow({ index }: { index: number }) {
-  return (
-    <div className="pcp-component-row">
-      <span className="pcp-row-index">{index}</span>
-      <label>
-        Tipo
-        <select name={`component_${index}_tipo`} defaultValue="">
-          <option value="">ignorar</option>
-          <option value="MP">MP</option>
-          <option value="PA">PA</option>
-          <option value="PI">PI</option>
-        </select>
-      </label>
-      <label className="wide-field">
-        Item
-        <input
-          name={`component_${index}_target_id`}
-          list="pcp-component-target-options"
-          placeholder="MP: materia-prima / PA: produto+embalagem / PI: produto"
-        />
-      </label>
-      <label>
-        Quantidade
-        <input name={`component_${index}_quantidade`} inputMode="decimal" />
-      </label>
-      <label>
-        Unidade
-        <input name={`component_${index}_unidade`} placeholder="KG, L, UN" />
-      </label>
-      <label className="wide-field">
-        Observacao
-        <input name={`component_${index}_observacao`} placeholder="Opcional" />
-      </label>
-    </div>
   );
 }
 
@@ -403,7 +614,7 @@ function FormulaCard({ formula }: { formula: PcpFormulaVersion }) {
   );
 }
 
-function OpCard({ op }: { op: PcpRecentOp }) {
+function OpCard({ op, lookups, availableLots }: { op: PcpRecentOp; lookups: PcpLookups; availableLots: PcpAvailableLot[] }) {
   const canReserve = op.status === "draft" || op.status === "planned";
   const canStart = op.status === "draft" || op.status === "planned";
   const canFinish = op.status === "planned" || op.status === "in_process";
@@ -436,7 +647,7 @@ function OpCard({ op }: { op: PcpRecentOp }) {
         {op.components.length > 0 ? (
           <div className="pcp-component-list">
             {op.components.map((component) => (
-              <OpComponentRow key={component.id} component={component} canReserve={canReserve} />
+              <OpComponentRow key={component.id} component={component} canReserve={canReserve} availableLots={availableLots} />
             ))}
           </div>
         ) : (
@@ -458,6 +669,24 @@ function OpCard({ op }: { op: PcpRecentOp }) {
               <span className="tag" key={output.id}>
                 {output.tipoProduto} {numberOrDash(output.quantidade)} - {output.loteLabel} / {output.statusLote}
               </span>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {op.guaranteeResults.length > 0 ? (
+        <section className="pcp-subsection" aria-label={`Garantias calculadas da ${op.codigoOp}`}>
+          <div className="pcp-subsection-title">
+            <strong>Garantias calculadas</strong>
+            <span>versao {Math.max(...op.guaranteeResults.map((result) => result.calculoVersao))}</span>
+          </div>
+          <div className="guarantee-result-grid">
+            {op.guaranteeResults.map((result) => (
+              <div className="guarantee-result" key={result.id}>
+                <span>{result.produtoLabel} / {result.nutriente}</span>
+                <strong>{result.valorCalculado === null ? "-" : numberOrDash(result.valorCalculado)} {result.unidade}</strong>
+                <span className={`status-chip ${result.statusResultado}`}>{result.statusResultado}</span>
+              </div>
             ))}
           </div>
         </section>
@@ -485,19 +714,23 @@ function OpCard({ op }: { op: PcpRecentOp }) {
         ) : null}
       </div>
 
-      {canFinish ? <FinishOpForm opId={op.id} /> : null}
+      {canFinish ? <FinishOpForm opId={op.id} lookups={lookups} /> : null}
+      {op.status === "completed" && op.tipoOp !== "mapa_documental" ? (
+        <form className="compact-action-form guarantee-calculate-form" action={calculateOpGuaranteesAction}>
+          <input type="hidden" name="op_id" value={op.id} />
+          <input name="justificativa" placeholder="Motivo do calculo ou recalculo" required />
+          <button className="secondary-button" type="submit">Calcular garantias</button>
+        </form>
+      ) : null}
     </article>
   );
 }
 
-function OpComponentRow({ component, canReserve }: { component: PcpOpComponent; canReserve: boolean }) {
+function OpComponentRow({ component, canReserve, availableLots }: { component: PcpOpComponent; canReserve: boolean; availableLots: PcpAvailableLot[] }) {
   const remaining = Math.max(component.quantidadePlanejada - component.quantidadeReservada, 0);
-  const lotDatalistId =
-    component.tipoComponente === "MP"
-      ? "pcp-lotes-mp-options"
-      : component.tipoComponente === "PA"
-        ? "pcp-lotes-pa-options"
-        : "pcp-lotes-pi-options";
+  const compatibleLots = availableLots.filter(
+    (lot) => lot.tipo === component.tipoComponente && lot.targetId === component.targetId && lot.status === "disponivel" && lot.saldoDisponivel > 0
+  );
 
   return (
     <div className="pcp-op-component">
@@ -526,7 +759,12 @@ function OpComponentRow({ component, canReserve }: { component: PcpOpComponent; 
           <input type="hidden" name="tipo_componente" value={component.tipoComponente} />
           <label className="wide-field">
             Lote {component.tipoComponente}
-            <input name="lote_id" list={lotDatalistId} placeholder="Buscar lote disponivel" required />
+            <select name="lote_id" defaultValue="" required>
+              <option value="">Selecione</option>
+              {compatibleLots.map((lot) => (
+                <option key={lot.id} value={lot.id}>{lot.codigoLote} - disponivel {numberOrDash(lot.saldoDisponivel)}</option>
+              ))}
+            </select>
           </label>
           <label>
             Quantidade
@@ -545,7 +783,7 @@ function OpComponentRow({ component, canReserve }: { component: PcpOpComponent; 
   );
 }
 
-function FinishOpForm({ opId }: { opId: number }) {
+function FinishOpForm({ opId, lookups }: { opId: number; lookups: PcpLookups }) {
   return (
     <form className="pcp-finish-form" action={finishPcpOpAction}>
       <input type="hidden" name="op_id" value={opId} />
@@ -584,26 +822,45 @@ function FinishOpForm({ opId }: { opId: number }) {
         </label>
         <label>
           Separador MP
-          <input name="separador_mp" required />
+          <select name="separador_pessoa_id" defaultValue="" required>
+            <option value="">Selecione</option>
+            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
         </label>
         <label>
           Conferente MP
-          <input name="conferente_mp" required />
+          <select name="conferente_pessoa_id" defaultValue="" required>
+            <option value="">Selecione</option>
+            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
         </label>
-        <label className="wide-field">
-          Formuladores
-          <input name="formuladores" placeholder="Separe por virgula" required />
+        <label>
+          Formulador principal
+          <select name="formulador_1_pessoa_id" defaultValue="" required>
+            <option value="">Selecione</option>
+            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
+        </label>
+        <label>
+          Formulador 2
+          <select name="formulador_2_pessoa_id" defaultValue="">
+            <option value="">Nenhum</option>
+            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
+        </label>
+        <label>
+          Formulador 3
+          <select name="formulador_3_pessoa_id" defaultValue="">
+            <option value="">Nenhum</option>
+            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
         </label>
         <label className="wide-field">
           Observacao
           <input name="observacao_finalizacao" placeholder="Opcional" />
         </label>
       </div>
-      <div className="pcp-output-editor" aria-label="Produtos gerados">
-        {Array.from({ length: 3 }, (_, index) => (
-          <OutputRow key={index + 1} index={index + 1} />
-        ))}
-      </div>
+      <OutputRows targets={{ produtos: lookups.produtos, produtoEmbalagens: lookups.produtoEmbalagens }} />
       <div className="form-footer compact-footer">
         <span>PA usa produto+embalagem. PI usa produto base. O lote e automatico.</span>
         <button className="primary-button" type="submit">
@@ -612,73 +869,6 @@ function FinishOpForm({ opId }: { opId: number }) {
       </div>
     </form>
   );
-}
-
-function OutputRow({ index }: { index: number }) {
-  return (
-    <div className="pcp-output-row">
-      <span className="pcp-row-index">{index}</span>
-      <label>
-        Saida
-        <select name={`output_${index}_tipo`} defaultValue="">
-          <option value="">ignorar</option>
-          <option value="PA">PA</option>
-          <option value="PI">PI</option>
-        </select>
-      </label>
-      <label className="wide-field">
-        Produto gerado
-        <input name={`output_${index}_target_id`} list="pcp-output-target-options" placeholder="PA: item vendavel / PI: produto" />
-      </label>
-      <label>
-        Quantidade
-        <input name={`output_${index}_quantidade`} inputMode="decimal" />
-      </label>
-      <label className="wide-field">
-        Observacao
-        <input name={`output_${index}_observacao`} placeholder="Opcional" />
-      </label>
-    </div>
-  );
-}
-
-function LookupDatalists({ lookups, availableLots }: { lookups: PcpLookups; availableLots: PcpAvailableLot[] }) {
-  return (
-    <>
-      <LookupDatalist id="pcp-produtos-options" options={lookups.produtos} />
-      <LookupDatalist id="pcp-component-target-options" options={lookups.componentTargets} />
-      <LookupDatalist id="pcp-output-target-options" options={lookups.outputTargets} />
-      <LookupDatalist id="pcp-formulas-options" options={lookups.formulas} />
-      <LookupDatalist id="pcp-ops-options" options={lookups.ops} />
-      <LookupDatalist id="pcp-lotes-mp-options" options={lotOptions(availableLots, "MP")} />
-      <LookupDatalist id="pcp-lotes-pa-options" options={lotOptions(availableLots, "PA")} />
-      <LookupDatalist id="pcp-lotes-pi-options" options={lotOptions(availableLots, "PI")} />
-    </>
-  );
-}
-
-function LookupDatalist({ id, options }: { id: string; options: PcpLookupOption[] }) {
-  return (
-    <datalist id={id}>
-      {options.map((option) => (
-        <option key={`${id}-${option.id}-${option.label}`} value={lookupValue(option)} />
-      ))}
-    </datalist>
-  );
-}
-
-function lotOptions(lots: PcpAvailableLot[], tipo: "MP" | "PA" | "PI"): PcpLookupOption[] {
-  return lots
-    .filter((lot) => lot.tipo === tipo && lot.status === "disponivel" && lot.saldoDisponivel > 0)
-    .map((lot) => ({
-      id: lot.id,
-      label: `${lot.codigoLote} - ${lot.targetLabel}`,
-      detail: `disp ${numberOrDash(lot.saldoDisponivel)} / val ${lot.dataValidade ?? "-"}`
-    }));
-}
-
-function lookupValue(option: PcpLookupOption): string {
-  return option.detail ? `${option.id} | ${option.label} | ${option.detail}` : `${option.id} | ${option.label}`;
 }
 
 function singleValue(value: string | string[] | undefined): string | undefined {
@@ -744,10 +934,30 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "OP cancelada",
       detail: "Reservas ativas foram liberadas com motivo auditado."
     },
+    product_guarantee_registered: {
+      kind: "ok",
+      title: "Garantia do produto registrada",
+      detail: "A nova versao entrou no historico append-only sem alterar a declaracao anterior."
+    },
+    mp_lot_guarantee_registered: {
+      kind: "ok",
+      title: "Garantia do lote registrada",
+      detail: "O resultado do fornecedor ou laboratorio foi vinculado ao lote de materia-prima."
+    },
+    guarantees_calculated: {
+      kind: "ok",
+      title: "Garantias calculadas",
+      detail: "O calculo ponderado usou os lotes efetivamente consumidos e foi congelado em nova versao."
+    },
+    blocked_lot_released: {
+      kind: "ok",
+      title: "Lote liberado",
+      detail: "A liberacao de CQ foi registrada com autor, motivo e estado anterior/posterior."
+    },
     not_configured: {
       kind: "warning",
       title: "Supabase nao configurado",
-      detail: "Configure o banco antes de operar PCP."
+      detail: "Configure o banco antes de operar Producao."
     },
     missing_formula_required: {
       kind: "warning",
@@ -808,6 +1018,51 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "CQ incompleto",
       detail: "Informe pessoas do processo e dados obrigatorios de CQ."
+    },
+    invalid_participants: {
+      kind: "warning",
+      title: "Equipe de producao invalida",
+      detail: "Separador, conferente e formuladores devem ser pessoas ativas cadastradas."
+    },
+    missing_guarantee_required: {
+      kind: "warning",
+      title: "Garantia incompleta",
+      detail: "Revise item, nutriente, valor, unidade, fonte, data e justificativa."
+    },
+    invalid_guarantee_type: {
+      kind: "warning",
+      title: "Classificacao de garantia invalida",
+      detail: "Use um limite e uma fonte previstos pelo contrato regulatorio."
+    },
+    invalid_guarantee_range: {
+      kind: "warning",
+      title: "Faixa de garantia invalida",
+      detail: "Somente limite do tipo faixa aceita valor maximo, que deve ser maior ou igual ao inicial."
+    },
+    missing_guarantee_document: {
+      kind: "warning",
+      title: "Documento obrigatorio",
+      detail: "Garantia de laboratorio ou fornecedor exige laudo, certificado ou documento de referencia."
+    },
+    missing_guarantee_calculation: {
+      kind: "warning",
+      title: "Calculo incompleto",
+      detail: "Informe a OP finalizada e a justificativa do calculo."
+    },
+    invalid_guarantee_op: {
+      kind: "warning",
+      title: "OP sem base para calculo",
+      detail: "A OP precisa estar finalizada, ser operacional e possuir produto gerado."
+    },
+    invalid_guarantee: {
+      kind: "warning",
+      title: "Garantia rejeitada",
+      detail: "O banco recusou dados ausentes, incompativeis ou fora do contrato de garantia."
+    },
+    missing_release_required: {
+      kind: "warning",
+      title: "Liberacao incompleta",
+      detail: "Selecione um lote PA/PI bloqueado e informe o motivo da liberacao."
     },
     missing_cq_numbers: {
       kind: "warning",

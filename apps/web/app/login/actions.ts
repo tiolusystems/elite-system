@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { applicationUrl } from "@/lib/application-url";
 import { getRuntimeStatus } from "@/lib/runtime";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -55,7 +56,7 @@ export async function requestPasswordRecoveryAction(formData: FormData) {
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: passwordRecoveryCallbackUrl()
+    redirectTo: applicationUrl("/auth/confirm").toString()
   });
 
   if (error) {
@@ -172,22 +173,6 @@ function passwordChangeMode(value: string): PasswordChangeMode {
 function changePasswordUrl(result: string, nextPath: string, mode: PasswordChangeMode): string {
   const params = new URLSearchParams({ result, next: nextPath, mode });
   return `/login/trocar-senha?${params.toString()}`;
-}
-
-function passwordRecoveryCallbackUrl(): string {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL?.trim();
-  const baseUrl = configuredUrl || (vercelUrl ? `https://${vercelUrl}` : "http://127.0.0.1:3000");
-
-  try {
-    const url = new URL("/auth/confirm", baseUrl);
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      throw new Error("invalid application URL protocol");
-    }
-    return url.toString();
-  } catch {
-    return "http://127.0.0.1:3000/auth/confirm";
-  }
 }
 
 function mapPasswordRecoveryError(message: string): string {

@@ -25,7 +25,7 @@ class PasswordRecoveryContractTests(unittest.TestCase):
         page = RECOVERY_PAGE.read_text(encoding="utf-8")
 
         self.assertIn("resetPasswordForEmail", actions)
-        self.assertIn("passwordRecoveryCallbackUrl()", actions)
+        self.assertIn('applicationUrl("/auth/confirm").toString()', actions)
         self.assertNotIn("auth.admin.listUsers", actions)
         self.assertNotIn(".rpc(", actions)
         self.assertIn("Se existe uma conta ativa", page)
@@ -38,7 +38,8 @@ class PasswordRecoveryContractTests(unittest.TestCase):
         self.assertIn('type === "recovery"', route)
         self.assertIn("supabase.auth.verifyOtp", route)
         self.assertIn("supabase.auth.exchangeCodeForSession", route)
-        self.assertIn('redirectUrl.search = ""', route)
+        self.assertIn('applicationUrl("/")', route)
+        self.assertNotIn("request.nextUrl.clone()", route)
         self.assertNotRegex(route, re.compile(r"redirectUrl\.pathname\s*=\s*request", re.IGNORECASE))
 
     def test_login_exposes_recovery_and_authenticated_change_paths(self) -> None:

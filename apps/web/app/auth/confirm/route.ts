@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { applicationUrl } from "@/lib/application-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const CHANGE_PASSWORD_PATH = "/login/trocar-senha";
@@ -25,8 +26,7 @@ export async function GET(request: NextRequest) {
     error = { message: "missing recovery credential" };
   }
 
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.search = "";
+  const redirectUrl = applicationUrl("/");
 
   if (error) {
     redirectUrl.pathname = "/login/recuperar-senha";

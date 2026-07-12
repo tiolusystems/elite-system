@@ -189,7 +189,7 @@ export default async function HistoricalMpPage() {
           ) : (
             <EmptyState
               title="Ainda nao analisamos as materias-primas do Excel"
-              detail="O proximo passo da equipe tecnica e executar uma leitura somente leitura. Depois, os nomes e codigos aparecerao aqui para conferencia. Nada sera importado nessa leitura."
+              detail="O proximo passo da equipe tecnica e executar uma leitura segura do historico. Depois, os nomes e codigos aparecerao aqui para conferencia. Nada sera importado nessa leitura."
             />
           )}
         </section>
@@ -229,7 +229,7 @@ export default async function HistoricalMpPage() {
 
         <section className="notice-panel" role="note">
           <strong>Proximo passo da equipe tecnica</strong>
-          <span>Executar a leitura somente leitura do historico. Voce sera acionado depois apenas para decidir nomes duplicados, codigos conflitantes ou materias-primas desconhecidas.</span>
+          <span>Executar a leitura segura do historico. Voce sera acionado depois apenas para decidir nomes duplicados, codigos conflitantes ou materias-primas desconhecidas.</span>
         </section>
       </section>
     </main>

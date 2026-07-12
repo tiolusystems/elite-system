@@ -2,7 +2,7 @@
 
 ## Finalidade deste mapa
 
-Este e o ponto inicial para localizar qualquer trabalho no Elite System. Ele resume a arquitetura vigente, os modulos, os limites de propriedade, as dependencias, os fluxos e a maturidade. Documentos detalhados em `docs/` preservam as decisoes e validacoes; este arquivo apenas as organiza.
+Este e o mapa detalhado da arquitetura vigente. A entrada operacional curta e `docs/00_MAPA_EXECUTIVO.md`; o andamento corrente e a proxima tarefa ficam em `docs/01_ESTADO_ATUAL.md`. Este arquivo resume os modulos, os limites de propriedade, as dependencias, os fluxos e a maturidade.
 
 O codigo e o banco continuam sendo a fonte executavel. Se este mapa divergir deles, a tarefa deve parar, corrigir a divergencia e registrar a decisao antes de continuar.
 
@@ -10,7 +10,7 @@ O codigo e o banco continuam sendo a fonte executavel. Se este mapa divergir del
 
 - Stack operacional: Next.js 16, TypeScript, Supabase e PostgreSQL; Vercel planejada para o frontend cloud.
 - Ferramentas historicas: Python para importacao, auditoria e reconciliacao do Excel; SQLite nao e o banco operacional novo.
-- Ultima migration desta baseline: `0045_historical_mp_import_foundation.sql`.
+- Ultima migration desta baseline: `0049_security_admin_privilege_boundary.sql`.
 - Ambiente local autoritativo em 2026-07-11: `test`.
 - Modulos em validacao de negocio no banco de teste: `cadastros`, `estoque` e `pcp`.
 - `core` e `seguranca` estao operacionais no banco de teste.
@@ -238,6 +238,9 @@ Uma validacao so deve ser repetida se o codigo, o ambiente, o banco ou a entrada
 
 ## Documentos detalhados
 
+- Entrada operacional: `docs/00_MAPA_EXECUTIVO.md`.
+- Estado vigente e proxima tarefa: `docs/01_ESTADO_ATUAL.md`.
+- Decisoes que exigem autorizacao: `docs/02_DECISOES_PENDENTES.md`.
 - Propriedade dos dominios: `docs/matriz_propriedade_modulos.md`.
 - Runtime e rollout: `docs/decisao_operacao_incremental_modulos.md`.
 - Integridade relacional: `docs/decisao_gate_arquitetura_integridade.md`.
@@ -253,3 +256,5 @@ Uma validacao so deve ser repetida se o codigo, o ambiente, o banco ou a entrada
 ## Regra de manutencao
 
 O catalogo executavel em `apps/web/lib/system-map.ts`, as chaves de `sys_modules` na migration e esta tabela devem permanecer sincronizados. O teste `tests/test_architecture_navigation_contract.py` falha quando uma nova chave aparece sem mapa visual ou documentacao.
+
+O estado dinamico nao deve ser acumulado neste mapa. Cada tarefa concluida atualiza entrega, validacao e proxima tarefa em `docs/01_ESTADO_ATUAL.md`.

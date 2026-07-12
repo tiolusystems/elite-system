@@ -8,6 +8,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 AGENT_CONTRACT = ROOT / "AGENTS.md"
 ARCHITECTURE_MAP = ROOT / "docs" / "arquitetura" / "ARQUITETURA_GERAL.md"
+EXECUTIVE_MAP = ROOT / "docs" / "00_MAPA_EXECUTIVO.md"
+CURRENT_STATUS = ROOT / "docs" / "01_ESTADO_ATUAL.md"
+PENDING_DECISIONS = ROOT / "docs" / "02_DECISOES_PENDENTES.md"
 SYSTEM_MAP = ROOT / "apps" / "web" / "lib" / "system-map.ts"
 MODULES_LIB = ROOT / "apps" / "web" / "lib" / "modules.ts"
 MODULES_PAGE = ROOT / "apps" / "web" / "app" / "modulos" / "page.tsx"
@@ -35,11 +38,31 @@ class ArchitectureNavigationContractTest(unittest.TestCase):
     def test_agent_contract_starts_from_the_authoritative_map(self) -> None:
         contract = AGENT_CONTRACT.read_text(encoding="utf-8")
 
+        self.assertIn("docs/00_MAPA_EXECUTIVO.md", contract)
+        self.assertIn("docs/01_ESTADO_ATUAL.md", contract)
+        self.assertIn("docs/02_DECISOES_PENDENTES.md", contract)
         self.assertIn("docs/arquitetura/ARQUITETURA_GERAL.md", contract)
         self.assertIn("Nao refaca inventario geral", contract)
         self.assertIn("Nao repita comando", contract)
         self.assertIn("Validacao proporcional", contract)
         self.assertIn("Git recebe somente codigo e documentacao", contract)
+        self.assertIn("Ao concluir cada tarefa", contract)
+        self.assertIn("autorizacao previa do usuario", contract)
+
+    def test_operational_documents_define_status_and_next_task(self) -> None:
+        executive = EXECUTIVE_MAP.read_text(encoding="utf-8")
+        status = CURRENT_STATUS.read_text(encoding="utf-8")
+        decisions = PENDING_DECISIONS.read_text(encoding="utf-8")
+
+        self.assertIn("## Classificacao da tarefa", executive)
+        self.assertIn("## Gate de arquitetura", executive)
+        self.assertIn("## Tarefa concluida mais recente", status)
+        self.assertIn("## Validacao desta tarefa", status)
+        self.assertIn("## Proxima tarefa", status)
+        self.assertIn("## Tarefa seguinte", status)
+        self.assertIn("DEC-001", decisions)
+        self.assertIn("DEC-002", decisions)
+        self.assertIn("solicitacao de troca de email nao pertence", decisions)
 
     def test_human_map_covers_every_runtime_module(self) -> None:
         document = ARCHITECTURE_MAP.read_text(encoding="utf-8")

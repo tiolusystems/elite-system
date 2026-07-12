@@ -76,6 +76,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/historical_mp_import_foundation.sql
+      - name: Run DEC-007 technical catalogs smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_007_technical_catalogs.sql
       - name: Run administrator email change workflow smoke
         env:
           PGPASSWORD: postgres

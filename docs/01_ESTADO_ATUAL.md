@@ -5,54 +5,45 @@ Atualizado em: 2026-07-12
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- ultima entrega funcional: `ea87791` - fronteira de privilegio administrativo;
-- ultima migration aplicada localmente: `0049_security_admin_privilege_boundary.sql`;
+- ultima entrega funcional: `DEC-007` - catalogos tecnicos normalizados, aguardando commit;
+- ultima migration aplicada localmente: `0050_dec_007_technical_catalogs.sql`;
 - ambiente ativo: Supabase local e banco de teste;
 - publicacao externa: ainda nao autorizada;
 - GitHub: codigo e documentacao somente; push depende de autorizacao.
 
 ## Tarefa concluida mais recente
 
-Registro arquitetonico de `DEC-005` - matriz inicial de perfis e permissoes:
+Implementacao de `DEC-007` - catalogos tecnicos e especificacoes:
 
-- sete perfis iniciais autorizados;
-- contas individuais e perfis combinaveis definidos;
-- perfil tratado como conjunto versionado de permissoes atomicas;
-- backend e banco mantidos como fonte da autorizacao efetiva;
-- operacoes criticas vinculadas a auditoria e futuro MFA/reautenticacao;
-- ADR-006 registra alternativas, invariantes, transicao e rollback.
+- unidades, aliases, nutrientes e parametros tecnicos normalizados por FK;
+- especificacoes de produto versionadas, append-only e ativadas somente por humano;
+- garantia documental MAPA separada de garantia calculada legada;
+- fatos historicos exigem batch, linha de origem e ator `Migracao Historica`;
+- itens pendentes nao entram em read model operacional;
+- migration `0050` validada em cadeia nova e em upgrade de `0049`.
 
-Somente documentacao foi alterada. Nenhum perfil, usuario, modulo, rota,
-tabela, RPC, migration, autorizacao ou configuracao Auth foi implementado.
+Nenhum dado do workbook real foi gravado ou versionado. A entrega contem
+somente schema, dados tecnicos de referencia, testes e documentacao.
 
 ## Validacao desta tarefa
 
-- contrato documental de perfis/permissoes: aprovado (`PROFILE_PERMISSION_DOCUMENTATION_OK`);
-- `tests.test_architecture_navigation_contract`: 6 testes aprovados;
-- `git diff --check`: aprovado;
-- suite completa: deliberadamente dispensada por ser tarefa documental `T1`.
+- cadeia limpa `0001` a `0050`: aprovada;
+- upgrade descartavel `0049` para `0050`: `DEC_007_UPGRADE_CHAIN_OK`;
+- smoke transacional em ambiente `test`: `DEC_007_TECHNICAL_CATALOGS_SMOKE_OK`;
+- gates de arquitetura, Producao e importacao MP: aprovados;
+- PostgreSQL lint: sem erro de schema;
+- testes Python direcionados: 38 aprovados.
 
 ## Tarefa em andamento
 
-`T2` - fluxo integral de importacao historica do Excel.
+`T3` - contratos relacionais obrigatorios antes do importador integral.
 
-A descoberta obrigatoria anterior ao codigo foi concluida:
+`DEC-007` foi concluida. As demais decisoes estao autorizadas e serao
+implementadas isoladamente, cada uma com migration, testes e commit proprios.
 
-- workbook real localizado e analisado localmente, sem versionamento;
-- 155 abas, 269 tabelas estruturadas e 114 nomes definidos inventariados;
-- todas as colunas estruturadas e usadas fora de tabela classificadas;
-- matriz Excel para schema produzida sem gravacao no banco;
-- Supabase ativo confirmado como ambiente `test`;
-- importador atual confirmado como parcial: SQLite generico, fundacao Supabase
-  especifica de MP e tela web analitica, sem upload/aplicacao integral.
+Ordem vigente: `DEC-008`, `DEC-011`, `DEC-010`, `DEC-006` e `DEC-009`.
 
-O gate arquitetonico encontrou destinos relacionais indispensaveis ausentes.
-Por regra expressa da tarefa, nenhuma migration, rota, RPC ou aplicador foi
-criado. As lacunas estao em
-`docs/importacao-historica/01_MATRIZ_EXCEL_SCHEMA.md` e nas decisoes
-`DEC-006` a `DEC-011`.
-
-## Validacao do gate T2
+## Validacao do gate de importacao
 
 - inventario: 155/155 abas classificadas;
 - cobertura: 3.095 referencias de coluna classificadas e zero
@@ -73,16 +64,14 @@ criado. As lacunas estao em
 O estado executavel de maturidade permanece no PostgreSQL e na tela
 `/modulos`. Este resumo nao substitui o ledger de rollout.
 
-## Proxima decisao bloqueante
+## Proxima tarefa
 
-Luciano deve autorizar ou ajustar as recomendacoes de `DEC-006` a `DEC-011`.
-Elas definem como preservar formulas/OP historicas, catalogos tecnicos,
-embalagens, parcelas/posicoes legadas, campanhas e papeis do vinculo
-cliente-vendedor sem inventar fatos.
+Implementar `DEC-008` - embalagens, unidades, conversoes e logistica - sem
+iniciar o importador e sem trabalhar nas tarefas temporariamente adiadas.
 
-## Proxima tarefa apos autorizacao
+## Proxima tarefa apos DEC-006 a DEC-011
 
-Retomar `T2` e implementar, em ordem:
+Construir o importador historico integral, em ordem:
 
 1. contratos relacionais aprovados;
 2. upload e analise integral sem escrita;

@@ -5,43 +5,43 @@ Atualizado em: 2026-07-12
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- ultima entrega funcional: `DEC-007` - catalogos tecnicos normalizados, aguardando commit;
-- ultima migration aplicada localmente: `0050_dec_007_technical_catalogs.sql`;
+- ultima entrega funcional: `DEC-008` - embalagens e logistica relacionais, aguardando commit;
+- ultima migration aplicada localmente: `0051_dec_008_packaging_logistics_contract.sql`;
 - ambiente ativo: Supabase local e banco de teste;
 - publicacao externa: ainda nao autorizada;
 - GitHub: codigo e documentacao somente; push depende de autorizacao.
 
 ## Tarefa concluida mais recente
 
-Implementacao de `DEC-007` - catalogos tecnicos e especificacoes:
+Implementacao de `DEC-008` - embalagens, logistica e transformacoes:
 
-- unidades, aliases, nutrientes e parametros tecnicos normalizados por FK;
-- especificacoes de produto versionadas, append-only e ativadas somente por humano;
-- garantia documental MAPA separada de garantia calculada legada;
-- fatos historicos exigem batch, linha de origem e ator `Migracao Historica`;
-- itens pendentes nao entram em read model operacional;
-- migration `0050` validada em cadeia nova e em upgrade de `0049`.
+- BOM de embalagem versionada por MP, quantidade e unidade canonica;
+- tara, cubagem e vigencia separadas da identidade fixa da embalagem;
+- conversoes antigas ligadas por FK ao catalogo tecnico da `DEC-007`;
+- entregador e veiculo registrados por ledger append-only do romaneio;
+- transformacoes PA/PI possuem origens, destinos e perdas relacionais;
+- inferencias e historico permanecem pendentes e nao geram estoque.
 
 Nenhum dado do workbook real foi gravado ou versionado. A entrega contem
 somente schema, dados tecnicos de referencia, testes e documentacao.
 
 ## Validacao desta tarefa
 
-- cadeia limpa `0001` a `0050`: aprovada;
-- upgrade descartavel `0049` para `0050`: `DEC_007_UPGRADE_CHAIN_OK`;
-- smoke transacional em ambiente `test`: `DEC_007_TECHNICAL_CATALOGS_SMOKE_OK`;
+- cadeia limpa `0001` a `0051`: aprovada;
+- upgrade descartavel `0050` para `0051`: `DEC_008_UPGRADE_CHAIN_OK`;
+- smoke transacional em ambiente `test`: `DEC_008_PACKAGING_LOGISTICS_SMOKE_OK`;
 - gates de arquitetura, Producao e importacao MP: aprovados;
 - PostgreSQL lint: sem erro de schema;
-- testes Python direcionados: 38 aprovados.
+- testes Python direcionados: 45 aprovados.
 
 ## Tarefa em andamento
 
 `T3` - contratos relacionais obrigatorios antes do importador integral.
 
-`DEC-007` foi concluida. As demais decisoes estao autorizadas e serao
+`DEC-007` e `DEC-008` foram concluidas. As demais decisoes estao autorizadas e serao
 implementadas isoladamente, cada uma com migration, testes e commit proprios.
 
-Ordem vigente: `DEC-008`, `DEC-011`, `DEC-010`, `DEC-006` e `DEC-009`.
+Ordem vigente: `DEC-011`, `DEC-010`, `DEC-006` e `DEC-009`.
 
 ## Validacao do gate de importacao
 
@@ -66,7 +66,7 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Implementar `DEC-008` - embalagens, unidades, conversoes e logistica - sem
+Implementar `DEC-011` - vinculos temporais cliente-vendedor/regiao - sem
 iniciar o importador e sem trabalhar nas tarefas temporariamente adiadas.
 
 ## Proxima tarefa apos DEC-006 a DEC-011

@@ -29,6 +29,7 @@ O mapa detalhado continua sendo
 | Assunto | Modulo dono | Ponto inicial |
 |---|---|---|
 | login, usuario, permissao, MFA | `seguranca` | `apps/web/app/seguranca`, `apps/web/app/login` |
+| ajuda, suporte e solicitacoes | `core` no portal; `seguranca` nas acoes sensiveis | `docs/suporte/00_PLANO_EVOLUCAO_SUPORTE.md`; futura `/suporte` |
 | MP, produto, embalagem, cliente | `cadastros` | `apps/web/app/cadastros` |
 | pedido, credito, Kanban | `pedidos` | `apps/web/app/pedidos` |
 | lotes, movimentos e saldos | `estoque` | RPCs e migrations `est_*` |

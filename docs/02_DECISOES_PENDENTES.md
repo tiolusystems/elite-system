@@ -13,15 +13,36 @@ Estados permitidos: `pendente`, `autorizada`, `implementada`, `cancelada`.
 
 | ID | Decisao | Recomendacao tecnica | Impacto | Estado |
 |---|---|---|---|---|
-| `DEC-001` | Onde Suporte pertence na arvore e qual sera sua rota autenticada | primeiro avaliar uma subarea de `seguranca` ou `core`; criar modulo `suporte` somente se houver funcoes proprias suficientes | rota, navegacao, ownership e catalogo modular | pendente |
 | `DEC-002` | Fluxo MFA TOTP | QR Code TOTP padrao, compativel com Google Authenticator em Android/iOS, Apple Passwords, Microsoft Authenticator e equivalentes; exigir AAL2 no banco | boundary Auth, login, recuperacao e RPCs criticas | pendente |
 | `DEC-003` | Aprovacao da troca de email do proprio administrador | com dois administradores, proibir autoaprovacao; enquanto houver apenas um, exigir MFA e reautenticacao forte | governanca e continuidade administrativa | pendente |
 | `DEC-004` | Politica Auth de producao | senha forte, CAPTCHA, sessoes limitadas, SMTP corporativo e confirmacao adequada de email antes da internet | configuracao Supabase cloud e UX de acesso | pendente |
+
+## Decisoes autorizadas aguardando implementacao
+
+### DEC-001 - Suporte autenticado no core
+
+Estado: `autorizada`
+
+“Suporte será inicialmente uma subárea autenticada do core, acessível pela
+rota /suporte e apresentada como Ajuda e Solicitações. O core será responsável
+pelo portal, orientações, registro, acompanhamento e histórico. Ações sensíveis
+de identidade, troca de e-mail, MFA, sessões, recuperação e privilégios
+permanecerão pertencendo a segurança. Não haverá módulo autônomo suporte nesta
+fase. A criação de módulo próprio será reavaliada quando houver equipe,
+demanda recorrente, SLA, e-mail, filas, automações e responsabilidades
+autônomas suficientes. Enquanto não houver e-mail ou equipe dedicada, o
+acompanhamento ocorrerá dentro do sistema, sob responsabilidade da
+Administração do sistema e sem SLA público.”
+
+Documentos: `docs/suporte/00_PLANO_EVOLUCAO_SUPORTE.md` e
+`docs/decisoes-arquiteturais/ADR-005-suporte-autenticado-no-core.md`.
 
 ## Decisoes ja confirmadas
 
 - solicitacao de troca de email nao pertence a tela publica de login;
 - ela deve ser acessada em area autenticada de Suporte;
+- Suporte S0 pertence ao `core`; acoes sensiveis permanecem em `seguranca`;
+- nao sera criado modulo autonomo `suporte` nesta fase;
 - alteracao da arvore exige autorizacao previa;
 - GitHub recebe somente codigo e documentacao, nunca dados operacionais.
 

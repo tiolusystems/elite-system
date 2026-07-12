@@ -13,19 +13,20 @@ Atualizado em: 2026-07-12
 
 ## Tarefa concluida mais recente
 
-Implantacao do protocolo de eficiencia de execucao:
+Definicao documental da arquitetura e do roadmap de Suporte:
 
-- entrada curta em `docs/00_MAPA_EXECUTIVO.md`;
-- estado e proxima tarefa neste arquivo;
-- decisoes abertas em `docs/02_DECISOES_PENDENTES.md`;
-- obrigacao de atualizar este estado ao concluir cada tarefa;
-- gate explicito contra mudanca arquitetonica sem autorizacao.
+- `DEC-001` autorizada com texto literal;
+- Suporte S0 definido como subarea autenticada do `core`;
+- acoes sensiveis mantidas no dominio `seguranca`;
+- roadmap S0 a S4, gatilhos e criterios de modulo autonomo documentados;
+- ADR-005 registra alternativas, consequencias, reavaliacao e rollback.
 
-Arquivos de governanca foram alterados. Nenhum modulo, rota, tabela, RPC ou
-dependencia de negocio foi modificado.
+Somente documentacao foi alterada. Nenhum modulo, rota, navegacao, tabela, RPC,
+migration, dependencia, autenticacao ou configuracao Auth foi modificado.
 
 ## Validacao desta tarefa
 
+- contrato documental de Suporte: aprovado (`SUPPORT_GOVERNANCE_DOCUMENTATION_OK`);
 - `tests.test_architecture_navigation_contract`: 6 testes aprovados;
 - `git diff --check`: aprovado;
 - suite completa: deliberadamente dispensada por ser tarefa documental `T1`.
@@ -44,15 +45,11 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Preparar proposta arquitetonica para mover a solicitacao de troca de email da
-tela de login para uma area autenticada de Suporte.
-
-Antes de codar:
-
-1. verificar se Suporte ja existe como responsabilidade de modulo atual;
-2. se nao existir, apresentar opcoes sem criar modulo unilateralmente;
-3. registrar a autorizacao em `docs/02_DECISOES_PENDENTES.md`;
-4. somente depois alterar rota, navegacao e ownership.
+Implementar a fase `S0` de Suporte conforme `DEC-001` e ADR-005: area
+autenticada `/suporte`, apresentada como **Ajuda e Solicitacoes**, pertencente
+ao `core`, sem criar modulo autonomo. A implementacao devera preservar em
+`seguranca` toda acao sensivel e retirar a solicitacao de troca de e-mail da
+tela publica de login.
 
 ## Tarefa seguinte
 

@@ -243,6 +243,7 @@ Uma validacao so deve ser repetida se o codigo, o ambiente, o banco ou a entrada
 - Plano de construcao: `docs/plano_construcao_elite_system.md`.
 - Publicacao de Producao: `docs/decisao_publicacao_modulo_producao.md`.
 - Migracao historica: `docs/plano_migracao_sem_perda_historico.md`.
+- Migracao historica de MP e valores de aquisicao: `docs/decisao_migracao_historica_materias_primas.md`.
 - Evidencia desta consolidacao: `docs/validacao_mapa_arquitetural_workflow.md`.
 
 ## Regra de manutencao

@@ -258,7 +258,7 @@ Decisao: `id_sku_mp` deveria ser codigo unico, mas foi usado em parte com nomes 
 | `densidade` | `Densidade` | Nao | Necessaria para conversoes quando aplicavel. |
 | `estoque_minimo` | `ESTOQUE MINIMO` | Nao | Parametro operacional de compras/alerta. |
 | `valor_estoque_minimo` | `R$ Estoque Minimo` | Nao | Valor historico/analitico. |
-| `custo_unitario` | `R$/Und` | Nao | Historico; custo definitivo sera tratado em formacao de custos. |
+| `custo_unitario` | `R$/Und` | Nao | Snapshot historico do cadastro; nao substitui o historico de aquisicoes. |
 | `ibama` | `IBAMA` | Nao | Campo regulatorio. |
 | `ncm` | `NCM` | Nao | Campo fiscal/classificacao. |
 | `codigo_ads` | `Codigo ADS` | Nao | Identificador operacional/regulatorio. |
@@ -273,6 +273,8 @@ Subcadastros previstos:
 | `MateriaPrimaGarantia` | Garantias declaradas do insumo por cadastro ou padrao. |
 | `LoteMateriaPrimaGarantia` | Garantias por lote, vindas de fornecedor ou laboratorio. |
 | `MateriaPrimaSaneamentoSKU` | Fila de correcao de `id_sku_mp` usado como nome. |
+| `MateriaPrimaIdentificadorOrigem` | Aliases de nome, codigo legado e codigo de fornecedor ligados a MP canonica. |
+| `MateriaPrimaHistoricoAquisicao` | Preco, frete, DIFAL, total e valor unitario por entrada/lote, sem sobrescrever historia. |
 
 Regras iniciais:
 
@@ -285,6 +287,10 @@ Regras iniciais:
 - densidade deve ser positiva quando preenchida.
 - XML/NF pode vir com unidades diferentes, como saca, ton, toneladas, t e kg; a entrada deve converter para unidade base por regra aprovada.
 - se o XML nao trouxer informacao suficiente para converter, o sistema deve pedir correcao manual assistida e registrar a decisao.
+- quando a MP vier de fora de SP, o diferencial de aliquota de ICMS aplicavel compoe o custo de aquisicao; valor da MP, frete e DIFAL permanecem separados e auditaveis.
+- a UF do emitente nao gera valor tributario por inferencia: o DIFAL deve vir do documento/importacao ou de confirmacao manual auditada.
+
+Contrato da migracao historica: `docs/decisao_migracao_historica_materias_primas.md`.
 
 Perguntas para revisao:
 

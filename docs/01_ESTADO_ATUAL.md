@@ -32,6 +32,35 @@ tabela, RPC, migration, autorizacao ou configuracao Auth foi implementado.
 - `git diff --check`: aprovado;
 - suite completa: deliberadamente dispensada por ser tarefa documental `T1`.
 
+## Tarefa em andamento
+
+`T2` - fluxo integral de importacao historica do Excel.
+
+A descoberta obrigatoria anterior ao codigo foi concluida:
+
+- workbook real localizado e analisado localmente, sem versionamento;
+- 155 abas, 269 tabelas estruturadas e 114 nomes definidos inventariados;
+- todas as colunas estruturadas e usadas fora de tabela classificadas;
+- matriz Excel para schema produzida sem gravacao no banco;
+- Supabase ativo confirmado como ambiente `test`;
+- importador atual confirmado como parcial: SQLite generico, fundacao Supabase
+  especifica de MP e tela web analitica, sem upload/aplicacao integral.
+
+O gate arquitetonico encontrou destinos relacionais indispensaveis ausentes.
+Por regra expressa da tarefa, nenhuma migration, rota, RPC ou aplicador foi
+criado. As lacunas estao em
+`docs/importacao-historica/01_MATRIZ_EXCEL_SCHEMA.md` e nas decisoes
+`DEC-006` a `DEC-011`.
+
+## Validacao do gate T2
+
+- inventario: 155/155 abas classificadas;
+- cobertura: 3.095 referencias de coluna classificadas e zero
+  `review_required`;
+- ambiente PostgreSQL: `test`, consultado em modo somente leitura;
+- workbook e dados operacionais: fora do Git;
+- codigo, migration, rota, RPC e configuracao Auth: inalterados.
+
 ## Estado funcional resumido
 
 - `core` e `seguranca`: operacionais no banco de teste;
@@ -44,20 +73,36 @@ tabela, RPC, migration, autorizacao ou configuracao Auth foi implementado.
 O estado executavel de maturidade permanece no PostgreSQL e na tela
 `/modulos`. Este resumo nao substitui o ledger de rollout.
 
-## Proxima tarefa
+## Proxima decisao bloqueante
 
-Implementar a fase `S0` de Suporte conforme `DEC-001` e ADR-005: area
-autenticada `/suporte`, apresentada como **Ajuda e Solicitacoes**, pertencente
-ao `core`, sem criar modulo autonomo. A implementacao devera preservar em
-`seguranca` toda acao sensivel e retirar a solicitacao de troca de e-mail da
-tela publica de login.
+Luciano deve autorizar ou ajustar as recomendacoes de `DEC-006` a `DEC-011`.
+Elas definem como preservar formulas/OP historicas, catalogos tecnicos,
+embalagens, parcelas/posicoes legadas, campanhas e papeis do vinculo
+cliente-vendedor sem inventar fatos.
 
-## Tarefa seguinte
+## Proxima tarefa apos autorizacao
 
-Apresentar o desenho de MFA TOTP compativel com Android e iOS, incluindo
-cadastro por QR Code, desafio no login, recuperacao e exigencia AAL2. Essa
-mudanca toca o boundary de autenticacao, depende de autorizacao arquitetonica
-e definira a protecao adicional das operacoes criticas de `DEC-005`.
+Retomar `T2` e implementar, em ordem:
+
+1. contratos relacionais aprovados;
+2. upload e analise integral sem escrita;
+3. simulacao com validos, pendentes, rejeitados e existentes;
+4. aplicacao transacional e idempotente somente no banco de teste;
+5. rollback, rastreabilidade, reconciliacao e download de pendencias;
+6. homologacao Excel -> sistema -> OP.
+
+## Tarefa seguinte apos a homologacao
+
+Construir a lista operacional completa das ordens de producao.
+
+## Tarefas temporariamente adiadas
+
+- Suporte S0 (`DEC-001`);
+- MFA TOTP (`DEC-002` a `DEC-004`);
+- implementacao dos perfis combinaveis (`DEC-005`).
+
+Essas tarefas permanecem autorizadas ou pendentes conforme
+`docs/02_DECISOES_PENDENTES.md`, mas nao precedem a homologacao da importacao.
 
 ## Regra de manutencao
 

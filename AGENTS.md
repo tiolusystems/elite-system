@@ -31,6 +31,16 @@ Nao refaca inventario geral do repositorio para tarefas locais. Nao releia migra
 
 Nao repita comando quando codigo, configuracao, banco e `HEAD` nao mudaram. Uma repeticao deve ter motivo objetivo: entrada alterada, ambiente reiniciado, falha anterior investigada ou gate final de publicacao.
 
+## Telas para validacao de negocio
+
+1. A tela deve usar linguagem do processo da Elite; termos internos de banco e desenvolvimento ficam no codigo, log ou detalhe tecnico.
+2. Antes de indicadores, mostrar finalidade, etapa atual, o que ja aconteceu e o que ainda nao aconteceu.
+3. Estado vazio deve diferenciar explicitamente `nenhum dado carregado` de `nenhuma pendencia encontrada`.
+4. Informar quem executa o proximo passo. Nao apresentar uma decisao ao usuario quando a acao ainda pertence a equipe tecnica.
+5. IDs internos, nomes de tabela, `batch`, `staging`, RPC e action key nao aparecem como rotulo principal.
+6. Antes de apresentar a tela, validar desktop e mobile, texto completo, ausencia de sobreposicao e coerencia entre mensagem e estado real do banco.
+7. Uma tela tecnicamente correta que nao permita ao usuario formar uma imagem mental do progresso nao esta pronta para validacao.
+
 ## Economia de contexto
 
 - Prefira `rg` com termo e caminho especificos a listagens recursivas amplas.

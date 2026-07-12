@@ -44,12 +44,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (flow === "email_change") {
-    const { error: auditError } = await auditedRpc(supabase, "record_security_own_email_changed", {}, {
+    const { error: auditError } = await auditedRpc(supabase, "complete_security_email_change_request", {}, {
       metadata: {
-        action_key: "security.change_own_email",
-        axis: "change_type",
+        action_key: "security.email_change.dispatch_approved",
+        axis: "status_transition",
         domain: "seguranca",
-        entity: "auth.users",
+        entity: "security_email_change_requests",
         failure_action: "seguranca.own_email_change_confirmation_log_failed"
       }
     });

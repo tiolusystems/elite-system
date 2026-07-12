@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   clearSecurityPermissionOverrideAction,
   inviteSecurityAuthUserAction,
+  reviewSecurityEmailChangeAction,
   setSecurityPermissionOverrideAction,
 } from "@/app/seguranca/actions";
 import { getRuntimeStatus } from "@/lib/runtime";
@@ -22,6 +23,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
   const dashboard = await getSecurityDashboard(selectedUserId);
   const formMessage = messageForResult(result);
   const selectedProfile = dashboard.selectedProfile;
+  const selectedEmailChangeRequest = dashboard.emailChangeRequests[0] ?? null;
 
   return (
     <main className="app-shell">
@@ -190,6 +192,112 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
               </div>
             )}
           </section>
+        </section>
+
+        <section className="panel form-panel" id="troca-email" aria-labelledby="troca-email-title">
+          <div className="panel-header">
+            <h2 id="troca-email-title">Troca de e-mail do usuário</h2>
+            <span className="pill">
+              {selectedEmailChangeRequest ? emailChangeStatusLabel(selectedEmailChangeRequest.status) : "sem solicitação"}
+            </span>
+          </div>
+
+          {!selectedProfile || selectedProfile.isSystemActor ? (
+            <div className="empty-state">
+              <strong>Selecione um usuário operacional</strong>
+              <span>Atores de sistema não possuem e-mail de acesso.</span>
+            </div>
+          ) : null}
+
+          {selectedProfile && !selectedProfile.isSystemActor && !selectedEmailChangeRequest ? (
+            <div className="empty-state">
+              <strong>Nenhuma solicitação pendente</strong>
+              <span>O usuário deve solicitar a troca. Ele não consegue alterar o endereço diretamente.</span>
+            </div>
+          ) : null}
+
+          {selectedProfile && selectedEmailChangeRequest ? (
+            <dl className="status-list">
+              <div className="status-row">
+                <dt>Usuário</dt>
+                <dd>{selectedProfile.displayName}</dd>
+              </div>
+              <div className="status-row">
+                <dt>Motivo</dt>
+                <dd>{emailChangeReasonLabel(selectedEmailChangeRequest.requestReasonCode)}</dd>
+              </div>
+              {selectedEmailChangeRequest.requestReasonDetail ? (
+                <div className="status-row">
+                  <dt>Detalhes</dt>
+                  <dd>{selectedEmailChangeRequest.requestReasonDetail}</dd>
+                </div>
+              ) : null}
+              {selectedEmailChangeRequest.newEmail ? (
+                <div className="status-row">
+                  <dt>Novo e-mail definido</dt>
+                  <dd>{selectedEmailChangeRequest.newEmail}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
+
+          {selectedProfile && selectedEmailChangeRequest?.status === "pending_admin" ? (
+            <div className="two-column">
+              <form action={reviewSecurityEmailChangeAction}>
+                <input name="request_id" type="hidden" value={selectedEmailChangeRequest.requestId} />
+                <input name="user_id" type="hidden" value={selectedProfile.id} />
+                <input name="decision" type="hidden" value="approve" />
+                <div className="form-grid single-field-grid">
+                  <label>
+                    Novo e-mail
+                    <input name="new_email" type="email" autoComplete="off" required />
+                  </label>
+                  <label>
+                    Motivo da aprovação
+                    <input name="review_reason" placeholder="Conferência realizada pelo administrador" required />
+                  </label>
+                </div>
+                <div className="form-footer">
+                  <span>O endereço será travado para confirmação pelo titular.</span>
+                  <button className="primary-button" type="submit">
+                    Aprovar endereço
+                  </button>
+                </div>
+              </form>
+
+              <form action={reviewSecurityEmailChangeAction}>
+                <input name="request_id" type="hidden" value={selectedEmailChangeRequest.requestId} />
+                <input name="user_id" type="hidden" value={selectedProfile.id} />
+                <input name="decision" type="hidden" value="reject" />
+                <div className="form-grid single-field-grid">
+                  <label>
+                    Motivo da rejeição
+                    <input name="review_reason" placeholder="Explique por que a solicitação foi rejeitada" required />
+                  </label>
+                </div>
+                <div className="form-footer">
+                  <span>Nenhum dado do Auth será alterado.</span>
+                  <button className="secondary-button" type="submit">
+                    Rejeitar solicitação
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : null}
+
+          {selectedEmailChangeRequest?.status === "approved" ? (
+            <div className="empty-state">
+              <strong>Endereço aprovado pelo administrador</strong>
+              <span>O usuário deve entrar no sistema e enviar a confirmação para esse endereço.</span>
+            </div>
+          ) : null}
+
+          {selectedEmailChangeRequest?.status === "confirmation_pending" ? (
+            <div className="empty-state">
+              <strong>Aguardando confirmação do titular</strong>
+              <span>O e-mail atual permanece válido até o novo endereço ser confirmado.</span>
+            </div>
+          ) : null}
         </section>
 
         <section className="panel" id="perfis" aria-labelledby="perfis-title">
@@ -404,6 +512,22 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
       return { kind: "warning", title: "Email invalido", detail: "Informe um email valido para login." };
     case "fictitious_email":
       return { kind: "warning", title: "E-mail fictício bloqueado", detail: "Informe um endereço real que possa receber a confirmação." };
+    case "email_change_approved":
+      return { kind: "ok", title: "Novo e-mail aprovado", detail: "O usuário agora pode enviar a confirmação para o endereço definido." };
+    case "email_change_rejected":
+      return { kind: "ok", title: "Solicitação rejeitada", detail: "Nenhum e-mail do Auth foi alterado." };
+    case "email_review_reason_required":
+      return { kind: "warning", title: "Motivo obrigatório", detail: "Registre o motivo da decisão administrativa." };
+    case "invalid_email_review":
+      return { kind: "warning", title: "Decisão inválida", detail: "Use aprovar ou rejeitar." };
+    case "admin_role_required":
+      return { kind: "warning", title: "Administrador obrigatório", detail: "Somente perfil admin pode decidir a troca de e-mail." };
+    case "email_change_request_not_found":
+      return { kind: "warning", title: "Solicitação não encontrada", detail: "Atualize a tela e selecione uma solicitação existente." };
+    case "email_change_request_not_pending":
+      return { kind: "warning", title: "Solicitação já analisada", detail: "Esta solicitação não aceita uma segunda decisão." };
+    case "email_unchanged":
+      return { kind: "warning", title: "E-mail não alterado", detail: "O endereço informado já é o e-mail atual do usuário." };
     case "invalid_role":
       return { kind: "warning", title: "Papel invalido", detail: "Escolha um papel permitido." };
     case "invalid_status":
@@ -417,6 +541,25 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
     default:
       return null;
   }
+}
+
+function emailChangeStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    approved: "aprovada",
+    confirmation_pending: "aguardando confirmação",
+    pending_admin: "aguardando administrador"
+  };
+  return labels[status] ?? status;
+}
+
+function emailChangeReasonLabel(reason: string): string {
+  const labels: Record<string, string> = {
+    lost_access: "Sem acesso ao e-mail atual",
+    other: "Outro",
+    professional_change: "Alteração de e-mail profissional",
+    registration_correction: "Correção de cadastro"
+  };
+  return labels[reason] ?? reason;
 }
 
 function emailStatusLabel(status: SecurityProfile["emailStatus"]): string {

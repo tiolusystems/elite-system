@@ -175,6 +175,63 @@ export async function upsertSecurityUserProfileAction(formData: FormData) {
   redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=profile_saved#perfil`);
 }
 
+export async function reviewSecurityEmailChangeAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/seguranca?result=not_configured#troca-email");
+  }
+
+  const requestId = field(formData, "request_id");
+  const userId = field(formData, "user_id");
+  const decision = field(formData, "decision");
+  const newEmail = field(formData, "new_email").toLowerCase();
+  const reviewReason = field(formData, "review_reason");
+
+  if (!UUID_PATTERN.test(requestId) || !UUID_PATTERN.test(userId)) {
+    redirect("/seguranca?result=invalid_uuid#troca-email");
+  }
+  if (decision !== "approve" && decision !== "reject") {
+    redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=invalid_email_review#troca-email`);
+  }
+  if (!reviewReason) {
+    redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=email_review_reason_required#troca-email`);
+  }
+  if (decision === "approve" && !EMAIL_ADDRESS_PATTERN.test(newEmail)) {
+    redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=invalid_email#troca-email`);
+  }
+  if (decision === "approve" && isReservedEmailAddress(newEmail)) {
+    redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=fictitious_email#troca-email`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "review_security_email_change_request", {
+    p_decision: decision,
+    p_new_email: decision === "approve" ? newEmail : null,
+    p_request_id: requestId,
+    p_review_reason: reviewReason
+  }, {
+    metadata: {
+      action_key: "security.email_change.review",
+      axis: "status_transition",
+      domain: "seguranca",
+      entity: "security_email_change_requests",
+      entity_id: requestId,
+      failure_action: "seguranca.email_change_review_failed"
+    }
+  });
+
+  if (error) {
+    redirect(
+      `/seguranca?user_id=${encodeURIComponent(userId)}&result=${encodeURIComponent(mapSecurityError(error.message))}#troca-email`
+    );
+  }
+
+  revalidatePath("/login");
+  revalidatePath("/seguranca");
+  const result = decision === "approve" ? "email_change_approved" : "email_change_rejected";
+  redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=${result}#troca-email`);
+}
+
 export async function setSecurityPermissionOverrideAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
@@ -275,5 +332,10 @@ function mapSecurityError(message: string): string {
   if (normalized.includes("target user profile not found")) return "target_profile_not_found";
   if (normalized.includes("invalid user role")) return "invalid_role";
   if (normalized.includes("invalid user status")) return "invalid_status";
+  if (normalized.includes("system administrator role")) return "admin_role_required";
+  if (normalized.includes("email change request not found")) return "email_change_request_not_found";
+  if (normalized.includes("not pending administrator review")) return "email_change_request_not_pending";
+  if (normalized.includes("email already belongs")) return "auth_user_exists";
+  if (normalized.includes("matches current auth email")) return "email_unchanged";
   return "security_error";
 }

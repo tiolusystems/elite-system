@@ -39,6 +39,21 @@ export type EffectivePermission = {
   sortOrder: number;
 };
 
+export type SecurityEmailChangeRequest = {
+  requestId: string;
+  userId: string;
+  displayName: string | null;
+  status: "approved" | "completed" | "confirmation_pending" | "pending_admin" | "rejected";
+  requestReasonCode: string;
+  requestReasonDetail: string | null;
+  newEmail: string | null;
+  reviewReason: string | null;
+  requestedAt: string;
+  reviewedAt: string | null;
+  confirmationRequestedAt: string | null;
+  completedAt: string | null;
+};
+
 export type SecurityDashboard = {
   metrics: {
     totalProfiles: number | null;
@@ -50,6 +65,7 @@ export type SecurityDashboard = {
   };
   profiles: SecurityProfile[];
   selectedProfile: SecurityProfile | null;
+  emailChangeRequests: SecurityEmailChangeRequest[];
   permissions: EffectivePermission[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
@@ -82,10 +98,19 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
     const permissionsResult = selectedProfile
       ? await supabase.rpc("list_security_effective_permissions", { p_user_id: selectedProfile.id })
       : { data: [], error: null };
+    const emailChangeResult = selectedProfile
+      ? await supabase.rpc("list_security_email_change_requests", {
+          p_include_closed: false,
+          p_user_id: selectedProfile.id
+        })
+      : { data: [], error: null };
 
     const permissions = permissionsResult.error
       ? []
       : ((permissionsResult.data ?? []) as Array<Record<string, unknown>>).map(mapPermission);
+    const emailChangeRequests = emailChangeResult.error
+      ? []
+      : ((emailChangeResult.data ?? []) as Array<Record<string, unknown>>).map(mapEmailChangeRequest);
 
     return {
       metrics: {
@@ -100,9 +125,15 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
       },
       profiles,
       selectedProfile,
+      emailChangeRequests,
       permissions,
       source: "supabase",
-      error: profilesResult.error?.message ?? authDirectory.error ?? permissionsResult.error?.message ?? null
+      error:
+        profilesResult.error?.message ??
+        authDirectory.error ??
+        permissionsResult.error?.message ??
+        emailChangeResult.error?.message ??
+        null
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
@@ -121,10 +152,35 @@ function emptyDashboard(source: "not_configured" | "error", error: string | null
     },
     profiles: [],
     selectedProfile: null,
+    emailChangeRequests: [],
     permissions: [],
     source,
     error
   };
+}
+
+export async function getOwnEmailChangeRequest(): Promise<{
+  request: SecurityEmailChangeRequest | null;
+  error: string | null;
+}> {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    return { request: null, error: null };
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase.rpc("get_security_own_email_change_request");
+    if (result.error) {
+      return { request: null, error: result.error.message };
+    }
+    const row = ((result.data ?? []) as Array<Record<string, unknown>>)[0];
+    return {
+      request: row ? mapEmailChangeRequest(row) : null,
+      error: null
+    };
+  } catch (error) {
+    return { request: null, error: error instanceof Error ? error.message : "Erro desconhecido" };
+  }
 }
 
 function mapProfile(row: Record<string, unknown>, authUser: User | undefined): SecurityProfile {
@@ -202,4 +258,25 @@ function mapPermission(row: Record<string, unknown>): EffectivePermission {
     effectiveAllowed: Boolean(row.effective_allowed),
     sortOrder: Number(row.sort_order ?? 0)
   };
+}
+
+function mapEmailChangeRequest(row: Record<string, unknown>): SecurityEmailChangeRequest {
+  return {
+    requestId: String(row.request_id),
+    userId: row.user_id === undefined ? "" : String(row.user_id),
+    displayName: row.display_name === undefined || row.display_name === null ? null : String(row.display_name),
+    status: String(row.status) as SecurityEmailChangeRequest["status"],
+    requestReasonCode: String(row.request_reason_code),
+    requestReasonDetail: nullableString(row.request_reason_detail),
+    newEmail: nullableString(row.new_email),
+    reviewReason: nullableString(row.review_reason),
+    requestedAt: String(row.requested_at),
+    reviewedAt: nullableString(row.reviewed_at),
+    confirmationRequestedAt: nullableString(row.confirmation_requested_at),
+    completedAt: nullableString(row.completed_at)
+  };
+}
+
+function nullableString(value: unknown): string | null {
+  return value === null || value === undefined ? null : String(value);
 }

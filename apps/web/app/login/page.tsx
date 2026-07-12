@@ -1,8 +1,14 @@
 import Link from "next/link";
 
-import { loginAction, logoutAction, requestOwnEmailChangeAction } from "@/app/login/actions";
+import {
+  dispatchApprovedOwnEmailChangeAction,
+  loginAction,
+  logoutAction,
+  requestOwnEmailChangeReviewAction
+} from "@/app/login/actions";
 import { getAuthStatus } from "@/lib/auth";
 import { getRuntimeStatus } from "@/lib/runtime";
+import { getOwnEmailChangeRequest } from "@/lib/security";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -10,6 +16,10 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
   const auth = await getAuthStatus();
+  const emailChange = auth.isAuthenticated
+    ? await getOwnEmailChangeRequest()
+    : { request: null, error: null };
+  const emailRequest = emailChange.request;
   const result = singleValue(params.result);
   const next = singleValue(params.next) ?? "/";
   const message = messageForResult(result);
@@ -78,7 +88,14 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
         {hasPlaceholderEmail ? (
           <section className="notice-panel warning" role="status">
             <strong>E-mail técnico precisa ser substituído</strong>
-            <span>Esta conta usa um endereço local fictício. Informe abaixo um e-mail real e confirme pelo link recebido.</span>
+            <span>Solicite a troca abaixo. O administrador definirá o novo endereço no cadastro do usuário.</span>
+          </section>
+        ) : null}
+
+        {emailChange.error ? (
+          <section className="notice-panel warning" role="status">
+            <strong>Fluxo de e-mail indisponível</strong>
+            <span>{emailChange.error}</span>
           </section>
         ) : null}
 
@@ -142,7 +159,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
                     Alterar senha
                   </Link>
                   <a className="secondary-button" href="#meu-email">
-                    Alterar e-mail
+                    Solicitar troca de e-mail
                   </a>
                   <form action={logoutAction}>
                     <button className="secondary-button" type="submit">
@@ -163,43 +180,99 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
         {auth.isAuthenticated ? (
           <section className="panel form-panel" id="meu-email" aria-labelledby="my-email-title">
             <div className="panel-header">
-              <h2 id="my-email-title">Meu e-mail de acesso</h2>
-              <span className="pill">confirmação obrigatória</span>
+              <h2 id="my-email-title">Solicitação de troca de e-mail</h2>
+              <span className="pill">{emailRequest ? emailChangeStatusLabel(emailRequest.status) : "sem solicitação"}</span>
             </div>
-            <form action={requestOwnEmailChangeAction}>
-              <div className="form-grid">
-                <label className="wide-field">
-                  E-mail atual
-                  <input type="email" value={auth.email ?? ""} readOnly aria-readonly="true" />
-                </label>
-                <label className="wide-field">
-                  Novo e-mail
-                  <input name="new_email" type="email" autoComplete="email" required />
-                </label>
-                <label className="wide-field">
-                  Confirmar novo e-mail
-                  <input name="new_email_confirmation" type="email" autoComplete="email" required />
-                </label>
+            <dl className="status-list">
+              <div className="status-row">
+                <dt>E-mail atual</dt>
+                <dd>{auth.email ?? "-"}</dd>
               </div>
+              {emailRequest?.newEmail ? (
+                <div className="status-row">
+                  <dt>E-mail aprovado</dt>
+                  <dd>{emailRequest.newEmail}</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            {!emailRequest || emailRequest.status === "completed" || emailRequest.status === "rejected" ? (
+              <form action={requestOwnEmailChangeReviewAction}>
+                <div className="form-grid">
+                  <label>
+                    Motivo
+                    <select name="reason_code" defaultValue="lost_access" required>
+                      <option value="lost_access">Sem acesso ao e-mail atual</option>
+                      <option value="registration_correction">Correção de cadastro</option>
+                      <option value="professional_change">Alteração de e-mail profissional</option>
+                      <option value="other">Outro</option>
+                    </select>
+                  </label>
+                  <label className="wide-field">
+                    Detalhes
+                    <input name="reason_detail" placeholder="Obrigatório quando o motivo for outro" />
+                  </label>
+                </div>
+                <div className="form-footer">
+                  <span>Você não informa o novo endereço. O administrador fará isso no cadastro do usuário.</span>
+                  <button className="primary-button" type="submit">
+                    Solicitar ao administrador
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
+            {emailRequest?.status === "pending_admin" ? (
+              <div className="empty-state">
+                <strong>Aguardando administrador</strong>
+                <span>A solicitação não altera o acesso até ser analisada no módulo Segurança.</span>
+              </div>
+            ) : null}
+
+            {emailRequest?.status === "approved" ? (
+              <form action={dispatchApprovedOwnEmailChangeAction}>
+                <div className="form-footer">
+                  <span>O administrador aprovou o endereço acima. Envie a confirmação para comprovar que ele existe.</span>
+                  <button className="primary-button" type="submit">
+                    Enviar confirmação aprovada
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
+            {emailRequest?.status === "confirmation_pending" ? (
               <div className="form-footer">
-                <span>O endereço atual continua válido até a confirmação do novo e-mail.</span>
+                <span>Aguardando confirmação no novo endereço. O e-mail atual permanece válido até a conclusão.</span>
                 <div className="form-footer-actions">
-                  {result === "email_confirmation_sent" && runtime.databaseMode === "local" ? (
+                  {runtime.databaseMode === "local" ? (
                     <a className="secondary-button" href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">
                       Abrir e-mail local
                     </a>
                   ) : null}
-                  <button className="primary-button" type="submit">
-                    Enviar confirmação
-                  </button>
+                  <form action={dispatchApprovedOwnEmailChangeAction}>
+                    <button className="secondary-button" type="submit">
+                      Reenviar confirmação
+                    </button>
+                  </form>
                 </div>
               </div>
-            </form>
+            ) : null}
           </section>
         ) : null}
       </section>
     </main>
   );
+}
+
+function emailChangeStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    approved: "aprovada",
+    completed: "concluída",
+    confirmation_pending: "aguardando confirmação",
+    pending_admin: "aguardando administrador",
+    rejected: "rejeitada"
+  };
+  return labels[status] ?? status;
 }
 
 function singleValue(value: string | string[] | undefined): string | undefined {
@@ -234,7 +307,32 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     email_confirmation_sent: {
       kind: "ok",
       title: "Confirmação enviada",
-      detail: "Abra a mensagem enviada ao novo endereço e confirme a alteração."
+      detail: "Abra a mensagem enviada ao endereço aprovado pelo administrador e confirme a alteração."
+    },
+    email_change_review_requested: {
+      kind: "ok",
+      title: "Solicitação enviada ao administrador",
+      detail: "Nenhum e-mail foi alterado. O administrador analisará a solicitação no cadastro do usuário."
+    },
+    email_change_request_active: {
+      kind: "warning",
+      title: "Solicitação já existente",
+      detail: "Conclua ou aguarde a análise da solicitação atual antes de criar outra."
+    },
+    email_change_reason_required: {
+      kind: "warning",
+      title: "Motivo obrigatório",
+      detail: "Selecione o motivo da solicitação."
+    },
+    email_change_detail_required: {
+      kind: "warning",
+      title: "Detalhe obrigatório",
+      detail: "Descreva o motivo quando escolher a opção outro."
+    },
+    email_change_not_approved: {
+      kind: "warning",
+      title: "Troca ainda não aprovada",
+      detail: "O envio só é liberado depois que o administrador definir o novo endereço."
     },
     email_confirmed: {
       kind: "ok",
@@ -269,7 +367,7 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     permission_denied: {
       kind: "warning",
       title: "Alteração não autorizada",
-      detail: "Seu perfil não tem alçada para alterar o e-mail de acesso."
+      detail: "Seu perfil não tem alçada para esta etapa do fluxo."
     },
     email_change_expired: {
       kind: "warning",

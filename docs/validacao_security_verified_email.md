@@ -13,8 +13,9 @@ O bootstrap local criou uma conta humana com email placeholder confirmado. Recup
 - `invitation_pending = true` bloqueia acesso operacional ate a ativacao terminar;
 - modulo Seguranca mostra email e estado de confirmacao somente para administrador autorizado;
 - dominios `.local`, `.invalid`, `.test` e dominios `example.*` conhecidos sao bloqueados e aparecem como ficticios em dados antigos;
-- conta autenticada pode solicitar troca do proprio email;
-- a alçada da troca e verificada e auditada antes da chamada externa ao Auth;
+- a `0047` originalmente permitia que a conta informasse o novo email; esse comportamento foi revogado e substituido pela `0048`;
+- conta autenticada informa apenas o motivo; o administrador define o novo endereco no cadastro do usuario;
+- a aplicacao envia ao Auth somente o endereco aprovado e persistido no workflow;
 - somente o novo endereco precisa confirmar a troca;
 - logs operacionais guardam hash, ator, acao e estado, nunca email completo, senha ou token.
 
@@ -42,3 +43,5 @@ Na verificacao de 2026-07-12, o Auth local tinha uma conta humana com endereco p
 - usuarios sinteticos removidos ao final e caixa Mailpit de teste limpa;
 - painel `/seguranca`: email ficticio identificado e status de confirmacao visivel;
 - layout medido em 1280 px e 390 px sem overflow horizontal.
+
+O contrato atual e detalhado em `validacao_security_admin_email_change_workflow.md`.

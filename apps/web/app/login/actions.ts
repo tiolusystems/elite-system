@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { applicationUrl } from "@/lib/application-url";
-import { EMAIL_ADDRESS_PATTERN, isReservedEmailAddress } from "@/lib/email-address";
+import { EMAIL_ADDRESS_PATTERN } from "@/lib/email-address";
 import { getRuntimeStatus } from "@/lib/runtime";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -144,22 +144,19 @@ export async function changeOwnPasswordAction(formData: FormData) {
   redirect(nextPath);
 }
 
-export async function requestOwnEmailChangeAction(formData: FormData) {
+export async function requestOwnEmailChangeReviewAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/login?result=not_configured#meu-email");
   }
 
-  const email = field(formData, "new_email").toLowerCase();
-  const confirmation = field(formData, "new_email_confirmation").toLowerCase();
+  const reasonCode = field(formData, "reason_code");
+  const reasonDetail = field(formData, "reason_detail");
 
-  if (!EMAIL_ADDRESS_PATTERN.test(email)) {
-    redirect("/login?result=invalid_email#meu-email");
+  if (!reasonCode) {
+    redirect("/login?result=email_change_reason_required#meu-email");
   }
-  if (isReservedEmailAddress(email)) {
-    redirect("/login?result=fictitious_email#meu-email");
-  }
-  if (email !== confirmation) {
-    redirect("/login?result=email_mismatch#meu-email");
+  if (reasonCode === "other" && !reasonDetail) {
+    redirect("/login?result=email_change_detail_required#meu-email");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -171,41 +168,82 @@ export async function requestOwnEmailChangeAction(formData: FormData) {
   if (userError || !user) {
     redirect("/login?result=auth_required");
   }
-  if (user.email?.toLowerCase() === email) {
-    redirect("/login?result=email_unchanged#meu-email");
-  }
 
-  const authorization = await auditedRpc(supabase, "authorize_security_own_email_change", {
-    p_new_email: email
+  const requestResult = await auditedRpc<string>(supabase, "request_security_own_email_change", {
+    p_reason_code: reasonCode,
+    p_reason_detail: reasonDetail || null
   }, {
     metadata: {
-      action_key: "security.change_own_email",
-      axis: "change_type",
+      action_key: "security.email_change.request",
+      axis: "status_transition",
       domain: "seguranca",
-      entity: "auth.users",
+      entity: "security_email_change_requests",
       entity_id: user.id,
-      failure_action: "seguranca.own_email_change_authorization_failed"
+      failure_action: "seguranca.email_change_request_failed"
     }
   });
-  if (authorization.error) {
-    redirect(`/login?result=${encodeURIComponent(mapEmailChangeError(authorization.error.message))}#meu-email`);
+
+  if (requestResult.error) {
+    redirect(`/login?result=${encodeURIComponent(mapEmailChangeWorkflowError(requestResult.error.message))}#meu-email`);
   }
 
-  const { error: updateError } = await supabase.auth.updateUser({ email });
+  revalidatePath("/login");
+  revalidatePath("/seguranca");
+  redirect("/login?result=email_change_review_requested#meu-email");
+}
+
+export async function dispatchApprovedOwnEmailChangeAction() {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/login?result=not_configured#meu-email");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login?result=auth_required");
+  }
+
+  const approval = await auditedRpc<Array<{ new_email: string; request_id: string }>>(
+    supabase,
+    "get_security_approved_own_email_change",
+    {},
+    {
+      metadata: {
+        action_key: "security.email_change.dispatch_approved",
+        axis: "status_transition",
+        domain: "seguranca",
+        entity: "security_email_change_requests",
+        entity_id: user.id,
+        failure_action: "seguranca.email_change_approved_lookup_failed"
+      }
+    }
+  );
+
+  const approvedRequest = approval.data?.[0];
+  if (approval.error || !approvedRequest?.request_id || !approvedRequest.new_email) {
+    const result = approval.error ? mapEmailChangeWorkflowError(approval.error.message) : "email_change_not_approved";
+    redirect(`/login?result=${encodeURIComponent(result)}#meu-email`);
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({ email: approvedRequest.new_email });
   if (updateError) {
     redirect(`/login?result=${encodeURIComponent(mapEmailChangeError(updateError.message))}#meu-email`);
   }
 
-  const { error: auditError } = await auditedRpc(supabase, "record_security_own_email_change_requested", {
-    p_new_email: email
+  const { error: auditError } = await auditedRpc(supabase, "mark_security_email_change_confirmation_pending", {
+    p_request_id: approvedRequest.request_id
   }, {
     metadata: {
-      action_key: "security.change_own_email",
-      axis: "change_type",
+      action_key: "security.email_change.dispatch_approved",
+      axis: "status_transition",
       domain: "seguranca",
-      entity: "auth.users",
-      entity_id: user.id,
-      failure_action: "seguranca.own_email_change_request_log_failed"
+      entity: "security_email_change_requests",
+      entity_id: approvedRequest.request_id,
+      failure_action: "seguranca.email_change_confirmation_dispatch_log_failed"
     }
   });
 
@@ -266,6 +304,17 @@ function mapEmailChangeError(message: string): string {
   if (normalized.includes("invalid") && normalized.includes("email")) {
     return "invalid_email";
   }
+  return "email_change_failed";
+}
+
+function mapEmailChangeWorkflowError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("not allowed")) return "permission_denied";
+  if (normalized.includes("active email change request already exists")) return "email_change_request_active";
+  if (normalized.includes("administrator role")) return "admin_role_required";
+  if (normalized.includes("not pending administrator review")) return "email_change_request_not_pending";
+  if (normalized.includes("approved email change request not found")) return "email_change_not_approved";
+  if (normalized.includes("invalid email change request reason")) return "email_change_reason_required";
   return "email_change_failed";
 }
 

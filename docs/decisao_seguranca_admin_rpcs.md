@@ -41,7 +41,9 @@ O usuario nasce com `invitation_pending = true`. O convite confirma que o destin
 
 O modulo Seguranca mostra o email do diretorio Auth e seu estado: confirmado, aguardando confirmacao, aguardando criacao de senha, ausente ou placeholder local. A recuperacao publica continua sem revelar se uma conta existe; essa informacao pertence somente a administracao autenticada.
 
-Conta autenticada pode solicitar troca do proprio email. Com `double_confirm_changes = false`, somente o novo endereco precisa confirmar a mudanca, evitando dependencia de um email placeholder antigo. Solicitacao e conclusao sao auditadas por hash, sem gravar o endereco completo no ledger operacional.
+Desde a `0048`, conta autenticada nao informa nem altera diretamente o proprio email. Ela registra apenas uma solicitacao com motivo. Um perfil `admin`, com `security.email_change.review`, define ou rejeita o novo endereco no cadastro do usuario. Depois da aprovacao, o titular pode somente enviar e confirmar exatamente o endereco aprovado. Com `double_confirm_changes = false`, apenas o novo endereco precisa confirmar. Solicitacao, decisao, envio e conclusao sao eventos auditados; logs usam hash e nunca gravam token ou credencial.
+
+As RPCs diretas da `0047` (`authorize_security_own_email_change`, `record_security_own_email_change_requested` e `record_security_own_email_changed`) permanecem no historico de migrations, mas tiveram `execute` revogado de `authenticated` pela `0048`.
 
 ### Perfil operacional e separado de ator de sistema
 

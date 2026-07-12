@@ -524,6 +524,8 @@ Senha temporaria deve exigir troca no primeiro acesso. Enquanto `user_metadata.t
 
 Convite novo deve manter `user_metadata.invitation_pending = true` ate o destinatario confirmar o email e criar a propria senha. A conta pode existir tecnicamente no Auth, mas nao e considerada ativada nem recebe acesso operacional antes desses dois fatos.
 
+Troca de email de usuario e fluxo administrativo governado desde a `0048`: o usuario registra motivo sem fornecer endereco; somente perfil `admin` define ou rejeita o novo email; a aplicacao chama `auth.updateUser` apenas com o valor retornado pela aprovacao persistida; o titular confirma esse endereco. Solicitacao, revisao, envio e conclusao geram eventos append-only. RPC direta que aceite email digitado pelo proprio usuario e anti-pattern bloqueado.
+
 Senha existente nunca e recuperada ou exibida. A recuperacao usa link de uso limitado emitido pelo Supabase Auth; o callback aceita somente o tipo `recovery`, remove codigo/token da URL antes de abrir a tela de nova senha e apresenta resposta neutra para email existente ou inexistente. Solicitacao e validacao do link pertencem ao log nativo do Supabase Auth. A mudanca concluida tambem registra `record_security_own_password_changed()` no ledger operacional, sem senha, token ou segredo.
 
 ## Leitura minima antes de guard

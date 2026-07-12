@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0047_security_verified_email_invitation.sql"
+ADMIN_WORKFLOW_MIGRATION = ROOT / "supabase" / "migrations" / "0048_security_admin_email_change_workflow.sql"
 SECURITY_ACTIONS = ROOT / "apps" / "web" / "app" / "seguranca" / "actions.ts"
 SECURITY_PAGE = ROOT / "apps" / "web" / "app" / "seguranca" / "page.tsx"
 SECURITY_SERVICE = ROOT / "apps" / "web" / "lib" / "security.ts"
@@ -20,6 +21,7 @@ INVITE_TEMPLATE = ROOT / "supabase" / "templates" / "invite.html"
 EMAIL_CHANGE_TEMPLATE = ROOT / "supabase" / "templates" / "email_change.html"
 TEMP_PASSWORD_MODULE = ROOT / "apps" / "web" / "lib" / "security-temp-password.ts"
 EMAIL_POLICY = ROOT / "apps" / "web" / "lib" / "email-address.ts"
+CI = ROOT / ".github" / "workflows" / "ci.yml"
 
 
 class SecurityVerifiedEmailContractTests(unittest.TestCase):
@@ -80,20 +82,34 @@ class SecurityVerifiedEmailContractTests(unittest.TestCase):
         self.assertIn("E-mails fictícios", page)
         self.assertNotIn("Auth user id", page)
 
-    def test_own_email_change_requires_confirmation_and_is_audited(self) -> None:
+    def test_email_change_requires_admin_approval_before_auth_update(self) -> None:
         actions = LOGIN_ACTIONS.read_text(encoding="utf-8")
         page = LOGIN_PAGE.read_text(encoding="utf-8")
+        security_actions = SECURITY_ACTIONS.read_text(encoding="utf-8")
+        security_page = SECURITY_PAGE.read_text(encoding="utf-8")
+        sql = ADMIN_WORKFLOW_MIGRATION.read_text(encoding="utf-8").lower()
 
-        self.assertIn("requestOwnEmailChangeAction", actions)
-        authorization = actions.index('auditedRpc(supabase, "authorize_security_own_email_change"')
-        update = actions.index("supabase.auth.updateUser({ email })")
-        requested_log = actions.index('auditedRpc(supabase, "record_security_own_email_change_requested"')
-        self.assertLess(authorization, update)
-        self.assertLess(update, requested_log)
-        self.assertIn("supabase.auth.updateUser({ email })", actions)
-        self.assertIn('auditedRpc(supabase, "record_security_own_email_change_requested"', actions)
-        self.assertIn('name="new_email"', page)
-        self.assertIn('name="new_email_confirmation"', page)
+        self.assertIn("requestOwnEmailChangeReviewAction", actions)
+        self.assertIn("dispatchApprovedOwnEmailChangeAction", actions)
+        approval = actions.index('"get_security_approved_own_email_change"')
+        update = actions.index("supabase.auth.updateUser({ email: approvedRequest.new_email })")
+        pending_log = actions.index('"mark_security_email_change_confirmation_pending"')
+        self.assertLess(approval, update)
+        self.assertLess(update, pending_log)
+        self.assertNotIn('field(formData, "new_email")', actions)
+        self.assertNotIn('name="new_email"', page)
+        self.assertNotIn('name="new_email_confirmation"', page)
+        self.assertIn('name="reason_code"', page)
+        self.assertIn("requestOwnEmailChangeReviewAction", page)
+        self.assertIn("reviewSecurityEmailChangeAction", security_actions)
+        self.assertNotIn("admin.auth.admin.updateUserById", security_actions)
+        self.assertIn('name="new_email"', security_page)
+        self.assertIn("create table if not exists public.security_email_change_requests", sql)
+        self.assertIn("security_email_change_request_events", sql)
+        self.assertIn("events are append-only", sql)
+        self.assertIn("public.require_current_user_admin_role()", sql)
+        self.assertIn("revoke all on function public.authorize_security_own_email_change(text) from authenticated", sql)
+        self.assertIn("tests/sql/security_admin_email_change_workflow.sql", CI.read_text(encoding="utf-8"))
         self.assertIn("E-mail técnico precisa ser substituído", page)
 
     def test_callback_and_proxy_support_invitation_and_email_change(self) -> None:
@@ -103,7 +119,8 @@ class SecurityVerifiedEmailContractTests(unittest.TestCase):
 
         self.assertIn('type === "invite"', callback)
         self.assertIn('type === "email_change"', callback)
-        self.assertIn('record_security_own_email_changed', callback)
+        self.assertIn('complete_security_email_change_request', callback)
+        self.assertIn('security.email_change.dispatch_approved', callback)
         self.assertIn('flow === "invite" ? "invitation" : "recovery"', callback)
         self.assertIn("invitation_pending", proxy)
         self.assertIn('invitationPending ? "invitation" : "temporary"', proxy)

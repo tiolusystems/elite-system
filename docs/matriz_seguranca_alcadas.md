@@ -11,6 +11,18 @@ Esta matriz guia o endurecimento de RLS por dominio. A regra de construcao e:
 
 A receita operacional para escolher eixo de alcada, validar dominio no banco, escrever RPC auditada e rodar smoke esta em `docs/receita_rls_rpc_auditada.md`.
 
+## Perfis combinaveis
+
+`DEC-005` autoriza sete perfis iniciais como conjuntos combinaveis de
+permissoes atomicas, sempre vinculados a contas individuais. Perfil organiza
+grants; nao substitui action key, regra de escopo, RLS, guard de backend ou
+validacao no banco.
+
+A matriz conceitual, separacao de funcoes, transicao do papel unico e criterios
+de aceite estao em
+`docs/seguranca/00_MATRIZ_INICIAL_PERFIS_PERMISSOES.md`. Nenhum perfil foi
+implementado por esta decisao documental.
+
 ## Rotas publicas
 
 | Rota | Motivo |

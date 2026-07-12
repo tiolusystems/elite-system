@@ -13,20 +13,21 @@ Atualizado em: 2026-07-12
 
 ## Tarefa concluida mais recente
 
-Definicao documental da arquitetura e do roadmap de Suporte:
+Registro arquitetonico de `DEC-005` - matriz inicial de perfis e permissoes:
 
-- `DEC-001` autorizada com texto literal;
-- Suporte S0 definido como subarea autenticada do `core`;
-- acoes sensiveis mantidas no dominio `seguranca`;
-- roadmap S0 a S4, gatilhos e criterios de modulo autonomo documentados;
-- ADR-005 registra alternativas, consequencias, reavaliacao e rollback.
+- sete perfis iniciais autorizados;
+- contas individuais e perfis combinaveis definidos;
+- perfil tratado como conjunto versionado de permissoes atomicas;
+- backend e banco mantidos como fonte da autorizacao efetiva;
+- operacoes criticas vinculadas a auditoria e futuro MFA/reautenticacao;
+- ADR-006 registra alternativas, invariantes, transicao e rollback.
 
-Somente documentacao foi alterada. Nenhum modulo, rota, navegacao, tabela, RPC,
-migration, dependencia, autenticacao ou configuracao Auth foi modificado.
+Somente documentacao foi alterada. Nenhum perfil, usuario, modulo, rota,
+tabela, RPC, migration, autorizacao ou configuracao Auth foi implementado.
 
 ## Validacao desta tarefa
 
-- contrato documental de Suporte: aprovado (`SUPPORT_GOVERNANCE_DOCUMENTATION_OK`);
+- contrato documental de perfis/permissoes: aprovado (`PROFILE_PERMISSION_DOCUMENTATION_OK`);
 - `tests.test_architecture_navigation_contract`: 6 testes aprovados;
 - `git diff --check`: aprovado;
 - suite completa: deliberadamente dispensada por ser tarefa documental `T1`.
@@ -55,7 +56,8 @@ tela publica de login.
 
 Apresentar o desenho de MFA TOTP compativel com Android e iOS, incluindo
 cadastro por QR Code, desafio no login, recuperacao e exigencia AAL2. Essa
-mudanca toca o boundary de autenticacao e depende de autorizacao arquitetonica.
+mudanca toca o boundary de autenticacao, depende de autorizacao arquitetonica
+e definira a protecao adicional das operacoes criticas de `DEC-005`.
 
 ## Regra de manutencao
 

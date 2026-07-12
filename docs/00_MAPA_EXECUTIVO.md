@@ -29,6 +29,7 @@ O mapa detalhado continua sendo
 | Assunto | Modulo dono | Ponto inicial |
 |---|---|---|
 | login, usuario, permissao, MFA | `seguranca` | `apps/web/app/seguranca`, `apps/web/app/login` |
+| perfis combinaveis e permissoes atomicas | `seguranca` | `docs/seguranca/00_MATRIZ_INICIAL_PERFIS_PERMISSOES.md` |
 | ajuda, suporte e solicitacoes | `core` no portal; `seguranca` nas acoes sensiveis | `docs/suporte/00_PLANO_EVOLUCAO_SUPORTE.md`; futura `/suporte` |
 | MP, produto, embalagem, cliente | `cadastros` | `apps/web/app/cadastros` |
 | pedido, credito, Kanban | `pedidos` | `apps/web/app/pedidos` |

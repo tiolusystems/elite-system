@@ -37,12 +37,41 @@ Administração do sistema e sem SLA público.”
 Documentos: `docs/suporte/00_PLANO_EVOLUCAO_SUPORTE.md` e
 `docs/decisoes-arquiteturais/ADR-005-suporte-autenticado-no-core.md`.
 
+### DEC-005 - Matriz inicial de perfis e permissoes
+
+Estado: `autorizada`
+
+Autorizada a criacao dos seguintes perfis iniciais:
+
+- Administrador;
+- PCP / Producao;
+- Estoque;
+- Comercial / Pedidos;
+- Expedicao / Faturamento;
+- Financeiro / Recebimentos e Comissoes;
+- Consulta / Auditoria.
+
+Cada pessoa tera conta individual. Perfis serao conjuntos de permissoes
+atomicas e poderao ser combinados por usuario. Nao havera contas funcionais
+compartilhadas.
+
+A autorizacao deve ser validada no backend e no banco, nao apenas pela
+visibilidade da interface. Operacoes financeiras, cancelamentos, estornos,
+pagamentos de comissao e mudancas de privilegio deverao ser auditadas e, quando
+disponivel, protegidas por reautenticacao/MFA.
+
+Documentos: `docs/seguranca/00_MATRIZ_INICIAL_PERFIS_PERMISSOES.md` e
+`docs/decisoes-arquiteturais/ADR-006-perfis-combinaveis-permissoes-atomicas.md`.
+
 ## Decisoes ja confirmadas
 
 - solicitacao de troca de email nao pertence a tela publica de login;
 - ela deve ser acessada em area autenticada de Suporte;
 - Suporte S0 pertence ao `core`; acoes sensiveis permanecem em `seguranca`;
 - nao sera criado modulo autonomo `suporte` nesta fase;
+- os sete perfis iniciais serao combinacoes de permissoes atomicas por conta individual;
+- contas funcionais compartilhadas sao proibidas;
+- autorizacao efetiva pertence ao backend e ao banco, nunca somente a interface;
 - alteracao da arvore exige autorizacao previa;
 - GitHub recebe somente codigo e documentacao, nunca dados operacionais.
 

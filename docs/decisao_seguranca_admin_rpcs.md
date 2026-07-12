@@ -125,7 +125,7 @@ As duas funcoes `resolve_*` sao excecoes documentadas de leitura minima antes do
 ## Decisoes pendentes para Luciano
 
 - Configurar SMTP e templates de convite, alteracao de email e recuperacao no Supabase cloud antes da homologacao externa.
-- Confirmar se os papeis atuais (`admin`, `comercial`, `producao`, `estoque`, `expedicao`, `auditoria`) sao suficientes.
+- Implementar `DEC-005` por migration separada, preservando o papel atual durante a transicao para perfis combinaveis.
 - Definir se a tela de alçadas mostrara apenas overrides ou tambem o valor efetivo calculado (`default_allowed` + override).
 - Definir se `permission_actions` podera ser alterada por tela ou se continuara sendo catalogo controlado por migration.
 - Implantar MFA TOTP com exigencia AAL2 antes da exposicao publica, sem bloquear o unico administrador durante o cadastro inicial do fator.

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { changeTemporaryPasswordAction, logoutAction } from "@/app/login/actions";
+import { changeOwnPasswordAction, logoutAction } from "@/app/login/actions";
 import { getAuthStatus } from "@/lib/auth";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -16,6 +16,9 @@ export default async function ChangeTemporaryPasswordPage({
   const auth = await getAuthStatus();
   const result = singleValue(params.result);
   const next = singleValue(params.next) ?? "/";
+  const requestedMode = passwordChangeMode(singleValue(params.mode));
+  const mode = auth.requiresPasswordChange ? "temporary" : requestedMode;
+  const copy = pageCopy(mode);
   const message = messageForResult(result);
 
   return (
@@ -23,7 +26,7 @@ export default async function ChangeTemporaryPasswordPage({
       <header className="topbar">
         <div className="brand">
           <strong>Elite System</strong>
-          <span>Troca de senha</span>
+          <span>{copy.brandLabel}</span>
         </div>
         <nav className="topnav" aria-label="Modulos principais">
           <Link href="/">Inicio</Link>
@@ -42,11 +45,9 @@ export default async function ChangeTemporaryPasswordPage({
       <section className="workspace login-workspace">
         <div className="dashboard-header">
           <div>
-            <span className="eyebrow">seguranca</span>
-            <h1>Trocar senha temporaria</h1>
-            <p className="muted">
-              Defina uma senha propria antes de acessar os modulos operacionais.
-            </p>
+            <span className="eyebrow">segurança</span>
+            <h1>{copy.title}</h1>
+            <p className="muted">{copy.description}</p>
           </div>
         </div>
 
@@ -60,11 +61,12 @@ export default async function ChangeTemporaryPasswordPage({
         <section className="two-column">
           <section className="panel form-panel" aria-labelledby="change-password-title">
             <div className="panel-header">
-              <h2 id="change-password-title">Nova senha</h2>
-              <span className="pill">{auth.isAuthenticated ? "sessao ativa" : "sem sessao"}</span>
+              <h2 id="change-password-title">{copy.formTitle}</h2>
+              <span className="pill">{auth.isAuthenticated ? "sessão validada" : "link inválido"}</span>
             </div>
-            <form action={changeTemporaryPasswordAction}>
+            <form action={changeOwnPasswordAction}>
               <input type="hidden" name="next" value={next} />
+              <input type="hidden" name="mode" value={mode} />
               <div className="form-grid single-field-grid">
                 <label>
                   Nova senha
@@ -84,7 +86,7 @@ export default async function ChangeTemporaryPasswordPage({
               <div className="form-footer">
                 <span>Use no minimo 12 caracteres.</span>
                 <button className="primary-button" type="submit" disabled={!auth.isAuthenticated}>
-                  Trocar senha
+                  {copy.buttonLabel}
                 </button>
               </div>
             </form>
@@ -114,8 +116,9 @@ export default async function ChangeTemporaryPasswordPage({
               </form>
             ) : (
               <div className="empty-state">
-                <strong>Nenhuma sessao ativa</strong>
-                <span>Entre com a senha temporaria recebida por email.</span>
+                <strong>Não foi possível validar sua sessão</strong>
+                <span>Solicite um novo link de recuperação ou volte ao login.</span>
+                <Link href="/login/recuperar-senha">Recuperar acesso</Link>
               </div>
             )}
           </section>
@@ -154,6 +157,11 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Auditoria negada",
       detail: "Seu perfil nao tem permissao para registrar a troca de senha."
     },
+    password_changed_audit_failed: {
+      kind: "warning",
+      title: "Senha alterada, auditoria pendente",
+      detail: "Não repita a alteração. Avise o administrador para conferir o registro de segurança."
+    },
     login_failed: {
       kind: "warning",
       title: "Troca nao concluida",
@@ -161,4 +169,41 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     }
   };
   return messages[result] ?? messages.login_failed;
+}
+
+type PasswordChangeMode = "authenticated" | "recovery" | "temporary";
+
+function passwordChangeMode(value: string | undefined): PasswordChangeMode {
+  if (value === "recovery" || value === "temporary") {
+    return value;
+  }
+  return "authenticated";
+}
+
+function pageCopy(mode: PasswordChangeMode) {
+  if (mode === "recovery") {
+    return {
+      brandLabel: "Recuperação de senha",
+      title: "Criar nova senha",
+      description: "O link de recuperação foi validado. Defina a senha que usará nos próximos acessos.",
+      formTitle: "Nova senha",
+      buttonLabel: "Redefinir senha"
+    };
+  }
+  if (mode === "temporary") {
+    return {
+      brandLabel: "Primeiro acesso",
+      title: "Trocar senha temporária",
+      description: "Defina uma senha própria antes de acessar os módulos operacionais.",
+      formTitle: "Senha definitiva",
+      buttonLabel: "Trocar senha"
+    };
+  }
+  return {
+    brandLabel: "Minha senha",
+    title: "Alterar minha senha",
+    description: "Defina uma nova senha para esta conta.",
+    formTitle: "Nova senha",
+    buttonLabel: "Alterar senha"
+  };
 }

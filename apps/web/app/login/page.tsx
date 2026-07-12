@@ -47,10 +47,10 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
       <section className="workspace login-workspace">
         <div className="dashboard-header">
           <div>
-            <span className="eyebrow">multiusuario</span>
-            <h1>Acesso por senha</h1>
+            <span className="eyebrow">acesso seguro</span>
+            <h1>Entrar no Elite System</h1>
             <p className="muted">
-              Sessao Supabase Auth para vincular usuario, perfil, alcadas e trilha de auditoria das acoes.
+              Use o e-mail cadastrado e sua senha. Cada navegador mantém sua própria sessão.
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de login">
@@ -78,7 +78,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
           <section className="panel form-panel" aria-labelledby="login-title">
             <div className="panel-header">
               <h2 id="login-title">Entrar</h2>
-              <span className="pill">{auth.isConfigured ? "Supabase Auth" : "aguardando Supabase"}</span>
+              <span className="pill">{auth.isConfigured ? "acesso protegido" : "indisponível"}</span>
             </div>
             <form action={loginAction}>
               <input type="hidden" name="next" value={next} />
@@ -93,10 +93,12 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
                 </label>
               </div>
               <div className="form-footer">
-                <span>Use o usuario cadastrado no Supabase Auth e vinculado em `user_profiles`.</span>
-                <button className="primary-button" type="submit">
-                  Entrar
-                </button>
+                <Link href="/login/recuperar-senha">Esqueci minha senha</Link>
+                <div className="form-footer-actions">
+                  <button className="primary-button" type="submit">
+                    Entrar
+                  </button>
+                </div>
               </div>
             </form>
           </section>
@@ -125,16 +127,23 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
               </div>
             </dl>
             {auth.isAuthenticated ? (
-              <form className="form-footer" action={logoutAction}>
-                <span>Encerrar sessao neste navegador.</span>
-                <button className="secondary-button" type="submit">
-                  Sair
-                </button>
-              </form>
+              <div className="form-footer">
+                <span>Conta conectada somente neste navegador.</span>
+                <div className="form-footer-actions">
+                  <Link className="secondary-button" href="/login/trocar-senha?mode=authenticated">
+                    Alterar senha
+                  </Link>
+                  <form action={logoutAction}>
+                    <button className="secondary-button" type="submit">
+                      Sair
+                    </button>
+                  </form>
+                </div>
+              </div>
             ) : (
               <div className="empty-state">
-                <strong>Nenhuma sessao ativa</strong>
-                <span>As acoes protegidas dependem de usuario autenticado e perfil ativo.</span>
+                <strong>Nenhuma sessão ativa neste navegador</strong>
+                <span>Uma sessão aberta no navegador do Codex não é compartilhada com o navegador externo.</span>
               </div>
             )}
           </section>
@@ -157,6 +166,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "ok",
       title: "Sessao encerrada",
       detail: "O usuario saiu deste navegador."
+    },
+    password_changed: {
+      kind: "ok",
+      title: "Senha alterada",
+      detail: "A nova senha já está válida para os próximos acessos."
+    },
+    password_recovered: {
+      kind: "ok",
+      title: "Senha redefinida",
+      detail: "Entre agora com seu e-mail e a nova senha."
     },
     not_configured: {
       kind: "warning",

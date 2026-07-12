@@ -56,7 +56,7 @@ Direcao obrigatoria: `tela -> aplicacao -> RPC auditada -> dominio proprietario 
 | Chave | Modulo e responsabilidade objetiva | Dono/tabelas | Dependencias diretas | Tela principal | Baseline |
 |---|---|---|---|---|---|
 | `core` | Sessao, health-check, painel e runtime central | `sys_*` | nenhuma | `/` e `/modulos` | operacional em teste |
-| `seguranca` | Usuarios, convites, senha, perfis, alcadas e auditoria de acesso | `user_profiles`, permissoes, `action_logs` | `core` | `/seguranca` | operacional em teste |
+| `seguranca` | Usuarios, provisionamento, recuperacao de senha, perfis, alcadas e auditoria de acesso | `user_profiles`, permissoes, `action_logs`, Supabase Auth | `core` | `/seguranca`, `/login` | operacional em teste |
 | `cadastros` | Clientes, propriedades, contatos, pessoas, MP, produtos, embalagens e conversoes | `cad_*` | `core`, `seguranca` | `/cadastros` | validacao de negocio |
 | `pedidos` | Pedido, itens, credito, comissionados, transicoes e Kanban | `com_pedidos`, `com_pedido_*` | `core`, `seguranca`, `cadastros` | `/pedidos`, `/kanban` | validacao tecnica |
 | `estoque` | Lotes MP/PA/PI, reservas, movimentos, reversoes e saldos derivados | `est_*` | `core`, `seguranca`, `cadastros` | integrado em `/producao` e `/romaneios` | validacao de negocio |

@@ -522,6 +522,8 @@ O fluxo de senha temporaria aprovado na 0038 usa `SUPABASE_SERVICE_ROLE_KEY` som
 
 Senha temporaria deve exigir troca no primeiro acesso. Enquanto `user_metadata.temporary_password_bootstrap = true`, o proxy deve redirecionar para tela de troca antes de qualquer modulo operacional. A troca registra somente o fato auditavel, nunca a senha nova.
 
+Senha existente nunca e recuperada ou exibida. A recuperacao usa link de uso limitado emitido pelo Supabase Auth; o callback aceita somente o tipo `recovery`, remove codigo/token da URL antes de abrir a tela de nova senha e apresenta resposta neutra para email existente ou inexistente. Solicitacao e validacao do link pertencem ao log nativo do Supabase Auth. A mudanca concluida tambem registra `record_security_own_password_changed()` no ledger operacional, sem senha, token ou segredo.
+
 ## Leitura minima antes de guard
 
 Algumas wrappers precisam resolver a action key antes de negar permissao, por exemplo `pedidos.create.own` vs `pedidos.create.any` ou `pcp.formula.create` vs `pcp.formula.change`. Essa leitura pre-guard so e permitida quando:

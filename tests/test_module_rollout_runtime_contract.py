@@ -76,7 +76,14 @@ class ModuleRolloutRuntimeContractTest(unittest.TestCase):
             for migration in sorted(MIGRATIONS_DIR.glob("*.sql"))
         )
         registered = set(re.findall(r"\('(/[a-z0-9/-]*)',\s*'[a-z_]+'", sql))
-        public_routes = {"/login", "/health", "/api/health"}
+        proxy = PROXY.read_text(encoding="utf-8")
+        public_routes_match = re.search(
+            r"const PUBLIC_ROUTES = new Set\(\[(.*?)\]\);",
+            proxy,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(public_routes_match, "proxy public route allowlist not found")
+        public_routes = set(re.findall(r'"(/[a-z0-9/-]*)"', public_routes_match.group(1)))
         recovery_routes = {"/modulo-indisponivel"}
         app_routes: set[str] = set()
 

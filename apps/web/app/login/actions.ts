@@ -7,6 +7,11 @@ import { getRuntimeStatus } from "@/lib/runtime";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const MINIMUM_PASSWORD_LENGTH = 12;
+
+type PasswordChangeMode = "authenticated" | "recovery" | "temporary";
+
 export async function loginAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/login?result=not_configured");
@@ -31,30 +36,55 @@ export async function loginAction(formData: FormData) {
   }
 
   if (data.user?.user_metadata?.temporary_password_bootstrap === true) {
-    redirect(`/login/trocar-senha?next=${encodeURIComponent(nextPath)}`);
+    redirect(`/login/trocar-senha?mode=temporary&next=${encodeURIComponent(nextPath)}`);
   }
 
   revalidatePath("/", "layout");
   redirect(nextPath);
 }
 
-export async function changeTemporaryPasswordAction(formData: FormData) {
+export async function requestPasswordRecoveryAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/login/recuperar-senha?result=not_configured");
+  }
+
+  const email = field(formData, "email").toLowerCase();
+  if (!EMAIL_PATTERN.test(email)) {
+    redirect("/login/recuperar-senha?result=invalid_email");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: passwordRecoveryCallbackUrl()
+  });
+
+  if (error) {
+    const result = mapPasswordRecoveryError(error.message);
+    redirect(`/login/recuperar-senha?result=${encodeURIComponent(result)}`);
+  }
+
+  // The same response is used whether or not the account exists.
+  redirect("/login/recuperar-senha?result=recovery_sent");
+}
+
+export async function changeOwnPasswordAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/login?result=not_configured");
   }
 
   const nextPath = safeNextPath(field(formData, "next"));
+  const mode = passwordChangeMode(field(formData, "mode"));
   const password = field(formData, "new_password");
   const confirmation = field(formData, "new_password_confirmation");
 
   if (!password || !confirmation) {
-    redirect(`/login/trocar-senha?result=missing_credentials&next=${encodeURIComponent(nextPath)}`);
+    redirect(changePasswordUrl("missing_credentials", nextPath, mode));
   }
   if (password !== confirmation) {
-    redirect(`/login/trocar-senha?result=password_mismatch&next=${encodeURIComponent(nextPath)}`);
+    redirect(changePasswordUrl("password_mismatch", nextPath, mode));
   }
-  if (password.length < 12) {
-    redirect(`/login/trocar-senha?result=weak_password&next=${encodeURIComponent(nextPath)}`);
+  if (password.length < MINIMUM_PASSWORD_LENGTH) {
+    redirect(changePasswordUrl("weak_password", nextPath, mode));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -64,11 +94,7 @@ export async function changeTemporaryPasswordAction(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    redirect(`/login?result=auth_required&next=${encodeURIComponent("/login/trocar-senha")}`);
-  }
-
-  if (user.user_metadata?.temporary_password_bootstrap !== true) {
-    redirect(nextPath);
+    redirect("/login/recuperar-senha?result=recovery_expired");
   }
 
   const { error: updateError } = await supabase.auth.updateUser({
@@ -81,7 +107,7 @@ export async function changeTemporaryPasswordAction(formData: FormData) {
   });
 
   if (updateError) {
-    redirect(`/login/trocar-senha?result=${encodeURIComponent(mapLoginError(updateError.message))}&next=${encodeURIComponent(nextPath)}`);
+    redirect(changePasswordUrl(mapLoginError(updateError.message), nextPath, mode));
   }
 
   const { error: auditError } = await auditedRpc(supabase, "record_security_own_password_changed", {}, {
@@ -96,10 +122,18 @@ export async function changeTemporaryPasswordAction(formData: FormData) {
   });
 
   if (auditError) {
-    redirect(`/login/trocar-senha?result=${encodeURIComponent(mapLoginError(auditError.message))}&next=${encodeURIComponent(nextPath)}`);
+    redirect(changePasswordUrl("password_changed_audit_failed", nextPath, mode));
   }
 
   revalidatePath("/", "layout");
+
+  if (mode === "recovery") {
+    await supabase.auth.signOut({ scope: "local" });
+    redirect("/login?result=password_recovered");
+  }
+  if (mode === "authenticated") {
+    redirect("/login?result=password_changed");
+  }
   redirect(nextPath);
 }
 
@@ -126,6 +160,42 @@ function safeNextPath(value: string): string {
     return "/";
   }
   return value;
+}
+
+function passwordChangeMode(value: string): PasswordChangeMode {
+  if (value === "recovery" || value === "temporary") {
+    return value;
+  }
+  return "authenticated";
+}
+
+function changePasswordUrl(result: string, nextPath: string, mode: PasswordChangeMode): string {
+  const params = new URLSearchParams({ result, next: nextPath, mode });
+  return `/login/trocar-senha?${params.toString()}`;
+}
+
+function passwordRecoveryCallbackUrl(): string {
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL?.trim();
+  const baseUrl = configuredUrl || (vercelUrl ? `https://${vercelUrl}` : "http://127.0.0.1:3000");
+
+  try {
+    const url = new URL("/auth/confirm", baseUrl);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new Error("invalid application URL protocol");
+    }
+    return url.toString();
+  } catch {
+    return "http://127.0.0.1:3000/auth/confirm";
+  }
+}
+
+function mapPasswordRecoveryError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("rate") || normalized.includes("frequency")) {
+    return "rate_limited";
+  }
+  return "recovery_failed";
 }
 
 function mapLoginError(message: string): string {

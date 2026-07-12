@@ -108,15 +108,15 @@ class SecurityEmailTemporaryPasswordContractTests(unittest.TestCase):
         page = CHANGE_PASSWORD_PAGE.read_text(encoding="utf-8")
 
         self.assertIn("temporary_password_bootstrap === true", actions)
-        self.assertIn("/login/trocar-senha", actions)
+        self.assertIn("/login/trocar-senha?mode=temporary", actions)
         self.assertIn("supabase.auth.updateUser", actions)
         self.assertIn('auditedRpc(supabase, "record_security_own_password_changed"', actions)
         self.assertLess(actions.index('normalized.includes("not allowed")'), actions.index('normalized.includes("weak")'))
         self.assertNotIn(".rpc(", actions)
         self.assertIn("temporary_password_bootstrap === true", proxy)
         self.assertIn("TEMP_PASSWORD_CHANGE_ROUTE", proxy)
-        self.assertIn("Trocar senha temporaria", page)
-        self.assertIn("changeTemporaryPasswordAction", page)
+        self.assertIn("Trocar senha temporária", page)
+        self.assertIn("changeOwnPasswordAction", page)
         self.assertNotIn("temporaryPassword", page)
 
     def test_docs_replace_invite_decision_with_temp_password_boundary(self) -> None:

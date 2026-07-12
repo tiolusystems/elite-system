@@ -1049,6 +1049,18 @@ h1 {
   background: #fbfcfd;
 }
 
+.form-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.form-footer-actions form {
+  margin: 0;
+}
+
 .kanban-board {
   display: grid;
   grid-template-columns: repeat(5, minmax(250px, 1fr));
@@ -2259,6 +2271,11 @@ h1 {
 
   .toolbar-actions,
   .form-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .form-footer-actions {
     display: grid;
     grid-template-columns: 1fr;
   }

@@ -11,6 +11,7 @@ export type AuthProfile = {
 export type AuthStatus = {
   isConfigured: boolean;
   isAuthenticated: boolean;
+  requiresPasswordChange: boolean;
   email: string | null;
   profile: AuthProfile | null;
   source: "supabase" | "not_configured" | "anonymous" | "error";
@@ -23,6 +24,7 @@ export async function getAuthStatus(): Promise<AuthStatus> {
     return {
       isConfigured: false,
       isAuthenticated: false,
+      requiresPasswordChange: false,
       email: null,
       profile: null,
       source: "not_configured",
@@ -39,6 +41,7 @@ export async function getAuthStatus(): Promise<AuthStatus> {
       return {
         isConfigured: true,
         isAuthenticated: false,
+        requiresPasswordChange: false,
         email: null,
         profile: null,
         source: "anonymous",
@@ -55,6 +58,7 @@ export async function getAuthStatus(): Promise<AuthStatus> {
     return {
       isConfigured: true,
       isAuthenticated: true,
+      requiresPasswordChange: user.user_metadata?.temporary_password_bootstrap === true,
       email: user.email ?? null,
       profile: profileResult.data
         ? {
@@ -71,6 +75,7 @@ export async function getAuthStatus(): Promise<AuthStatus> {
     return {
       isConfigured: true,
       isAuthenticated: false,
+      requiresPasswordChange: false,
       email: null,
       profile: null,
       source: "error",

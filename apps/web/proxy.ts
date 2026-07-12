@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = new Set(["/login", "/health", "/api/health"]);
+const PUBLIC_ROUTES = new Set([
+  "/auth/confirm",
+  "/login",
+  "/login/recuperar-senha",
+  "/health",
+  "/api/health"
+]);
 const TEMP_PASSWORD_CHANGE_ROUTE = "/login/trocar-senha";
 const MODULE_GUARD_RECOVERY_ROUTE = "/modulo-indisponivel";
 
@@ -71,6 +77,7 @@ export async function proxy(request: NextRequest) {
     const changeUrl = request.nextUrl.clone();
     changeUrl.pathname = TEMP_PASSWORD_CHANGE_ROUTE;
     changeUrl.search = "";
+    changeUrl.searchParams.set("mode", "temporary");
     changeUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(changeUrl);
   }

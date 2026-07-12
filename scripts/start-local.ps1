@@ -13,7 +13,7 @@ $ToolsRoot = Join-Path $RepoRoot '.tools'
 $RuntimeRoot = Join-Path $ToolsRoot 'runtime'
 $Supabase = Join-Path $ToolsRoot 'supabase-cli\supabase.exe'
 $EnvFile = Join-Path $WebRoot '.env.local'
-$SupabaseExcludedServices = 'logflare,storage-api,studio,imgproxy,edge-runtime,postgres-meta,realtime,mailpit,vector'
+$SupabaseExcludedServices = 'logflare,storage-api,studio,imgproxy,edge-runtime,postgres-meta,realtime,vector'
 
 New-Item -ItemType Directory -Force -Path $RuntimeRoot | Out-Null
 

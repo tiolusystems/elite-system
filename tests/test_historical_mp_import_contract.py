@@ -138,7 +138,12 @@ class HistoricalMpImportContractTests(unittest.TestCase):
         self.assertIn('.from("est_mp_historico_precos")', data)
         self.assertNotIn("auditedRpc(", data + page)
         self.assertNotIn("actions.ts", data + page)
-        self.assertIn("Nenhum cadastro, lote ou saldo e criado automaticamente", page)
+        self.assertIn("Situacao atual: estrutura pronta, dados do Excel ainda nao analisados", page)
+        self.assertIn("Proximo passo da equipe tecnica", page)
+        self.assertIn("Correspondencia entre o Excel e o cadastro novo", page)
+        self.assertNotIn("Identidades no batch", page)
+        self.assertNotIn("Nenhum staging de MP carregado", page)
+        self.assertNotIn("Excel para MP canonica", page)
         self.assertIn('href="/importacao-historica/mp"', home)
         self.assertIn('primaryRoute: "/importacao-historica/mp"', system_map)
 

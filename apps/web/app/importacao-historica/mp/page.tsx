@@ -9,6 +9,7 @@ export default async function HistoricalMpPage() {
   const runtime = getRuntimeStatus();
   const dashboard = await getHistoricalMpDashboard();
   const attention = (dashboard.metrics.pendingItems ?? 0) + (dashboard.metrics.conflictItems ?? 0);
+  const historyLoaded = (dashboard.metrics.totalItems ?? 0) > 0;
 
   return (
     <main className="app-shell">
@@ -38,21 +39,29 @@ export default async function HistoricalMpPage() {
       <section className="workspace dashboard-workspace">
         <div className="dashboard-header">
           <div>
-            <span className="eyebrow">migracao historica auditavel</span>
-            <h1>Reconciliacao de materias-primas</h1>
+            <span className="eyebrow">preservacao do historico</span>
+            <h1>Migracao do historico de materias-primas</h1>
             <p className="muted">
-              Confere identidades, lotes e valores do Tio Lu System antes de qualquer promocao ao estoque operacional.
+              Aqui voce acompanha o que sera trazido do Tio Lu System e confere os casos que exigem uma decisao.
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Atalhos de importacao historica">
-            <a className="secondary-button" href="#valores">Valores</a>
-            <a className="primary-button" href="#mapeamentos">Mapeamentos</a>
+            <a className="secondary-button" href="#etapas">Ver etapas</a>
+            <a className="primary-button" href="#conferencia">Conferir dados</a>
           </div>
         </div>
 
-        <section className="notice-panel ok" role="status">
-          <strong>Modo de reconciliacao</strong>
-          <span>Nenhum cadastro, lote ou saldo e criado automaticamente nesta tela. Sugestao nao equivale a aprovacao.</span>
+        <section className={`notice-panel ${historyLoaded ? "ok" : "warning"}`} role="status">
+          <strong>
+            {historyLoaded
+              ? "Situacao atual: dados do Excel prontos para conferencia"
+              : "Situacao atual: estrutura pronta, dados do Excel ainda nao analisados"}
+          </strong>
+          <span>
+            {historyLoaded
+              ? "Os registros abaixo ainda nao alteram cadastro ou estoque. Casos duvidosos precisam ser confirmados antes da importacao."
+              : "O historico continua preservado. O proximo trabalho da equipe tecnica e executar uma leitura sem alterar o Excel nem o estoque."}
+          </span>
         </section>
 
         {dashboard.error ? (
@@ -62,30 +71,81 @@ export default async function HistoricalMpPage() {
           </section>
         ) : null}
 
+        <section className="migration-progress" id="etapas" aria-labelledby="etapas-title">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">onde estamos</span>
+              <h2 id="etapas-title">Caminho ate o historico entrar no Elite System</h2>
+            </div>
+            <p>Nenhuma etapa posterior avanca enquanto a anterior nao estiver conferida.</p>
+          </div>
+          <ol className="migration-steps">
+            <li className="migration-step done">
+              <span className="migration-step-number">1</span>
+              <div>
+                <strong>Estrutura segura criada</strong>
+                <p>Banco, rastreabilidade e protecoes contra duplicacao estao prontos.</p>
+              </div>
+              <span className="migration-step-status">concluido</span>
+            </li>
+            <li className={`migration-step ${historyLoaded ? "done" : "current"}`}>
+              <span className="migration-step-number">2</span>
+              <div>
+                <strong>Ler o historico do Tio Lu</strong>
+                <p>A equipe tecnica executa uma leitura que nao altera o arquivo original.</p>
+              </div>
+              <span className="migration-step-status">{historyLoaded ? "concluido" : "proximo"}</span>
+            </li>
+            <li className={`migration-step ${historyLoaded ? "current" : "waiting"}`}>
+              <span className="migration-step-number">3</span>
+              <div>
+                <strong>Conferir nomes e codigos</strong>
+                <p>Voce sera acionado somente nos casos duplicados, conflitantes ou desconhecidos.</p>
+              </div>
+              <span className="migration-step-status">{historyLoaded ? "em conferencia" : "aguardando"}</span>
+            </li>
+            <li className="migration-step waiting">
+              <span className="migration-step-number">4</span>
+              <div>
+                <strong>Importar e conferir os saldos</strong>
+                <p>Lotes, entradas, consumos, precos e saldos entram apenas depois da aprovacao.</p>
+              </div>
+              <span className="migration-step-status">aguardando</span>
+            </li>
+          </ol>
+        </section>
+
         <section className="kpi-grid" aria-label="Resumo da importacao historica de MP">
           <article className="kpi-card accent-blue">
-            <span>Identidades no batch</span>
+            <span>Registros do Excel analisados</span>
             <strong>{valueOrDash(dashboard.metrics.totalItems)}</strong>
-            <p>Batch {dashboard.metrics.batchId ?? "ainda nao carregado"}.</p>
+            <p>{historyLoaded ? "Materias-primas encontradas para conferencia." : "A leitura do historico ainda nao foi executada."}</p>
           </article>
           <article className="kpi-card accent-green">
-            <span>Mapeamentos aprovados</span>
+            <span>Correspondencias confirmadas</span>
             <strong>{valueOrDash(dashboard.metrics.approvedItems)}</strong>
-            <p>{valueOrDash(dashboard.metrics.suggestedItems)} sugestao(oes) aguardando decisao.</p>
+            <p>{valueOrDash(dashboard.metrics.suggestedItems)} correspondencia(s) sugerida(s) pelo sistema.</p>
           </article>
           <article className="kpi-card accent-amber">
-            <span>Exigem analise</span>
+            <span>Precisam de uma decisao</span>
             <strong>{dashboard.metrics.totalItems === null ? "sem conexao" : attention}</strong>
-            <p>Pendencias e conflitos nunca sao unificados silenciosamente.</p>
+            <p>Nomes duplicados ou conflitantes nunca sao unidos automaticamente.</p>
           </article>
           <article className="kpi-card accent-red">
-            <span>Custo de aquisicao</span>
+            <span>Valor historico identificado</span>
             <strong>{moneyOrDash(dashboard.metrics.custoAquisicaoTotal)}</strong>
-            <p>{valueOrDash(dashboard.metrics.acquisitionRecords)} entrada(s) com componentes preservados.</p>
+            <p>{valueOrDash(dashboard.metrics.acquisitionRecords)} entrada(s) de materia-prima analisada(s).</p>
           </article>
         </section>
 
-        <section className="summary-grid" id="valores" aria-label="Componentes de aquisicao">
+        <div className="section-heading" id="valores">
+          <div>
+            <span className="eyebrow">valores preservados</span>
+            <h2>Composicao das compras historicas</h2>
+          </div>
+          <p>Os componentes ficam separados para mostrar exatamente como cada custo foi formado.</p>
+        </div>
+        <section className="summary-grid" aria-label="Componentes de aquisicao">
           <article className="summary-card">
             <span>Materia-prima</span>
             <strong>{moneyOrDash(dashboard.metrics.valorMateriaPrima)}</strong>
@@ -104,22 +164,21 @@ export default async function HistoricalMpPage() {
           </article>
         </section>
 
-        <section className="panel" id="mapeamentos" aria-labelledby="mapeamentos-title">
+        <section className="panel" id="conferencia" aria-labelledby="conferencia-title">
           <div className="panel-header">
-            <h2 id="mapeamentos-title">Excel para MP canonica</h2>
-            <span className="pill">{dashboard.mappings.length} linha(s)</span>
+            <h2 id="conferencia-title">Correspondencia entre o Excel e o cadastro novo</h2>
+            <span className="pill">{dashboard.mappings.length} registro(s)</span>
           </div>
           {dashboard.mappings.length > 0 ? (
             <div className="table-scroll">
               <table className="data-table historical-mp-table">
                 <thead>
                   <tr>
-                    <th>Linha fonte</th>
-                    <th>Identidade legada</th>
+                    <th>Nome e codigo no Excel</th>
                     <th>Unidade</th>
-                    <th>Situacao</th>
-                    <th>MP canonica</th>
-                    <th>Criterio</th>
+                    <th>Estado da conferencia</th>
+                    <th>Cadastro oficial correspondente</th>
+                    <th>Como foi encontrado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -129,15 +188,15 @@ export default async function HistoricalMpPage() {
             </div>
           ) : (
             <EmptyState
-              title="Nenhum staging de MP carregado"
-              detail="O analisador local e o staging auditado devem rodar antes de qualquer decisao de mapeamento."
+              title="Ainda nao analisamos as materias-primas do Excel"
+              detail="O proximo passo da equipe tecnica e executar uma leitura somente leitura. Depois, os nomes e codigos aparecerao aqui para conferencia. Nada sera importado nessa leitura."
             />
           )}
         </section>
 
         <section className="panel" aria-labelledby="precos-title">
           <div className="panel-header">
-            <h2 id="precos-title">Historico de precos e lotes</h2>
+            <h2 id="precos-title">Entradas, lotes e custos encontrados no historico</h2>
             <span className="pill">{dashboard.prices.length} entrada(s)</span>
           </div>
           {dashboard.prices.length > 0 ? (
@@ -162,15 +221,15 @@ export default async function HistoricalMpPage() {
             </div>
           ) : (
             <EmptyState
-              title="Nenhum valor promovido"
-              detail="Os componentes aparecerao somente apos mapeamento aprovado e importacao em ensaio descartavel."
+              title="Ainda nao analisamos as entradas de materia-prima"
+              detail="Quando a leitura tecnica terminar, esta area mostrara documento, lote, quantidade, valor da mercadoria, frete, DIFAL e custo total."
             />
           )}
         </section>
 
         <section className="notice-panel" role="note">
-          <strong>Proxima trava</strong>
-          <span>Importar lotes e movimentos somente depois de quantidade, valor, saldo e vinculos de producao reconciliarem com o Excel.</span>
+          <strong>Proximo passo da equipe tecnica</strong>
+          <span>Executar a leitura somente leitura do historico. Voce sera acionado depois apenas para decidir nomes duplicados, codigos conflitantes ou materias-primas desconhecidas.</span>
         </section>
       </section>
     </main>
@@ -180,12 +239,11 @@ export default async function HistoricalMpPage() {
 function MappingRow({ row }: { row: HistoricalMpMapping }) {
   return (
     <tr>
-      <td>#{row.sourceRowId}<span className="table-subtext">staging {row.stagingItemId}</span></td>
       <td><strong>{row.codigoLegado ?? "sem codigo"}</strong><span className="table-subtext">{row.nomeLegado ?? "sem nome"}</span></td>
       <td>{row.unidadeOrigem ?? "-"}</td>
       <td><span className={`status-chip ${row.mappingStatus}`}>{mappingStatusLabel(row.mappingStatus)}</span></td>
-      <td>{row.materiaPrimaId ? <><strong>{row.materiaPrimaSku}</strong><span className="table-subtext">{row.materiaPrimaNome}</span></> : "Nao definida"}</td>
-      <td>{row.matchMethod}<span className="table-subtext">{row.confidence === null ? `${row.matchCount} candidato(s)` : `${row.confidence}% de confianca`}</span></td>
+      <td>{row.materiaPrimaId ? <><strong>{row.materiaPrimaSku}</strong><span className="table-subtext">{row.materiaPrimaNome}</span></> : "Ainda nao definido"}</td>
+      <td>{matchMethodLabel(row.matchMethod)}<span className="table-subtext">{row.confidence === null ? `${row.matchCount} candidato(s)` : `${row.confidence}% de confianca`}</span></td>
     </tr>
   );
 }
@@ -211,6 +269,17 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 
 function mappingStatusLabel(status: string): string {
   return ({ approved: "aprovado", suggested: "sugerido", pending: "pendente", conflict: "conflito", rejected: "rejeitado" } as Record<string, string>)[status] ?? status;
+}
+
+function matchMethodLabel(method: string): string {
+  return ({
+    exact_sku: "codigo oficial igual",
+    exact_legacy_code: "codigo antigo igual",
+    exact_name: "nome igual",
+    normalized_name: "nome equivalente",
+    manual: "confirmado manualmente",
+    none: "sem correspondencia"
+  } as Record<string, string>)[method] ?? method;
 }
 
 function valueOrDash(value: number | null): string {

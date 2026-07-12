@@ -644,7 +644,8 @@ h1 {
 
 .status-chip.ativo,
 .status-chip.vigente,
-.status-chip.baixa {
+.status-chip.baixa,
+.status-chip.approved {
   border-color: var(--ok-border);
   background: var(--ok-bg);
   color: var(--ok-text);
@@ -653,7 +654,9 @@ h1 {
 .status-chip.planejado,
 .status-chip.vence_30_dias,
 .status-chip.vence_60_dias,
-.status-chip.media {
+.status-chip.media,
+.status-chip.suggested,
+.status-chip.pending {
   border-color: var(--warning-border);
   background: var(--warning-bg);
   color: var(--warning-text);
@@ -661,7 +664,9 @@ h1 {
 
 .status-chip.vencido_com_saldo,
 .status-chip.vencido_sem_saldo,
-.status-chip.alta {
+.status-chip.alta,
+.status-chip.conflict,
+.status-chip.rejected {
   border-color: var(--danger-border);
   background: var(--danger-bg);
   color: var(--danger-text);
@@ -695,6 +700,18 @@ h1 {
 
 .data-table td {
   font-size: 14px;
+}
+
+.historical-mp-table {
+  min-width: 940px;
+}
+
+.historical-mp-price-table {
+  min-width: 1180px;
+}
+
+.dashboard-workspace > .panel {
+  margin-bottom: 16px;
 }
 
 .security-profile-table {

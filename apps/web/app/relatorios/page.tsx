@@ -27,6 +27,7 @@ export default async function RelatoriosPage() {
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
+          <a href="/importacao-historica/mp">Historico MP</a>
           <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios" aria-current="page">

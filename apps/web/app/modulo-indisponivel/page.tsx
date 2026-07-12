@@ -2,7 +2,7 @@ import Link from "next/link";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export default async function ModuleUnavailablePage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function ModuleUnavailablePage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const moduleKey = singleValue(params.module) ?? "rota";
   const reason = singleValue(params.reason) ?? "module_unavailable";

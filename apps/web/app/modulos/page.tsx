@@ -34,7 +34,7 @@ const LIFECYCLES: ModuleLifecycle[] = [
 ];
 const ACCESS_MODES: ModuleAccessMode[] = ["disabled", "read_only", "read_write"];
 
-export default async function ModulosPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function ModulosPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const result = singleValue(params.result);
   const changedModule = singleValue(params.module);

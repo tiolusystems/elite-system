@@ -26,7 +26,7 @@ import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export default async function PcpPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function PcpPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
   const dashboard = await getPcpDashboard();

@@ -10,6 +10,7 @@ from .audit import run_audit
 from .apps.admin_server import run_admin_server
 from .db import connect, init_db
 from .migration import import_workbook
+from .services.historical_mp import analyze_historical_mp
 from .services.security import (
     authenticate_user,
     can_perform_action,
@@ -35,6 +36,14 @@ def main(argv: list[str] | None = None) -> int:
     audit_parser = sub.add_parser("audit", help="Roda auditoria da ultima importacao")
     audit_parser.add_argument("--db", required=True, type=Path)
     audit_parser.add_argument("--batch-id", type=int)
+
+    mp_history_parser = sub.add_parser(
+        "analyze-mp-history",
+        help="Analisa historico de MP em modo somente leitura, sem importar para o PostgreSQL",
+    )
+    mp_history_parser.add_argument("--db", required=True, type=Path)
+    mp_history_parser.add_argument("--batch-id", type=int)
+    mp_history_parser.add_argument("--identity-limit", type=int, default=500)
 
     user_parser = sub.add_parser("create-user", help="Cria usuario operacional")
     user_parser.add_argument("--db", required=True, type=Path)
@@ -95,6 +104,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "audit":
         _print(run_audit(args.db, args.batch_id))
+        return 0
+    if args.command == "analyze-mp-history":
+        _print(analyze_historical_mp(args.db, args.batch_id, identity_limit=args.identity_limit))
         return 0
     if args.command == "create-user":
         init_db(args.db)

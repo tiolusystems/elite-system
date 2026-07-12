@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 const ROLES = ["admin", "comercial", "producao", "estoque", "expedicao", "auditoria"];
 
-export default async function SegurancaPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function SegurancaPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const selectedUserId = singleValue(params.user_id);
   const result = singleValue(params.result);

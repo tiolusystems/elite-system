@@ -10,7 +10,7 @@ O codigo e o banco continuam sendo a fonte executavel. Se este mapa divergir del
 
 - Stack operacional: Next.js 16, TypeScript, Supabase e PostgreSQL; Vercel planejada para o frontend cloud.
 - Ferramentas historicas: Python para importacao, auditoria e reconciliacao do Excel; SQLite nao e o banco operacional novo.
-- Ultima migration desta baseline: `0044_production_module_release.sql`.
+- Ultima migration desta baseline: `0045_historical_mp_import_foundation.sql`.
 - Ambiente local autoritativo em 2026-07-11: `test`.
 - Modulos em validacao de negocio no banco de teste: `cadastros`, `estoque` e `pcp`.
 - `core` e `seguranca` estao operacionais no banco de teste.
@@ -67,7 +67,7 @@ Direcao obrigatoria: `tela -> aplicacao -> RPC auditada -> dominio proprietario 
 | `financeiro` | Recebimentos, alocacoes, liberacao proporcional e conta corrente de comissao | `fin_*` e contratos financeiros | `core`, `seguranca`, `pedidos`, `faturamento` | integrada ao pedido; tela dedicada pendente | validacao tecnica |
 | `metas` | Periodos customizados e ledger de vendas, cancelamentos e devolucoes | `com_meta_*` | `core`, `seguranca`, `pedidos` | tela dedicada pendente | validacao tecnica |
 | `relatorios` | Read models, reconciliacoes, vendas, estoque e rastreabilidade | views `rel_*` | leitura opcional dos dominios operacionais | `/relatorios` | validacao tecnica |
-| `auditoria` | Fonte historica, batches, issues, reconciliacao e evidencias de migracao | `source_*`, `migration_*` | leitura controlada dos dominios | ferramentas Python e relatorios | validacao tecnica |
+| `auditoria` | Fonte historica, batches, aliases, valores de aquisicao, reconciliacao e evidencias | `source_*`, `migration_*`, fatos historicos governados | leitura controlada dos dominios | `/importacao-historica/mp` e Python | validacao tecnica |
 
 ## Grafo de dependencias obrigatorias
 
@@ -168,6 +168,8 @@ flowchart LR
   RC --> AP[Aprovacao ou divergencia documentada]
 ```
 
+Para MP, a sequencia executavel e `analisador local somente leitura -> staging append-only -> sugestao -> aprovacao humana -> alias canonico -> ensaio de lote/movimento -> reconciliacao`. Valor da mercadoria, frete, DIFAL e outras despesas permanecem componentes separados. Nenhuma sugestao cria cadastro ou saldo.
+
 ## Progresso: o que cada estado significa
 
 O sistema nao usa porcentagens inventadas. A maturidade e um gate objetivo do banco:
@@ -205,6 +207,7 @@ O acesso (`disabled`, `read_only`, `read_write`) e independente da maturidade. U
 | Pedido/Kanban/credito | `apps/web/app/pedidos`, `apps/web/lib/orders.ts`, `apps/web/lib/kanban.ts` | RPC de pedido e transicao |
 | Romaneio/lote de expedicao | `apps/web/app/romaneios`, `apps/web/lib/romaneios.ts` | contratos de reserva e movimento PA |
 | XML de entrada MP | `apps/web/app/importacao-xml`, `apps/web/lib/importacao-xml.ts` | staging, conversao e API de estoque MP |
+| Historico Excel de MP | `elite_system/services/historical_mp.py`, `apps/web/app/importacao-historica/mp` | migration `0045` e decisao de migracao historica de MP |
 | Permissao/login/usuario | `apps/web/app/seguranca`, `apps/web/lib/security.ts` | migration de seguranca e wrapper RPC |
 | Relatorio | `apps/web/app/relatorios`, `apps/web/lib/reports.ts` | view/read model do dominio fonte |
 | Schema ou regra SQL | ultima migration relacionada e teste de contrato | migrations antigas apenas para origem do contrato |
@@ -244,6 +247,7 @@ Uma validacao so deve ser repetida se o codigo, o ambiente, o banco ou a entrada
 - Publicacao de Producao: `docs/decisao_publicacao_modulo_producao.md`.
 - Migracao historica: `docs/plano_migracao_sem_perda_historico.md`.
 - Migracao historica de MP e valores de aquisicao: `docs/decisao_migracao_historica_materias_primas.md`.
+- Evidencia da fundacao de importacao historica de MP: `docs/validacao_importacao_historica_mp_foundation.md`.
 - Evidencia desta consolidacao: `docs/validacao_mapa_arquitetural_workflow.md`.
 
 ## Regra de manutencao

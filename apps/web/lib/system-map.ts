@@ -254,7 +254,7 @@ export const SYSTEM_MODULE_CATALOG = [
     isCore: false,
     sortOrder: 1100,
     lane: "controle",
-    primaryRoute: "/relatorios",
+    primaryRoute: "/importacao-historica/mp",
     dependencies: [
       { moduleKey: "core", access: "read_write", required: true },
       { moduleKey: "seguranca", access: "read_only", required: true },
@@ -263,7 +263,7 @@ export const SYSTEM_MODULE_CATALOG = [
       { moduleKey: "estoque", access: "read_only", required: false },
       { moduleKey: "pcp", access: "read_only", required: false }
     ],
-    capabilities: ["Fonte e hash", "Batch e linha original", "Issues de migracao", "Reconciliacao de valores"]
+    capabilities: ["Fonte e hash", "Batch e linha original", "Historico MP e aliases", "Reconciliacao de valores"]
   }
 ] as const satisfies readonly SystemModuleDetail[];
 

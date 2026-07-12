@@ -9,7 +9,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 export default async function ChangeTemporaryPasswordPage({
   searchParams
 }: {
-  searchParams?: SearchParams | Promise<SearchParams>;
+  searchParams?: Promise<SearchParams>;
 }) {
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();

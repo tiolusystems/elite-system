@@ -43,6 +43,14 @@ python -m elite_system.cli audit --db .\data\elite.sqlite
 
 A auditoria inclui reconciliacoes de valores para pedidos, faturamento, entradas MP, saidas MP, saidas PA, producao e saldos de estoque.
 
+Analisar o historico de MP sem gravar ou promover dados:
+
+```powershell
+python -m elite_system.cli analyze-mp-history --db .\data\elite.sqlite --batch-id 1
+```
+
+O comando abre o SQLite em modo somente leitura e relata identidades, sugestoes de MP canonica, lotes, destinos, saldo derivado, valor da mercadoria, frete, DIFAL e diferenca contra o total legado. Ele nao altera cadastro nem estoque.
+
 Criar usuario local:
 
 ```powershell

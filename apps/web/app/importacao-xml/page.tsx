@@ -17,7 +17,7 @@ import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export default async function ImportacaoXmlPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function ImportacaoXmlPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
   const dashboard = await getImportacaoXmlDashboard();
@@ -40,6 +40,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
           <a href="/importacao-xml" aria-current="page">
             XML MP
           </a>
+          <a href="/importacao-historica/mp">Historico MP</a>
           <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>

@@ -39,6 +39,7 @@ class ArchitectureIntegrityGateTest(unittest.TestCase):
             "supabase gen types --local --schema public",
             "elite-database-types",
             "tests/sql/architecture_integrity_gate.sql",
+            "tests/sql/historical_mp_import_foundation.sql",
         ):
             self.assertIn(expected, workflow)
 

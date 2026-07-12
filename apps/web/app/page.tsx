@@ -64,6 +64,7 @@ export default async function HomePage() {
           <a href="/pedidos">Pedidos</a>
           <a href="/kanban">Kanban</a>
           <a href="/importacao-xml">XML MP</a>
+          <a href="/importacao-historica/mp">Historico MP</a>
           <a href="/producao">Producao</a>
           <a href="/romaneios">Romaneio</a>
           <a href="/relatorios">Relatorios</a>
@@ -212,6 +213,13 @@ export default async function HomePage() {
                 <span>{valueOrDash(importacaoXml.metrics.itensPendentes)} item(ns) pendente(s)</span>
                 <div className="progress-rail">
                   <span style={{ width: maturityWidth("importacao") }}></span>
+                </div>
+              </a>
+              <a className="module-tile" href="/importacao-historica/mp">
+                <strong>Historico MP</strong>
+                <span>Conciliar aliases, lotes, frete e DIFAL</span>
+                <div className="progress-rail">
+                  <span style={{ width: maturityWidth("auditoria") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/kanban">

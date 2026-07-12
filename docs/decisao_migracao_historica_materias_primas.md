@@ -6,7 +6,30 @@ Data: 2026-07-11
 
 Preservar e migrar do Tio Lu System os nomes, codigos, precos, lotes, entradas, consumos, destinos e saldos de materia-prima sem transformar o cadastro mestre em um campo de saldo ou custo editavel.
 
-Este contrato antecede a implementacao da importacao PostgreSQL. Nenhum dado real entra no Git.
+Este contrato orienta a fundacao PostgreSQL implementada na migration `0045_historical_mp_import_foundation.sql`. Nenhum dado real entra no Git.
+
+## Estado de implementacao
+
+Concluido nesta etapa:
+
+- analisador Python somente leitura por batch;
+- staging append-only e idempotente por `batch_id + source_row_id`;
+- sugestao sem aprovacao automatica;
+- aprovacao auditada e aliases historicos ligados a MP canonica;
+- componentes imutaveis de aquisicao ligados ao movimento fisico de entrada;
+- origem `source_batch_id + source_row_id` validada no banco;
+- views de fila, resumo e historico de precos;
+- tela analitica `/importacao-historica/mp`;
+- smoke transacional descartavel e CI.
+
+Deliberadamente nao implementado nesta etapa:
+
+- promocao em massa de lotes e movimentos reais;
+- importacao de consumos e destinos de producao;
+- movimento de saldo de abertura;
+- decisao automatica sobre conflito de nome ou codigo.
+
+Esses itens dependem da revisao visual dos mapeamentos e da reconciliacao contra o Excel.
 
 ## Fontes historicas confirmadas
 
@@ -148,3 +171,10 @@ Essas regras futuras consumirao os fatos preservados por este contrato, sem rees
 ## Decisao ainda necessaria
 
 Definir o formato do novo SKU oficial de MP. Essa decisao nao bloqueia inventario, staging, conciliacao e preservacao do codigo legado.
+
+Antes do primeiro ensaio com dados reais, tambem devem ser confirmados:
+
+1. data de corte do estoque;
+2. responsavel pela aprovacao de aliases ambiguos;
+3. tolerancia de quantidade e valor por MP/lote;
+4. criterio para aceitar vinculo historico `saida MP -> OP/produto` quando o Excel nao trouxer chave inequivoca.

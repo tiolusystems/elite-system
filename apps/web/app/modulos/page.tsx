@@ -11,6 +11,12 @@ import {
   type SystemEnvironment
 } from "@/lib/modules";
 import { getRuntimeStatus } from "@/lib/runtime";
+import {
+  getSystemModuleDetail,
+  moduleMaturityPercent,
+  SYSTEM_FLOWS,
+  SYSTEM_MAP_LANES
+} from "@/lib/system-map";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -71,12 +77,13 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Sea
         <div className="toolbar">
           <div>
             <span className="eyebrow">liberacao progressiva</span>
-            <h1>Prontidao dos modulos</h1>
+            <h1>Mapa e prontidao dos modulos</h1>
             <p className="muted">
-              Maturidade, acesso efetivo e dependencias controlados pelo banco antes de qualquer operacao.
+              Veja como o sistema se encaixa e qual maturidade o banco autoriza em cada bloco.
             </p>
           </div>
           <div className="toolbar-actions">
+            <a className="secondary-button" href="#mapa">Mapa</a>
             <a className="secondary-button" href="#ambiente">Ambiente</a>
             <a className="primary-button" href="#catalogo">Rollout</a>
           </div>
@@ -123,6 +130,95 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Sea
             <span>{message.detail}</span>
           </section>
         ) : null}
+
+        <section className="architecture-overview" id="mapa" aria-labelledby="mapa-title">
+          <div className="architecture-heading">
+            <div>
+              <span className="eyebrow">visao do sistema</span>
+              <h2 id="mapa-title">Da fundacao ao controle</h2>
+              <p className="muted">
+                Cada bloco tem um dono, depende apenas dos blocos indicados e avanca por gates auditados.
+              </p>
+            </div>
+            <div className="architecture-legend" aria-label="Legenda de maturidade">
+              <span><i className="map-dot technical"></i> Tecnica</span>
+              <span><i className="map-dot business"></i> Negocio</span>
+              <span><i className="map-dot operational"></i> Operacional</span>
+              <span><i className="map-dot blocked"></i> Bloqueado</span>
+            </div>
+          </div>
+
+          <div className="architecture-lanes">
+            {SYSTEM_MAP_LANES.map((lane) => (
+              <article className="architecture-lane" key={lane.laneKey}>
+                <div className="architecture-lane-title">
+                  <strong>{lane.label}</strong>
+                  <span>{lane.description}</span>
+                </div>
+                <div className="architecture-node-grid">
+                  {lane.moduleKeys.map((moduleKey) => {
+                    const detail = getSystemModuleDetail(moduleKey);
+                    const current = dashboard.modules.find((module) => module.moduleKey === moduleKey);
+                    if (!detail) return null;
+                    const maturity = moduleMaturityPercent(current?.lifecycle ?? null);
+                    return (
+                      <a
+                        className={`architecture-node ${lifecycleTone(current?.lifecycle ?? null)} ${current?.available ? "available" : "unavailable"}`}
+                        href={`#module-${moduleKey}`}
+                        key={moduleKey}
+                      >
+                        <div className="architecture-node-head">
+                          <strong>{detail.shortName}</strong>
+                          <span className="architecture-node-status">
+                            {lifecycleLabel(current?.lifecycle ?? null)}
+                          </span>
+                        </div>
+                        <p>{detail.description}</p>
+                        <div className="architecture-node-progress" aria-label={`Maturidade de ${detail.shortName}: ${lifecycleLabel(current?.lifecycle ?? null)}`}>
+                          <span style={{ width: `${maturity}%` }}></span>
+                        </div>
+                        <span className="architecture-node-meta">
+                          {detail.dependencies.filter((dependency) => dependency.required).length} dependencia(s) obrigatoria(s)
+                        </span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="architecture-flows" aria-labelledby="fluxos-title">
+          <div className="architecture-heading compact">
+            <div>
+              <span className="eyebrow">fluxos ponta a ponta</span>
+              <h2 id="fluxos-title">Como os blocos trabalham juntos</h2>
+            </div>
+            <span className="architecture-note">A seta indica dependencia de processo, nao permissao de escrita direta.</span>
+          </div>
+          <div className="architecture-flow-list">
+            {SYSTEM_FLOWS.map((flow) => (
+              <article className="architecture-flow" key={flow.flowKey}>
+                <div className="architecture-flow-title">
+                  <strong>{flow.title}</strong>
+                  <span>{flow.description}</span>
+                </div>
+                <div className="architecture-flow-steps">
+                  {flow.moduleKeys.map((moduleKey, index) => {
+                    const detail = getSystemModuleDetail(moduleKey);
+                    return (
+                      <div className="architecture-flow-step" key={`${flow.flowKey}:${moduleKey}:${index}`}>
+                        {index > 0 ? <span className="architecture-arrow" aria-hidden="true">&rarr;</span> : null}
+                        <a href={`#module-${moduleKey}`}>{detail?.shortName ?? moduleKey}</a>
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <section className="panel form-panel" id="ambiente" aria-labelledby="ambiente-title">
           <div className="panel-header">
@@ -198,7 +294,7 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Sea
               </thead>
               <tbody>
                 {dashboard.modules.map((module) => (
-                  <tr key={module.moduleKey}>
+                  <tr id={`module-${module.moduleKey}`} key={module.moduleKey}>
                     <td>
                       <strong>{module.displayName}</strong>
                       <span className="table-subtext">{module.moduleKey} · dono: {module.ownerDomain}</span>
@@ -302,6 +398,13 @@ function lifecycleLabel(value: ModuleLifecycle | null): string {
     suspended: "Suspenso"
   };
   return labels[value];
+}
+
+function lifecycleTone(value: ModuleLifecycle | null): string {
+  if (value === "operational" || value === "pilot") return "operational";
+  if (value === "business_validation") return "business";
+  if (value === "technical_validation" || value === "construction") return "technical";
+  return "blocked";
 }
 
 function accessLabel(value: ModuleAccessMode): string {

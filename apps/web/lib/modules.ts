@@ -1,5 +1,6 @@
 import { getRuntimeStatus } from "@/lib/runtime";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { SYSTEM_MODULE_CATALOG } from "@/lib/system-map";
 
 export type SystemEnvironment = "unconfigured" | "development" | "test" | "staging" | "production";
 export type ModuleLifecycle =
@@ -51,21 +52,16 @@ export type ModuleRuntimeDashboard = {
   error: string | null;
 };
 
-const FALLBACK_MODULES: Array<Pick<ModuleRuntime, "moduleKey" | "displayName" | "description" | "ownerDomain" | "isCore" | "sortOrder">> = [
-  { moduleKey: "core", displayName: "Nucleo", description: "Sessao, painel e diagnostico", ownerDomain: "sistema", isCore: true, sortOrder: 10 },
-  { moduleKey: "seguranca", displayName: "Seguranca", description: "Usuarios, perfis e alcadas", ownerDomain: "seguranca", isCore: true, sortOrder: 20 },
-  { moduleKey: "cadastros", displayName: "Cadastros", description: "Cadastros mestres", ownerDomain: "cadastros", isCore: false, sortOrder: 100 },
-  { moduleKey: "pedidos", displayName: "Pedidos", description: "Ciclo comercial", ownerDomain: "pedidos", isCore: false, sortOrder: 200 },
-  { moduleKey: "estoque", displayName: "Estoque", description: "Lotes, movimentos e saldos", ownerDomain: "estoque", isCore: false, sortOrder: 300 },
-  { moduleKey: "pcp", displayName: "Producao", description: "Cadastros tecnicos, formulas, garantias, OP, CQ e transformacoes", ownerDomain: "pcp", isCore: false, sortOrder: 400 },
-  { moduleKey: "expedicao", displayName: "Romaneio e expedicao", description: "Separacao e baixa de PA", ownerDomain: "expedicao", isCore: false, sortOrder: 500 },
-  { moduleKey: "importacao", displayName: "Importacao XML", description: "Conferencia de NF XML", ownerDomain: "importacao", isCore: false, sortOrder: 600 },
-  { moduleKey: "faturamento", displayName: "Faturamento", description: "Documentos e eventos fiscais", ownerDomain: "faturamento", isCore: false, sortOrder: 700 },
-  { moduleKey: "financeiro", displayName: "Financeiro e comissoes", description: "Recebimentos e comissoes", ownerDomain: "financeiro", isCore: false, sortOrder: 800 },
-  { moduleKey: "metas", displayName: "Metas comerciais", description: "Ledger de metas", ownerDomain: "metas", isCore: false, sortOrder: 900 },
-  { moduleKey: "relatorios", displayName: "Relatorios", description: "Relatorios e read models", ownerDomain: "relatorios", isCore: false, sortOrder: 1000 },
-  { moduleKey: "auditoria", displayName: "Auditoria e migracao", description: "Historico e reconciliacoes", ownerDomain: "auditoria", isCore: false, sortOrder: 1100 }
-];
+const FALLBACK_MODULES: Array<
+  Pick<ModuleRuntime, "moduleKey" | "displayName" | "description" | "ownerDomain" | "isCore" | "sortOrder">
+> = SYSTEM_MODULE_CATALOG.map((module) => ({
+  moduleKey: module.moduleKey,
+  displayName: module.displayName,
+  description: module.description,
+  ownerDomain: module.ownerDomain,
+  isCore: module.isCore,
+  sortOrder: module.sortOrder
+}));
 
 export async function getModuleRuntimeDashboard(viewEnvironment?: SystemEnvironment | null): Promise<ModuleRuntimeDashboard> {
   const runtime = getRuntimeStatus();

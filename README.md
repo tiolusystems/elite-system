@@ -2,6 +2,12 @@
 
 Base inicial do Elite System, o novo software comercial, industrial e auditavel criado a partir do historico preservado localmente.
 
+## Comece pelo mapa
+
+Antes de alterar codigo ou procurar um modulo, consulte `docs/arquitetura/ARQUITETURA_GERAL.md`. O documento mostra as camadas, os dominios proprietarios, as dependencias, os fluxos ponta a ponta, a maturidade e o localizador rapido de arquivos.
+
+A tela `/modulos` apresenta o mesmo sistema de forma visual e consulta no PostgreSQL o ambiente, a maturidade e o acesso efetivo de cada modulo.
+
 ## Decisao principal
 
 A stack operacional definida e PostgreSQL, Supabase, Next.js e Vercel.

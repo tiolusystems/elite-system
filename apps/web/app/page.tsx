@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { getAuthStatus } from "@/lib/auth";
 import { getMasterDataDashboard } from "@/lib/master-data";
-import { getModuleRuntimeDashboard } from "@/lib/modules";
+import { getModuleRuntimeDashboard, moduleRuntimeFor } from "@/lib/modules";
 import { getOrdersDashboard } from "@/lib/orders";
 import { getReportsDashboard } from "@/lib/reports";
 import { getRuntimeStatus } from "@/lib/runtime";
@@ -11,6 +11,7 @@ import { getKanbanDashboard } from "@/lib/kanban";
 import { getPcpDashboard } from "@/lib/pcp";
 import { getRomaneioDashboard } from "@/lib/romaneios";
 import { getSecurityDashboard } from "@/lib/security";
+import { moduleMaturityPercent } from "@/lib/system-map";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,8 @@ export default async function HomePage() {
   const pendentesXml = importacaoXml.metrics.itensPendentes;
   const opsAbertas = pcp.metrics.opsAbertas;
   const rolloutModules = moduleRuntime.modules.filter((module) => !module.isCore);
+  const maturityWidth = (moduleKey: string) =>
+    `${moduleMaturityPercent(moduleRuntimeFor(moduleRuntime, moduleKey)?.lifecycle ?? null)}%`;
 
   return (
     <main className="app-shell">
@@ -194,63 +197,63 @@ export default async function HomePage() {
                 <strong>Cadastros</strong>
                 <span>{cadastrosProntos} blocos prontos</span>
                 <div className="progress-rail">
-                  <span style={{ width: `${Math.round((cadastrosProntos / cadastros.modules.length) * 100)}%` }}></span>
+                  <span style={{ width: maturityWidth("cadastros") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/pedidos">
                 <strong>Pedidos</strong>
                 <span>{moneyOrDash(pedidos.metrics.faturamentoPrevisto)} previsto</span>
                 <div className="progress-rail">
-                  <span style={{ width: "42%" }}></span>
+                  <span style={{ width: maturityWidth("pedidos") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/importacao-xml">
                 <strong>XML MP</strong>
                 <span>{valueOrDash(importacaoXml.metrics.itensPendentes)} item(ns) pendente(s)</span>
                 <div className="progress-rail">
-                  <span style={{ width: "46%" }}></span>
+                  <span style={{ width: maturityWidth("importacao") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/kanban">
                 <strong>Kanban</strong>
                 <span>{valueOrDash(kanban.metrics.total)} pedido(s) no quadro</span>
                 <div className="progress-rail">
-                  <span style={{ width: "44%" }}></span>
+                  <span style={{ width: maturityWidth("pedidos") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/producao">
                 <strong>Producao</strong>
                 <span>{valueOrDash(pcp.metrics.opsAbertas)} OP(s) aberta(s)</span>
                 <div className="progress-rail">
-                  <span style={{ width: "48%" }}></span>
+                  <span style={{ width: maturityWidth("pcp") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/romaneios">
                 <strong>Romaneio</strong>
                 <span>{valueOrDash(romaneios.metrics.romaneiosSeparacao)} em separacao</span>
                 <div className="progress-rail">
-                  <span style={{ width: "46%" }}></span>
+                  <span style={{ width: maturityWidth("expedicao") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/relatorios">
                 <strong>Relatorios</strong>
                 <span>{valueOrDash(relatorios.metrics.catalogados)} catalogados</span>
                 <div className="progress-rail">
-                  <span style={{ width: "28%" }}></span>
+                  <span style={{ width: maturityWidth("relatorios") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/login">
                 <strong>Login</strong>
                 <span>{auth.profile?.displayName ?? auth.email ?? "entrar no sistema"}</span>
                 <div className="progress-rail">
-                  <span style={{ width: auth.isAuthenticated ? "70%" : "24%" }}></span>
+                  <span style={{ width: maturityWidth("seguranca") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/seguranca">
                 <strong>Seguranca</strong>
                 <span>{valueOrDash(seguranca.metrics.activeProfiles)} perfil(is) ativo(s)</span>
                 <div className="progress-rail">
-                  <span style={{ width: seguranca.source === "supabase" ? "58%" : "20%" }}></span>
+                  <span style={{ width: maturityWidth("seguranca") }}></span>
                 </div>
               </a>
             </div>

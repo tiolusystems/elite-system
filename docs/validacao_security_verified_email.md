@@ -29,3 +29,16 @@ Localmente, Mailpit recebe convite, alteracao de email e recuperacao em `http://
 ## Diagnostico local
 
 Na verificacao de 2026-07-12, o Auth local tinha uma conta humana com endereco placeholder confirmado e nenhuma identidade humana associada ao endereco real usado na recuperacao. Por isso o pedido de recuperacao retornava a mensagem publica neutra e nenhuma mensagem era criada: a conta solicitada nao existia no diretorio Auth.
+
+## Evidencias executadas
+
+- migration `0047` aplicada ao PostgreSQL local e registrada no historico;
+- `supabase db lint --local`: nenhum erro de schema;
+- 238 testes Python: OK;
+- ESLint, TypeScript `--noEmit` e build de producao Next.js: OK;
+- convite sintetico: mensagem recebida no Mailpit com rota `/auth/confirm`, `type=invite` e sem senha temporaria;
+- troca de email sintetica: mensagem recebida com `type=email_change`;
+- recuperacao de conta sintetica existente: mensagem recebida com `type=recovery`;
+- usuarios sinteticos removidos ao final e caixa Mailpit de teste limpa;
+- painel `/seguranca`: email ficticio identificado e status de confirmacao visivel;
+- layout medido em 1280 px e 390 px sem overflow horizontal.

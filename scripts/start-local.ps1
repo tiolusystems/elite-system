@@ -7,6 +7,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$env:SUPABASE_TELEMETRY_DISABLED = '1'
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $WebRoot = Join-Path $RepoRoot 'apps\web'
 $ToolsRoot = Join-Path $RepoRoot '.tools'
@@ -122,7 +123,6 @@ if (-not (Test-Path (Join-Path $WebRoot 'node_modules\next\dist\bin\next'))) {
 Start-DockerEngine
 $supabaseStartExitCode = 0
 if (-not $SkipSupabaseStart) {
-  $env:SUPABASE_TELEMETRY_DISABLED = '1'
   $previousErrorActionPreference = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {

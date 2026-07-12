@@ -61,6 +61,10 @@ class OperationalBootstrapContractTest(unittest.TestCase):
         self.assertIn(".env.local", script)
         self.assertIn("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", script)
         self.assertIn("ELITE_DATABASE_MODE=local", script)
+        self.assertLess(
+            script.index("SUPABASE_TELEMETRY_DISABLED"),
+            script.index("if (-not $SkipSupabaseStart)"),
+        )
         self.assertIn("/api/health", script)
         self.assertIn("ELITE_LOCAL_RUNTIME_OK", script)
         self.assertIn(".env.*", gitignore)

@@ -80,6 +80,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/security_admin_email_change_workflow.sql
+      - name: Run security administrator privilege boundary smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/security_admin_privilege_boundary.sql
       - uses: actions/upload-artifact@v4
         with:
           name: elite-database-types

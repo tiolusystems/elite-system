@@ -45,6 +45,27 @@ Desde a `0048`, conta autenticada nao informa nem altera diretamente o proprio e
 
 As RPCs diretas da `0047` (`authorize_security_own_email_change`, `record_security_own_email_change_requested` e `record_security_own_email_changed`) permanecem no historico de migrations, mas tiveram `execute` revogado de `authenticated` pela `0048`.
 
+### Fronteira administrativa 0049
+
+Autonomia operacional nao inclui administrar identidade, alcadas ou ambiente.
+`system.admin`, `security.manage_users`, `security.manage_permissions` e
+`security.email_change.review` usam `default_allowed = false`.
+
+Uma RPC administrativa exige duas condicoes simultaneas:
+
+1. perfil humano ativo com `user_profiles.role = 'admin'`;
+2. grant explicito da action key exigida.
+
+Conceder uma action key administrativa por engano a um perfil nao-admin nao o
+transforma em administrador. Promover ou administrar outro `admin` exige
+`security.manage_permissions`, alem de `security.manage_users`. O ultimo
+administrador capaz nao pode ser rebaixado, desativado ou perder uma das quatro
+concessoes centrais.
+
+O bootstrap `service_role` cria o primeiro administrador com esses grants. As
+implementacoes `_impl_0049`, o snapshot interno e o logger legado de senha
+temporaria nao sao executaveis por `authenticated`.
+
 ### Perfil operacional e separado de ator de sistema
 
 Perfis com `is_system_actor = true`, como `Migracao Historica`, nao podem ser alterados pelas RPCs normais de usuario.
@@ -106,5 +127,5 @@ As duas funcoes `resolve_*` sao excecoes documentadas de leitura minima antes do
 - Configurar SMTP e templates de convite, alteracao de email e recuperacao no Supabase cloud antes da homologacao externa.
 - Confirmar se os papeis atuais (`admin`, `comercial`, `producao`, `estoque`, `expedicao`, `auditoria`) sao suficientes.
 - Definir se a tela de alçadas mostrara apenas overrides ou tambem o valor efetivo calculado (`default_allowed` + override).
-- Definir quando trocar `default_allowed = true` para restricao por dominio em producao.
 - Definir se `permission_actions` podera ser alterada por tela ou se continuara sendo catalogo controlado por migration.
+- Implantar MFA TOTP com exigencia AAL2 antes da exposicao publica, sem bloquear o unico administrador durante o cadastro inicial do fator.

@@ -526,6 +526,14 @@ Convite novo deve manter `user_metadata.invitation_pending = true` ate o destina
 
 Troca de email de usuario e fluxo administrativo governado desde a `0048`: o usuario registra motivo sem fornecer endereco; somente perfil `admin` define ou rejeita o novo email; a aplicacao chama `auth.updateUser` apenas com o valor retornado pela aprovacao persistida; o titular confirma esse endereco. Solicitacao, revisao, envio e conclusao geram eventos append-only. RPC direta que aceite email digitado pelo proprio usuario e anti-pattern bloqueado.
 
+Administracao de seguranca e excecao permanente a autonomia operacional. Desde
+a `0049`, action keys de usuarios, permissoes, revisao de email e runtime nascem
+negadas. Toda RPC administrativa exige papel humano `admin` e grant explicito.
+Uma action key isolada nunca pode elevar um perfil operacional a administrador.
+Promocao de admin exige `manage_users` + `manage_permissions`, implementacoes
+internas nao ficam executaveis e o ultimo administrador capaz nao pode ser
+desativado nem perder os grants centrais.
+
 Senha existente nunca e recuperada ou exibida. A recuperacao usa link de uso limitado emitido pelo Supabase Auth; o callback aceita somente o tipo `recovery`, remove codigo/token da URL antes de abrir a tela de nova senha e apresenta resposta neutra para email existente ou inexistente. Solicitacao e validacao do link pertencem ao log nativo do Supabase Auth. A mudanca concluida tambem registra `record_security_own_password_changed()` no ledger operacional, sem senha, token ou segredo.
 
 ## Leitura minima antes de guard
@@ -608,7 +616,7 @@ Contrato do sweep:
 - confirmar que nenhuma tabela operacional teve contagem alterada pela tentativa negada;
 - falhar de forma barulhenta quando uma RPC retorna sucesso ou valida regra de dominio antes de negar permissao.
 
-O sweep inicial cobre `cadastros`, `estoque`, `pcp`, `faturamento`, `financeiro` e `pedidos`, incluindo action keys satelites ja acopladas a esses fluxos (`romaneios`, `importacao` e `metas`). O dominio `seguranca` fica explicitamente fora desse sweep ate o fechamento proprio do dominio.
+O sweep inicial cobre `cadastros`, `estoque`, `pcp`, `faturamento`, `financeiro` e `pedidos`, incluindo action keys satelites ja acopladas a esses fluxos (`romaneios`, `importacao` e `metas`). O dominio `seguranca` recebeu smoke proprio de escalada na `0049`, porque sua regra adicional exige papel admin mesmo quando um grant critico e concedido propositalmente a um perfil operacional.
 
 ## Ordem recomendada apos cadastros
 

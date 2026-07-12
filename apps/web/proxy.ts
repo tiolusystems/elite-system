@@ -73,11 +73,14 @@ export async function proxy(request: NextRequest) {
     return redirectToLogin(request, "profile_required");
   }
 
-  if (user.user_metadata?.temporary_password_bootstrap === true && pathname !== TEMP_PASSWORD_CHANGE_ROUTE) {
+  const invitationPending = user.user_metadata?.invitation_pending === true;
+  const temporaryPasswordPending = user.user_metadata?.temporary_password_bootstrap === true;
+
+  if ((invitationPending || temporaryPasswordPending) && pathname !== TEMP_PASSWORD_CHANGE_ROUTE) {
     const changeUrl = request.nextUrl.clone();
     changeUrl.pathname = TEMP_PASSWORD_CHANGE_ROUTE;
     changeUrl.search = "";
-    changeUrl.searchParams.set("mode", "temporary");
+    changeUrl.searchParams.set("mode", invitationPending ? "invitation" : "temporary");
     changeUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(changeUrl);
   }

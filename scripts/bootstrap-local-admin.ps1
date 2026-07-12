@@ -6,7 +6,10 @@ param(
 
   [Parameter(Mandatory = $true)]
   [ValidateLength(1, 160)]
-  [string]$DisplayName
+  [string]$DisplayName,
+
+  [ValidatePattern('^https?://(127\.0\.0\.1|localhost)(:\d+)?$')]
+  [string]$ApplicationUrl = 'http://127.0.0.1:3000'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,44 +38,18 @@ function Get-SupabaseEnvironment {
   return $values
 }
 
-function New-TemporaryPassword {
-  $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
-  $lower = 'abcdefghijkmnopqrstuvwxyz'
-  $digits = '23456789'
-  $symbols = '!@#$%&*?'
-  $all = $upper + $lower + $digits + $symbols
-  $random = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-
-  function Get-RandomCharacter([string]$Alphabet) {
-    $buffer = New-Object byte[] 4
-    $random.GetBytes($buffer)
-    $index = [BitConverter]::ToUInt32($buffer, 0) % $Alphabet.Length
-    return $Alphabet[[int]$index]
-  }
-
-  $characters = New-Object System.Collections.Generic.List[char]
-  $characters.Add((Get-RandomCharacter $upper))
-  $characters.Add((Get-RandomCharacter $lower))
-  $characters.Add((Get-RandomCharacter $digits))
-  $characters.Add((Get-RandomCharacter $symbols))
-  while ($characters.Count -lt 18) {
-    $characters.Add((Get-RandomCharacter $all))
-  }
-
-  for ($index = $characters.Count - 1; $index -gt 0; $index -= 1) {
-    $buffer = New-Object byte[] 4
-    $random.GetBytes($buffer)
-    $swap = [BitConverter]::ToUInt32($buffer, 0) % ($index + 1)
-    $current = $characters[$index]
-    $characters[$index] = $characters[[int]$swap]
-    $characters[[int]$swap] = $current
-  }
-  $random.Dispose()
-  return -join $characters
-}
-
 if (-not (Test-Path $Supabase)) {
   throw 'Supabase CLI local nao encontrada.'
+}
+
+$normalizedEmail = $Email.Trim().ToLowerInvariant()
+$emailDomain = ($normalizedEmail -split '@', 2)[1]
+$reservedDomains = @('example.com', 'example.net', 'example.org')
+if (
+  $emailDomain -match '(^|\.)(local|invalid|test)$' -or
+  $reservedDomains -contains $emailDomain
+) {
+  throw 'Informe um email real. Dominios ficticios ou reservados nao podem criar acesso.'
 }
 
 $supabaseEnvironment = Get-SupabaseEnvironment
@@ -92,26 +69,27 @@ $headers = @{
   Authorization = "Bearer $serviceRoleKey"
   'Content-Type' = 'application/json'
 }
-$temporaryPassword = New-TemporaryPassword
-$createBody = @{
-  email = $Email.Trim().ToLowerInvariant()
-  password = $temporaryPassword
-  email_confirm = $true
-  user_metadata = @{
-    temporary_password_bootstrap = $true
+$redirectTo = "$($ApplicationUrl.TrimEnd('/'))/auth/confirm?flow=invite"
+$inviteUri = "$apiUrl/auth/v1/invite?redirect_to=$([Uri]::EscapeDataString($redirectTo))"
+$inviteBody = @{
+  email = $normalizedEmail
+  data = @{
+    display_name = $DisplayName.Trim()
+    elite_role = 'admin'
+    invitation_pending = $true
     bootstrap_origin = 'local_operator'
   }
 } | ConvertTo-Json -Depth 4
 
-$createdUser = Invoke-RestMethod `
+$invitedUser = Invoke-RestMethod `
   -Method Post `
-  -Uri "$apiUrl/auth/v1/admin/users" `
+  -Uri $inviteUri `
   -Headers $headers `
-  -Body $createBody
+  -Body $inviteBody
 
 try {
   $bootstrapBody = @{
-    p_user_id = $createdUser.id
+    p_user_id = $invitedUser.id
     p_display_name = $DisplayName.Trim()
   } | ConvertTo-Json
   Invoke-RestMethod `
@@ -122,13 +100,15 @@ try {
 } catch {
   Invoke-RestMethod `
     -Method Delete `
-    -Uri "$apiUrl/auth/v1/admin/users/$($createdUser.id)" `
+    -Uri "$apiUrl/auth/v1/admin/users/$($invitedUser.id)" `
     -Headers $headers `
     -ErrorAction SilentlyContinue | Out-Null
   throw
 }
 
 Write-Output 'ELITE_FIRST_ADMIN_BOOTSTRAP_OK'
-Write-Output "Login: $($Email.Trim().ToLowerInvariant())"
-Write-Output "Senha temporaria (exibida uma unica vez): $temporaryPassword"
-Write-Output 'No primeiro login o sistema exigira a troca da senha.'
+Write-Output "Convite enviado para: $normalizedEmail"
+Write-Output 'Abra o email de convite, confirme o endereco e defina a senha.'
+if ($supabaseEnvironment['INBUCKET_URL']) {
+  Write-Output "Caixa de email local: $($supabaseEnvironment['INBUCKET_URL'])"
+}

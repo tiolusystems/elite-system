@@ -25,7 +25,7 @@ class PasswordRecoveryContractTests(unittest.TestCase):
         page = RECOVERY_PAGE.read_text(encoding="utf-8")
 
         self.assertIn("resetPasswordForEmail", actions)
-        self.assertIn('applicationUrl("/auth/confirm").toString()', actions)
+        self.assertIn('applicationUrl("/auth/confirm?flow=recovery").toString()', actions)
         self.assertNotIn("auth.admin.listUsers", actions)
         self.assertNotIn(".rpc(", actions)
         self.assertIn("Se existe uma conta ativa", page)

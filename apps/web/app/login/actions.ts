@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { applicationUrl } from "@/lib/application-url";
+import { EMAIL_ADDRESS_PATTERN, isReservedEmailAddress } from "@/lib/email-address";
 import { getRuntimeStatus } from "@/lib/runtime";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const MINIMUM_PASSWORD_LENGTH = 12;
 
-type PasswordChangeMode = "authenticated" | "recovery" | "temporary";
+type PasswordChangeMode = "authenticated" | "invitation" | "recovery" | "temporary";
 
 export async function loginAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
@@ -50,13 +50,13 @@ export async function requestPasswordRecoveryAction(formData: FormData) {
   }
 
   const email = field(formData, "email").toLowerCase();
-  if (!EMAIL_PATTERN.test(email)) {
+  if (!EMAIL_ADDRESS_PATTERN.test(email)) {
     redirect("/login/recuperar-senha?result=invalid_email");
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: applicationUrl("/auth/confirm").toString()
+    redirectTo: applicationUrl("/auth/confirm?flow=recovery").toString()
   });
 
   if (error) {
@@ -102,6 +102,8 @@ export async function changeOwnPasswordAction(formData: FormData) {
     password,
     data: {
       ...user.user_metadata,
+      invitation_pending: false,
+      invitation_accepted_at: mode === "invitation" ? new Date().toISOString() : user.user_metadata?.invitation_accepted_at,
       temporary_password_bootstrap: false,
       temporary_password_changed_at: new Date().toISOString()
     }
@@ -132,10 +134,87 @@ export async function changeOwnPasswordAction(formData: FormData) {
     await supabase.auth.signOut({ scope: "local" });
     redirect("/login?result=password_recovered");
   }
+  if (mode === "invitation") {
+    await supabase.auth.signOut({ scope: "local" });
+    redirect("/login?result=account_activated");
+  }
   if (mode === "authenticated") {
     redirect("/login?result=password_changed");
   }
   redirect(nextPath);
+}
+
+export async function requestOwnEmailChangeAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/login?result=not_configured#meu-email");
+  }
+
+  const email = field(formData, "new_email").toLowerCase();
+  const confirmation = field(formData, "new_email_confirmation").toLowerCase();
+
+  if (!EMAIL_ADDRESS_PATTERN.test(email)) {
+    redirect("/login?result=invalid_email#meu-email");
+  }
+  if (isReservedEmailAddress(email)) {
+    redirect("/login?result=fictitious_email#meu-email");
+  }
+  if (email !== confirmation) {
+    redirect("/login?result=email_mismatch#meu-email");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login?result=auth_required");
+  }
+  if (user.email?.toLowerCase() === email) {
+    redirect("/login?result=email_unchanged#meu-email");
+  }
+
+  const authorization = await auditedRpc(supabase, "authorize_security_own_email_change", {
+    p_new_email: email
+  }, {
+    metadata: {
+      action_key: "security.change_own_email",
+      axis: "change_type",
+      domain: "seguranca",
+      entity: "auth.users",
+      entity_id: user.id,
+      failure_action: "seguranca.own_email_change_authorization_failed"
+    }
+  });
+  if (authorization.error) {
+    redirect(`/login?result=${encodeURIComponent(mapEmailChangeError(authorization.error.message))}#meu-email`);
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({ email });
+  if (updateError) {
+    redirect(`/login?result=${encodeURIComponent(mapEmailChangeError(updateError.message))}#meu-email`);
+  }
+
+  const { error: auditError } = await auditedRpc(supabase, "record_security_own_email_change_requested", {
+    p_new_email: email
+  }, {
+    metadata: {
+      action_key: "security.change_own_email",
+      axis: "change_type",
+      domain: "seguranca",
+      entity: "auth.users",
+      entity_id: user.id,
+      failure_action: "seguranca.own_email_change_request_log_failed"
+    }
+  });
+
+  if (auditError) {
+    redirect("/login?result=email_change_audit_failed#meu-email");
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/login?result=email_confirmation_sent#meu-email");
 }
 
 export async function logoutAction() {
@@ -164,11 +243,32 @@ function safeNextPath(value: string): string {
 }
 
 function passwordChangeMode(value: string): PasswordChangeMode {
-  if (value === "recovery" || value === "temporary") {
+  if (value === "invitation" || value === "recovery" || value === "temporary") {
     return value;
   }
   return "authenticated";
 }
+
+function mapEmailChangeError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("not allowed")) {
+    return "permission_denied";
+  }
+  if (normalized.includes("fictitious email")) {
+    return "fictitious_email";
+  }
+  if (normalized.includes("already") || normalized.includes("registered") || normalized.includes("exists")) {
+    return "email_already_used";
+  }
+  if (normalized.includes("rate") || normalized.includes("frequency")) {
+    return "rate_limited";
+  }
+  if (normalized.includes("invalid") && normalized.includes("email")) {
+    return "invalid_email";
+  }
+  return "email_change_failed";
+}
+
 
 function changePasswordUrl(result: string, nextPath: string, mode: PasswordChangeMode): string {
   const params = new URLSearchParams({ result, next: nextPath, mode });

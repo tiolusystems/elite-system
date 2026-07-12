@@ -2,9 +2,8 @@ import Link from "next/link";
 
 import {
   clearSecurityPermissionOverrideAction,
-  createSecurityAuthUserWithTemporaryPasswordAction,
+  inviteSecurityAuthUserAction,
   setSecurityPermissionOverrideAction,
-  upsertSecurityUserProfileAction
 } from "@/app/seguranca/actions";
 import { getRuntimeStatus } from "@/lib/runtime";
 import { getSecurityDashboard, type EffectivePermission, type SecurityProfile } from "@/lib/security";
@@ -59,7 +58,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
           <div>
             <h1>Seguranca e alcadas</h1>
             <p className="muted">
-              Perfis vinculados ao Supabase Auth, checks por usuario e auditoria das mudancas de permissao.
+              Contas, confirmação de e-mail, perfis, alçadas e auditoria de acesso.
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de seguranca">
@@ -69,8 +68,8 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
             <a className="secondary-button" href="#novo-acesso">
               Novo acesso
             </a>
-            <a className="primary-button" href="#perfil">
-              Perfil
+            <a className="primary-button" href="#perfis">
+              Contas
             </a>
           </div>
         </div>
@@ -81,16 +80,16 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
             <strong>{valueOrDash(dashboard.metrics.totalProfiles)}</strong>
           </div>
           <div className="summary-card">
-            <span>Ativos</span>
-            <strong>{valueOrDash(dashboard.metrics.activeProfiles)}</strong>
+            <span>E-mails confirmados</span>
+            <strong>{valueOrDash(dashboard.metrics.confirmedEmails)}</strong>
           </div>
           <div className="summary-card">
-            <span>Atores de sistema</span>
-            <strong>{valueOrDash(dashboard.metrics.systemActors)}</strong>
+            <span>Confirmações pendentes</span>
+            <strong>{valueOrDash(dashboard.metrics.pendingEmails)}</strong>
           </div>
           <div className="summary-card">
-            <span>Overrides</span>
-            <strong>{valueOrDash(dashboard.metrics.overrides)}</strong>
+            <span>E-mails fictícios</span>
+            <strong>{valueOrDash(dashboard.metrics.placeholderEmails)}</strong>
           </div>
         </section>
 
@@ -111,10 +110,10 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
         <section className="two-column">
           <section className="panel form-panel" id="novo-acesso" aria-labelledby="novo-acesso-title">
             <div className="panel-header">
-              <h2 id="novo-acesso-title">Novo acesso por email</h2>
-              <span className="pill">{runtime.supabaseConfigured ? "Auth + auditoria" : "aguardando Supabase"}</span>
+              <h2 id="novo-acesso-title">Convidar novo usuário</h2>
+              <span className="pill">confirmação por e-mail</span>
             </div>
-            <form action={createSecurityAuthUserWithTemporaryPasswordAction}>
+            <form action={inviteSecurityAuthUserAction}>
               <div className="form-grid">
                 <label className="wide-field">
                   Email
@@ -134,60 +133,11 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                     ))}
                   </select>
                 </label>
-                <label>
-                  Status
-                  <select name="status" defaultValue="active">
-                    <option value="active">active</option>
-                    <option value="inactive">inactive</option>
-                  </select>
-                </label>
               </div>
               <div className="form-footer">
-                <span>Senha temporaria enviada pelo canal configurado. Credenciais nao entram no log.</span>
+                <span>A conta fica pendente até o destinatário confirmar o e-mail e criar sua senha.</span>
                 <button className="primary-button" type="submit">
-                  Criar e enviar
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section className="panel form-panel" id="perfil" aria-labelledby="perfil-title">
-            <div className="panel-header">
-              <h2 id="perfil-title">Perfil operacional</h2>
-              <span className="pill">{runtime.supabaseConfigured ? "RPC auditada" : "aguardando Supabase"}</span>
-            </div>
-            <form action={upsertSecurityUserProfileAction}>
-              <div className="form-grid">
-                <label className="wide-field">
-                  Auth user id
-                  <input name="user_id" placeholder="UUID do usuario no Supabase Auth" required />
-                </label>
-                <label className="wide-field">
-                  Nome
-                  <input name="display_name" placeholder="Nome exibido no sistema" required />
-                </label>
-                <label>
-                  Papel
-                  <select name="role" defaultValue="comercial">
-                    {ROLES.map((role) => (
-                      <option value={role} key={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Status
-                  <select name="status" defaultValue="active">
-                    <option value="active">active</option>
-                    <option value="inactive">inactive</option>
-                  </select>
-                </label>
-              </div>
-              <div className="form-footer">
-                <span>O usuario precisa existir no Supabase Auth antes do perfil operacional.</span>
-                <button className="primary-button" type="submit">
-                  Salvar perfil
+                  Enviar convite
                 </button>
               </div>
             </form>
@@ -203,6 +153,18 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                 <div className="status-row">
                   <dt>Nome</dt>
                   <dd>{dashboard.selectedProfile.displayName}</dd>
+                </div>
+                <div className="status-row">
+                  <dt>E-mail</dt>
+                  <dd>{dashboard.selectedProfile.email ?? "não cadastrado"}</dd>
+                </div>
+                <div className="status-row">
+                  <dt>Confirmação</dt>
+                  <dd>
+                    <span className={`status-chip ${emailStatusTone(dashboard.selectedProfile.emailStatus)}`}>
+                      {emailStatusLabel(dashboard.selectedProfile.emailStatus)}
+                    </span>
+                  </dd>
                 </div>
                 <div className="status-row">
                   <dt>Status</dt>
@@ -230,7 +192,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
           </section>
         </section>
 
-        <section className="panel" aria-labelledby="perfis-title">
+        <section className="panel" id="perfis" aria-labelledby="perfis-title">
           <div className="panel-header">
             <h2 id="perfis-title">Perfis</h2>
             <span className="pill">{dashboard.source}</span>
@@ -239,18 +201,19 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
             <table className="data-table security-profile-table">
               <thead>
                 <tr>
-                  <th>Usuario</th>
+                  <th>Usuário</th>
+                  <th>E-mail</th>
+                  <th>Confirmação</th>
                   <th>Papel</th>
                   <th>Status</th>
                   <th>Overrides</th>
-                  <th>Atualizado</th>
                   <th>Selecionar</th>
                 </tr>
               </thead>
               <tbody>
                 {dashboard.profiles.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>Nenhum perfil encontrado.</td>
+                    <td colSpan={7}>Nenhum perfil encontrado.</td>
                   </tr>
                 ) : (
                   dashboard.profiles.map((profile) => (
@@ -318,15 +281,19 @@ function ProfileRow({ profile, selected }: { profile: SecurityProfile; selected:
     <tr>
       <td>
         <strong>{profile.displayName}</strong>
-        <span className="table-subtext">{profile.id}</span>
         {profile.systemActorKey ? <span className="table-subtext">{profile.systemActorKey}</span> : null}
+      </td>
+      <td>{profile.email ?? "-"}</td>
+      <td>
+        <span className={`status-chip ${emailStatusTone(profile.emailStatus)}`}>
+          {emailStatusLabel(profile.emailStatus)}
+        </span>
       </td>
       <td>{profile.role}</td>
       <td>
         <span className={`status-chip ${profile.status}`}>{profile.status}</span>
       </td>
       <td>{profile.overridesCount}</td>
-      <td>{formatDate(profile.updatedAt)}</td>
       <td>
         <a className={selected ? "primary-button" : "secondary-button"} href={`/seguranca?user_id=${profile.id}#alcadas`}>
           {selected ? "Selecionado" : "Selecionar"}
@@ -398,17 +365,6 @@ function labelForBoolean(value: boolean): string {
   return value ? "permitido" : "bloqueado";
 }
 
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(date);
-}
-
 function singleValue(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
@@ -418,8 +374,8 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
   switch (result) {
     case "profile_saved":
       return { kind: "ok", title: "Perfil salvo", detail: "O perfil operacional foi gravado com auditoria." };
-    case "auth_user_created":
-      return { kind: "ok", title: "Acesso criado", detail: "O usuario Auth foi criado e a senha temporaria foi enviada pelo canal configurado." };
+    case "auth_invitation_sent":
+      return { kind: "ok", title: "Convite enviado", detail: "A conta permanecerá pendente até o e-mail ser confirmado e a senha ser criada." };
     case "permission_saved":
       return { kind: "ok", title: "Alcada atualizada", detail: "O override de permissao foi registrado." };
     case "permission_cleared":
@@ -428,12 +384,10 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
       return { kind: "warning", title: "Supabase nao configurado", detail: "Configure o ambiente antes de gravar." };
     case "service_role_missing":
       return { kind: "warning", title: "Service role ausente", detail: "Configure SUPABASE_SERVICE_ROLE_KEY somente no servidor." };
-    case "temp_password_mailer_missing":
-      return { kind: "warning", title: "Envio nao configurado", detail: "Configure ELITE_TEMP_PASSWORD_EMAIL_WEBHOOK_URL antes de criar senha temporaria." };
-    case "temp_password_email_failed":
-      return { kind: "warning", title: "Envio falhou", detail: "A senha temporaria nao foi entregue pelo canal configurado." };
     case "auth_user_create_failed":
-      return { kind: "warning", title: "Auth nao criado", detail: "O Supabase Auth recusou a criacao do usuario." };
+      return { kind: "warning", title: "Convite não criado", detail: "O Supabase Auth recusou a criação da conta." };
+    case "auth_user_exists":
+      return { kind: "warning", title: "E-mail já cadastrado", detail: "Este endereço já pertence a uma conta do sistema. Consulte o status na lista abaixo." };
     case "permission_denied":
       return { kind: "warning", title: "Permissao negada", detail: "Seu perfil nao tem alcada para esta operacao." };
     case "auth_user_missing":
@@ -448,6 +402,8 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
       return { kind: "warning", title: "UUID invalido", detail: "Informe um identificador valido do Supabase Auth." };
     case "invalid_email":
       return { kind: "warning", title: "Email invalido", detail: "Informe um email valido para login." };
+    case "fictitious_email":
+      return { kind: "warning", title: "E-mail fictício bloqueado", detail: "Informe um endereço real que possa receber a confirmação." };
     case "invalid_role":
       return { kind: "warning", title: "Papel invalido", detail: "Escolha um papel permitido." };
     case "invalid_status":
@@ -461,4 +417,23 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
     default:
       return null;
   }
+}
+
+function emailStatusLabel(status: SecurityProfile["emailStatus"]): string {
+  const labels: Record<SecurityProfile["emailStatus"], string> = {
+    confirmed: "confirmado",
+    missing: "ausente",
+    not_applicable: "não aplicável",
+    pending_activation: "e-mail confirmado; falta criar senha",
+    pending_confirmation: "aguardando confirmação",
+    placeholder: "e-mail fictício"
+  };
+  return labels[status];
+}
+
+function emailStatusTone(status: SecurityProfile["emailStatus"]): string {
+  if (status === "confirmed") return "active";
+  if (status === "pending_activation" || status === "pending_confirmation") return "pending";
+  if (status === "not_applicable") return "blocked";
+  return "rejected";
 }

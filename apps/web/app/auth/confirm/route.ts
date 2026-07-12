@@ -1,22 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { applicationUrl } from "@/lib/application-url";
+import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const CHANGE_PASSWORD_PATH = "/login/trocar-senha";
+type ConfirmationFlow = "email_change" | "invite" | "recovery";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const tokenHash = request.nextUrl.searchParams.get("token_hash");
   const type = request.nextUrl.searchParams.get("type");
+  let flow = confirmationFlow(request.nextUrl.searchParams.get("flow"));
   const supabase = await createSupabaseServerClient();
 
   let error: { message: string } | null = null;
 
-  if (tokenHash && type === "recovery") {
+  if (tokenHash && (type === "recovery" || type === "invite" || type === "email_change")) {
+    flow = type;
     const result = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: "recovery"
+      type
     });
     error = result.error;
   } else if (code) {
@@ -29,12 +33,39 @@ export async function GET(request: NextRequest) {
   const redirectUrl = applicationUrl("/");
 
   if (error) {
-    redirectUrl.pathname = "/login/recuperar-senha";
-    redirectUrl.searchParams.set("result", "recovery_expired");
+    if (flow === "recovery") {
+      redirectUrl.pathname = "/login/recuperar-senha";
+      redirectUrl.searchParams.set("result", "recovery_expired");
+    } else {
+      redirectUrl.pathname = "/login";
+      redirectUrl.searchParams.set("result", flow === "invite" ? "invitation_expired" : "email_change_expired");
+    }
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (flow === "email_change") {
+    const { error: auditError } = await auditedRpc(supabase, "record_security_own_email_changed", {}, {
+      metadata: {
+        action_key: "security.change_own_email",
+        axis: "change_type",
+        domain: "seguranca",
+        entity: "auth.users",
+        failure_action: "seguranca.own_email_change_confirmation_log_failed"
+      }
+    });
+    redirectUrl.pathname = "/login";
+    redirectUrl.searchParams.set("result", auditError ? "email_change_audit_failed" : "email_confirmed");
     return NextResponse.redirect(redirectUrl);
   }
 
   redirectUrl.pathname = CHANGE_PASSWORD_PATH;
-  redirectUrl.searchParams.set("mode", "recovery");
+  redirectUrl.searchParams.set("mode", flow === "invite" ? "invitation" : "recovery");
   return NextResponse.redirect(redirectUrl);
+}
+
+function confirmationFlow(value: string | null): ConfirmationFlow {
+  if (value === "email_change" || value === "invite") {
+    return value;
+  }
+  return "recovery";
 }

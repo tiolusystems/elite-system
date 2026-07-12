@@ -45,9 +45,13 @@ class OperationalBootstrapContractTest(unittest.TestCase):
         script = BOOTSTRAP_SCRIPT.read_text(encoding="utf-8")
 
         self.assertIn("Este script aceita somente Supabase local", script)
-        self.assertIn("temporary_password_bootstrap = $true", script)
+        self.assertIn("/auth/v1/invite", script)
+        self.assertIn("invitation_pending = $true", script)
+        self.assertIn("Dominios ficticios ou reservados nao podem criar acesso", script)
         self.assertIn("-Method Delete", script)
         self.assertIn("bootstrap_first_system_admin", script)
+        self.assertNotIn("email_confirm = $true", script)
+        self.assertNotIn("New-TemporaryPassword", script)
         self.assertNotRegex(script, r"(?i)(service_role_key|password)\s*=\s*['\"][A-Za-z0-9._-]{20,}")
 
     def test_start_script_generates_ignored_environment_and_health_checks(self) -> None:

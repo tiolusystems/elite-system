@@ -17,7 +17,11 @@ export default async function ChangeTemporaryPasswordPage({
   const result = singleValue(params.result);
   const next = singleValue(params.next) ?? "/";
   const requestedMode = passwordChangeMode(singleValue(params.mode));
-  const mode = auth.requiresPasswordChange ? "temporary" : requestedMode;
+  const mode = auth.requiresAccountActivation
+    ? "invitation"
+    : auth.requiresPasswordChange
+      ? "temporary"
+      : requestedMode;
   const copy = pageCopy(mode);
   const message = messageForResult(result);
 
@@ -171,16 +175,25 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
   return messages[result] ?? messages.login_failed;
 }
 
-type PasswordChangeMode = "authenticated" | "recovery" | "temporary";
+type PasswordChangeMode = "authenticated" | "invitation" | "recovery" | "temporary";
 
 function passwordChangeMode(value: string | undefined): PasswordChangeMode {
-  if (value === "recovery" || value === "temporary") {
+  if (value === "invitation" || value === "recovery" || value === "temporary") {
     return value;
   }
   return "authenticated";
 }
 
 function pageCopy(mode: PasswordChangeMode) {
+  if (mode === "invitation") {
+    return {
+      brandLabel: "Ativação da conta",
+      title: "Confirme seu acesso",
+      description: "Seu e-mail foi confirmado. Crie a senha que usará para entrar no Elite System.",
+      formTitle: "Criar senha",
+      buttonLabel: "Ativar conta"
+    };
+  }
   if (mode === "recovery") {
     return {
       brandLabel: "Recuperação de senha",

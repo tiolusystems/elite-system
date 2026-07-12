@@ -32,17 +32,17 @@ O script:
 4. inicia Next.js em `http://127.0.0.1:3000`;
 5. so termina com sucesso quando `/api/health` responde.
 
-Servicos opcionais que nao participam deste fluxo (Studio, Storage, Realtime, Analytics, Edge Runtime e Mailpit) ficam desativados no Windows local. Isso reduz falhas de health-check sem reduzir o contrato usado pela aplicacao. O CI continua reconstruindo o stack descartavel completo.
+Servicos opcionais que nao participam deste fluxo (Studio, Storage, Realtime, Analytics e Edge Runtime) ficam desativados no Windows local. O Mailpit permanece ativo para validar convites, confirmacao de email e recuperacao de senha sem enviar mensagens reais pela internet. O CI continua reconstruindo o stack descartavel completo.
 
 ## Primeiro administrador
 
 Executar apenas uma vez no banco novo:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\bootstrap-local-admin.ps1 -Email "admin@elite.local" -DisplayName "Administrador Elite"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\bootstrap-local-admin.ps1 -Email "seu-email-real@empresa.com.br" -DisplayName "Administrador Elite"
 ```
 
-O script gera uma senha temporaria forte, cria o usuario no Auth local e chama `bootstrap_first_system_admin`. A RPC:
+O script rejeita dominios ficticios conhecidos, envia um convite pelo Auth local e chama `bootstrap_first_system_admin`. A RPC:
 
 - aceita somente JWT `service_role`;
 - verifica a ausencia de qualquer perfil humano;
@@ -51,12 +51,12 @@ O script gera uma senha temporaria forte, cria o usuario no Auth local e chama `
 - grava auditoria sem email e sem credencial;
 - fecha definitivamente o bootstrap depois do primeiro perfil humano.
 
-A senha aparece uma unica vez no terminal local. O primeiro login exige troca.
+Nenhuma senha e criada pelo operador. No ambiente local, abra a mensagem no Mailpit, confirme o email e defina a senha pelo link de ativacao. Sem essa confirmacao, a conta nao consegue concluir a ativacao.
 
 ## Abrir modulos para teste
 
 1. entrar em `http://127.0.0.1:3000/login`;
-2. trocar a senha temporaria;
+2. concluir o convite e definir a senha, quando for o primeiro acesso;
 3. abrir `/modulos`;
 4. mudar o ambiente autoritativo de `unconfigured` para `test` com motivo `test_reset`;
 5. validar os modulos na ordem documentada em `operacao_gradual_modulos.md`.
@@ -88,7 +88,7 @@ Este banco local serve para validacao nesta maquina. Operacao simultanea em quat
 Estas decisoes nao bloqueiam os testes locais, mas devem ser confirmadas antes do piloto cloud:
 
 1. email e nome do primeiro administrador humano de homologacao;
-2. provedor/webhook que enviara senhas temporarias por email;
+2. provedor SMTP transacional que enviara convites e recuperacoes no ambiente cloud;
 3. primeiro modulo de negocio promovido para `business_validation` (recomendacao tecnica: `cadastros` antes de `pedidos`);
 4. retencao de backup e frequencia do teste de restore no Supabase cloud;
 5. pessoas que assinam a homologacao funcional de cada modulo.

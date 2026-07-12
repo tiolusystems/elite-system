@@ -19,7 +19,9 @@ A migration `0035_security_admin_rpcs.sql` cria RPCs auditadas para administrar:
 
 Ela nao cria senha, nao confirma email e nao altera credenciais. Isso evita acoplar o schema operacional ao contrato interno do Supabase Auth.
 
-### Criacao por email com senha temporaria
+### Historico 0038 - senha temporaria
+
+Este fluxo foi substituido pela 0047 e permanece documentado apenas para explicar contas legadas com `temporary_password_bootstrap = true`.
 
 Evolucao 0038: por decisao operacional, a rotina interna cria o usuario no Supabase Auth por email e gera uma senha temporaria.
 
@@ -30,6 +32,16 @@ O log registra apenas autorizacao e envio, com hash do email, ator, data, origem
 Se o webhook de envio nao estiver configurado, a tela deve bloquear a criacao. Se o envio falhar depois da criacao do Auth user, a Server Action tenta remover o usuario criado para evitar acesso incompleto.
 
 O usuario criado recebe `temporary_password_bootstrap = true` em `user_metadata`. Ao primeiro login, o proxy redireciona para `/login/trocar-senha` antes de liberar modulos operacionais. A troca atualiza a senha no Supabase Auth, remove o bootstrap e registra `record_security_own_password_changed()` sem gravar a nova senha.
+
+### Fluxo atual 0047 - convite e email verificado
+
+Novos acessos usam `auth.admin.inviteUserByEmail(...)` somente no servidor, depois de `authorize_security_auth_user_provision(...)`. Nenhuma senha temporaria e criada ou enviada.
+
+O usuario nasce com `invitation_pending = true`. O convite confirma que o destinatario controla o endereco informado e abre a definicao da propria senha. Enquanto a ativacao nao termina, o proxy bloqueia os modulos operacionais.
+
+O modulo Seguranca mostra o email do diretorio Auth e seu estado: confirmado, aguardando confirmacao, aguardando criacao de senha, ausente ou placeholder local. A recuperacao publica continua sem revelar se uma conta existe; essa informacao pertence somente a administracao autenticada.
+
+Conta autenticada pode solicitar troca do proprio email. Com `double_confirm_changes = false`, somente o novo endereco precisa confirmar a mudanca, evitando dependencia de um email placeholder antigo. Solicitacao e conclusao sao auditadas por hash, sem gravar o endereco completo no ledger operacional.
 
 ### Perfil operacional e separado de ator de sistema
 
@@ -89,7 +101,7 @@ As duas funcoes `resolve_*` sao excecoes documentadas de leitura minima antes do
 
 ## Decisoes pendentes para Luciano
 
-- Configurar o provedor real de envio em `ELITE_TEMP_PASSWORD_EMAIL_WEBHOOK_URL` antes de usar criacao de acesso em ambiente operacional.
+- Configurar SMTP e templates de convite, alteracao de email e recuperacao no Supabase cloud antes da homologacao externa.
 - Confirmar se os papeis atuais (`admin`, `comercial`, `producao`, `estoque`, `expedicao`, `auditoria`) sao suficientes.
 - Definir se a tela de alçadas mostrara apenas overrides ou tambem o valor efetivo calculado (`default_allowed` + override).
 - Definir quando trocar `default_allowed = true` para restricao por dominio em producao.

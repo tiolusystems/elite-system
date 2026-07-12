@@ -518,9 +518,11 @@ Quando um fluxo precisar tocar Supabase Auth por boundary administrativo, a orde
 3. registrar apenas o fato operacional sem segredo, preferindo hash para email quando a identificacao completa nao for necessaria;
 4. documentar explicitamente qualquer falha que deixe Auth e perfil operacional em estados diferentes.
 
-O fluxo de senha temporaria aprovado na 0038 usa `SUPABASE_SERVICE_ROLE_KEY` somente no servidor e entrega a senha por `ELITE_TEMP_PASSWORD_EMAIL_WEBHOOK_URL`. A senha existe apenas em memoria durante a Server Action e no payload enviado ao provedor de email configurado.
+O fluxo 0038 de senha temporaria e historico e atende apenas contas legadas. A partir da 0047, novos acessos usam convite verificavel do Supabase Auth: o servidor valida `security.manage_users`, envia o convite, cria o perfil vinculado e registra somente o fato com hash do email. Nenhuma senha temporaria e criada ou transmitida pela aplicacao.
 
 Senha temporaria deve exigir troca no primeiro acesso. Enquanto `user_metadata.temporary_password_bootstrap = true`, o proxy deve redirecionar para tela de troca antes de qualquer modulo operacional. A troca registra somente o fato auditavel, nunca a senha nova.
+
+Convite novo deve manter `user_metadata.invitation_pending = true` ate o destinatario confirmar o email e criar a propria senha. A conta pode existir tecnicamente no Auth, mas nao e considerada ativada nem recebe acesso operacional antes desses dois fatos.
 
 Senha existente nunca e recuperada ou exibida. A recuperacao usa link de uso limitado emitido pelo Supabase Auth; o callback aceita somente o tipo `recovery`, remove codigo/token da URL antes de abrir a tela de nova senha e apresenta resposta neutra para email existente ou inexistente. Solicitacao e validacao do link pertencem ao log nativo do Supabase Auth. A mudanca concluida tambem registra `record_security_own_password_changed()` no ledger operacional, sem senha, token ou segredo.
 

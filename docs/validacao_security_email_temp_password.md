@@ -1,5 +1,7 @@
 # Validacao - seguranca email e senha temporaria
 
+> Registro historico da 0038. O provisionamento ativo foi substituido por convite com email verificado na 0047. Contas legadas continuam suportadas para troca obrigatoria da senha temporaria.
+
 Data: 2026-07-10
 
 ## Escopo

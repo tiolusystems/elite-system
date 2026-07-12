@@ -394,6 +394,18 @@ h1 {
   max-width: 980px;
 }
 
+.login-workspace .two-column {
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.9fr);
+}
+
+.login-workspace .status-row {
+  grid-template-columns: minmax(110px, 0.75fr) minmax(0, 1.25fr);
+}
+
+.login-workspace .status-row dd {
+  overflow-wrap: anywhere;
+}
+
 .flow-board,
 .queue-list,
 .module-radar,
@@ -2160,6 +2172,11 @@ h1 {
   .romaneio-actions,
   .compact-action-form,
   .module-card {
+    grid-template-columns: 1fr;
+  }
+
+  .login-workspace .two-column,
+  .login-workspace .status-row {
     grid-template-columns: 1fr;
   }
 

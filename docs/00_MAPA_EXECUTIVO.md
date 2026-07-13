@@ -37,7 +37,7 @@ O mapa detalhado continua sendo
 | formula, OP, CQ, transformacao | `pcp` | `apps/web/app/pcp`, `apps/web/app/producao` |
 | romaneio e expedicao | `expedicao` | `apps/web/app/romaneios` |
 | NF XML de entrada | `importacao` | `apps/web/app/importacao-xml` |
-| historico do Excel | `auditoria` | `elite_system/services/historical_mp.py` |
+| historico do Excel | `auditoria` | `/importacao-historica/mp`; `elite_system/services/historical_workbook.py` |
 | relatorio e rastreabilidade | `relatorios` | `apps/web/app/relatorios` |
 
 ## Regra de leitura

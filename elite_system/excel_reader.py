@@ -14,6 +14,15 @@ NS = {
 }
 RID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
 CELL_RE = re.compile(r"^\$?([A-Z]+)\$?([0-9]+)$")
+EXCEL_ERROR_VALUES = {
+    "#REF!",
+    "#N/A",
+    "#VALUE!",
+    "#DIV/0!",
+    "#NAME?",
+    "#NUM!",
+    "#NULL!",
+}
 
 
 @dataclass(frozen=True)
@@ -34,6 +43,55 @@ class ExcelTable:
     data_first_row: int
     data_last_row: int
     rows: list[ExcelRow]
+
+
+@dataclass(frozen=True)
+class ExcelColumnStructure:
+    column: str
+    nonempty_cells: int
+    formula_cells: int
+    error_cells: int
+    first_row: int
+    last_row: int
+    outside_table_cells: int
+
+
+@dataclass(frozen=True)
+class ExcelTableStructure:
+    table_name: str
+    ref: str
+    headers: list[str]
+    header_row: int
+    data_first_row: int
+    data_last_row: int
+    first_column: str
+    last_column: str
+    row_count: int
+    populated_row_count: int
+    warnings: list[str]
+
+
+@dataclass(frozen=True)
+class ExcelSheetStructure:
+    order: int
+    sheet_name: str
+    state: str
+    dimension: str
+    nonempty_rows: int
+    nonempty_cells: int
+    formula_cells: int
+    error_cells: int
+    columns: list[ExcelColumnStructure]
+    tables: list[ExcelTableStructure]
+    warnings: list[str]
+
+
+@dataclass(frozen=True)
+class ExcelWorkbookStructure:
+    sheet_count: int
+    table_count: int
+    named_range_count: int
+    sheets: list[ExcelSheetStructure]
 
 
 def extract_tables(workbook_path: str | Path, table_names: set[str] | None = None) -> list[ExcelTable]:
@@ -62,6 +120,143 @@ def extract_tables(workbook_path: str | Path, table_names: set[str] | None = Non
                 tables.append(_materialize_table(sheet_name, table, cells))
 
         return tables
+
+
+def inspect_workbook_structure(workbook_path: str | Path) -> ExcelWorkbookStructure:
+    """Read workbook structure without returning business cell values."""
+
+    path = Path(workbook_path)
+    with zipfile.ZipFile(path) as zf:
+        required_parts = {"xl/workbook.xml", "xl/_rels/workbook.xml.rels"}
+        missing_parts = sorted(required_parts.difference(zf.namelist()))
+        if missing_parts:
+            raise ValueError(f"Invalid XLSX package; missing: {', '.join(missing_parts)}")
+
+        shared_strings = _load_shared_strings(zf)
+        workbook = _xml(zf, "xl/workbook.xml")
+        workbook_rels = _rels(zf, "xl/_rels/workbook.xml.rels")
+        named_ranges = workbook.findall("main:definedNames/main:definedName", NS)
+        sheets: list[ExcelSheetStructure] = []
+
+        for order, sheet in enumerate(workbook.findall("main:sheets/main:sheet", NS), start=1):
+            sheet_name = sheet.attrib["name"]
+            rel_id = sheet.attrib.get(RID)
+            if not rel_id or rel_id not in workbook_rels:
+                raise ValueError(f"Worksheet relationship not found: {sheet_name}")
+            sheet_xml = _workbook_target(workbook_rels[rel_id]["Target"])
+            if sheet_xml not in zf.namelist():
+                raise ValueError(f"Worksheet part not found: {sheet_name}")
+
+            sheet_root = _xml(zf, sheet_xml)
+            sheet_rels = _rels(zf, _rels_path(sheet_xml))
+            table_paths = _table_paths_for_sheet(sheet_xml, sheet_rels, zf)
+            cells = _read_sheet_cells(zf, sheet_xml, shared_strings)
+            table_structures: list[ExcelTableStructure] = []
+            table_bounds: list[tuple[int, int, int, int]] = []
+
+            for table_path in table_paths:
+                table = _read_table(zf, table_path)
+                min_col, min_row, max_col, max_row = _range_bounds(str(table["ref"]))
+                headers = [str(value) for value in table["columns"]]
+                populated_rows = sum(
+                    any(
+                        f"{_column_letter(column_number)}{row_number}" in cells
+                        for column_number in range(min_col, max_col + 1)
+                    )
+                    for row_number in range(min_row + 1, max_row + 1)
+                )
+                warnings: list[str] = []
+                normalized_headers = [header.strip().casefold() for header in headers]
+                if len(set(normalized_headers)) != len(normalized_headers):
+                    warnings.append("Cabecalhos duplicados na tabela.")
+                if max_row <= min_row:
+                    warnings.append("Tabela sem linhas de dados declaradas.")
+
+                table_structures.append(
+                    ExcelTableStructure(
+                        table_name=str(table["name"]),
+                        ref=str(table["ref"]),
+                        headers=headers,
+                        header_row=min_row,
+                        data_first_row=min_row + 1,
+                        data_last_row=max_row,
+                        first_column=_column_letter(min_col),
+                        last_column=_column_letter(max_col),
+                        row_count=max(max_row - min_row, 0),
+                        populated_row_count=populated_rows,
+                        warnings=warnings,
+                    )
+                )
+                table_bounds.append((min_col, min_row, max_col, max_row))
+
+            column_stats: dict[str, dict[str, int]] = {}
+            nonempty_rows: set[int] = set()
+            total_formula_cells = 0
+            total_error_cells = 0
+            for address, (value, formula) in cells.items():
+                column, row_number = _cell_parts(address)
+                column_number = _column_number(column)
+                nonempty_rows.add(row_number)
+                stats = column_stats.setdefault(
+                    column,
+                    {
+                        "nonempty_cells": 0,
+                        "formula_cells": 0,
+                        "error_cells": 0,
+                        "first_row": row_number,
+                        "last_row": row_number,
+                        "outside_table_cells": 0,
+                    },
+                )
+                stats["nonempty_cells"] += 1
+                stats["first_row"] = min(stats["first_row"], row_number)
+                stats["last_row"] = max(stats["last_row"], row_number)
+                if formula is not None:
+                    stats["formula_cells"] += 1
+                    total_formula_cells += 1
+                if isinstance(value, str) and value in EXCEL_ERROR_VALUES:
+                    stats["error_cells"] += 1
+                    total_error_cells += 1
+                if not any(
+                    min_col <= column_number <= max_col and min_row <= row_number <= max_row
+                    for min_col, min_row, max_col, max_row in table_bounds
+                ):
+                    stats["outside_table_cells"] += 1
+
+            columns = [
+                ExcelColumnStructure(column=column, **stats)
+                for column, stats in sorted(column_stats.items(), key=lambda item: _column_number(item[0]))
+            ]
+            dimension_node = sheet_root.find("main:dimension", NS)
+            dimension = dimension_node.attrib.get("ref", "A1") if dimension_node is not None else "A1"
+            sheet_warnings: list[str] = []
+            if not table_structures:
+                sheet_warnings.append("Aba sem tabela estruturada; metadados externos serao preservados.")
+            if not cells:
+                sheet_warnings.append("Aba sem celulas preenchidas.")
+
+            sheets.append(
+                ExcelSheetStructure(
+                    order=order,
+                    sheet_name=sheet_name,
+                    state=sheet.attrib.get("state", "visible"),
+                    dimension=dimension,
+                    nonempty_rows=len(nonempty_rows),
+                    nonempty_cells=len(cells),
+                    formula_cells=total_formula_cells,
+                    error_cells=total_error_cells,
+                    columns=columns,
+                    tables=table_structures,
+                    warnings=sheet_warnings,
+                )
+            )
+
+        return ExcelWorkbookStructure(
+            sheet_count=len(sheets),
+            table_count=sum(len(sheet.tables) for sheet in sheets),
+            named_range_count=len(named_ranges),
+            sheets=sheets,
+        )
 
 
 def _xml(zf: zipfile.ZipFile, path: str) -> ET.Element:
@@ -172,7 +367,7 @@ def _cell_value(cell: ET.Element, shared_strings: list[str]) -> tuple[object, st
 def _coerce_scalar(value: str | None) -> object:
     if value is None:
         return None
-    if value in {"#REF!", "#N/A", "#VALUE!", "#DIV/0!", "#NAME?", "#NUM!", "#NULL!"}:
+    if value in EXCEL_ERROR_VALUES:
         return value
     try:
         if "." in value or "E" in value.upper():

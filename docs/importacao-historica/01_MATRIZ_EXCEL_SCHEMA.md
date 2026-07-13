@@ -226,11 +226,11 @@ nao registra a transformacao historica de granel/PI para PA embalado.
 |---|---|---:|
 | `DATA PEDIDO` | `com_pedidos.data_pedido` | `D` |
 | `DATA DA ENTREGA` | previsao ou fato de entrega | `P` |
-| `Vencimento 01` a `Vencimento 12` | parcelas do pedido | `B` |
-| `STATUS RECEBIMENTO` | posicao financeira legada | `B` |
+| `Vencimento 01` a `Vencimento 12` | `fin_pedido_planos_pagamento` + `fin_pedido_parcelas` | `T` |
+| `STATUS RECEBIMENTO` | `fin_recebimento_posicoes_historicas` | `T` |
 | `Nº PEDIDO` | `sequencia_propriedade`/codigo legado | `P` |
 | `ID_pedido` | `com_pedidos.codigo_pedido` e `codigo_legado` | `T` |
-| `NF` | referencia fiscal legada | `B` |
+| `NF` | `fat_referencias_fiscais_historicas` | `T` |
 | `STATUS ENTREGA` | status de pedido/expedicao | `T` |
 | `TIPO` | `tipo_pedido` e `tipo_item` | `T` |
 | `CLIENTE` | `cliente_id` | `T` |
@@ -244,16 +244,16 @@ nao registra a transformacao historica de granel/PI para PA embalado.
 | `VENDEDOR 1` a `VENDEDOR 4` | `com_pedido_comissionados.pessoa_id` | `T` |
 | `%COMISSÃO 1` a `%COMISSÃO 4` | `percentual_comissao` congelado | `D` |
 | `R$ COMISSÃO 1` a `R$ COMISSÃO 4` | `valor_previsto`/reconciliacao | `T` |
-| `R$ COMISSÃO PAGO1` a `PAGO4` | saldo inicial de comissao paga | `B` |
+| `R$ COMISSÃO PAGO1` a `PAGO4` | `fin_comissao_posicoes_historicas` | `T` |
 | `R$ COMISSÃO PAGAR1` a `PAGAR4` | saldo derivado | `R` |
 | `PREMIAÇÃO PRODUÇÃO` | campanha/premiacao | `B` |
 | `PREMIAÇÃO REVENDA/VENDEDOR` | campanha/premiacao | `B` |
 
-As doze datas de vencimento nao cabem em `com_pedidos.condicao_pagamento` sem
-repeticao e perda de estrutura. A NF antiga possui numero, mas nao fornece de
-forma confiavel todos os campos obrigatorios de `fat_notas_fiscais`. O status
-de recebimento e os valores de comissao paga nao possuem eventos/datas de
-recebimento suficientes para fabricar `com_recebimentos`.
+As doze datas de vencimento usam plano versionado e parcelas relacionais, sem
+repeticao no pedido. A NF antiga permanece referencia fiscal pendente, pois nao
+fornece todos os campos obrigatorios de `fat_notas_fiscais`. Status recebido e
+comissao paga permanecem posicoes historicas pendentes; nao fabricam
+`com_recebimentos`, alocacao ou movimento de comissao.
 
 ## Romaneio
 

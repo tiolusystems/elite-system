@@ -96,6 +96,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_006_historical_formulas_ops.sql
+      - name: Run DEC-009 legacy financial and fiscal smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_009_legacy_financial_fiscal.sql
       - name: Run administrator email change workflow smoke
         env:
           PGPASSWORD: postgres

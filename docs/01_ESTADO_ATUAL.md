@@ -37,6 +37,8 @@ O workbook real e os relatorios gerados permanecem fora do Git.
 - TypeScript `--noEmit`: aprovado;
 - lint integral, build, verificacao visual e `git diff --check`: registrados no
   fechamento do commit;
+- transporte Python/Next revalidado com UTF-8 explicito: workbook real manteve
+  `155/269/3.095`, sem caractere de substituicao em nomes ou cabecalhos;
 - migration criada ou cadeia completa executada: nenhuma, conforme escopo.
 
 ## Estado funcional resumido

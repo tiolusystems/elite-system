@@ -215,7 +215,9 @@ def main(argv: list[str] | None = None) -> int:
     except WorkbookAnalysisError as error:
         print(json.dumps({"ok": False, "error": {"code": error.code, "message": str(error)}}))
         return 2
-    print(json.dumps({"ok": True, "analysis": result}, ensure_ascii=False, separators=(",", ":")))
+    # ASCII-safe JSON avoids dependence on the Windows console code page. JSON.parse
+    # restores escaped workbook labels such as "Produ\u00e7\u00e3o" to Unicode.
+    print(json.dumps({"ok": True, "analysis": result}, ensure_ascii=True, separators=(",", ":")))
     return 0
 
 

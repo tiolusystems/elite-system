@@ -81,12 +81,22 @@ A ponte procura o interpretador nesta ordem:
 for iniciado a partir de `apps/web`. A ponte nao envia dados a servicos
 externos.
 
+O contrato de transporte e independente da pagina de codigo do Windows: o
+processo Python recebe `PYTHONUTF8=1` e `PYTHONIOENCODING=utf-8`, o JSON de
+sucesso usa escapes ASCII seguros e o Node recompoe os fluxos com
+`StringDecoder`. Assim, nomes como `Producao`, `Relacao` e `Materia-prima`
+chegam ao navegador sem substituicao de caracteres.
+
 ## Relatorio
 
 O download CSV contem somente ordem e nome da aba, tipo de origem, tabela,
 intervalo, coluna, codigo de classificacao, status, dominio, destino, regra e
 alerta. Valores de clientes, produtos, lotes, pedidos e documentos nao entram
 no relatorio.
+
+O CSV lista referencias classificadas. Uma aba sem tabela e sem coluna usada
+pode aparecer no inventario visual das abas sem gerar linha no CSV; isso nao
+representa omissao de dado importavel.
 
 ## Limite desta entrega
 

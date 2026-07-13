@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 
 import type { HistoricalWorkbookActionResult, HistoricalWorkbookAnalysis } from "@/lib/historical-workbook";
 import { getRuntimeStatus } from "@/lib/runtime";
@@ -130,10 +131,22 @@ function pythonCandidates(): PythonCandidate[] {
 
 function spawnPython(command: string, args: string[], cwd: string): Promise<PythonResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, {
+      cwd,
+      env: {
+        ...process.env,
+        PYTHONIOENCODING: "utf-8",
+        PYTHONUTF8: "1"
+      },
+      shell: false,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
     let stdout = "";
     let stderr = "";
     let outputBytes = 0;
+    const stdoutDecoder = new StringDecoder("utf8");
+    const stderrDecoder = new StringDecoder("utf8");
     const timeout = setTimeout(() => {
       child.kill();
       reject(new Error("A analise excedeu o limite de 120 segundos."));
@@ -146,8 +159,8 @@ function spawnPython(command: string, args: string[], cwd: string): Promise<Pyth
         reject(new Error("A resposta do analisador excedeu o limite de seguranca."));
         return;
       }
-      if (target === "stdout") stdout += chunk.toString("utf8");
-      else stderr += chunk.toString("utf8");
+      if (target === "stdout") stdout += stdoutDecoder.write(chunk);
+      else stderr += stderrDecoder.write(chunk);
     };
     child.stdout.on("data", (chunk: Buffer) => collect("stdout", chunk));
     child.stderr.on("data", (chunk: Buffer) => collect("stderr", chunk));
@@ -157,6 +170,8 @@ function spawnPython(command: string, args: string[], cwd: string): Promise<Pyth
     });
     child.once("close", (code) => {
       clearTimeout(timeout);
+      stdout += stdoutDecoder.end();
+      stderr += stderrDecoder.end();
       resolve({ exitCode: code ?? 1, stdout, stderr });
     });
   });

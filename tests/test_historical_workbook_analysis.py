@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -105,6 +106,35 @@ class HistoricalWorkbookAnalysisTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 2)
             self.assertIn('"code": "corrupt_workbook"', completed.stdout)
 
+    def test_cli_output_is_ascii_safe_and_round_trips_unicode_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workbook = Path(temporary) / "historico.xlsx"
+            create_synthetic_workbook(
+                workbook,
+                sheet_count=1,
+                table_count=1,
+                structured_columns=1,
+                outside_columns=0,
+                sheet_name_prefix="Produção",
+            )
+            completed = subprocess.run(
+                [
+                    str(Path(__import__("sys").executable)),
+                    "-m",
+                    "elite_system.services.historical_workbook",
+                    "--file",
+                    str(workbook),
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertTrue(completed.stdout.isascii())
+            payload = json.loads(completed.stdout.decode("ascii"))
+            self.assertEqual(payload["analysis"]["sheets"][0]["name"], "Produção 1")
+
 
 def create_synthetic_workbook(
     destination: Path,
@@ -113,6 +143,7 @@ def create_synthetic_workbook(
     table_count: int,
     structured_columns: int,
     outside_columns: int,
+    sheet_name_prefix: str = "Aba",
 ) -> None:
     if table_count < sheet_count:
         raise ValueError("Each synthetic sheet needs at least one table.")
@@ -128,7 +159,10 @@ def create_synthetic_workbook(
     table_column_offset = 0
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as package:
         for sheet_index in range(1, sheet_count + 1):
-            workbook_sheets.append(f'<sheet name="Aba {sheet_index}" sheetId="{sheet_index}" r:id="rId{sheet_index}"/>')
+            sheet_name = f"{sheet_name_prefix} {sheet_index}"
+            workbook_sheets.append(
+                f'<sheet name="{escape(sheet_name)}" sheetId="{sheet_index}" r:id="rId{sheet_index}"/>'
+            )
             workbook_relationships.append(
                 f'<Relationship Id="rId{sheet_index}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{sheet_index}.xml"/>'
             )

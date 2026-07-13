@@ -36,6 +36,11 @@ class HistoricalWorkbookWebContractTests(unittest.TestCase):
         self.assertIn("await rm(temporaryDirectory, { recursive: true, force: true })", self.action)
         self.assertIn('path.join(temporaryDirectory, "workbook.xlsx")', self.action)
 
+    def test_python_bridge_has_an_explicit_utf8_transport_contract(self) -> None:
+        self.assertIn('PYTHONIOENCODING: "utf-8"', self.action)
+        self.assertIn('PYTHONUTF8: "1"', self.action)
+        self.assertIn('new StringDecoder("utf8")', self.action)
+
     def test_interface_contains_required_controls_and_literal_notice(self) -> None:
         for expected in (
             'type="file"',

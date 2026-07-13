@@ -11,6 +11,11 @@ import zipfile
 
 from elite_system.excel_reader import inspect_workbook_structure
 from elite_system.services.historical_workbook_mapping import classify_reference
+from elite_system.services.historical_workbook_sources import (
+    SOURCE_CLASSIFICATIONS,
+    resolve_approved_source,
+    worksheet_metadata_source_id,
+)
 
 
 MAX_WORKBOOK_BYTES = 32 * 1024 * 1024
@@ -48,11 +53,18 @@ def analyze_historical_workbook(
 
     sheets: list[dict[str, object]] = []
     flat_references: list[dict[str, object]] = []
+    source_classifications: list[dict[str, object]] = []
     total_table_rows = 0
     total_populated_table_rows = 0
     for sheet in structure.sheets:
         tables: list[dict[str, object]] = []
         for table in sheet.tables:
+            source_classification = resolve_approved_source(
+                sheet_name=sheet.sheet_name,
+                table_name=table.table_name,
+                headers=table.headers,
+            )
+            source_classifications.append(source_classification)
             mappings: list[dict[str, object]] = []
             for position, header in enumerate(table.headers, start=1):
                 mapping = classify_reference(
@@ -70,6 +82,9 @@ def analyze_historical_workbook(
                     "ref": table.ref,
                     "columnPosition": position,
                     "excelColumn": header,
+                    "sourceTableId": source_classification["sourceTableId"],
+                    "sourceClassification": source_classification["classification"],
+                    "sourceBindingKind": "structured_table",
                     **_camel_mapping(mapping.to_dict()),
                 }
                 mappings.append(reference)
@@ -83,13 +98,17 @@ def analyze_historical_workbook(
                     "rowCount": table.row_count,
                     "populatedRowCount": table.populated_row_count,
                     "columnCount": len(table.headers),
+                    "formulaCellCount": table.formula_cell_count,
+                    "calculatedValueCount": table.calculated_value_count,
                     "headers": table.headers,
                     "warnings": table.warnings,
                     "mappings": mappings,
+                    "sourceClassification": source_classification,
                 }
             )
 
         outside_mappings: list[dict[str, object]] = []
+        worksheet_source_id = worksheet_metadata_source_id(sheet.sheet_name)
         for column in sheet.columns:
             if column.outside_table_cells <= 0:
                 continue
@@ -108,6 +127,9 @@ def analyze_historical_workbook(
                 "columnPosition": None,
                 "excelColumn": column.column,
                 "outsideTableCells": column.outside_table_cells,
+                "sourceTableId": worksheet_source_id,
+                "sourceClassification": None,
+                "sourceBindingKind": "worksheet_metadata",
                 **_camel_mapping(mapping.to_dict()),
             }
             outside_mappings.append(reference)
@@ -138,19 +160,42 @@ def analyze_historical_workbook(
         domain_counts[domain] = domain_counts.get(domain, 0) + 1
 
     reference_count = len(flat_references)
-    profile_matches = (
+    table_classification_counts = {classification: 0 for classification in SOURCE_CLASSIFICATIONS}
+    unclassified_table_count = 0
+    schema_drift_table_count = 0
+    for source in source_classifications:
+        classification = source.get("classification")
+        if isinstance(classification, str) and classification in table_classification_counts:
+            table_classification_counts[classification] += 1
+        else:
+            unclassified_table_count += 1
+        if source.get("schemaDriftDetected") is True:
+            schema_drift_table_count += 1
+    bound_reference_count = sum(bool(reference.get("sourceTableId")) for reference in flat_references)
+    unbound_reference_count = reference_count - bound_reference_count
+    source_classification_complete = (
+        unclassified_table_count == 0
+        and schema_drift_table_count == 0
+        and unbound_reference_count == 0
+    )
+    structural_profile_matches = (
         structure.sheet_count == EXPECTED_PROFILE["sheets"]
         and structure.table_count == EXPECTED_PROFILE["tables"]
         and reference_count == EXPECTED_PROFILE["references"]
     )
+    profile_matches = structural_profile_matches and source_classification_complete
     profile_warnings: list[str] = []
-    if not profile_matches:
+    if not structural_profile_matches:
         profile_warnings.append(
             "O arquivo nao corresponde integralmente ao perfil estrutural de referencia 155/269/3.095."
         )
+    elif not source_classification_complete:
+        profile_warnings.append(
+            "As contagens conferem, mas uma ou mais fontes possuem identidade ou schema nao aprovado."
+        )
 
     return {
-        "contractVersion": 1,
+        "contractVersion": 2,
         "readOnly": True,
         "notice": "Esta etapa apenas analisa o arquivo. Nenhum dado sera gravado no banco.",
         "file": {
@@ -166,8 +211,16 @@ def analyze_historical_workbook(
             "tableRowCount": total_table_rows,
             "populatedTableRowCount": total_populated_table_rows,
             "referenceCount": reference_count,
+            "boundReferenceCount": bound_reference_count,
+            "unboundReferenceCount": unbound_reference_count,
+            "classifiedTableCount": structure.table_count - unclassified_table_count,
+            "unclassifiedTableCount": unclassified_table_count,
+            "schemaDriftTableCount": schema_drift_table_count,
+            "sourceClassificationComplete": source_classification_complete,
+            "tableClassificationCounts": table_classification_counts,
             "statusCounts": status_counts,
             "domainCounts": dict(sorted(domain_counts.items())),
+            "structuralProfileMatchesReference": structural_profile_matches,
             "profileMatchesReference": profile_matches,
             "profileWarnings": profile_warnings,
         },

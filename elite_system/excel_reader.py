@@ -68,6 +68,8 @@ class ExcelTableStructure:
     last_column: str
     row_count: int
     populated_row_count: int
+    formula_cell_count: int
+    calculated_value_count: int
     warnings: list[str]
 
 
@@ -165,6 +167,17 @@ def inspect_workbook_structure(workbook_path: str | Path) -> ExcelWorkbookStruct
                     )
                     for row_number in range(min_row + 1, max_row + 1)
                 )
+                formula_cell_count = 0
+                calculated_value_count = 0
+                for address, (value, formula) in cells.items():
+                    column, row_number = _cell_parts(address)
+                    column_number = _column_number(column)
+                    if not (min_col <= column_number <= max_col and min_row < row_number <= max_row):
+                        continue
+                    if formula is not None:
+                        formula_cell_count += 1
+                        if value is not None:
+                            calculated_value_count += 1
                 warnings: list[str] = []
                 normalized_headers = [header.strip().casefold() for header in headers]
                 if len(set(normalized_headers)) != len(normalized_headers):
@@ -184,6 +197,8 @@ def inspect_workbook_structure(workbook_path: str | Path) -> ExcelWorkbookStruct
                         last_column=_column_letter(max_col),
                         row_count=max(max_row - min_row, 0),
                         populated_row_count=populated_rows,
+                        formula_cell_count=formula_cell_count,
+                        calculated_value_count=calculated_value_count,
                         warnings=warnings,
                     )
                 )

@@ -25,7 +25,7 @@ codigo e documentacao sem dados operacionais.
 | Grupo | Natureza | Tratamento |
 |---|---|---|
 | formulas de produto | 119 abas com componentes, lotes correntes e custos derivados | importar componentes somente apos decidir base de rendimento e etapas |
-| garantias de produto | 112 tabelas associadas a formulas | separar calculada, especificacao tecnica e documental MAPA |
+| garantias de produto | 114 tabelas associadas a formulas, confirmadas na revalidacao UTF-8 da I1.1 | separar calculada, especificacao tecnica e documental MAPA |
 | cadastros mestres | MP, produtos, clientes, pessoas e veiculos | deduplicar, normalizar e resolver aliases |
 | embalagens | composicao de custo, peso e cubagem | bloqueado por destino relacional ausente |
 | pedidos | itens, vencimentos, fiscal, entrega e comissoes | bloqueado parcialmente por parcelas e posicoes legadas |

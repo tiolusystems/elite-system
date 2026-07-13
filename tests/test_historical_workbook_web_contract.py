@@ -49,6 +49,8 @@ class HistoricalWorkbookWebContractTests(unittest.TestCase):
             "Esta etapa apenas analisa o arquivo. Nenhum dado será gravado no banco.",
             "SHA256",
             "Referências classificadas",
+            "Tabelas classificadas",
+            "Drift estrutural",
             "Aba",
             "Domínio",
             "Status",
@@ -57,6 +59,8 @@ class HistoricalWorkbookWebContractTests(unittest.TestCase):
 
     def test_metadata_report_has_formula_injection_guard(self) -> None:
         self.assertIn("analysis.reportRows", self.workspace)
+        self.assertIn('"source_table_id"', self.workspace)
+        self.assertIn('"classificacao_fonte"', self.workspace)
         self.assertIn("text/csv;charset=utf-8", self.workspace)
         self.assertIn("/^[=+\\-@]/", self.workspace)
         self.assertIn("URL.revokeObjectURL", self.workspace)

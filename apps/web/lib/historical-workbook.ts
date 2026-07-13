@@ -1,5 +1,27 @@
 export type WorkbookMappingStatus = "defined" | "transform" | "pending" | "rejected" | "out_of_scope";
 
+export type WorkbookSourceClassificationName =
+  | "source_master"
+  | "source_transaction"
+  | "source_formula"
+  | "reconciliation_report"
+  | "derived_calculation"
+  | "duplicate_source"
+  | "dashboard_or_summary"
+  | "deferred"
+  | "out_of_scope";
+
+export type WorkbookSourceClassification = {
+  sourceTableId: string;
+  classification: WorkbookSourceClassificationName | null;
+  ownerDomain: string | null;
+  targetEntity: string | null;
+  schemaFingerprint: string;
+  schemaDriftDetected: boolean;
+  reviewRequired: boolean;
+  normalizationBlocked: boolean;
+};
+
 export type WorkbookReference = {
   sheetOrder: number;
   sourceKind: "structured_table" | "worksheet_outside_table";
@@ -9,6 +31,9 @@ export type WorkbookReference = {
   columnPosition: number | null;
   excelColumn: string;
   outsideTableCells?: number;
+  sourceTableId: string;
+  sourceClassification: WorkbookSourceClassificationName | null;
+  sourceBindingKind: "structured_table" | "worksheet_metadata";
   sourceCode: string;
   status: WorkbookMappingStatus;
   domain: string;
@@ -23,9 +48,12 @@ export type WorkbookTableAnalysis = {
   rowCount: number;
   populatedRowCount: number;
   columnCount: number;
+  formulaCellCount: number;
+  calculatedValueCount: number;
   headers: string[];
   warnings: string[];
   mappings: WorkbookReference[];
+  sourceClassification?: WorkbookSourceClassification;
 };
 
 export type WorkbookSheetAnalysis = {
@@ -59,8 +87,16 @@ export type HistoricalWorkbookAnalysis = {
     tableRowCount: number;
     populatedTableRowCount: number;
     referenceCount: number;
+    boundReferenceCount: number;
+    unboundReferenceCount: number;
+    classifiedTableCount: number;
+    unclassifiedTableCount: number;
+    schemaDriftTableCount: number;
+    sourceClassificationComplete: boolean;
+    tableClassificationCounts: Record<WorkbookSourceClassificationName, number>;
     statusCounts: Record<WorkbookMappingStatus, number>;
     domainCounts: Record<string, number>;
+    structuralProfileMatchesReference: boolean;
     profileMatchesReference: boolean;
     profileWarnings: string[];
   };

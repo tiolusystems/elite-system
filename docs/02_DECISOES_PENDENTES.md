@@ -1,6 +1,6 @@
 # Elite System - decisoes pendentes
 
-Atualizado em: 2026-07-12
+Atualizado em: 2026-07-13
 
 ## Regra
 
@@ -22,6 +22,7 @@ Estados permitidos: `pendente`, `autorizada`, `implementada`, `cancelada`.
 | `DEC-009` | Parcelas e posicao financeira/fiscal legada | criar parcelas normalizadas e eventos/snapshots de abertura para status recebido, comissao paga e referencia de NF incompleta, sem fabricar datas ou recebimentos | pedidos, faturamento, financeiro e comissoes | implementada |
 | `DEC-010` | Campanhas, pontos e premiacao | criar campanhas e regras versionadas, ledger append-only de pontos/premios e vouchers; nao misturar premiacao com comissao | comercial, metas, financeiro e auditoria | implementada |
 | `DEC-011` | Papeis do vinculo cliente-vendedor | distinguir no relacionamento quem cadastrou, quem atende e demais papeis, com vigencia e auditoria | cadastros, visibilidade comercial e pedidos | implementada |
+| `DEC-012` | Corte e inventario fisico de abertura | definir data de corte, data e responsaveis da contagem, depositos, criterio de aprovacao e tratamento dos movimentos durante o inventario; o Excel sera apenas comparador | ativacao dos saldos operacionais de MP, PI, PA, embalagens e outros insumos | pendente |
 
 ## Decisoes autorizadas aguardando implementacao
 

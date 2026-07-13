@@ -7,6 +7,7 @@ import type {
   WorkbookMappingStatus,
   WorkbookReference,
   WorkbookSheetAnalysis,
+  WorkbookSourceClassificationName,
   WorkbookTableAnalysis
 } from "@/lib/historical-workbook";
 
@@ -19,6 +20,18 @@ const STATUS_LABELS: Record<WorkbookMappingStatus, string> = {
   pending: "Pendente de decisão",
   rejected: "Rejeitado",
   out_of_scope: "Fora da carga operacional"
+};
+
+const SOURCE_CLASSIFICATION_LABELS: Record<WorkbookSourceClassificationName, string> = {
+  source_master: "Fonte cadastral",
+  source_transaction: "Fonte transacional",
+  source_formula: "Formula / composicao",
+  reconciliation_report: "Relatorio de reconciliacao",
+  derived_calculation: "Calculo derivado",
+  duplicate_source: "Fonte duplicada",
+  dashboard_or_summary: "Painel / resumo",
+  deferred: "Adiado",
+  out_of_scope: "Fora do escopo"
 };
 
 type Filters = { sheet: string; domain: string; status: string; text: string };
@@ -170,6 +183,8 @@ function AnalysisSummary({ analysis }: { analysis: HistoricalWorkbookAnalysis })
     { label: "Tabelas", value: summary.tableCount, tone: "neutral" },
     { label: "Linhas em tabelas", value: summary.tableRowCount, tone: "neutral" },
     { label: "Referências classificadas", value: summary.referenceCount, tone: "neutral" },
+    { label: "Tabelas classificadas", value: summary.classifiedTableCount, tone: "defined" },
+    { label: "Drift estrutural", value: summary.schemaDriftTableCount, tone: summary.schemaDriftTableCount ? "rejected" : "defined" },
     { label: "Destino definido", value: summary.statusCounts.defined, tone: "defined" },
     { label: "Transformação", value: summary.statusCounts.transform, tone: "transform" },
     { label: "Pendentes", value: summary.statusCounts.pending, tone: "pending" },
@@ -243,6 +258,8 @@ function SheetResult({ sheet }: { sheet: WorkbookSheetAnalysis }) {
               rowCount: sheet.nonemptyRows,
               populatedRowCount: sheet.nonemptyRows,
               columnCount: sheet.outsideColumns.length,
+              formulaCellCount: sheet.formulaCells,
+              calculatedValueCount: sheet.formulaCells,
               headers: sheet.outsideColumns.map((item) => item.excelColumn),
               warnings: ["Estas colunas serão preservadas somente na camada bruta auditável."],
               mappings: sheet.outsideColumns
@@ -256,10 +273,12 @@ function SheetResult({ sheet }: { sheet: WorkbookSheetAnalysis }) {
 
 function TableResult({ table }: { table: WorkbookTableAnalysis }) {
   const [open, setOpen] = useState(false);
+  const classification = table.sourceClassification?.classification;
+  const classificationLabel = classification ? SOURCE_CLASSIFICATION_LABELS[classification] : "Metadado de planilha";
   return (
     <details className="workbook-table" onToggle={(event) => setOpen(detailsOpen(event))}>
       <summary>
-        <span><strong>{table.name}</strong><small>{table.ref} · {formatNumber(table.rowCount)} linhas · {table.columnCount} colunas</small></span>
+        <span><strong>{table.name}</strong><small>{classificationLabel} · {table.ref} · {formatNumber(table.rowCount)} linhas · {table.columnCount} colunas</small></span>
         <span>{formatNumber(table.populatedRowCount)} linhas preenchidas</span>
       </summary>
       {open ? <div className="workbook-table-body">
@@ -314,8 +333,8 @@ function referenceMatches(mapping: WorkbookReference, filters: Filters, query: s
 }
 
 function downloadCsvReport(analysis: HistoricalWorkbookAnalysis) {
-  const headers = ["ordem_aba", "tipo_origem", "aba", "tabela", "intervalo", "posicao", "coluna_excel", "codigo", "status", "dominio", "destino", "regra", "alerta"];
-  const rows = analysis.reportRows.map((row) => [row.sheetOrder, row.sourceKind, row.sheet, row.table, row.ref, row.columnPosition ?? "", row.excelColumn, row.sourceCode, row.status, row.domain, row.target, row.rule, row.warning ?? ""]);
+  const headers = ["ordem_aba", "tipo_origem", "aba", "tabela", "intervalo", "source_table_id", "vinculo_fonte", "classificacao_fonte", "posicao", "coluna_excel", "codigo", "status", "dominio", "destino", "regra", "alerta"];
+  const rows = analysis.reportRows.map((row) => [row.sheetOrder, row.sourceKind, row.sheet, row.table, row.ref, row.sourceTableId, row.sourceBindingKind, row.sourceClassification ?? "worksheet_metadata", row.columnPosition ?? "", row.excelColumn, row.sourceCode, row.status, row.domain, row.target, row.rule, row.warning ?? ""]);
   const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(csvCell).join(";")).join("\r\n")}`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);

@@ -308,26 +308,39 @@ e alimentam reconciliacao:
 O relatorio de reconciliacao deve comparar, no minimo, pedidos, faturamento,
 entradas MP, saidas MP, saidas PA, producao e saldos de estoque.
 
-## Lacunas bloqueantes consolidadas
+## Contratos relacionais disponiveis
 
-1. **Formula e OP historica**: base de rendimento, etapas/fases, versao historica
-   desconhecida e classificacao PA/PI/embalado.
-2. **Catalogos tecnicos**: nutrientes sem FK, unidade livre e falta de
-   especificacao de produto para pH/faixas.
-3. **Embalagem e expedicao**: BOM de embalagem, peso, cubagem, transformacao e
-   vinculo de entregador/veiculo.
-4. **Financeiro/fiscal legado**: parcelas, posicao recebida sem evento detalhado,
-   comissao paga sem evento e NF apenas referenciada.
-5. **Campanhas/premiacao**: regras de pontos, premios e vouchers sem destino.
-6. **Vinculo comercial do cliente**: `cadastrou` e `atende` nao sao papeis
-   distintos no relacionamento atual.
+As lacunas estruturais identificadas nesta matriz foram tratadas pelas decisoes
+`DEC-006` a `DEC-011`: formulas/OP historicas, catalogos tecnicos, embalagem e
+logistica, vinculos comerciais temporais, campanhas e financeiro/fiscal legado.
 
-## Politica recomendada
+Esses contratos criam destinos seguros, mas nao autorizam promocao automatica.
+Incerteza de origem continua explicita e dado ausente nao sera inventado.
+
+## Classificacao oficial I1.1
+
+A classificacao completa esta em:
+
+- `docs/importacao-historica/02_CLASSIFICACAO_FONTES_WORKBOOK.md`;
+- `docs/importacao-historica/03_MATRIZ_CLASSIFICACAO_269_TABELAS.md`.
+
+Resultado aprovado: 269 tabelas classificadas, 3.095 referencias vinculadas,
+zero rejeitadas, zero drift no workbook de referencia e quatro pendencias de
+coluna: densidade de OP, pH, contato de cliente e UF.
+
+Somente `source_master`, `source_transaction` e `source_formula` poderao entrar
+na carga bruta I2. Relatorios, calculos, rankings e saldos derivados servem para
+reconciliacao ou metadados.
+
+## Politica vigente
 
 - nao enfraquecer tabelas vivas com dados inventados;
-- criar contratos explicitos para legado e manter incerteza visivel;
+- preservar o bruto antes de normalizar;
 - fatos derivados do Excel servem para reconciliacao, nunca para duplicar
   movimentos;
 - inferencia inevitavel deve produzir pendencia ou evento marcado como
   `inferido`, com regra, autor e justificativa;
-- a aplicacao integral continua bloqueada ate autorizacao das decisoes acima.
+- historico anterior ao corte nao forma estoque operacional;
+- inventario fisico aprovado e a unica fonte do saldo de abertura;
+- a proxima tarefa e `I2 - carga bruta auditavel somente das fontes oficiais
+  selecionadas`.

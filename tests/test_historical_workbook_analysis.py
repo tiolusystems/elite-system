@@ -23,6 +23,7 @@ class HistoricalWorkbookAnalysisTests(unittest.TestCase):
             result = analyze_historical_workbook(workbook, modified_at="2026-07-13T10:00:00.000Z")
 
             self.assertTrue(result["readOnly"])
+            self.assertEqual(result["contractVersion"], 2)
             self.assertEqual(result["summary"]["sheetCount"], 2)
             self.assertEqual(result["summary"]["tableCount"], 3)
             self.assertEqual(result["summary"]["referenceCount"], 27)
@@ -67,12 +68,18 @@ class HistoricalWorkbookAnalysisTests(unittest.TestCase):
             self.assertEqual(summary["sheetCount"], 155)
             self.assertEqual(summary["tableCount"], 269)
             self.assertEqual(summary["referenceCount"], 3095)
-            self.assertTrue(summary["profileMatchesReference"])
+            self.assertEqual(summary["boundReferenceCount"], 3095)
+            self.assertEqual(summary["unboundReferenceCount"], 0)
+            self.assertTrue(summary["structuralProfileMatchesReference"])
+            self.assertFalse(summary["profileMatchesReference"])
+            self.assertEqual(summary["unclassifiedTableCount"], 269)
             self.assertEqual(sum(summary["statusCounts"].values()), 3095)
             self.assertEqual(len(result["reportRows"]), 3095)
             self.assertTrue(all(row["status"] for row in result["reportRows"]))
             self.assertTrue(all(row["target"] for row in result["reportRows"]))
             self.assertTrue(all(row["rule"] for row in result["reportRows"]))
+            self.assertTrue(all(row["sourceTableId"] for row in result["reportRows"]))
+            self.assertTrue(all(row["sourceBindingKind"] for row in result["reportRows"]))
 
     def test_analyzer_has_no_postgresql_write_dependency(self) -> None:
         sources = "\n".join(
@@ -81,6 +88,7 @@ class HistoricalWorkbookAnalysisTests(unittest.TestCase):
                 "elite_system/excel_reader.py",
                 "elite_system/services/historical_workbook.py",
                 "elite_system/services/historical_workbook_mapping.py",
+                "elite_system/services/historical_workbook_sources.py",
             )
         )
         for forbidden in ("psycopg", "supabase", "insert into", "update ", "delete from", "service_role"):

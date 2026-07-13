@@ -21,7 +21,7 @@ Estados permitidos: `pendente`, `autorizada`, `implementada`, `cancelada`.
 | `DEC-008` | Embalagem, composicao e logistica | criar BOM versionada de embalagem, peso, cubagem e vinculo de entregador/veiculo ao romaneio; transformacao historica somente quando comprovada ou marcada como inferida | embalagem, custo, estoque PA/PI, romaneio e expedicao | implementada |
 | `DEC-009` | Parcelas e posicao financeira/fiscal legada | criar parcelas normalizadas e eventos/snapshots de abertura para status recebido, comissao paga e referencia de NF incompleta, sem fabricar datas ou recebimentos | pedidos, faturamento, financeiro e comissoes | autorizada |
 | `DEC-010` | Campanhas, pontos e premiacao | criar campanhas e regras versionadas, ledger append-only de pontos/premios e vouchers; nao misturar premiacao com comissao | comercial, metas, financeiro e auditoria | autorizada |
-| `DEC-011` | Papeis do vinculo cliente-vendedor | distinguir no relacionamento quem cadastrou, quem atende e demais papeis, com vigencia e auditoria | cadastros, visibilidade comercial e pedidos | autorizada |
+| `DEC-011` | Papeis do vinculo cliente-vendedor | distinguir no relacionamento quem cadastrou, quem atende e demais papeis, com vigencia e auditoria | cadastros, visibilidade comercial e pedidos | implementada |
 
 ## Decisoes autorizadas aguardando implementacao
 

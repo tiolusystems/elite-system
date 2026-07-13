@@ -12,6 +12,7 @@ import type {
 } from "@/lib/historical-workbook";
 
 import { analyzeHistoricalWorkbookAction } from "./actions";
+import { WorkbookHomologationWorkspace } from "./workbook-homologation";
 
 const READ_ONLY_NOTICE = "Esta etapa apenas analisa o arquivo. Nenhum dado será gravado no banco.";
 const STATUS_LABELS: Record<WorkbookMappingStatus, string> = {
@@ -138,6 +139,7 @@ export function WorkbookAnalysisWorkspace() {
         <>
           <FileIdentity analysis={analysis} />
           <AnalysisSummary analysis={analysis} />
+          <WorkbookHomologationWorkspace key={analysis.file.sha256} analysis={analysis} />
           <AnalysisFilters
             analysis={analysis}
             domains={domains}

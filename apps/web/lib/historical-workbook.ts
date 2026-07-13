@@ -20,6 +20,26 @@ export type WorkbookSourceClassification = {
   schemaDriftDetected: boolean;
   reviewRequired: boolean;
   normalizationBlocked: boolean;
+  identityHash?: string;
+  sheetRef?: string;
+  tableRef?: string;
+  tableNumberInSheet?: number;
+  baselineRange?: string;
+  baselineRowCount?: number;
+  baselineColumnCount?: number;
+  canonicalHeaders?: string[];
+  formulaCellCount?: number;
+  calculatedValueCount?: number;
+  equivalentPrimarySource?: string | null;
+  preserveRows?: boolean;
+  preserveMetadataOnly?: boolean;
+  normalizeLater?: boolean;
+  useForReconciliation?: boolean;
+  justification?: string;
+  duplicateRisk?: "low" | "medium" | "high" | "unknown";
+  dependencies?: string[];
+  qualityNotes?: string[];
+  driftReason?: string | null;
 };
 
 export type WorkbookReference = {

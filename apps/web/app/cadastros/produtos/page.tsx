@@ -147,7 +147,7 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
 
       <section className="panel production-next-band">
         <div><span className="eyebrow">Proxima dependencia</span><h2>Formula, garantias e producao</h2><p>Produtos ativos podem receber receitas de producao e MAPA, gerar OP e originar lotes PA ou PI.</p></div>
-        <div className="toolbar-actions"><Link className="secondary-button" href="/producao#garantias">Garantias</Link><Link className="primary-button" href="/producao#formulas">Abrir formulas</Link></div>
+        <div className="toolbar-actions"><Link className="secondary-button" href="/producao/garantias">Garantias</Link><Link className="primary-button" href="/producao/formulas">Abrir formulas</Link></div>
       </section>
     </CatalogShell>
   );

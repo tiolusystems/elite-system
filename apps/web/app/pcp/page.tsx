@@ -1,23 +1,20 @@
 import Link from "next/link";
 
 import {
-  activatePcpFormulaAction,
   calculateOpGuaranteesAction,
   cancelPcpOpAction,
-  createPcpFormulaAction,
   createPcpOpAction,
   finishPcpOpAction,
-  registerMpLotGuaranteeAction,
-  registerProductGuaranteeAction,
   releaseBlockedLotAction,
   reservePcpComponentAction,
   startPcpOpAction
 } from "@/app/pcp/actions";
-import { FormulaComponentRows, OutputRows } from "@/app/pcp/production-editors";
+import { OutputRows } from "@/app/pcp/production-editors";
+import { FormulaWorkbench } from "@/app/producao/formulas/formula-workbench";
+import { GuaranteeWorkbench } from "@/app/producao/garantias/guarantee-workbench";
 import {
   getPcpDashboard,
   type PcpAvailableLot,
-  type PcpFormulaVersion,
   type PcpLookups,
   type PcpOpComponent,
   type PcpRecentOp
@@ -146,76 +143,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
           </section>
         ) : null}
 
-        <section className="two-column">
-          <section className="panel form-panel" id="nova-formula" aria-labelledby="nova-formula-title">
-            <div className="panel-header">
-              <h2 id="nova-formula-title">Nova versao de formula</h2>
-              <span className="pill">append-only</span>
-            </div>
-            <form action={createPcpFormulaAction}>
-              <div className="form-grid">
-                <label className="wide-field">
-                  Produto PA/PI
-                  <select name="produto_id" defaultValue="" required>
-                    <option value="">Selecione o produto</option>
-                    {dashboard.lookups.produtos.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Tipo receita
-                  <select name="tipo_receita" defaultValue="producao">
-                    <option value="producao">producao</option>
-                    <option value="mapa">mapa documental</option>
-                  </select>
-                </label>
-                <label className="wide-field">
-                  Justificativa
-                  <input name="justificativa" placeholder="Motivo da criacao ou alteracao da formula" required />
-                </label>
-                <label className="full-field">
-                  Observacao
-                  <input name="observacao" placeholder="Opcional" />
-                </label>
-              </div>
-              <FormulaComponentRows
-                targets={{
-                  materiasPrimas: dashboard.lookups.materiasPrimas,
-                  produtos: dashboard.lookups.produtos,
-                  produtoEmbalagens: dashboard.lookups.produtoEmbalagens
-                }}
-              />
-              <div className="form-footer">
-                <span>Formula de producao exige componente. Formula MAPA pode ser apenas documental.</span>
-                <button className="primary-button" type="submit">
-                  Criar versao
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section className="panel" id="formulas" aria-labelledby="formulas-title">
-            <div className="panel-header">
-              <h2 id="formulas-title">Formulas recentes</h2>
-              <span className="pill">{dashboard.formulaVersions.length} versao(oes)</span>
-            </div>
-            {dashboard.formulaVersions.length > 0 ? (
-              <div className="module-list">
-                {dashboard.formulaVersions.slice(0, 10).map((formula) => (
-                  <FormulaCard key={formula.id} formula={formula} />
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <strong>Sem formulas carregadas</strong>
-                <span>Quando Supabase estiver configurado, as formulas versionadas aparecerao aqui.</span>
-              </div>
-            )}
-          </section>
-        </section>
+        <FormulaWorkbench dashboard={dashboard} includeActive={false} />
 
         <section className="two-column">
           <section className="panel form-panel" id="nova-op" aria-labelledby="nova-op-title">
@@ -296,151 +224,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
           </section>
         </section>
 
-        <section className="panel" id="garantias" aria-labelledby="garantias-title">
-          <div className="panel-header">
-            <h2 id="garantias-title">Garantias e conformidade</h2>
-            <span className="pill">{valueOrDash(dashboard.metrics.garantiasVigentes)} vigente(s)</span>
-          </div>
-          <div className="two-column production-forms">
-            <form className="production-form" action={registerProductGuaranteeAction}>
-              <h3>Garantia declarada do produto</h3>
-              <div className="form-grid">
-                <label className="wide-field">
-                  Produto
-                  <select name="produto_id" defaultValue="" required>
-                    <option value="">Selecione</option>
-                    {dashboard.lookups.produtos.map((option) => (
-                      <option key={option.id} value={option.id}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Nutriente
-                  <input name="nutriente" placeholder="N, P2O5, K2O" required />
-                </label>
-                <label>
-                  Limite
-                  <select name="tipo_limite" defaultValue="minimo">
-                    <option value="minimo">minimo</option>
-                    <option value="maximo">maximo</option>
-                    <option value="faixa">faixa</option>
-                    <option value="declarado">declarado</option>
-                  </select>
-                </label>
-                <label>
-                  Valor
-                  <input name="valor" inputMode="decimal" required />
-                </label>
-                <label>
-                  Maximo da faixa
-                  <input name="valor_maximo" inputMode="decimal" />
-                </label>
-                <label>
-                  Unidade
-                  <input name="unidade" placeholder="%, g/L" required />
-                </label>
-                <label>
-                  Fonte
-                  <select name="fonte" defaultValue="mapa">
-                    <option value="mapa">MAPA</option>
-                    <option value="laboratorio">laboratorio</option>
-                    <option value="manual">manual</option>
-                    <option value="fornecedor">fornecedor</option>
-                    <option value="calculado">calculado</option>
-                  </select>
-                </label>
-                <label>
-                  Vigencia inicial
-                  <input name="vigencia_inicio" type="date" defaultValue={today} />
-                </label>
-                <label>
-                  Vigencia final
-                  <input name="vigencia_fim" type="date" />
-                </label>
-                <label className="wide-field">
-                  Documento
-                  <input name="documento_referencia" placeholder="Registro MAPA ou laudo" />
-                </label>
-                <label className="full-field">
-                  Justificativa
-                  <input name="justificativa" placeholder="Motivo desta versao" required />
-                </label>
-              </div>
-              <button className="primary-button" type="submit">Registrar versao</button>
-            </form>
-
-            <form className="production-form" action={registerMpLotGuaranteeAction}>
-              <h3>Garantia analisada do lote de MP</h3>
-              <div className="form-grid">
-                <label className="wide-field">
-                  Lote de MP
-                  <select name="lote_mp_id" defaultValue="" required>
-                    <option value="">Selecione</option>
-                    {dashboard.availableLots.filter((lot) => lot.tipo === "MP").map((lot) => (
-                      <option key={lot.id} value={lot.id}>{lot.codigoLote} - {lot.targetLabel}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Nutriente
-                  <input name="nutriente" placeholder="N, P2O5, K2O" required />
-                </label>
-                <label>
-                  Valor
-                  <input name="valor" inputMode="decimal" required />
-                </label>
-                <label>
-                  Unidade
-                  <input name="unidade" placeholder="%, g/L" required />
-                </label>
-                <label>
-                  Fonte
-                  <select name="fonte" defaultValue="laboratorio">
-                    <option value="laboratorio">laboratorio</option>
-                    <option value="fornecedor">fornecedor</option>
-                    <option value="manual">manual</option>
-                    <option value="mapa">MAPA</option>
-                    <option value="calculado">calculado</option>
-                  </select>
-                </label>
-                <label>
-                  Data de referencia
-                  <input name="data_referencia" type="date" defaultValue={today} required />
-                </label>
-                <label className="wide-field">
-                  Documento
-                  <input name="documento_referencia" placeholder="Laudo ou certificado" />
-                </label>
-                <label className="full-field">
-                  Justificativa
-                  <input name="justificativa" placeholder="Origem e motivo desta versao" required />
-                </label>
-              </div>
-              <button className="primary-button" type="submit">Registrar analise</button>
-            </form>
-          </div>
-
-          <div className="table-scroll production-guarantee-table">
-            <table className="data-table">
-              <thead><tr><th>Origem</th><th>Item</th><th>Nutriente</th><th>Valor</th><th>Regra/Fonte</th><th>Referencia</th></tr></thead>
-              <tbody>
-                {dashboard.productGuarantees.map((guarantee) => (
-                  <tr key={`produto-${guarantee.id}`}>
-                    <td>Produto</td><td>{guarantee.produtoLabel}</td><td>{guarantee.nutriente}</td>
-                    <td>{numberOrDash(guarantee.valor)}{guarantee.valorMaximo === null ? "" : ` a ${numberOrDash(guarantee.valorMaximo)}`} {guarantee.unidade}</td>
-                    <td>{guarantee.tipoLimite} / {guarantee.fonte}</td><td>{guarantee.documentoReferencia ?? "-"}</td>
-                  </tr>
-                ))}
-                {dashboard.mpLotGuarantees.map((guarantee) => (
-                  <tr key={`lote-${guarantee.id}`}>
-                    <td>Lote MP</td><td>{guarantee.loteLabel}</td><td>{guarantee.nutriente}</td>
-                    <td>{numberOrDash(guarantee.valor)} {guarantee.unidade}</td><td>{guarantee.fonte}</td><td>{guarantee.documentoReferencia ?? guarantee.dataReferencia ?? "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <GuaranteeWorkbench dashboard={dashboard} today={today} />
 
         <section className="panel" id="ops" aria-labelledby="ops-title">
           <div className="panel-header">
@@ -572,45 +356,6 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
         </section>
       </section>
     </main>
-  );
-}
-
-function FormulaCard({ formula }: { formula: PcpFormulaVersion }) {
-  return (
-    <article className="module-card">
-      <div className="module-card-main">
-        <h3>{formula.produtoLabel}</h3>
-        <span>
-          {formula.tipoReceita} v{formula.versao} / {shortDate(formula.createdAt)}
-        </span>
-      </div>
-      <div className="module-card-meta">
-        <span>{formula.isActive ? "ativa" : "versao"}</span>
-        <strong>{formula.id}</strong>
-      </div>
-      <p>{formula.justificativa}</p>
-      <div className="tag-row">
-        {formula.components.length > 0 ? (
-          formula.components.slice(0, 6).map((component) => (
-            <span className="tag" key={component.id}>
-              {component.tipoComponente} {numberOrDash(component.quantidade)} {component.unidade ?? ""} -{" "}
-              {component.targetLabel}
-            </span>
-          ))
-        ) : (
-          <span className="tag">sem componentes operacionais</span>
-        )}
-      </div>
-      {!formula.isActive ? (
-        <form className="compact-action-form" action={activatePcpFormulaAction}>
-          <input type="hidden" name="formula_versao_id" value={formula.id} />
-          <input name="motivo" placeholder="Motivo para ativar esta versao" required />
-          <button className="secondary-button" type="submit">
-            Ativar
-          </button>
-        </form>
-      ) : null}
-    </article>
   );
 }
 

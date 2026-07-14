@@ -72,7 +72,7 @@ export default async function TechnicalCatalogOverviewPage() {
             <strong>Produtos PA/PI</strong>
             <small>Produto-base, validade e variantes vendaveis.</small>
           </Link>
-          <Link href="/producao#formulas">
+          <Link href="/producao/formulas">
             <span>05</span>
             <strong>Formulas e garantias</strong>
             <small>Versoes de producao, MAPA e composicao tecnica.</small>

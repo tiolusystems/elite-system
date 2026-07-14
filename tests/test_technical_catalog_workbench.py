@@ -31,7 +31,7 @@ class TechnicalCatalogWorkbenchTests(unittest.TestCase):
             "/cadastros/materias-primas",
             "/cadastros/embalagens",
             "/cadastros/produtos",
-            "/producao#formulas",
+            "/producao/formulas",
             "/producao#ops",
         ):
             self.assertIn(href, overview)

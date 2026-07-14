@@ -36,7 +36,7 @@ type OutputPayload = {
 
 export async function createPcpFormulaAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#nova-formula");
+    redirect("/producao/formulas?result=not_configured#nova-formula");
   }
 
   const produtoId = optionalInteger(formData, "produto_id");
@@ -45,13 +45,13 @@ export async function createPcpFormulaAction(formData: FormData) {
   const componentes = parseFormulaComponents(formData);
 
   if (!produtoId || !Number.isInteger(produtoId) || produtoId <= 0 || !justificativa) {
-    redirect("/pcp?result=missing_formula_required#nova-formula");
+    redirect("/producao/formulas?result=missing_formula_required#nova-formula");
   }
   if (!ALLOWED_FORMULA_TYPES.has(tipoReceita)) {
-    redirect("/pcp?result=invalid_formula_type#nova-formula");
+    redirect("/producao/formulas?result=invalid_formula_type#nova-formula");
   }
   if (tipoReceita === "producao" && componentes.length === 0) {
-    redirect("/pcp?result=missing_formula_components#nova-formula");
+    redirect("/producao/formulas?result=missing_formula_components#nova-formula");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -64,22 +64,22 @@ export async function createPcpFormulaAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#nova-formula`);
+    redirect(`/producao/formulas?result=${encodeURIComponent(mapPcpError(error.message))}#nova-formula`);
   }
 
   revalidatePath("/pcp");
-  redirect("/pcp?result=formula_created#formulas");
+  redirect("/producao/formulas?result=formula_created#formulas");
 }
 
 export async function activatePcpFormulaAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#formulas");
+    redirect("/producao/formulas?result=not_configured#formulas");
   }
 
   const formulaVersionId = optionalInteger(formData, "formula_versao_id");
   const motivo = field(formData, "motivo");
   if (!formulaVersionId || formulaVersionId <= 0 || !motivo) {
-    redirect("/pcp?result=missing_activation_required#formulas");
+    redirect("/producao/formulas?result=missing_activation_required#formulas");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -89,11 +89,11 @@ export async function activatePcpFormulaAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#formulas`);
+    redirect(`/producao/formulas?result=${encodeURIComponent(mapPcpError(error.message))}#formulas`);
   }
 
   revalidatePath("/pcp");
-  redirect("/pcp?result=formula_activated#formulas");
+  redirect("/producao/formulas?result=formula_activated#formulas");
 }
 
 export async function createPcpOpAction(formData: FormData) {
@@ -305,7 +305,7 @@ export async function cancelPcpOpAction(formData: FormData) {
 
 export async function registerProductGuaranteeAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/producao?result=not_configured#garantias");
+    redirect("/producao/garantias?result=not_configured");
   }
 
   const produtoId = optionalInteger(formData, "produto_id");
@@ -317,16 +317,16 @@ export async function registerProductGuaranteeAction(formData: FormData) {
   const documentoReferencia = optionalField(formData, "documento_referencia");
 
   if (!produtoId || !field(formData, "nutriente") || valor === null || valor < 0 || !field(formData, "unidade") || !justificativa) {
-    redirect("/producao?result=missing_guarantee_required#garantias");
+    redirect("/producao/garantias?result=missing_guarantee_required");
   }
   if (!ALLOWED_GUARANTEE_LIMITS.has(tipoLimite) || !ALLOWED_GUARANTEE_SOURCES.has(fonte)) {
-    redirect("/producao?result=invalid_guarantee_type#garantias");
+    redirect("/producao/garantias?result=invalid_guarantee_type");
   }
   if ((fonte === "laboratorio" || fonte === "fornecedor") && !documentoReferencia) {
-    redirect("/producao?result=missing_guarantee_document#garantias");
+    redirect("/producao/garantias?result=missing_guarantee_document");
   }
   if (tipoLimite === "faixa" ? valorMaximo === null || valorMaximo < valor : valorMaximo !== null) {
-    redirect("/producao?result=invalid_guarantee_range#garantias");
+    redirect("/producao/garantias?result=invalid_guarantee_range");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -345,16 +345,16 @@ export async function registerProductGuaranteeAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/producao?result=${encodeURIComponent(mapPcpError(error.message))}#garantias`);
+    redirect(`/producao/garantias?result=${encodeURIComponent(mapPcpError(error.message))}`);
   }
 
   revalidateProductionPaths();
-  redirect("/producao?result=product_guarantee_registered#garantias");
+  redirect("/producao/garantias?result=product_guarantee_registered");
 }
 
 export async function registerMpLotGuaranteeAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/producao?result=not_configured#garantias");
+    redirect("/producao/garantias?result=not_configured");
   }
 
   const loteMpId = optionalInteger(formData, "lote_mp_id");
@@ -363,13 +363,13 @@ export async function registerMpLotGuaranteeAction(formData: FormData) {
   const justificativa = field(formData, "justificativa");
   const documentoReferencia = optionalField(formData, "documento_referencia");
   if (!loteMpId || !field(formData, "nutriente") || valor === null || valor < 0 || !field(formData, "unidade") || !fonte || !field(formData, "data_referencia") || !justificativa) {
-    redirect("/producao?result=missing_guarantee_required#garantias");
+    redirect("/producao/garantias?result=missing_guarantee_required");
   }
   if (!ALLOWED_GUARANTEE_SOURCES.has(fonte)) {
-    redirect("/producao?result=invalid_guarantee_type#garantias");
+    redirect("/producao/garantias?result=invalid_guarantee_type");
   }
   if ((fonte === "laboratorio" || fonte === "fornecedor") && !documentoReferencia) {
-    redirect("/producao?result=missing_guarantee_document#garantias");
+    redirect("/producao/garantias?result=missing_guarantee_document");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -385,11 +385,11 @@ export async function registerMpLotGuaranteeAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/producao?result=${encodeURIComponent(mapPcpError(error.message))}#garantias`);
+    redirect(`/producao/garantias?result=${encodeURIComponent(mapPcpError(error.message))}`);
   }
 
   revalidateProductionPaths();
-  redirect("/producao?result=mp_lot_guarantee_registered#garantias");
+  redirect("/producao/garantias?result=mp_lot_guarantee_registered");
 }
 
 export async function calculateOpGuaranteesAction(formData: FormData) {
@@ -455,7 +455,7 @@ function parseFormulaComponents(formData: FormData): FormulaComponentPayload[] {
       continue;
     }
     if (!ALLOWED_COMPONENT_TYPES.has(tipo) || !targetId || targetId <= 0 || quantidade === null || quantidade <= 0) {
-      redirect("/pcp?result=invalid_component_row#nova-formula");
+      redirect("/producao/formulas?result=invalid_component_row#nova-formula");
     }
 
     const payload: FormulaComponentPayload = {

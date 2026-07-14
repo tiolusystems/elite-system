@@ -58,7 +58,7 @@ export function CatalogShell({ active, title, description, source, error, action
               {item.label}
             </Link>
           ))}
-          <Link href="/producao#formulas">Formulas e OP</Link>
+          <Link href="/producao/formulas">Formulas</Link>
         </nav>
 
         <div className="toolbar technical-toolbar">

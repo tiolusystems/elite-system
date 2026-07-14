@@ -16,6 +16,13 @@ export const SYSTEM_MODULE_KEYS = [
 
 export type SystemModuleKey = (typeof SYSTEM_MODULE_KEYS)[number];
 export type SystemMapLaneKey = "fundacao" | "operacao" | "saida" | "resultado" | "controle";
+export type SystemDeploymentGateKey =
+  | "architecture"
+  | "local_validation"
+  | "business_validation"
+  | "staging"
+  | "pilot"
+  | "production";
 
 export type SystemModuleDependency = {
   moduleKey: SystemModuleKey;
@@ -266,6 +273,50 @@ export const SYSTEM_MODULE_CATALOG = [
     capabilities: ["Fonte e hash", "Batch e linha original", "Historico MP e aliases", "Reconciliacao de valores"]
   }
 ] as const satisfies readonly SystemModuleDetail[];
+
+export const SYSTEM_DEPLOYMENT_GATES: ReadonlyArray<{
+  gateKey: SystemDeploymentGateKey;
+  label: string;
+  description: string;
+  evidence: string;
+}> = [
+  {
+    gateKey: "architecture",
+    label: "Base arquitetural",
+    description: "Modulos, donos, dependencias e contratos relacionais definidos.",
+    evidence: "Catalogo executavel, migrations e testes de arquitetura"
+  },
+  {
+    gateKey: "local_validation",
+    label: "Teste local",
+    description: "Fluxos executados no Supabase local sem usar dados de producao.",
+    evidence: "Banco descartavel, smoke tests e gates de codigo"
+  },
+  {
+    gateKey: "business_validation",
+    label: "Validacao de negocio",
+    description: "Telas e regras conferidas por quem executa o processo real.",
+    evidence: "Cenarios homologados e pendencias registradas"
+  },
+  {
+    gateKey: "staging",
+    label: "Homologacao online",
+    description: "Supabase e frontend cloud separados da producao.",
+    evidence: "Login, RLS, auditoria, backup e deploy validados"
+  },
+  {
+    gateKey: "pilot",
+    label: "Piloto controlado",
+    description: "Usuarios reais operam um escopo limitado e monitorado.",
+    evidence: "Uso simultaneo, suporte, restauracao e aceite do modulo"
+  },
+  {
+    gateKey: "production",
+    label: "Operacao",
+    description: "Modulo liberado gradualmente para a rotina da Elite.",
+    evidence: "Rollout auditado, monitoramento e plano de reversao"
+  }
+];
 
 export const SYSTEM_MAP_LANES: ReadonlyArray<{
   laneKey: SystemMapLaneKey;

@@ -14,6 +14,7 @@ PENDING_DECISIONS = ROOT / "docs" / "02_DECISOES_PENDENTES.md"
 SYSTEM_MAP = ROOT / "apps" / "web" / "lib" / "system-map.ts"
 MODULES_LIB = ROOT / "apps" / "web" / "lib" / "modules.ts"
 MODULES_PAGE = ROOT / "apps" / "web" / "app" / "modulos" / "page.tsx"
+IMPLEMENTATION_MAP = ROOT / "docs" / "implantacao" / "00_MAPA_IMPLANTACAO_MODULOS.md"
 HOME_PAGE = ROOT / "apps" / "web" / "app" / "page.tsx"
 MODULE_MIGRATION = ROOT / "supabase" / "migrations" / "0041_module_rollout_runtime.sql"
 
@@ -106,6 +107,19 @@ class ArchitectureNavigationContractTest(unittest.TestCase):
         self.assertIn("SYSTEM_FLOWS.map", page)
         self.assertIn("moduleMaturityPercent", page)
         self.assertIn('id="mapa"', page)
+
+    def test_visual_roadmap_translates_the_authoritative_runtime(self) -> None:
+        page = MODULES_PAGE.read_text(encoding="utf-8")
+        system_map = SYSTEM_MAP.read_text(encoding="utf-8")
+        implementation = IMPLEMENTATION_MAP.read_text(encoding="utf-8")
+
+        self.assertIn("SYSTEM_DEPLOYMENT_GATES", system_map)
+        self.assertIn("SYSTEM_DEPLOYMENT_GATES.map", page)
+        self.assertIn("deploymentGateState", page)
+        self.assertIn('id="implantacao"', page)
+        self.assertIn("Proxima validacao:", page)
+        self.assertIn("PostgreSQL", implementation)
+        self.assertIn("nao cria uma segunda fonte de status", implementation)
 
     def test_home_progress_uses_runtime_maturity_not_invented_percentages(self) -> None:
         page = HOME_PAGE.read_text(encoding="utf-8")

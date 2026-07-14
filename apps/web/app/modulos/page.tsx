@@ -14,8 +14,10 @@ import { getRuntimeStatus } from "@/lib/runtime";
 import {
   getSystemModuleDetail,
   moduleMaturityPercent,
+  SYSTEM_DEPLOYMENT_GATES,
   SYSTEM_FLOWS,
-  SYSTEM_MAP_LANES
+  SYSTEM_MAP_LANES,
+  type SystemDeploymentGateKey
 } from "@/lib/system-map";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -47,6 +49,10 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Pro
     runtime.databaseMode !== "not_configured" &&
     dashboard.activeEnvironment !== "unconfigured" &&
     runtime.databaseMode !== dashboard.activeEnvironment;
+  const deploymentGates = SYSTEM_DEPLOYMENT_GATES.map((gate) => ({
+    ...gate,
+    state: deploymentGateState(gate.gateKey, dashboard.activeEnvironment, dashboard.modules)
+  }));
 
   return (
     <main className="app-shell">
@@ -83,6 +89,7 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Pro
             </p>
           </div>
           <div className="toolbar-actions">
+            <a className="secondary-button" href="#implantacao">Implantacao</a>
             <a className="secondary-button" href="#mapa">Mapa</a>
             <a className="secondary-button" href="#ambiente">Ambiente</a>
             <a className="primary-button" href="#catalogo">Rollout</a>
@@ -130,6 +137,38 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Pro
             <span>{message.detail}</span>
           </section>
         ) : null}
+
+        <section className="deployment-roadmap" id="implantacao" aria-labelledby="implantacao-title">
+          <div className="architecture-heading">
+            <div>
+              <span className="eyebrow">caminho ate a operacao</span>
+              <h2 id="implantacao-title">O que esta pronto e o que vem depois</h2>
+              <p className="muted">
+                O PostgreSQL continua sendo a fonte de maturidade. Esta visao apenas traduz os gates para o trabalho diario.
+              </p>
+            </div>
+            <span className="pill">Ambiente: {environmentLabel(dashboard.activeEnvironment)}</span>
+          </div>
+          <ol className="deployment-gate-grid">
+            {deploymentGates.map((gate, index) => (
+              <li className={`deployment-gate ${gate.state}`} key={gate.gateKey}>
+                <span className="deployment-gate-number" aria-hidden="true">{index + 1}</span>
+                <div>
+                  <div className="deployment-gate-head">
+                    <strong>{gate.label}</strong>
+                    <span>{deploymentGateStateLabel(gate.state)}</span>
+                  </div>
+                  <p>{gate.description}</p>
+                  <small>Comprovacao: {gate.evidence}</small>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="deployment-next-step">
+            <strong>Proximo marco global</strong>
+            <span>{nextDeploymentMilestone(dashboard.activeEnvironment)}</span>
+          </div>
+        </section>
 
         <section className="architecture-overview" id="mapa" aria-labelledby="mapa-title">
           <div className="architecture-heading">
@@ -179,6 +218,10 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Pro
                         </div>
                         <span className="architecture-node-meta">
                           {detail.dependencies.filter((dependency) => dependency.required).length} dependencia(s) obrigatoria(s)
+                        </span>
+                        <span className="architecture-node-next">
+                          <strong>Proxima validacao:</strong>{" "}
+                          {moduleNextStep(detail.primaryRoute, current?.lifecycle ?? null, current?.available ?? false, dashboard.activeEnvironment)}
                         </span>
                       </a>
                     );
@@ -297,7 +340,7 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Pro
                   <tr id={`module-${module.moduleKey}`} key={module.moduleKey}>
                     <td>
                       <strong>{module.displayName}</strong>
-                      <span className="table-subtext">{module.moduleKey} · dono: {module.ownerDomain}</span>
+                      <span className="table-subtext">{module.moduleKey} - dono: {module.ownerDomain}</span>
                       <span className="table-subtext">{module.description}</span>
                     </td>
                     <td>
@@ -374,6 +417,80 @@ function parseEnvironment(value: string | null): SystemEnvironment | null {
     return value;
   }
   return null;
+}
+
+type DeploymentGateState = "complete" | "current" | "next" | "pending";
+type DeploymentModule = { isCore: boolean; lifecycle: ModuleLifecycle | null };
+
+function deploymentGateState(
+  gateKey: SystemDeploymentGateKey,
+  activeEnvironment: SystemEnvironment,
+  modules: readonly DeploymentModule[]
+): DeploymentGateState {
+  const businessModules = modules.filter((module) => !module.isCore);
+  const allBusinessReady = businessModules.length > 0 && businessModules.every((module) =>
+    module.lifecycle === "pilot" || module.lifecycle === "operational"
+  );
+  const hasPilot = businessModules.some((module) => module.lifecycle === "pilot");
+
+  switch (gateKey) {
+    case "architecture":
+      return "complete";
+    case "local_validation":
+      if (activeEnvironment === "test" || activeEnvironment === "staging" || activeEnvironment === "production") return "complete";
+      return activeEnvironment === "development" ? "current" : "next";
+    case "business_validation":
+      if (allBusinessReady) return "complete";
+      return activeEnvironment === "unconfigured" ? "pending" : "current";
+    case "staging":
+      if (activeEnvironment === "production") return "complete";
+      if (activeEnvironment === "staging") return "current";
+      return activeEnvironment === "test" ? "next" : "pending";
+    case "pilot":
+      if (activeEnvironment === "production") return "complete";
+      if (hasPilot) return "current";
+      return activeEnvironment === "staging" ? "next" : "pending";
+    case "production":
+      return activeEnvironment === "production" ? "current" : "pending";
+  }
+}
+
+function deploymentGateStateLabel(state: DeploymentGateState): string {
+  const labels: Record<DeploymentGateState, string> = {
+    complete: "Concluido",
+    current: "Em andamento",
+    next: "Proximo",
+    pending: "Pendente"
+  };
+  return labels[state];
+}
+
+function nextDeploymentMilestone(activeEnvironment: SystemEnvironment): string {
+  if (activeEnvironment === "unconfigured") return "Configurar o ambiente autoritativo antes de liberar modulos.";
+  if (activeEnvironment === "development") return "Concluir os testes locais e registrar o ambiente de teste.";
+  if (activeEnvironment === "test") return "Publicar uma homologacao online separada, sem dados operacionais reais.";
+  if (activeEnvironment === "staging") return "Homologar os fluxos ponta a ponta e iniciar o piloto controlado.";
+  return "Monitorar a operacao e promover cada modulo somente por rollout auditado.";
+}
+
+function moduleNextStep(
+  primaryRoute: string | null,
+  lifecycle: ModuleLifecycle | null,
+  available: boolean,
+  activeEnvironment: SystemEnvironment
+): string {
+  if (!available) return "Liberar as dependencias obrigatorias indicadas no catalogo.";
+  if (!lifecycle || lifecycle === "construction") return "Concluir implementacao e validacao tecnica local.";
+  if (lifecycle === "technical_validation") {
+    return primaryRoute
+      ? "Revisar a tela e executar o fluxo real com o responsavel do negocio."
+      : "Construir a tela dedicada e executar a validacao tecnica.";
+  }
+  if (lifecycle === "business_validation") return "Homologar cenarios reais e registrar as pendencias encontradas.";
+  if (lifecycle === "pilot") return "Executar o piloto com usuarios definidos e monitorar falhas.";
+  if (lifecycle === "suspended") return "Resolver o motivo da suspensao antes de nova promocao.";
+  if (activeEnvironment !== "production") return "Repetir a homologacao no ambiente cloud antes da liberacao final.";
+  return "Monitorar indicadores, auditoria, backup e incidentes.";
 }
 
 function environmentLabel(value: SystemEnvironment): string {

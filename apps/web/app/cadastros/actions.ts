@@ -29,6 +29,12 @@ const ALLOWED_PESSOA_ROLE_REASONS = new Set([
   "outro"
 ]);
 const DECIMAL_SEPARATOR = /,/g;
+const ALLOWED_CADASTRO_RETURN_PATHS = new Set([
+  "/cadastros/materias-primas",
+  "/cadastros/unidades",
+  "/cadastros/embalagens",
+  "/cadastros/produtos"
+]);
 
 export async function createClienteAction(formData: FormData) {
   const runtime = getRuntimeStatus();
@@ -339,7 +345,7 @@ export async function deactivatePessoaComercialAction(formData: FormData) {
 export async function createMateriaPrimaAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-mp");
+    redirectCadastroAction(formData, "not_configured", "#nova-mp");
   }
 
   const nome = field(formData, "nome");
@@ -350,16 +356,16 @@ export async function createMateriaPrimaAction(formData: FormData) {
   const estoqueMinimo = optionalNumber(formData, "estoque_minimo");
 
   if (!nome || !skuCorrigido || !unidadeBaseEstoque) {
-    redirect("/cadastros?result=missing_mp_required#nova-mp");
+    redirectCadastroAction(formData, "missing_mp_required", "#nova-mp");
   }
   if (!ALLOWED_STATUS.has(status)) {
-    redirect("/cadastros?result=invalid_status#nova-mp");
+    redirectCadastroAction(formData, "invalid_status", "#nova-mp");
   }
   if (densidade !== null && (!Number.isFinite(densidade) || densidade <= 0)) {
-    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#nova-mp");
   }
   if (estoqueMinimo !== null && (!Number.isFinite(estoqueMinimo) || estoqueMinimo < 0)) {
-    redirect("/cadastros?result=invalid_non_negative_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_non_negative_number", "#nova-mp");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -383,17 +389,17 @@ export async function createMateriaPrimaAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#nova-mp");
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=mp_created#nova-mp");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "mp_created", "#nova-mp");
 }
 
 export async function updateMateriaPrimaIdentityAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-mp");
+    redirectCadastroAction(formData, "not_configured", "#editar");
   }
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
@@ -402,10 +408,10 @@ export async function updateMateriaPrimaIdentityAction(formData: FormData) {
   const motivo = field(formData, "motivo");
 
   if (!materiaPrimaId || !nome || !motivo) {
-    redirect("/cadastros?result=missing_mp_required#nova-mp");
+    redirectCadastroAction(formData, "missing_mp_required", "#editar", materiaPrimaId);
   }
   if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#editar", materiaPrimaId);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -418,17 +424,17 @@ export async function updateMateriaPrimaIdentityAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#editar", materiaPrimaId);
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=mp_identity_updated#nova-mp");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "mp_identity_updated", "#editar", materiaPrimaId);
 }
 
 export async function updateMateriaPrimaSkuAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-mp");
+    redirectCadastroAction(formData, "not_configured", "#editar");
   }
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
@@ -437,13 +443,13 @@ export async function updateMateriaPrimaSkuAction(formData: FormData) {
   const motivo = field(formData, "motivo");
 
   if (!materiaPrimaId || !skuCorrigido || !motivo) {
-    redirect("/cadastros?result=missing_mp_required#nova-mp");
+    redirectCadastroAction(formData, "missing_mp_required", "#editar", materiaPrimaId);
   }
   if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#editar", materiaPrimaId);
   }
   if (/\s/.test(skuCorrigido)) {
-    redirect("/cadastros?result=invalid_sku#nova-mp");
+    redirectCadastroAction(formData, "invalid_sku", "#editar", materiaPrimaId);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -455,17 +461,17 @@ export async function updateMateriaPrimaSkuAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#editar", materiaPrimaId);
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=mp_sku_updated#nova-mp");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "mp_sku_updated", "#editar", materiaPrimaId);
 }
 
 export async function updateMateriaPrimaTechnicalAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-mp");
+    redirectCadastroAction(formData, "not_configured", "#editar");
   }
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
@@ -474,13 +480,13 @@ export async function updateMateriaPrimaTechnicalAction(formData: FormData) {
   const motivo = field(formData, "motivo");
 
   if (!materiaPrimaId || !unidadeBaseEstoque || !motivo) {
-    redirect("/cadastros?result=missing_mp_required#nova-mp");
+    redirectCadastroAction(formData, "missing_mp_required", "#editar", materiaPrimaId);
   }
   if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#editar", materiaPrimaId);
   }
   if (densidade !== null && (!Number.isFinite(densidade) || densidade <= 0)) {
-    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#editar", materiaPrimaId);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -492,17 +498,17 @@ export async function updateMateriaPrimaTechnicalAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#editar", materiaPrimaId);
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=mp_technical_updated#nova-mp");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "mp_technical_updated", "#editar", materiaPrimaId);
 }
 
 export async function updateMateriaPrimaStockPolicyAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-mp");
+    redirectCadastroAction(formData, "not_configured", "#editar");
   }
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
@@ -510,13 +516,13 @@ export async function updateMateriaPrimaStockPolicyAction(formData: FormData) {
   const motivo = field(formData, "motivo");
 
   if (!materiaPrimaId || estoqueMinimo === null || !motivo) {
-    redirect("/cadastros?result=missing_mp_required#nova-mp");
+    redirectCadastroAction(formData, "missing_mp_required", "#editar", materiaPrimaId);
   }
   if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#editar", materiaPrimaId);
   }
   if (!Number.isFinite(estoqueMinimo) || estoqueMinimo < 0) {
-    redirect("/cadastros?result=invalid_non_negative_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_non_negative_number", "#editar", materiaPrimaId);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -527,17 +533,17 @@ export async function updateMateriaPrimaStockPolicyAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#editar", materiaPrimaId);
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=mp_stock_policy_updated#nova-mp");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "mp_stock_policy_updated", "#editar", materiaPrimaId);
 }
 
 export async function updateMateriaPrimaRegulatoryAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-mp");
+    redirectCadastroAction(formData, "not_configured", "#editar");
   }
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
@@ -547,13 +553,13 @@ export async function updateMateriaPrimaRegulatoryAction(formData: FormData) {
   const motivo = field(formData, "motivo");
 
   if (!materiaPrimaId || !motivo) {
-    redirect("/cadastros?result=missing_mp_required#nova-mp");
+    redirectCadastroAction(formData, "missing_mp_required", "#editar", materiaPrimaId);
   }
   if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#editar", materiaPrimaId);
   }
   if (ncm && !/^\d{8}$/.test(onlyDigits(ncm))) {
-    redirect("/cadastros?result=invalid_ncm#nova-mp");
+    redirectCadastroAction(formData, "invalid_ncm", "#editar", materiaPrimaId);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -566,27 +572,27 @@ export async function updateMateriaPrimaRegulatoryAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#editar", materiaPrimaId);
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=mp_regulatory_updated#nova-mp");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "mp_regulatory_updated", "#editar", materiaPrimaId);
 }
 
 export async function deactivateMateriaPrimaAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-mp");
+    redirectCadastroAction(formData, "not_configured", "#editar");
   }
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
   const motivo = field(formData, "motivo");
 
   if (!materiaPrimaId || !motivo) {
-    redirect("/cadastros?result=missing_mp_required#nova-mp");
+    redirectCadastroAction(formData, "missing_mp_required", "#editar", materiaPrimaId);
   }
   if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#editar", materiaPrimaId);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -596,17 +602,17 @@ export async function deactivateMateriaPrimaAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-mp`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#editar", materiaPrimaId);
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=mp_deactivated#nova-mp");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "mp_deactivated", "#editar", materiaPrimaId);
 }
 
 export async function createProdutoBaseAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#novo-produto");
+    redirectCadastroAction(formData, "not_configured", "#novo-produto");
   }
 
   const codigoProduto = field(formData, "codigo_produto");
@@ -617,23 +623,23 @@ export async function createProdutoBaseAction(formData: FormData) {
   const prazoValidadeMeses = prazoValidadeMesesText === null ? null : Number(prazoValidadeMesesText);
 
   if (!codigoProduto || !nome) {
-    redirect("/cadastros?result=missing_product_required#novo-produto");
+    redirectCadastroAction(formData, "missing_product_required", "#novo-produto");
   }
   if (!ALLOWED_STATUS.has(status)) {
-    redirect("/cadastros?result=invalid_status#novo-produto");
+    redirectCadastroAction(formData, "invalid_status", "#novo-produto");
   }
   if (densidadeKgL !== null && (!Number.isFinite(densidadeKgL) || densidadeKgL <= 0)) {
-    redirect("/cadastros?result=invalid_positive_number#novo-produto");
+    redirectCadastroAction(formData, "invalid_positive_number", "#novo-produto");
   }
   if (
     prazoValidadeMeses !== null &&
     (!Number.isInteger(prazoValidadeMeses) || prazoValidadeMeses < 1 || prazoValidadeMeses > 240)
   ) {
-    redirect("/cadastros?result=invalid_validity_months#novo-produto");
+    redirectCadastroAction(formData, "invalid_validity_months", "#novo-produto");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: produtoId, error } = await auditedRpc<number>(supabase, "create_cad_produto_base", {
+  const { error } = await auditedRpc<number>(supabase, "create_cad_produto_base", {
     p_ads: optionalField(formData, "ads"),
     p_codigo_produto: codigoProduto.toUpperCase(),
     p_densidade_kg_l: densidadeKgL,
@@ -646,33 +652,22 @@ export async function createProdutoBaseAction(formData: FormData) {
       source: "apps/web/app/cadastros",
       form: "produto_base"
     },
+    p_prazo_validade_meses: prazoValidadeMeses,
     p_reg_mapa: optionalField(formData, "reg_mapa"),
     p_status: status
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-produto`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#novo-produto");
   }
-  if (prazoValidadeMeses !== null && produtoId) {
-    const { error: prazoError } = await auditedRpc(supabase, "set_cad_produto_prazo_validade", {
-      p_motivo: "Cadastro inicial do produto acabado",
-      p_prazo_validade_meses: prazoValidadeMeses,
-      p_produto_id: produtoId
-    });
-
-    if (prazoError) {
-      redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(prazoError.message))}#novo-produto`);
-    }
-  }
-
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=produto_created#novo-produto");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "produto_created", "#novo-produto");
 }
 
 export async function createEmbalagemAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-embalagem");
+    redirectCadastroAction(formData, "not_configured", "#nova-embalagem");
   }
 
   const descricao = field(formData, "descricao");
@@ -683,19 +678,19 @@ export async function createEmbalagemAction(formData: FormData) {
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
 
   if (!descricao || !unidade) {
-    redirect("/cadastros?result=missing_package_required#nova-embalagem");
+    redirectCadastroAction(formData, "missing_package_required", "#nova-embalagem");
   }
   if (!ALLOWED_STATUS.has(status)) {
-    redirect("/cadastros?result=invalid_status#nova-embalagem");
+    redirectCadastroAction(formData, "invalid_status", "#nova-embalagem");
   }
   if (volumeLitros !== null && (!Number.isFinite(volumeLitros) || volumeLitros <= 0)) {
-    redirect("/cadastros?result=invalid_positive_number#nova-embalagem");
+    redirectCadastroAction(formData, "invalid_positive_number", "#nova-embalagem");
   }
   if (materiaPrimaId !== null && (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0)) {
-    redirect("/cadastros?result=invalid_positive_number#nova-embalagem");
+    redirectCadastroAction(formData, "invalid_positive_number", "#nova-embalagem");
   }
   if (controlaEstoque && materiaPrimaId === null) {
-    redirect("/cadastros?result=missing_package_stock_item#nova-embalagem");
+    redirectCadastroAction(formData, "missing_package_stock_item", "#nova-embalagem");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -715,17 +710,17 @@ export async function createEmbalagemAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-embalagem`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#nova-embalagem");
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=embalagem_created#nova-embalagem");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "embalagem_created", "#nova-embalagem");
 }
 
 export async function createProdutoEmbalagemAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#novo-item-vendavel");
+    redirectCadastroAction(formData, "not_configured", "#novo-item-vendavel");
   }
 
   const produtoId = optionalInteger(formData, "produto_id");
@@ -734,13 +729,13 @@ export async function createProdutoEmbalagemAction(formData: FormData) {
   const status = field(formData, "status") || "active";
 
   if (!produtoId || !embalagemId || !codigoItem) {
-    redirect("/cadastros?result=missing_sale_item_required#novo-item-vendavel");
+    redirectCadastroAction(formData, "missing_sale_item_required", "#novo-item-vendavel");
   }
   if (!Number.isInteger(produtoId) || produtoId <= 0 || !Number.isInteger(embalagemId) || embalagemId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#novo-item-vendavel");
+    redirectCadastroAction(formData, "invalid_positive_number", "#novo-item-vendavel");
   }
   if (!ALLOWED_STATUS.has(status)) {
-    redirect("/cadastros?result=invalid_status#novo-item-vendavel");
+    redirectCadastroAction(formData, "invalid_status", "#novo-item-vendavel");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -752,17 +747,17 @@ export async function createProdutoEmbalagemAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-item-vendavel`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#novo-item-vendavel");
   }
 
-  revalidatePath("/cadastros");
-  redirect("/cadastros?result=item_vendavel_created#novo-item-vendavel");
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "item_vendavel_created", "#novo-item-vendavel");
 }
 
 export async function createConversaoUnidadeMpAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-conversao-mp");
+    redirectCadastroAction(formData, "not_configured", "#nova-conversao-mp");
   }
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
@@ -773,19 +768,19 @@ export async function createConversaoUnidadeMpAction(formData: FormData) {
   const vigenciaFim = optionalField(formData, "vigencia_fim");
 
   if (!materiaPrimaId || !unidadeOrigem || !unidadeDestino || fator === null) {
-    redirect("/cadastros?result=missing_conversion_required#nova-conversao-mp");
+    redirectCadastroAction(formData, "missing_conversion_required", "#nova-conversao-mp");
   }
   if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-conversao-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#nova-conversao-mp");
   }
   if (!Number.isFinite(fator) || fator <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-conversao-mp");
+    redirectCadastroAction(formData, "invalid_positive_number", "#nova-conversao-mp");
   }
   if (unidadeOrigem === unidadeDestino) {
-    redirect("/cadastros?result=invalid_unit_conversion#nova-conversao-mp");
+    redirectCadastroAction(formData, "invalid_unit_conversion", "#nova-conversao-mp");
   }
   if (vigenciaInicio && vigenciaFim && vigenciaFim < vigenciaInicio) {
-    redirect("/cadastros?result=invalid_date_range#nova-conversao-mp");
+    redirectCadastroAction(formData, "invalid_date_range", "#nova-conversao-mp");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -799,11 +794,37 @@ export async function createConversaoUnidadeMpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-conversao-mp`);
+    redirectCadastroAction(formData, mapSupabaseError(error.message), "#nova-conversao-mp");
   }
 
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, "conversion_created", "#nova-conversao-mp");
+}
+
+function redirectCadastroAction(
+  formData: FormData,
+  result: string,
+  hash: string,
+  selectedId: number | null = null
+): never {
+  const requestedPath = optionalField(formData, "return_to");
+  const targetPath = requestedPath && ALLOWED_CADASTRO_RETURN_PATHS.has(requestedPath)
+    ? requestedPath
+    : "/cadastros";
+  const params = new URLSearchParams({ result });
+  if (targetPath === "/cadastros/materias-primas" && selectedId && selectedId > 0) {
+    params.set("selected", String(selectedId));
+  }
+  redirect(`${targetPath}?${params.toString()}${hash}`);
+}
+
+function revalidateTechnicalCatalogs() {
   revalidatePath("/cadastros");
-  redirect("/cadastros?result=conversion_created#nova-conversao-mp");
+  revalidatePath("/cadastros/tecnicos");
+  revalidatePath("/cadastros/materias-primas");
+  revalidatePath("/cadastros/unidades");
+  revalidatePath("/cadastros/embalagens");
+  revalidatePath("/cadastros/produtos");
 }
 
 function field(formData: FormData, name: string): string {

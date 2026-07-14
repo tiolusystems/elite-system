@@ -100,6 +100,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_009_legacy_financial_fiscal.sql
+      - name: Run technical catalog operational workbench smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/technical_catalog_operational_workbench.sql
       - name: Run administrator email change workflow smoke
         env:
           PGPASSWORD: postgres

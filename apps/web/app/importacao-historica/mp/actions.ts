@@ -8,6 +8,7 @@ import { StringDecoder } from "node:string_decoder";
 
 import type { HistoricalWorkbookActionResult, HistoricalWorkbookAnalysis } from "@/lib/historical-workbook";
 import { getRuntimeStatus } from "@/lib/runtime";
+import { auditedRpcCall } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const MAX_WORKBOOK_BYTES = 32 * 1024 * 1024;
@@ -30,9 +31,19 @@ export async function analyzeHistoricalWorkbookAction(formData: FormData): Promi
   }
 
   const supabase = await createSupabaseServerClient();
-  const permission = await supabase.rpc("can_current_user", { p_action_key: "migration.mp.view" });
-  if (permission.error || permission.data !== true) {
-    return failure("permission_denied", "Seu usuario nao possui permissao para analisar o historico.");
+  const permission = await auditedRpcCall<void>(supabase, {
+    actionKey: "migration.mp.view",
+    axis: "field_risk",
+    domain: "migracao",
+    entity: "source_workbooks",
+    functionName: "require_current_user_permission",
+    origin: "apps/web/app/importacao-historica/mp"
+  }).execute({ p_action_key: "migration.mp.view" });
+  if (permission.error) {
+    if (permission.error.message.toLocaleLowerCase("pt-BR").includes("not allowed")) {
+      return failure("permission_denied", "Seu usuario nao possui permissao para analisar o historico.");
+    }
+    return failure("permission_check_failed", "Nao foi possivel validar sua permissao no banco local.");
   }
 
   const uploaded = formData.get("workbook");

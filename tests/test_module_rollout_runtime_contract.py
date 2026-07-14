@@ -75,7 +75,13 @@ class ModuleRolloutRuntimeContractTest(unittest.TestCase):
             migration.read_text(encoding="utf-8")
             for migration in sorted(MIGRATIONS_DIR.glob("*.sql"))
         )
-        registered = set(re.findall(r"\('(/[a-z0-9/-]*)',\s*'[a-z_]+'", sql))
+        registered_routes = [
+            (route_prefix, match_children == "true")
+            for route_prefix, match_children in re.findall(
+                r"\('(/[a-z0-9/-]*)',\s*'[a-z_]+',\s*(true|false)\)",
+                sql,
+            )
+        ]
         proxy = PROXY.read_text(encoding="utf-8")
         public_routes_match = re.search(
             r"const PUBLIC_ROUTES = new Set\(\[(.*?)\]\);",
@@ -93,7 +99,12 @@ class ModuleRolloutRuntimeContractTest(unittest.TestCase):
             app_routes.add(route)
 
         for route in sorted(app_routes - public_routes - recovery_routes):
-            self.assertIn(route, registered, f"authenticated route without module registration: {route}")
+            is_registered = any(
+                route == route_prefix
+                or (match_children and route.startswith(f"{route_prefix}/"))
+                for route_prefix, match_children in registered_routes
+            )
+            self.assertTrue(is_registered, f"authenticated route without module registration: {route}")
 
     def test_proxy_fails_closed_for_unregistered_or_unavailable_route(self) -> None:
         proxy = PROXY.read_text(encoding="utf-8")

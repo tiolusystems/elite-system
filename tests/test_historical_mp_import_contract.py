@@ -14,6 +14,7 @@ SMOKE = ROOT / "tests" / "sql" / "historical_mp_import_foundation.sql"
 CI = ROOT / ".github" / "workflows" / "ci.yml"
 WEB_DATA = ROOT / "apps" / "web" / "lib" / "historical-mp.ts"
 WEB_PAGE = ROOT / "apps" / "web" / "app" / "importacao-historica" / "mp" / "page.tsx"
+WEB_WORKSPACE = ROOT / "apps" / "web" / "app" / "importacao-historica" / "mp" / "workbook-analysis.tsx"
 HOME_PAGE = ROOT / "apps" / "web" / "app" / "page.tsx"
 SYSTEM_MAP = ROOT / "apps" / "web" / "lib" / "system-map.ts"
 
@@ -128,6 +129,7 @@ class HistoricalMpImportContractTests(unittest.TestCase):
         sql = MIGRATION.read_text(encoding="utf-8")
         data = WEB_DATA.read_text(encoding="utf-8")
         page = WEB_PAGE.read_text(encoding="utf-8")
+        workspace = WEB_WORKSPACE.read_text(encoding="utf-8")
         home = HOME_PAGE.read_text(encoding="utf-8")
         system_map = SYSTEM_MAP.read_text(encoding="utf-8")
 
@@ -138,9 +140,11 @@ class HistoricalMpImportContractTests(unittest.TestCase):
         self.assertIn('.from("est_mp_historico_precos")', data)
         self.assertNotIn("auditedRpc(", data + page)
         self.assertNotIn("actions.ts", data + page)
-        self.assertIn("Situacao atual: estrutura pronta, dados do Excel ainda nao analisados", page)
-        self.assertIn("Proximo passo da equipe tecnica", page)
-        self.assertIn("Correspondencia entre o Excel e o cadastro novo", page)
+        self.assertIn("WorkbookAnalysisWorkspace", page)
+        self.assertIn("READ_ONLY_NOTICE", workspace)
+        self.assertIn("analyzeHistoricalWorkbookAction", workspace)
+        self.assertIn("WorkbookHomologationWorkspace", workspace)
+        self.assertIn("downloadCsvReport", workspace)
         self.assertNotIn("Identidades no batch", page)
         self.assertNotIn("Nenhum staging de MP carregado", page)
         self.assertNotIn("Excel para MP canonica", page)

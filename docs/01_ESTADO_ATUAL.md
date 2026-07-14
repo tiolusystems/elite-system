@@ -5,57 +5,77 @@ Atualizado em: 2026-07-14
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- ultima entrega funcional: mapa visual de implantacao e estabilizacao da
-  interface `I1.2`;
+- ultima entrega funcional: `F1.1`, central de cadastros tecnicos para a
+  operacao industrial;
 - ultima migration aplicada localmente:
-  `0055_dec_009_legacy_financial_fiscal_contract.sql`;
-- ambiente ativo: Supabase local e banco de teste;
-- publicacao externa: autorizada para homologacao, mas ainda nao executada;
-- cloud: Supabase CLI sem sessao autenticada, nenhum projeto Supabase vinculado
-  e nenhum projeto ou CLI Vercel vinculado nesta maquina;
+  `0057_product_group_relational_resolution.sql`;
+- ambiente ativo: Supabase local para teste e Supabase staging para
+  homologacao;
+- publicacao externa: staging ativo em
+  `https://elite-system-staging.vercel.app`;
+- cloud: frontend staging na Vercel e PostgreSQL staging no Supabase, sem dados
+  operacionais reais;
 - GitHub: codigo e documentacao somente; push depende de autorizacao.
 
 ## Tarefa concluida mais recente
 
-Mapa visual de implantacao e estabilizacao da homologacao do workbook:
+`F1.1` - primeira fatia funcional dos cadastros tecnicos:
 
-- selecao do `.xlsx` inicia a analise sem depender de um segundo clique;
-- falha de origem entre `localhost` e `127.0.0.1` corrigida no runtime Next;
-- matriz das 269 fontes reorganizada para monitor grande, notebook e celular,
-  sem exigir rolagem horizontal para decidir uma tabela;
-- `/modulos` agora mostra os seis gates ate a operacao e a proxima validacao
-  concreta de cada modulo;
-- maturidade e acesso continuam vindo do PostgreSQL, sem uma segunda fonte de
-  status;
-- nenhuma rota, migration, tabela, dependencia ou regra de negocio foi criada.
+- `/cadastros/tecnicos` apresenta a sequencia industrial e as pendencias dos
+  catalogos;
+- `/cadastros/unidades` consulta unidades e nutrientes normalizados e registra
+  conversoes de MP pela RPC auditada existente;
+- `/cadastros/materias-primas` permite buscar, filtrar, criar, editar por eixo
+  de alcada e desativar MP sem escrita direta;
+- `/cadastros/embalagens` consulta e cria embalagens, incluindo o vinculo de
+  estoque com MP;
+- `/cadastros/produtos` consulta e cria produtos PA/PI e suas apresentacoes
+  vendaveis por embalagem;
+- telas responsivas substituem a dependencia do formulario monolitico para
+  estes fluxos, sem remover as operacoes anteriores;
+- criacao de produto e validade inicial passaram a ser atomicas na RPC
+  auditada `create_cad_produto_base`;
+- grupo de produto agora e resolvido pelo catalogo relacional
+  `cad_grupos_produto`, com `grupo_id`, texto canonico e rejeicao de grupo
+  inexistente ou inativo;
+- o gate integral alinhou o teste de ownership de subrotas ao contrato
+  `match_children` e removeu uma chamada RPC direta remanescente da analise
+  historica, que agora usa guarda de permissao auditada.
 
 O workbook real e os relatorios gerados permanecem fora do Git.
 
 ## Validacao desta tarefa
 
-- contratos de arquitetura e runtime modular: 16 testes aprovados;
-- contratos direcionados da importacao: 18 testes aprovados no commit anterior;
-- ESLint direcionado e TypeScript `--noEmit`: aprovados;
-- build Next de producao: aprovado, incluindo `/modulos` e
-  `/importacao-historica/mp`;
+- contratos direcionados de arquitetura, producao, RLS de MP, integridade e
+  workbench tecnico: 31 testes aprovados;
+- suite integral: 327 testes aprovados;
+- ESLint direcionado: aprovado;
+- TypeScript `--noEmit`: aprovado;
+- build Next de producao: aprovado, incluindo as cinco novas rotas de
+  cadastros tecnicos;
 - `git diff --check`: aprovado;
 - runtime local reiniciado pelo script oficial e `/api/health` retornou `ok`;
-- publicacao cloud nao executada por ausencia de autenticacao e vinculo, sem
-  criar conta, custo ou projeto por suposicao;
-- migration criada ou cadeia PostgreSQL executada: nenhuma.
+- inspecao visual autenticada ainda depende da publicacao desta entrega em
+  staging ou de sessao local ativa no navegador de teste;
+- migrations `0056` e `0057` aplicadas no Supabase local de teste;
+- smoke transacional local do cadastro de produto: aprovado;
+- cadeia `0001` a `0057` reconstruida do zero em PostgreSQL 17 descartavel e
+  smoke `PG_TECHNICAL_CATALOG_WORKBENCH_OK`: aprovado.
 
 ## Estado funcional resumido
 
 - `core` e `seguranca`: operacionais no banco de teste;
-- `cadastros`, `estoque` e `pcp`: validacao de negocio;
+- `cadastros`: primeira fatia industrial implementada e aguardando homologacao
+  visual/funcional em staging;
+- `estoque` e `pcp`: contratos de banco em validacao de negocio; interface
+  operacional ainda concentrada em `/producao`;
 - contratos relacionais `DEC-006` a `DEC-011`: implementados;
 - analise, classificacao e homologacao funcional do Excel: disponiveis
   localmente e sem escrita;
 - mapa visual de implantacao: disponivel em `/modulos`;
 - decisoes funcionais de Luciano: ainda nao preenchidas; I2 bloqueada;
 - carga bruta, simulacao, aplicacao e reconciliacao: pendentes;
-- homologacao cloud: autorizada e pendente de autenticacao/vinculo dos
-  provedores;
+- homologacao cloud: ambiente ativo, com login e banco declarando `staging`;
 - producao cloud: continua bloqueada por homologacao, backup, monitoramento,
   migracao historica ensaiada, seguranca externa e piloto;
 - Auth: convite e troca de email governados; MFA obrigatorio ainda pendente.
@@ -65,22 +85,23 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-`C1` - publicar o primeiro ambiente cloud de homologacao, sem dados reais:
+Publicar e homologar `F1.1` no staging, sem dados reais:
 
-1. autenticar a Supabase CLI na conta que sera proprietaria da homologacao;
-2. criar ou escolher projeto Supabase exclusivo de staging;
-3. autenticar e vincular projeto Vercel exclusivo de staging;
-4. configurar variaveis protegidas, URLs de Auth e migrations;
-5. validar health, login, RLS, auditoria, gates de modulo e rollback;
-6. registrar URL e evidencias sem versionar segredos.
-
-O analisador do workbook permanece local. Nenhum `.xlsx` sera enviado ao
-frontend cloud.
+1. revisar o diff e confirmar ausencia de segredo/dado operacional;
+2. fazer commit unico da fatia funcional;
+3. publicar a branch somente apos autorizacao de Luciano;
+4. validar as cinco rotas em desktop, notebook e celular com sessao staging;
+5. executar criacao e edicao controladas com dados de teste e conferir
+   `action_logs`.
 
 ## Tarefa seguinte de produto
 
-`F1` - revisar e homologar o fluxo mestre de operacao por telas, iniciando em
-`cadastros -> estoque -> formulas -> OP -> CQ -> produto gerado`.
+`F1.2` - decompor a interface de producao em telas operacionais para:
+
+1. formulas e garantias;
+2. ordens de producao e reservas;
+3. CQ, finalizacao e produto gerado;
+4. lotes, estoque e transformacoes PA/PI.
 
 `H1` continua em paralelo como tarefa funcional de Luciano: decidir as 269
 fontes. `I2` permanece bloqueada ate o artefato final homologado existir.

@@ -65,10 +65,13 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de cadastro">
+            <Link className="primary-button" href="/cadastros/tecnicos">
+              Cadastros tecnicos
+            </Link>
             <a className="secondary-button" href="#validacao">
               Fila
             </a>
-            <a className="primary-button" href="#novo-cadastro">
+            <a className="secondary-button" href="#novo-cadastro">
               Novo cadastro
             </a>
           </div>

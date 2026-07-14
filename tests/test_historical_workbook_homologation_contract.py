@@ -26,6 +26,7 @@ ANALYSIS = (
 )
 DOC = ROOT / "docs" / "importacao-historica" / "04_HOMOLOGACAO_FUNCIONAL_FONTES.md"
 STATE = ROOT / "docs" / "01_ESTADO_ATUAL.md"
+STYLES = ROOT / "apps" / "web" / "app" / "globals.css"
 
 
 class HistoricalWorkbookHomologationContractTests(unittest.TestCase):
@@ -36,6 +37,7 @@ class HistoricalWorkbookHomologationContractTests(unittest.TestCase):
         cls.analysis = ANALYSIS.read_text(encoding="utf-8")
         cls.doc = DOC.read_text(encoding="utf-8")
         cls.state = STATE.read_text(encoding="utf-8")
+        cls.styles = STYLES.read_text(encoding="utf-8")
 
     def test_exact_final_decision_catalog_is_closed(self) -> None:
         expected = (
@@ -118,6 +120,13 @@ class HistoricalWorkbookHomologationContractTests(unittest.TestCase):
         ):
             self.assertIn(expected, self.workspace)
         self.assertIn("<WorkbookHomologationWorkspace", self.analysis)
+
+    def test_decision_matrix_reflows_without_horizontal_scrolling(self) -> None:
+        self.assertIn('data-label="Decis\u00e3o funcional"', self.workspace)
+        self.assertIn("overflow-x: hidden", self.styles)
+        self.assertIn('"source technical decision"', self.styles)
+        self.assertIn('"source decision"', self.styles)
+        self.assertNotIn("min-width: 1580px", self.styles)
 
     def test_csv_has_formula_injection_guard_and_all_rows(self) -> None:
         self.assertIn("rows.map((row)", self.contract)

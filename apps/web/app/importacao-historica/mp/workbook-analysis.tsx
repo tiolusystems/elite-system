@@ -15,6 +15,7 @@ import { analyzeHistoricalWorkbookAction } from "./actions";
 import { WorkbookHomologationWorkspace } from "./workbook-homologation";
 
 const READ_ONLY_NOTICE = "Esta etapa apenas analisa o arquivo. Nenhum dado será gravado no banco.";
+const MAX_WORKBOOK_BYTES = 32 * 1024 * 1024;
 const STATUS_LABELS: Record<WorkbookMappingStatus, string> = {
   defined: "Destino definido",
   transform: "Requer transformação",
@@ -41,6 +42,7 @@ const EMPTY_FILTERS: Filters = { sheet: "", domain: "", status: "", text: "" };
 
 export function WorkbookAnalysisWorkspace() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const analysisInProgressRef = useRef(false);
   const [file, setFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState<HistoricalWorkbookAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,17 +58,33 @@ export function WorkbookAnalysisWorkspace() {
     [analysis]
   );
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!file || pending) return;
+  async function analyzeFile(nextFile: File) {
+    if (analysisInProgressRef.current) return;
+    if (!nextFile.name.toLocaleLowerCase("pt-BR").endsWith(".xlsx")) {
+      setFile(null);
+      setAnalysis(null);
+      setError("Selecione o workbook original com extensão .xlsx.");
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+    if (nextFile.size > MAX_WORKBOOK_BYTES) {
+      setFile(null);
+      setAnalysis(null);
+      setError("O arquivo excede o limite local de 32 MB.");
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+
+    analysisInProgressRef.current = true;
+    setFile(nextFile);
     setPending(true);
     setError(null);
     setAnalysis(null);
     setFilters(EMPTY_FILTERS);
     try {
       const formData = new FormData();
-      formData.set("workbook", file);
-      formData.set("modifiedAt", new Date(file.lastModified).toISOString());
+      formData.set("workbook", nextFile);
+      formData.set("modifiedAt", new Date(nextFile.lastModified).toISOString());
       const result = await analyzeHistoricalWorkbookAction(formData);
       if (!result.ok) {
         setError(result.message);
@@ -76,8 +94,15 @@ export function WorkbookAnalysisWorkspace() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível concluir a análise local.");
     } finally {
+      analysisInProgressRef.current = false;
       setPending(false);
     }
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!file) return;
+    await analyzeFile(file);
   }
 
   return (
@@ -109,17 +134,21 @@ export function WorkbookAnalysisWorkspace() {
             name="workbook"
             type="file"
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            disabled={pending}
             onChange={(event) => {
               const nextFile = event.currentTarget.files?.[0] ?? null;
-              setFile(nextFile);
-              setAnalysis(null);
-              setError(null);
+              if (!nextFile) return;
+              void analyzeFile(nextFile);
             }}
           />
-          <span>{file ? `${file.name} · ${formatBytes(file.size)} · ${formatDate(file.lastModified)}` : "Nenhum arquivo selecionado"}</span>
+          <span aria-live="polite">
+            {file
+              ? `${file.name} · ${formatBytes(file.size)} · ${formatDate(file.lastModified)}`
+              : "Selecione o Tio Lu System.xlsx. A análise começará automaticamente."}
+          </span>
         </div>
         <button className="primary-button" type="submit" disabled={!file || pending}>
-          {pending ? "Analisando workbook..." : "Analisar arquivo"}
+          {pending ? "Analisando workbook..." : analysis ? "Analisar novamente" : "Analisar arquivo"}
         </button>
       </form>
 

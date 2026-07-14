@@ -57,6 +57,12 @@ class HistoricalWorkbookWebContractTests(unittest.TestCase):
         ):
             self.assertIn(expected, self.workspace)
 
+    def test_file_selection_starts_analysis_without_a_second_click(self) -> None:
+        self.assertIn("void analyzeFile(nextFile)", self.workspace)
+        self.assertIn("analysisInProgressRef.current", self.workspace)
+        self.assertIn("A análise começará automaticamente.", self.workspace)
+        self.assertIn("MAX_WORKBOOK_BYTES", self.workspace)
+
     def test_metadata_report_has_formula_injection_guard(self) -> None:
         self.assertIn("analysis.reportRows", self.workspace)
         self.assertIn('"source_table_id"', self.workspace)
@@ -67,6 +73,7 @@ class HistoricalWorkbookWebContractTests(unittest.TestCase):
 
     def test_upload_limit_is_configured_without_new_dependency(self) -> None:
         config = CONFIG.read_text(encoding="utf-8")
+        self.assertIn('allowedDevOrigins: ["127.0.0.1"]', config)
         self.assertIn('bodySizeLimit: "32mb"', config)
         package = (ROOT / "apps" / "web" / "package.json").read_text(encoding="utf-8")
         self.assertNotIn('"xlsx"', package)

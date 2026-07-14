@@ -388,26 +388,26 @@ export function WorkbookHomologationWorkspace({ analysis }: { analysis: Historic
           <tbody>
             {filteredRows.map((row) => (
               <tr key={row.sourceTableId} className={row.decision ? `decision-${row.decision}` : "decision-missing"}>
-                <td className="homologation-source-cell">
+                <td className="homologation-source-cell" data-label="Fonte no workbook">
                   <strong>{row.sheetOrder}. {row.sheetName}</strong>
                   <span>{row.tableName}</span>
                   <code>{row.range}</code>
                   <small>{formatNumber(row.rowCount)} linhas · {row.columnCount} colunas · {formatNumber(row.populatedRowCount)} preenchidas</small>
                   <small>ID: {row.sourceTableId}</small>
                 </td>
-                <td>
+                <td className="homologation-columns-cell" data-label="Principais colunas">
                   <div className="homologation-columns">
                     {row.mainColumns.map((column, index) => <span key={`${row.sourceTableId}-${index}`}>{column}</span>)}
                     {row.columnCount > row.mainColumns.length ? <small>+ {row.columnCount - row.mainColumns.length} coluna(s)</small> : null}
                   </div>
                 </td>
-                <td className="homologation-technical-cell">
+                <td className="homologation-technical-cell" data-label="Classificação e destino técnicos">
                   <strong>{classificationLabel(row.technicalClassification)}</strong>
                   <span>{domainLabel(row.ownerDomain ?? "sem_dominio")}</span>
                   <code>{row.targetEntity ?? "Destino técnico não definido"}</code>
                   {row.technicalReviewRequired ? <small className="warning-text">Revisão técnica exigida</small> : null}
                 </td>
-                <td>
+                <td className="homologation-signals-cell" data-label="Indícios e riscos">
                   <div className="homologation-signals">
                     <span>Fórmulas: <strong>{row.formulaCellCount > 0 ? `Sim (${formatNumber(row.formulaCellCount)})` : "Não"}</strong></span>
                     <span>Relatório: <strong>{yesNo(row.reportIndicator)}</strong></span>
@@ -415,8 +415,8 @@ export function WorkbookHomologationWorkspace({ analysis }: { analysis: Historic
                     <span>Duplicidade: <strong>{DUPLICATE_RISK_LABELS[row.duplicateRisk]}</strong></span>
                   </div>
                 </td>
-                <td className="homologation-justification">{row.technicalJustification}</td>
-                <td className="homologation-decision-cell">
+                <td className="homologation-justification" data-label="Justificativa técnica">{row.technicalJustification}</td>
+                <td className="homologation-decision-cell" data-label="Decisão funcional">
                   <label>
                     Decisão
                     <select

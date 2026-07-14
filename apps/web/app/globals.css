@@ -2757,42 +2757,87 @@ h1 {
   position: relative;
   max-height: 72vh;
   margin-top: 12px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface);
+  background: var(--surface-muted);
+  padding: 10px;
 }
 
 .homologation-table {
-  min-width: 1580px;
-  table-layout: fixed;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border-collapse: separate;
 }
 
-.homologation-table th {
-  position: sticky;
-  z-index: 2;
-  top: 0;
-  background: #eaf0f5;
-  box-shadow: inset 0 -1px var(--border-strong);
+.homologation-table thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.homologation-table th:nth-child(1) { width: 240px; }
-.homologation-table th:nth-child(2) { width: 240px; }
-.homologation-table th:nth-child(3) { width: 270px; }
-.homologation-table th:nth-child(4) { width: 185px; }
-.homologation-table th:nth-child(5) { width: 280px; }
-.homologation-table th:nth-child(6) { width: 310px; }
+.homologation-table tbody {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.homologation-table tr {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) minmax(240px, 1.1fr) minmax(290px, 0.9fr);
+  grid-template-areas:
+    "source technical decision"
+    "columns signals decision"
+    "justification justification decision";
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 3px 10px rgb(24 43 58 / 6%);
+}
 
 .homologation-table td {
+  display: block;
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
   vertical-align: top;
   overflow-wrap: anywhere;
 }
 
-.homologation-table tr.decision-missing td:first-child {
+.homologation-table td::before {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  content: attr(data-label);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.homologation-source-cell { grid-area: source; }
+.homologation-columns-cell { grid-area: columns; }
+.homologation-technical-cell { grid-area: technical; }
+.homologation-signals-cell { grid-area: signals; }
+.homologation-justification { grid-area: justification; }
+.homologation-table .homologation-decision-cell {
+  grid-area: decision;
+  border-bottom: 0;
+  border-left: 1px solid var(--border);
+  background: #f4f7fa;
+}
+
+.homologation-table tr.decision-missing {
   box-shadow: inset 4px 0 #b7791f;
 }
 
-.homologation-table tr.decision-importar_integralmente td:first-child {
+.homologation-table tr.decision-importar_integralmente {
   box-shadow: inset 4px 0 #22835a;
 }
 
@@ -2905,6 +2950,15 @@ h1 {
 
   .homologation-bulk > div {
     grid-column: 1 / -1;
+  }
+
+  .homologation-table tr {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+    grid-template-areas:
+      "source decision"
+      "technical decision"
+      "columns signals"
+      "justification justification";
   }
 }
 
@@ -3091,6 +3145,23 @@ h1 {
 
   .homologation-table-scroll {
     max-height: 68vh;
+    padding: 8px;
+  }
+
+  .homologation-table tr {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "source"
+      "decision"
+      "technical"
+      "signals"
+      "columns"
+      "justification";
+  }
+
+  .homologation-table .homologation-decision-cell {
+    border-top: 1px solid var(--border);
+    border-left: 0;
   }
 
   .workbook-sheet > summary {

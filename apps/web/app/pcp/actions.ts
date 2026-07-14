@@ -98,7 +98,7 @@ export async function activatePcpFormulaAction(formData: FormData) {
 
 export async function createPcpOpAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#nova-op");
+    redirect("/producao/ordens?result=not_configured#nova-op");
   }
 
   const formulaVersionId = optionalInteger(formData, "formula_versao_id");
@@ -106,13 +106,13 @@ export async function createPcpOpAction(formData: FormData) {
   const quantidadePlanejada = optionalNumber(formData, "quantidade_planejada");
 
   if (!formulaVersionId || formulaVersionId <= 0) {
-    redirect("/pcp?result=missing_op_required#nova-op");
+    redirect("/producao/ordens?result=missing_op_required#nova-op");
   }
   if (!ALLOWED_OP_TYPES.has(tipoOp)) {
-    redirect("/pcp?result=invalid_op_type#nova-op");
+    redirect("/producao/ordens?result=invalid_op_type#nova-op");
   }
   if (quantidadePlanejada !== null && (!Number.isFinite(quantidadePlanejada) || quantidadePlanejada <= 0)) {
-    redirect("/pcp?result=invalid_positive_number#nova-op");
+    redirect("/producao/ordens?result=invalid_positive_number#nova-op");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -124,16 +124,18 @@ export async function createPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#nova-op`);
+    redirect(`/producao/ordens?result=${encodeURIComponent(mapPcpError(error.message))}#nova-op`);
   }
 
   revalidatePath("/pcp");
-  redirect("/pcp?result=op_created#ops");
+  revalidatePath("/producao");
+  revalidatePath("/producao/ordens");
+  redirect("/producao/ordens?result=op_created#ops");
 }
 
 export async function reservePcpComponentAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#ops");
+    redirect("/producao/ordens?result=not_configured#ops");
   }
 
   const opComponentId = optionalInteger(formData, "op_componente_id");
@@ -142,13 +144,13 @@ export async function reservePcpComponentAction(formData: FormData) {
   const quantidadeReservada = optionalNumber(formData, "quantidade_reservada");
 
   if (!opComponentId || opComponentId <= 0 || !loteId || loteId <= 0) {
-    redirect("/pcp?result=missing_reservation_required#ops");
+    redirect("/producao/ordens?result=missing_reservation_required#ops");
   }
   if (!ALLOWED_COMPONENT_TYPES.has(tipoComponente)) {
-    redirect("/pcp?result=invalid_component_type#ops");
+    redirect("/producao/ordens?result=invalid_component_type#ops");
   }
   if (quantidadeReservada !== null && (!Number.isFinite(quantidadeReservada) || quantidadeReservada <= 0)) {
-    redirect("/pcp?result=invalid_positive_number#ops");
+    redirect("/producao/ordens?result=invalid_positive_number#ops");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -162,21 +164,23 @@ export async function reservePcpComponentAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirect(`/producao/ordens?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
   }
 
   revalidatePath("/pcp");
-  redirect("/pcp?result=component_reserved#ops");
+  revalidatePath("/producao");
+  revalidatePath("/producao/ordens");
+  redirect("/producao/ordens?result=component_reserved#ops");
 }
 
 export async function startPcpOpAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#ops");
+    redirect("/producao/ordens?result=not_configured#ops");
   }
 
   const opId = optionalInteger(formData, "op_id");
   if (!opId || opId <= 0) {
-    redirect("/pcp?result=missing_op_required#ops");
+    redirect("/producao/ordens?result=missing_op_required#ops");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -186,11 +190,13 @@ export async function startPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirect(`/producao/ordens?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
   }
 
   revalidatePath("/pcp");
-  redirect("/pcp?result=op_started#ops");
+  revalidatePath("/producao");
+  revalidatePath("/producao/ordens");
+  redirect("/producao/ordens?result=op_started#ops");
 }
 
 export async function finishPcpOpAction(formData: FormData) {
@@ -280,13 +286,13 @@ export async function finishPcpOpAction(formData: FormData) {
 
 export async function cancelPcpOpAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#ops");
+    redirect("/producao/ordens?result=not_configured#ops");
   }
 
   const opId = optionalInteger(formData, "op_id");
   const motivo = field(formData, "motivo");
   if (!opId || opId <= 0 || !motivo) {
-    redirect("/pcp?result=missing_cancel_required#ops");
+    redirect("/producao/ordens?result=missing_cancel_required#ops");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -296,11 +302,13 @@ export async function cancelPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirect(`/producao/ordens?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
   }
 
   revalidatePath("/pcp");
-  redirect("/pcp?result=op_cancelled#ops");
+  revalidatePath("/producao");
+  revalidatePath("/producao/ordens");
+  redirect("/producao/ordens?result=op_cancelled#ops");
 }
 
 export async function registerProductGuaranteeAction(formData: FormData) {

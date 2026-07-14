@@ -5,8 +5,8 @@ Atualizado em: 2026-07-14
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- ultima entrega funcional: `F1.2a`, central de Producao com Formulas e
-  Garantias em rotas operacionais proprias;
+- ultima entrega funcional: `F1.2b`, Ordens de Producao e Reservas em rota
+  operacional propria;
 - ultima migration aplicada localmente:
   `0057_product_group_relational_resolution.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
@@ -19,46 +19,46 @@ Atualizado em: 2026-07-14
 
 ## Tarefa concluida mais recente
 
-`F1.2a` - primeira decomposicao operacional de Producao:
+`F1.2b` - Ordens de Producao e Reservas:
 
-- `/producao` passou a ser a central do fluxo industrial, com estado real do
-  PostgreSQL e acesso direto a cada etapa;
-- `/producao/formulas` concentra criacao append-only, historico, componentes,
-  ativacao e referencias vigentes;
-- `/producao/garantias` separa garantia declarada de produto, analise de lote
-  de MP e consulta das versoes vigentes;
-- o shell de Producao centraliza navegacao, ambiente, falhas e feedback de
-  operacoes, evitando que cada tela redefina o contrato visual;
-- a tela legada `/pcp` passou a reutilizar os mesmos componentes de Formulas e
-  Garantias, sem duplicar a logica de escrita;
-- as Server Actions continuam chamando somente as RPCs auditadas existentes;
-  nenhuma migration ou escrita direta foi adicionada;
-- os redirecionamentos de sucesso e erro retornam para a subarea operacional
-  que originou a acao;
-- a entrega usa grade responsiva para monitor amplo, notebook e celular.
+- `/producao/ordens` apresenta fila filtravel por texto, status e tipo de OP;
+- abertura de OP usa formula versionada e os tipos estoque, experimental,
+  desenvolvimento, reprocessamento ou MAPA documental;
+- cada OP exibe componentes planejados, quantidade reservada e reservas ativas;
+- a selecao de lote usa identificador relacional e limita as opcoes a familia,
+  item, status e saldo disponivel compativeis com o componente;
+- reserva parcial ou total reduz somente o saldo disponivel; a baixa fisica
+  continua pertencendo a finalizacao da OP;
+- inicio e cancelamento permanecem nas RPCs auditadas existentes, com retorno
+  de sucesso ou erro para a propria fila;
+- OP em processo aponta para o fluxo atual de CQ enquanto `F1.2c` nao estiver
+  separado;
+- nenhuma migration, escrita direta ou nova dependencia entre modulos foi
+  criada.
 
-`F1.1` esta publicada no staging. `F1.2a` permanece somente na branch local ate
-commit e autorizacao de publicacao. O workbook real e os relatorios gerados
-permanecem fora do Git.
+`F1.1` esta publicada no staging. `F1.2a` esta no commit local `a50dc74` e
+`F1.2b` aguarda commit local; ambas dependem de autorizacao antes do push. O
+workbook real e os relatorios gerados permanecem fora do Git.
 
 ## Validacao desta tarefa
 
-- 25 testes direcionados de Producao, cadastros e arquitetura: aprovados;
+- 20 testes direcionados de Producao e arquitetura: aprovados;
 - ESLint direcionado aos arquivos alterados: aprovado;
-- build Next de producao e TypeScript: aprovado, com 20 paginas e as rotas
-  `/producao/formulas` e `/producao/garantias` reconhecidas;
+- build Next de producao e TypeScript: aprovado, com 21 paginas e a rota
+  `/producao/ordens` reconhecida;
 - runtime local `/api/health`: `ok`, com backend configurado;
-- guard central: ambas as rotas redirecionam usuario sem sessao para login;
+- guard central: a rota redireciona usuario sem sessao para login;
 - nenhuma migration foi criada ou aplicada nesta fatia;
-- homologacao visual autenticada de `F1.2a`: pendente de publicacao no staging.
+- homologacao visual autenticada de `F1.2a/F1.2b`: pendente de publicacao no
+  staging.
 
 ## Estado funcional resumido
 
 - `core` e `seguranca`: operacionais no banco de teste;
 - `cadastros`: primeira fatia industrial publicada no staging e aguardando
   homologacao funcional de Luciano;
-- `pcp`: Formulas e Garantias separadas em telas operacionais; Ordens, CQ,
-  finalizacao, lotes e transformacoes ainda usam a tela legada compartilhada;
+- `pcp`: Formulas, Garantias, Ordens e Reservas separadas em telas operacionais;
+  CQ, finalizacao, lotes e transformacoes ainda usam a tela legada compartilhada;
 - `estoque`: contratos de banco em validacao de negocio e interface operacional
   ainda acoplada aos fluxos de PCP;
 - contratos relacionais `DEC-006` a `DEC-011`: implementados;
@@ -77,18 +77,17 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-`F1.2b` - separar Ordens de Producao e Reservas em telas operacionais:
+`F1.2c` - separar CQ, finalizacao e produto gerado:
 
-1. fila de OP por status e prioridade;
-2. abertura de OP por formula vigente;
-3. componentes planejados e lotes disponiveis;
-4. reserva parcial ou total por componente;
-5. inicio e cancelamento com feedback auditado.
+1. fila exclusiva de OP em processo;
+2. pH, densidade, volume, massa e temperatura;
+3. separador, conferente e formuladores;
+4. resultado aprovado, bloqueado ou reprovado;
+5. saidas PA/PI e lotes gerados na mesma transacao.
 
 ## Tarefa seguinte de produto
 
-`F1.2c` - separar CQ, finalizacao e produto gerado; depois `F1.2d` - lotes,
-estoque e transformacoes PA/PI.
+`F1.2d` - separar lotes, estoque e transformacoes PA/PI.
 
 `H1` continua em paralelo como tarefa funcional de Luciano: decidir as 269
 fontes. `I2` permanece bloqueada ate o artefato final homologado existir.

@@ -9,7 +9,7 @@ const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: strin
   { key: "overview", href: "/producao", label: "Visao geral" },
   { key: "formulas", href: "/producao/formulas", label: "Formulas" },
   { key: "garantias", href: "/producao/garantias", label: "Garantias" },
-  { key: "ordens", href: "/pcp#ops", label: "Ordens" },
+  { key: "ordens", href: "/producao/ordens", label: "Ordens" },
   { key: "qualidade", href: "/pcp#ops", label: "CQ e finalizacao" },
   { key: "estoque", href: "/pcp#lotes", label: "Lotes e transformacoes" }
 ];
@@ -102,6 +102,10 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   formula_activated: { kind: "ok", title: "Formula ativada", detail: "A versao passou a ser a referencia vigente." },
   product_guarantee_registered: { kind: "ok", title: "Garantia registrada", detail: "A versao declarada do produto foi salva." },
   mp_lot_guarantee_registered: { kind: "ok", title: "Analise registrada", detail: "A garantia do lote de materia-prima foi salva." },
+  op_created: { kind: "ok", title: "OP aberta", detail: "Componentes planejados foram copiados da formula vigente." },
+  component_reserved: { kind: "ok", title: "Lote reservado", detail: "A reserva reduziu o saldo disponivel sem baixar o saldo fisico." },
+  op_started: { kind: "ok", title: "OP iniciada", detail: "A ordem passou para execucao industrial." },
+  op_cancelled: { kind: "ok", title: "OP cancelada", detail: "As reservas relacionadas foram tratadas pelo fluxo auditado." },
   not_allowed: { kind: "warning", title: "Sem alcada", detail: "O usuario atual nao possui a permissao exigida." },
   not_configured: { kind: "warning", title: "Ambiente indisponivel", detail: "O Supabase nao esta configurado neste ambiente." },
   missing_formula_required: { kind: "warning", title: "Campos obrigatorios", detail: "Informe produto, tipo e justificativa." },
@@ -112,7 +116,13 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   missing_guarantee_required: { kind: "warning", title: "Campos obrigatorios", detail: "Preencha item, nutriente, valor, unidade e justificativa." },
   invalid_guarantee_type: { kind: "warning", title: "Classificacao invalida", detail: "Revise limite ou fonte da garantia." },
   missing_guarantee_document: { kind: "warning", title: "Documento obrigatorio", detail: "Informe o documento exigido para esta origem." },
-  invalid_guarantee_range: { kind: "warning", title: "Faixa invalida", detail: "O valor maximo deve ser igual ou maior que o minimo." }
+  invalid_guarantee_range: { kind: "warning", title: "Faixa invalida", detail: "O valor maximo deve ser igual ou maior que o minimo." },
+  missing_op_required: { kind: "warning", title: "OP incompleta", detail: "Informe a formula ou a ordem exigida pela operacao." },
+  invalid_op_type: { kind: "warning", title: "Tipo de OP invalido", detail: "Selecione um tipo de ordem previsto no processo." },
+  missing_reservation_required: { kind: "warning", title: "Reserva incompleta", detail: "Informe componente, lote e quantidade." },
+  invalid_component_type: { kind: "warning", title: "Componente invalido", detail: "A reserva aceita somente MP, PA ou PI." },
+  invalid_positive_number: { kind: "warning", title: "Quantidade invalida", detail: "Informe um numero maior que zero." },
+  missing_cancel_required: { kind: "warning", title: "Cancelamento incompleto", detail: "Informe a OP e o motivo do cancelamento." }
 };
 
 export function ProductionFeedback({ result }: { result: string | null }) {

@@ -55,7 +55,7 @@ export default async function ProductionOverviewPage() {
           <StageCard number="01" title="Base tecnica" detail="MP, unidades, embalagens e produtos." href="/cadastros/tecnicos" status="Operacional" />
           <StageCard number="02" title="Formulas" detail="Receitas versionadas de producao e MAPA." href="/producao/formulas" status="Operacional" />
           <StageCard number="03" title="Garantias" detail="Declaracoes de produto e analises por lote de MP." href="/producao/garantias" status="Operacional" />
-          <StageCard number="04" title="Ordens e reservas" detail="Abertura de OP e reserva de MP, PA ou PI." href="/pcp#nova-op" status="Proxima fatia" />
+          <StageCard number="04" title="Ordens e reservas" detail="Abertura de OP e reserva de MP, PA ou PI." href="/producao/ordens" status="Operacional" />
           <StageCard number="05" title="CQ e finalizacao" detail="Dados de processo, aprovacao e produto gerado." href="/pcp#ops" status="Em decomposicao" />
           <StageCard number="06" title="Lotes e transformacoes" detail="Saldos, bloqueios e conversoes entre PA e PI." href="/pcp#lotes" status="Em decomposicao" />
         </div>
@@ -64,10 +64,10 @@ export default async function ProductionOverviewPage() {
       <section className="panel production-next-band">
         <div>
           <span className="eyebrow">Proxima entrega</span>
-          <h2>Ordens de producao e reservas</h2>
-          <p className="muted">A proxima fatia separara planejamento, reserva de componentes e fila de OP.</p>
+          <h2>CQ, finalizacao e produto gerado</h2>
+          <p className="muted">A proxima fatia separara o registro de processo, participantes, aprovacao e lotes gerados.</p>
         </div>
-        <Link className="secondary-button" href="/pcp#ops">Consultar operacao atual</Link>
+        <Link className="secondary-button" href="/pcp#ops">Consultar CQ atual</Link>
       </section>
     </ProductionShell>
   );

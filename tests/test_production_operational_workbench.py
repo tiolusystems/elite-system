@@ -12,6 +12,8 @@ FORMULAS_PAGE = PRODUCTION / "formulas" / "page.tsx"
 FORMULAS_COMPONENT = PRODUCTION / "formulas" / "formula-workbench.tsx"
 GUARANTEES_PAGE = PRODUCTION / "garantias" / "page.tsx"
 GUARANTEES_COMPONENT = PRODUCTION / "garantias" / "guarantee-workbench.tsx"
+ORDERS_PAGE = PRODUCTION / "ordens" / "page.tsx"
+ORDERS_COMPONENT = PRODUCTION / "ordens" / "orders-workbench.tsx"
 PCP_PAGE = ROOT / "apps" / "web" / "app" / "pcp" / "page.tsx"
 PCP_ACTIONS = ROOT / "apps" / "web" / "app" / "pcp" / "actions.ts"
 STYLES = ROOT / "apps" / "web" / "app" / "globals.css"
@@ -26,12 +28,14 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
             "/producao",
             "/producao/formulas",
             "/producao/garantias",
+            "/producao/ordens",
         ):
             self.assertIn(route, shell if route != "/producao" else overview + shell)
 
         self.assertIn("ProductionShell", overview)
         self.assertIn("Sequencia da producao", overview)
-        self.assertIn("Ordens de producao e reservas", overview)
+        self.assertIn('href="/producao/ordens"', overview)
+        self.assertIn("CQ, finalizacao e produto gerado", overview)
 
     def test_formula_and_guarantee_pages_reuse_shared_business_components(self) -> None:
         formulas_page = FORMULAS_PAGE.read_text(encoding="utf-8")
@@ -42,6 +46,20 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn("<GuaranteeWorkbench", guarantees_page)
         self.assertIn("<FormulaWorkbench", pcp_page)
         self.assertIn("<GuaranteeWorkbench", pcp_page)
+
+    def test_orders_route_filters_queue_and_uses_relational_lot_ids(self) -> None:
+        page = ORDERS_PAGE.read_text(encoding="utf-8")
+        component = ORDERS_COMPONENT.read_text(encoding="utf-8")
+
+        self.assertIn('active="ordens"', page)
+        self.assertIn('name="status"', page)
+        self.assertIn('name="tipo"', page)
+        self.assertIn("dashboard.recentOps.filter", page)
+        self.assertIn("<OrdersWorkbench", page)
+        self.assertIn('name="op_componente_id"', component)
+        self.assertIn('name="lote_id"', component)
+        self.assertIn('value={lot.id}', component)
+        self.assertNotIn("<datalist", component)
 
     def test_writes_stay_in_existing_audited_server_actions(self) -> None:
         formulas = FORMULAS_COMPONENT.read_text(encoding="utf-8")
@@ -66,6 +84,16 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
 
         self.assertNotIn(".rpc(", formulas + guarantees)
 
+        orders = ORDERS_COMPONENT.read_text(encoding="utf-8")
+        for action in (
+            "createPcpOpAction",
+            "reservePcpComponentAction",
+            "startPcpOpAction",
+            "cancelPcpOpAction",
+        ):
+            self.assertIn(action, orders)
+        self.assertNotIn(".rpc(", orders)
+
     def test_actions_return_to_the_new_operational_routes(self) -> None:
         actions = PCP_ACTIONS.read_text(encoding="utf-8")
 
@@ -75,6 +103,10 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn('/producao/garantias?result=mp_lot_guarantee_registered', actions)
         self.assertNotIn('/pcp?result=formula_', actions)
         self.assertNotIn('/producao?result=product_guarantee_', actions)
+        self.assertIn('/producao/ordens?result=op_created', actions)
+        self.assertIn('/producao/ordens?result=component_reserved', actions)
+        self.assertIn('/producao/ordens?result=op_started', actions)
+        self.assertIn('/producao/ordens?result=op_cancelled', actions)
 
     def test_layout_has_explicit_responsive_contract(self) -> None:
         styles = STYLES.read_text(encoding="utf-8")

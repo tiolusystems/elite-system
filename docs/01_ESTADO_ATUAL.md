@@ -5,12 +5,11 @@ Atualizado em: 2026-07-15
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- ultima entrega publicada: `F1.2d`, com Lotes, Estoque e Transformacoes no
-  commit `0774c4a` e no staging;
-- entrega atual: Bloco 6 de Romaneio/Expedicao, validado localmente e em banco
-  descartavel, ainda sem homologacao visual autenticada;
-- ultima migration no staging: `0058_restore_production_catalog_view_access.sql`;
-- proxima migration validada: `0059_romaneio_logistics_operational_contract.sql`;
+- ultima entrega publicada: Bloco 6 de Romaneio/Expedicao no commit `c54c328`
+  e no staging;
+- entrega atual: Bloco 6 validado localmente, instalado no Supabase staging e
+  publicado na Vercel, ainda sem homologacao funcional autenticada;
+- ultima migration no staging: `0059_romaneio_logistics_operational_contract.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -51,8 +50,12 @@ Bloco 6 - Romaneio e Expedicao operacional:
 - lint PostgreSQL: nenhum erro de schema;
 - ator sem grants negado antes da validacao de parametros nas RPCs 0059;
 - runtime local ativo `elite-system` nao foi resetado, migrado ou alterado;
-- publicacao da branch, migration no staging e homologacao visual autenticada:
-  proximos gates desta entrega.
+- branch privada publicada e sincronizada;
+- migration 0059 aplicada somente no Supabase `elite-system-staging`;
+- deploy atualizado em `https://elite-system-staging.vercel.app`;
+- `/api/health`: `status=ok` e backend configurado;
+- acesso anonimo a `/romaneios`: redirecionado para login;
+- homologacao visual autenticada: unico gate pendente desta entrega.
 
 ## Estado funcional resumido
 
@@ -70,8 +73,8 @@ Bloco 6 - Romaneio e Expedicao operacional:
 - decisoes funcionais de Luciano: ainda nao preenchidas; I2 bloqueada;
 - carga bruta, simulacao, aplicacao e reconciliacao: pendentes;
 - homologacao cloud: ambiente ativo, com login e banco declarando `staging`;
-- `expedicao`: Bloco 6 completo em codigo e banco descartavel; publicacao e
-  homologacao visual da 0059 pendentes;
+- `expedicao`: Bloco 6 completo e publicado no staging; homologacao funcional
+  autenticada da 0059 pendente;
 - producao cloud: continua bloqueada por homologacao, backup, monitoramento,
   migracao historica ensaiada, seguranca externa e piloto;
 - Auth: convite e troca de email governados; MFA obrigatorio ainda pendente.
@@ -81,9 +84,9 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Publicar a entrega do Bloco 6 na branch atual, aplicar somente a migration 0059
-no Supabase staging e atualizar a Vercel staging. A homologacao visual
-autenticada sera concluida quando Luciano puder entrar.
+Homologar o Bloco 6 no staging com usuario autenticado: criacao total/parcial,
+multi-item, reserva multilote, logistica, confirmacao, baixa PA, situacao fiscal,
+cancelamento e estorno. Nao iniciar o encadeamento de status antes desse gate.
 
 ## Tarefa seguinte de produto
 

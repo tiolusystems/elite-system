@@ -60,6 +60,13 @@ DEC-008:
 - smoke transacional: `PG_VALIDATE_0059_WITH_SMOKE_OK`;
 - lint PostgreSQL: nenhum erro de schema;
 - `git diff --check`: aprovado no fechamento.
+- commit `c54c328` publicado na branch privada
+  `feature/0044-production-module-release`;
+- migration 0059 registrada no Supabase cloud `elite-system-staging`;
+- build da Vercel concluido e alias atualizado em
+  `https://elite-system-staging.vercel.app`;
+- `/api/health` respondeu `status=ok` com backend configurado;
+- `/romaneios` respondeu `307` para o login quando acessado sem sessao.
 
 O sweep global default-deny foi executado no banco descartavel ainda declarado
 como `unconfigured`. Ele encontrou duas dividas anteriores e fora deste escopo

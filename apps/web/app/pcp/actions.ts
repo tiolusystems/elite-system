@@ -34,6 +34,12 @@ type OutputPayload = {
   observacao?: string;
 };
 
+type OpReturnTarget = {
+  path: "/producao/ordens" | "/producao/transformacoes";
+  createAnchor: "nova-op" | "nova-transformacao";
+  queueAnchor: "ops" | "transformacoes";
+};
+
 export async function createPcpFormulaAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/producao/formulas?result=not_configured#nova-formula");
@@ -97,8 +103,9 @@ export async function activatePcpFormulaAction(formData: FormData) {
 }
 
 export async function createPcpOpAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/producao/ordens?result=not_configured#nova-op");
+    redirectWithResult(returnTarget.path, "not_configured", returnTarget.createAnchor);
   }
 
   const formulaVersionId = optionalInteger(formData, "formula_versao_id");
@@ -106,13 +113,13 @@ export async function createPcpOpAction(formData: FormData) {
   const quantidadePlanejada = optionalNumber(formData, "quantidade_planejada");
 
   if (!formulaVersionId || formulaVersionId <= 0) {
-    redirect("/producao/ordens?result=missing_op_required#nova-op");
+    redirectWithResult(returnTarget.path, "missing_op_required", returnTarget.createAnchor);
   }
   if (!ALLOWED_OP_TYPES.has(tipoOp)) {
-    redirect("/producao/ordens?result=invalid_op_type#nova-op");
+    redirectWithResult(returnTarget.path, "invalid_op_type", returnTarget.createAnchor);
   }
   if (quantidadePlanejada !== null && (!Number.isFinite(quantidadePlanejada) || quantidadePlanejada <= 0)) {
-    redirect("/producao/ordens?result=invalid_positive_number#nova-op");
+    redirectWithResult(returnTarget.path, "invalid_positive_number", returnTarget.createAnchor);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -124,18 +131,17 @@ export async function createPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/producao/ordens?result=${encodeURIComponent(mapPcpError(error.message))}#nova-op`);
+    redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.createAnchor);
   }
 
-  revalidatePath("/pcp");
-  revalidatePath("/producao");
-  revalidatePath("/producao/ordens");
-  redirect("/producao/ordens?result=op_created#ops");
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "op_created", returnTarget.queueAnchor);
 }
 
 export async function reservePcpComponentAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/producao/ordens?result=not_configured#ops");
+    redirectWithResult(returnTarget.path, "not_configured", returnTarget.queueAnchor);
   }
 
   const opComponentId = optionalInteger(formData, "op_componente_id");
@@ -144,13 +150,13 @@ export async function reservePcpComponentAction(formData: FormData) {
   const quantidadeReservada = optionalNumber(formData, "quantidade_reservada");
 
   if (!opComponentId || opComponentId <= 0 || !loteId || loteId <= 0) {
-    redirect("/producao/ordens?result=missing_reservation_required#ops");
+    redirectWithResult(returnTarget.path, "missing_reservation_required", returnTarget.queueAnchor);
   }
   if (!ALLOWED_COMPONENT_TYPES.has(tipoComponente)) {
-    redirect("/producao/ordens?result=invalid_component_type#ops");
+    redirectWithResult(returnTarget.path, "invalid_component_type", returnTarget.queueAnchor);
   }
   if (quantidadeReservada !== null && (!Number.isFinite(quantidadeReservada) || quantidadeReservada <= 0)) {
-    redirect("/producao/ordens?result=invalid_positive_number#ops");
+    redirectWithResult(returnTarget.path, "invalid_positive_number", returnTarget.queueAnchor);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -164,23 +170,22 @@ export async function reservePcpComponentAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/producao/ordens?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.queueAnchor);
   }
 
-  revalidatePath("/pcp");
-  revalidatePath("/producao");
-  revalidatePath("/producao/ordens");
-  redirect("/producao/ordens?result=component_reserved#ops");
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "component_reserved", returnTarget.queueAnchor);
 }
 
 export async function startPcpOpAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/producao/ordens?result=not_configured#ops");
+    redirectWithResult(returnTarget.path, "not_configured", returnTarget.queueAnchor);
   }
 
   const opId = optionalInteger(formData, "op_id");
   if (!opId || opId <= 0) {
-    redirect("/producao/ordens?result=missing_op_required#ops");
+    redirectWithResult(returnTarget.path, "missing_op_required", returnTarget.queueAnchor);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -190,13 +195,11 @@ export async function startPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/producao/ordens?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.queueAnchor);
   }
 
-  revalidatePath("/pcp");
-  revalidatePath("/producao");
-  revalidatePath("/producao/ordens");
-  redirect("/producao/ordens?result=op_started#ops");
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "op_started", returnTarget.queueAnchor);
 }
 
 export async function finishPcpOpAction(formData: FormData) {
@@ -288,14 +291,15 @@ export async function finishPcpOpAction(formData: FormData) {
 }
 
 export async function cancelPcpOpAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/producao/ordens?result=not_configured#ops");
+    redirectWithResult(returnTarget.path, "not_configured", returnTarget.queueAnchor);
   }
 
   const opId = optionalInteger(formData, "op_id");
   const motivo = field(formData, "motivo");
   if (!opId || opId <= 0 || !motivo) {
-    redirect("/producao/ordens?result=missing_cancel_required#ops");
+    redirectWithResult(returnTarget.path, "missing_cancel_required", returnTarget.queueAnchor);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -305,13 +309,11 @@ export async function cancelPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/producao/ordens?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.queueAnchor);
   }
 
-  revalidatePath("/pcp");
-  revalidatePath("/producao");
-  revalidatePath("/producao/ordens");
-  redirect("/producao/ordens?result=op_cancelled#ops");
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "op_cancelled", returnTarget.queueAnchor);
 }
 
 export async function registerProductGuaranteeAction(formData: FormData) {
@@ -430,14 +432,14 @@ export async function calculateOpGuaranteesAction(formData: FormData) {
 
 export async function releaseBlockedLotAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/producao?result=not_configured#lotes");
+    redirect("/producao/estoque?result=not_configured#lotes");
   }
 
   const tipoLote = field(formData, "tipo_lote").toUpperCase();
   const loteId = optionalInteger(formData, "lote_id");
   const motivo = field(formData, "motivo");
   if (!ALLOWED_OUTPUT_TYPES.has(tipoLote) || !loteId || !motivo) {
-    redirect("/producao?result=missing_release_required#lotes");
+    redirect("/producao/estoque?result=missing_release_required#lotes");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -447,11 +449,11 @@ export async function releaseBlockedLotAction(formData: FormData) {
     p_tipo_lote: tipoLote
   });
   if (error) {
-    redirect(`/producao?result=${encodeURIComponent(mapPcpError(error.message))}#lotes`);
+    redirect(`/producao/estoque?result=${encodeURIComponent(mapPcpError(error.message))}#lotes`);
   }
 
   revalidateProductionPaths();
-  redirect("/producao?result=blocked_lot_released#lotes");
+  redirect("/producao/estoque?result=blocked_lot_released#lotes");
 }
 
 function parseFormulaComponents(formData: FormData): FormulaComponentPayload[] {
@@ -554,7 +556,32 @@ function optionalInteger(formData: FormData, name: string): number | null {
 function revalidateProductionPaths() {
   revalidatePath("/pcp");
   revalidatePath("/producao");
+  revalidatePath("/producao/formulas");
+  revalidatePath("/producao/garantias");
+  revalidatePath("/producao/ordens");
+  revalidatePath("/producao/qualidade");
+  revalidatePath("/producao/estoque");
+  revalidatePath("/producao/transformacoes");
   revalidatePath("/relatorios");
+}
+
+function opReturnTarget(formData: FormData): OpReturnTarget {
+  if (field(formData, "return_to") === "transformacoes") {
+    return {
+      path: "/producao/transformacoes",
+      createAnchor: "nova-transformacao",
+      queueAnchor: "transformacoes"
+    };
+  }
+  return {
+    path: "/producao/ordens",
+    createAnchor: "nova-op",
+    queueAnchor: "ops"
+  };
+}
+
+function redirectWithResult(path: OpReturnTarget["path"], result: string, anchor: string): never {
+  redirect(`${path}?result=${encodeURIComponent(result)}#${anchor}`);
 }
 
 function mapPcpError(message: string): string {

@@ -1,6 +1,6 @@
 # Elite System - decisoes pendentes
 
-Atualizado em: 2026-07-13
+Atualizado em: 2026-07-15
 
 ## Regra
 
@@ -23,6 +23,7 @@ Estados permitidos: `pendente`, `autorizada`, `implementada`, `cancelada`.
 | `DEC-010` | Campanhas, pontos e premiacao | criar campanhas e regras versionadas, ledger append-only de pontos/premios e vouchers; nao misturar premiacao com comissao | comercial, metas, financeiro e auditoria | implementada |
 | `DEC-011` | Papeis do vinculo cliente-vendedor | distinguir no relacionamento quem cadastrou, quem atende e demais papeis, com vigencia e auditoria | cadastros, visibilidade comercial e pedidos | implementada |
 | `DEC-012` | Corte e inventario fisico de abertura | definir data de corte, data e responsaveis da contagem, depositos, criterio de aprovacao e tratamento dos movimentos durante o inventario; o Excel sera apenas comparador | ativacao dos saldos operacionais de MP, PI, PA, embalagens e outros insumos | pendente |
+| `DEC-013` | Escala operacional da formula na OP | definir se a formula representa lote padrao absoluto ou base proporcional; se proporcional, definir rendimento-base, unidade da OP, perdas e arredondamentos antes de alterar quantidades dos componentes | formulas, OP, reservas, consumo, CQ, custos e lotes gerados | pendente |
 
 ## Decisoes autorizadas aguardando implementacao
 
@@ -81,6 +82,15 @@ Documentos: `docs/seguranca/00_MATRIZ_INICIAL_PERFIS_PERMISSOES.md` e
 - autorizacao efetiva pertence ao backend e ao banco, nunca somente a interface;
 - alteracao da arvore exige autorizacao previa;
 - GitHub recebe somente codigo e documentacao, nunca dados operacionais.
+
+## Limite funcional vigente da DEC-013
+
+Enquanto a decisao estiver pendente, a OP copia as quantidades absolutas da
+formula versionada. O campo `quantidade_planejada` e apenas referencia da OP e
+nao escala componentes, reservas, consumos ou saidas. A interface de
+transformacoes nao solicita quantidade de escala para evitar uma promessa que
+o contrato atual do banco nao cumpre. Isso nao bloqueia a execucao do lote
+padrao definido pela formula.
 
 ## Manutencao
 

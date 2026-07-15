@@ -174,8 +174,8 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
                   </select>
                 </label>
                 <label>
-                  Quantidade planejada
-                  <input name="quantidade_planejada" inputMode="decimal" placeholder="opcional" />
+                  Quantidade de referencia
+                  <input name="quantidade_planejada" inputMode="decimal" placeholder="nao escala a formula" />
                 </label>
                 <label className="full-field">
                   Observacao

@@ -3,7 +3,14 @@ import type { ReactNode } from "react";
 
 import { getRuntimeStatus } from "@/lib/runtime";
 
-export type ProductionRoute = "overview" | "formulas" | "garantias" | "ordens" | "qualidade" | "estoque";
+export type ProductionRoute =
+  | "overview"
+  | "formulas"
+  | "garantias"
+  | "ordens"
+  | "qualidade"
+  | "estoque"
+  | "transformacoes";
 
 const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: string }> = [
   { key: "overview", href: "/producao", label: "Visao geral" },
@@ -11,7 +18,8 @@ const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: strin
   { key: "garantias", href: "/producao/garantias", label: "Garantias" },
   { key: "ordens", href: "/producao/ordens", label: "Ordens" },
   { key: "qualidade", href: "/producao/qualidade", label: "CQ e finalizacao" },
-  { key: "estoque", href: "/pcp#lotes", label: "Lotes e transformacoes" }
+  { key: "estoque", href: "/producao/estoque", label: "Lotes e estoque" },
+  { key: "transformacoes", href: "/producao/transformacoes", label: "Transformacoes" }
 ];
 
 type ProductionShellProps = {
@@ -108,6 +116,7 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   op_cancelled: { kind: "ok", title: "OP cancelada", detail: "As reservas relacionadas foram tratadas pelo fluxo auditado." },
   op_finished: { kind: "ok", title: "OP finalizada", detail: "Consumos, CQ e lotes gerados foram gravados na mesma transacao." },
   guarantees_calculated: { kind: "ok", title: "Garantias calculadas", detail: "O resultado foi versionado a partir dos lotes efetivamente consumidos." },
+  blocked_lot_released: { kind: "ok", title: "Lote liberado", detail: "A decisao foi registrada com autor, motivo e estado anterior e posterior." },
   not_allowed: { kind: "warning", title: "Sem alcada", detail: "O usuario atual nao possui a permissao exigida." },
   not_configured: { kind: "warning", title: "Ambiente indisponivel", detail: "O Supabase nao esta configurado neste ambiente." },
   missing_formula_required: { kind: "warning", title: "Campos obrigatorios", detail: "Informe produto, tipo e justificativa." },
@@ -129,6 +138,7 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   invalid_cq_status: { kind: "warning", title: "Resultado de CQ invalido", detail: "Use aprovado, bloqueado ou reprovado." },
   missing_cq_numbers: { kind: "warning", title: "Dados de processo incompletos", detail: "Informe pH, densidade, volume, massa e temperatura." },
   missing_outputs: { kind: "warning", title: "Produto gerado obrigatorio", detail: "Informe ao menos uma saida PA ou PI." },
+  missing_release_required: { kind: "warning", title: "Liberacao incompleta", detail: "Informe um lote PA ou PI bloqueado e o motivo da liberacao." },
   invalid_participants: { kind: "warning", title: "Participantes invalidos", detail: "Separador, conferente e formuladores devem estar ativos." },
   invalid_output_row: { kind: "warning", title: "Saida invalida", detail: "Revise tipo, produto e quantidade da saida." },
   missing_guarantee_calculation: { kind: "warning", title: "Calculo incompleto", detail: "Informe a OP e a justificativa do calculo." }

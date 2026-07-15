@@ -9,7 +9,10 @@ type SearchParams = Record<string, string | string[] | undefined>;
 export default async function ProductionQualityPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const dashboard = await getPcpDashboard();
-  const inProcess = dashboard.recentOps.filter((op) => op.status === "in_process");
+  const type = singleProductionParam(params.tipo);
+  const inProcess = dashboard.recentOps.filter(
+    (op) => op.status === "in_process" && (!type || op.tipoOp === type)
+  );
   const completed = dashboard.recentOps.filter((op) => op.status === "completed").slice(0, 12);
 
   return (

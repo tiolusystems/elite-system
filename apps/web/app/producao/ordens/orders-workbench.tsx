@@ -168,7 +168,7 @@ function PlanningOrderCard({ op, availableLots }: { op: PcpRecentOp; availableLo
           </form>
         ) : null}
         {op.status === "in_process" ? (
-          <Link className="primary-button" href="/pcp#ops">Registrar CQ e finalizar</Link>
+          <Link className="primary-button" href="/producao/qualidade#cq-pendente">Registrar CQ e finalizar</Link>
         ) : null}
       </div>
     </article>

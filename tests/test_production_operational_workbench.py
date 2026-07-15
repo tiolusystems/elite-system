@@ -14,6 +14,8 @@ GUARANTEES_PAGE = PRODUCTION / "garantias" / "page.tsx"
 GUARANTEES_COMPONENT = PRODUCTION / "garantias" / "guarantee-workbench.tsx"
 ORDERS_PAGE = PRODUCTION / "ordens" / "page.tsx"
 ORDERS_COMPONENT = PRODUCTION / "ordens" / "orders-workbench.tsx"
+QUALITY_PAGE = PRODUCTION / "qualidade" / "page.tsx"
+QUALITY_COMPONENT = PRODUCTION / "qualidade" / "quality-workbench.tsx"
 PCP_PAGE = ROOT / "apps" / "web" / "app" / "pcp" / "page.tsx"
 PCP_ACTIONS = ROOT / "apps" / "web" / "app" / "pcp" / "actions.ts"
 STYLES = ROOT / "apps" / "web" / "app" / "globals.css"
@@ -29,13 +31,15 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
             "/producao/formulas",
             "/producao/garantias",
             "/producao/ordens",
+            "/producao/qualidade",
         ):
             self.assertIn(route, shell if route != "/producao" else overview + shell)
 
         self.assertIn("ProductionShell", overview)
         self.assertIn("Sequencia da producao", overview)
         self.assertIn('href="/producao/ordens"', overview)
-        self.assertIn("CQ, finalizacao e produto gerado", overview)
+        self.assertIn('href="/producao/qualidade"', overview)
+        self.assertIn("Lotes, estoque e transformacoes", overview)
 
     def test_formula_and_guarantee_pages_reuse_shared_business_components(self) -> None:
         formulas_page = FORMULAS_PAGE.read_text(encoding="utf-8")
@@ -46,6 +50,7 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn("<GuaranteeWorkbench", guarantees_page)
         self.assertIn("<FormulaWorkbench", pcp_page)
         self.assertIn("<GuaranteeWorkbench", pcp_page)
+        self.assertIn("<QualityFinishForm", pcp_page)
 
     def test_orders_route_filters_queue_and_uses_relational_lot_ids(self) -> None:
         page = ORDERS_PAGE.read_text(encoding="utf-8")
@@ -60,6 +65,22 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn('name="lote_id"', component)
         self.assertIn('value={lot.id}', component)
         self.assertNotIn("<datalist", component)
+
+    def test_quality_route_uses_only_started_ops_for_finalization(self) -> None:
+        page = QUALITY_PAGE.read_text(encoding="utf-8")
+        component = QUALITY_COMPONENT.read_text(encoding="utf-8")
+
+        self.assertIn('active="qualidade"', page)
+        self.assertIn('op.status === "in_process"', page)
+        self.assertIn('op.status === "completed"', page)
+        self.assertIn("<QualityWorkbench", page)
+        self.assertIn("finishPcpOpAction", component)
+        self.assertIn("calculateOpGuaranteesAction", component)
+        self.assertIn('name="cq_status"', component)
+        self.assertIn('name="separador_pessoa_id"', component)
+        self.assertIn('name="conferente_pessoa_id"', component)
+        self.assertIn("<OutputRows", component)
+        self.assertNotIn(".rpc(", component)
 
     def test_writes_stay_in_existing_audited_server_actions(self) -> None:
         formulas = FORMULAS_COMPONENT.read_text(encoding="utf-8")
@@ -94,6 +115,11 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
             self.assertIn(action, orders)
         self.assertNotIn(".rpc(", orders)
 
+        quality = QUALITY_COMPONENT.read_text(encoding="utf-8")
+        self.assertIn("finishPcpOpAction", quality)
+        self.assertIn("calculateOpGuaranteesAction", quality)
+        self.assertNotIn(".rpc(", quality)
+
     def test_actions_return_to_the_new_operational_routes(self) -> None:
         actions = PCP_ACTIONS.read_text(encoding="utf-8")
 
@@ -107,6 +133,9 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn('/producao/ordens?result=component_reserved', actions)
         self.assertIn('/producao/ordens?result=op_started', actions)
         self.assertIn('/producao/ordens?result=op_cancelled', actions)
+        self.assertIn('/producao/qualidade?result=op_finished', actions)
+        self.assertIn('/producao/qualidade?result=guarantees_calculated', actions)
+        self.assertNotIn('/pcp?result=op_finished', actions)
 
     def test_layout_has_explicit_responsive_contract(self) -> None:
         styles = STYLES.read_text(encoding="utf-8")

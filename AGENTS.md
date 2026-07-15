@@ -69,6 +69,21 @@ Nao repita comando quando codigo, configuracao, banco e `HEAD` nao mudaram. Uma 
 - Testes de escrita usam banco descartavel ou copia temporaria, nunca banco operacional.
 - Nao reduzir RLS, auditoria, constraints ou guards para facilitar teste ou interface.
 
+## Protecao do runtime Supabase local
+
+1. Teste de instalacao limpa nunca usa o projeto Supabase local ativo.
+2. Antes de `db reset`, `db start` para validacao ou migration destrutiva, execute
+   `scripts/assert-disposable-supabase-target.ps1` com autorizacao explicita.
+3. Nunca use o `project_id` ativo lido de `supabase/config.toml` como alvo de
+   validacao destrutiva, mesmo quando houver autorizacao generica para testar.
+4. O alvo descartavel deve ter `project_id`, container e volume proprios, todos
+   identificados pelo prefixo `elite-validation-`.
+5. O script oficial `scripts/start-local.ps1` continua sendo o unico bootstrap
+   do runtime em uso; ele nao e um teste de instalacao limpa.
+6. Nao execute diretamente `supabase db reset`, `supabase start` ou migration
+   destrutiva no runtime em uso. Uma excecao exige autorizacao nominal do
+   usuario para aquele ambiente e operacao.
+
 ## Fonte de verdade
 
 - Entrada operacional e classificacao da tarefa: `docs/00_MAPA_EXECUTIVO.md`.

@@ -1,14 +1,14 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-14
+Atualizado em: 2026-07-15
 
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- ultima entrega funcional: `F1.2b`, Ordens de Producao e Reservas em rota
-  operacional propria;
+- ultima entrega funcional: `F1.2c`, com o fluxo integral de Producao
+  homologado no ambiente local;
 - ultima migration aplicada localmente:
-  `0057_product_group_relational_resolution.sql`;
+  `0058_restore_production_catalog_view_access.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -19,46 +19,57 @@ Atualizado em: 2026-07-14
 
 ## Tarefa concluida mais recente
 
-`F1.2b` - Ordens de Producao e Reservas:
+`F1.2c` - CQ, finalizacao, produto gerado e homologacao integral:
 
-- `/producao/ordens` apresenta fila filtravel por texto, status e tipo de OP;
-- abertura de OP usa formula versionada e os tipos estoque, experimental,
-  desenvolvimento, reprocessamento ou MAPA documental;
-- cada OP exibe componentes planejados, quantidade reservada e reservas ativas;
-- a selecao de lote usa identificador relacional e limita as opcoes a familia,
-  item, status e saldo disponivel compativeis com o componente;
-- reserva parcial ou total reduz somente o saldo disponivel; a baixa fisica
-  continua pertencendo a finalizacao da OP;
-- inicio e cancelamento permanecem nas RPCs auditadas existentes, com retorno
-  de sucesso ou erro para a propria fila;
-- OP em processo aponta para o fluxo atual de CQ enquanto `F1.2c` nao estiver
-  separado;
-- nenhuma migration, escrita direta ou nova dependencia entre modulos foi
-  criada.
+- `/producao/qualidade` apresenta somente OP iniciadas na fila de finalizacao;
+- pH, densidade, volume, massa e temperatura sao obrigatorios;
+- separador, conferente e ate tres formuladores sao escolhidos por identificador
+  de pessoa ativa, sem parse de texto livre;
+- resultado de CQ aceita aprovado, bloqueado ou reprovado;
+- saidas PA usam produto e embalagem; saidas PI usam o produto-base;
+- a RPC `finalizar_pcp_op` continua executando consumo, CQ e geracao de lotes em
+  uma unica transacao auditada e idempotente;
+- resultado bloqueado ou reprovado preserva o fato fisico e gera lote bloqueado
+  para decisao posterior;
+- finalizacoes recentes exibem lotes gerados e permitem calculo versionado das
+  garantias sobre os lotes efetivamente consumidos;
+- a tela legada `/pcp` reutiliza o mesmo formulario de finalizacao, removendo a
+  duplicacao do bloco sensivel;
+- a migration `0058` restaurou a leitura autenticada das views de garantias
+  recriadas pela `0050`, mantendo `security_invoker`, RLS e menor privilegio;
+- um cenario sintetico percorreu produto, formula, OP, reserva, inicio, CQ,
+  finalizacao e lote PI pela interface;
+- a reconciliacao confirmou MP `100 -> 90`, reserva `10 -> 0` e entrada PI
+  `0 -> 10`, com quatro eventos correlacionados em `pcp_op:1:finish`.
 
-`F1.1` esta publicada no staging. `F1.2a` esta no commit local `a50dc74` e
-`F1.2b` aguarda commit local; ambas dependem de autorizacao antes do push. O
-workbook real e os relatorios gerados permanecem fora do Git.
+`F1.1` esta publicada no staging. `F1.2a` esta no commit `a50dc74`, `F1.2b` no
+commit `cf5c53d` e `F1.2c` aguarda o commit local desta validacao; todas
+dependem de autorizacao antes do push. O workbook real e os relatorios gerados
+permanecem fora do Git.
 
 ## Validacao desta tarefa
 
-- 20 testes direcionados de Producao e arquitetura: aprovados;
-- ESLint direcionado aos arquivos alterados: aprovado;
-- build Next de producao e TypeScript: aprovado, com 21 paginas e a rota
-  `/producao/ordens` reconhecida;
+- migration `0058` instalada na cadeia limpa `0001` a `0058` e validada em
+  upgrade;
+- smoke de leitura autenticada: `PG_PRODUCTION_CATALOG_VIEW_ACCESS_OK`;
+- cenario funcional completo pela interface: aprovado;
+- reconciliacao relacional, estoque e auditoria: aprovada;
+- 8 testes direcionados da `0058` e da trava destrutiva: aprovados;
+- ESLint direcionado aos 7 arquivos TypeScript/TSX alterados: aprovado;
+- TypeScript com `--noEmit`: aprovado;
+- lint PostgreSQL: nenhum erro de schema;
 - runtime local `/api/health`: `ok`, com backend configurado;
 - guard central: a rota redireciona usuario sem sessao para login;
-- nenhuma migration foi criada ou aplicada nesta fatia;
-- homologacao visual autenticada de `F1.2a/F1.2b`: pendente de publicacao no
-  staging.
+- homologacao visual autenticada de `F1.2a/F1.2b/F1.2c`: aprovada localmente e
+  ainda nao repetida no staging.
 
 ## Estado funcional resumido
 
 - `core` e `seguranca`: operacionais no banco de teste;
 - `cadastros`: primeira fatia industrial publicada no staging e aguardando
   homologacao funcional de Luciano;
-- `pcp`: Formulas, Garantias, Ordens e Reservas separadas em telas operacionais;
-  CQ, finalizacao, lotes e transformacoes ainda usam a tela legada compartilhada;
+- `pcp`: Formulas, Garantias, Ordens, Reservas, CQ e Finalizacao separados em
+  telas operacionais; lotes e transformacoes ainda usam a tela legada;
 - `estoque`: contratos de banco em validacao de negocio e interface operacional
   ainda acoplada aos fluxos de PCP;
 - contratos relacionais `DEC-006` a `DEC-011`: implementados;
@@ -77,17 +88,19 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-`F1.2c` - separar CQ, finalizacao e produto gerado:
+`F1.2d` - separar Lotes, Estoque e Transformacoes:
 
-1. fila exclusiva de OP em processo;
-2. pH, densidade, volume, massa e temperatura;
-3. separador, conferente e formuladores;
-4. resultado aprovado, bloqueado ou reprovado;
-5. saidas PA/PI e lotes gerados na mesma transacao.
+1. consulta por MP, PA e PI com saldo fisico, reservado e disponivel;
+2. validade, status e origem de cada lote;
+3. liberacao auditada de lote bloqueado;
+4. abertura e acompanhamento de reprocessamento;
+5. transformacoes PA para PI, PI para PA e reenvasamento.
 
 ## Tarefa seguinte de produto
 
-`F1.2d` - separar lotes, estoque e transformacoes PA/PI.
+Repetir no staging o fluxo homologado localmente Base tecnica -> Formula -> OP
+-> Reserva -> CQ -> Lote, somente depois de autorizacao de publicacao das
+entregas locais.
 
 `H1` continua em paralelo como tarefa funcional de Luciano: decidir as 269
 fontes. `I2` permanece bloqueada ate o artefato final homologado existir.

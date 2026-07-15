@@ -4,14 +4,13 @@ import {
   calculateOpGuaranteesAction,
   cancelPcpOpAction,
   createPcpOpAction,
-  finishPcpOpAction,
   releaseBlockedLotAction,
   reservePcpComponentAction,
   startPcpOpAction
 } from "@/app/pcp/actions";
-import { OutputRows } from "@/app/pcp/production-editors";
 import { FormulaWorkbench } from "@/app/producao/formulas/formula-workbench";
 import { GuaranteeWorkbench } from "@/app/producao/garantias/guarantee-workbench";
+import { QualityFinishForm } from "@/app/producao/qualidade/quality-workbench";
 import {
   getPcpDashboard,
   type PcpAvailableLot,
@@ -459,7 +458,7 @@ function OpCard({ op, lookups, availableLots }: { op: PcpRecentOp; lookups: PcpL
         ) : null}
       </div>
 
-      {canFinish ? <FinishOpForm opId={op.id} lookups={lookups} /> : null}
+      {canFinish ? <QualityFinishForm opId={op.id} lookups={lookups} /> : null}
       {op.status === "completed" && op.tipoOp !== "mapa_documental" ? (
         <form className="compact-action-form guarantee-calculate-form" action={calculateOpGuaranteesAction}>
           <input type="hidden" name="op_id" value={op.id} />
@@ -525,94 +524,6 @@ function OpComponentRow({ component, canReserve, availableLots }: { component: P
         </form>
       ) : null}
     </div>
-  );
-}
-
-function FinishOpForm({ opId, lookups }: { opId: number; lookups: PcpLookups }) {
-  return (
-    <form className="pcp-finish-form" action={finishPcpOpAction}>
-      <input type="hidden" name="op_id" value={opId} />
-      <div className="pcp-subsection-title">
-        <strong>Finalizacao com CQ</strong>
-        <span>baixa insumos e gera lotes</span>
-      </div>
-      <div className="form-grid pcp-cq-grid">
-        <label>
-          CQ
-          <select name="cq_status" defaultValue="aprovado">
-            <option value="aprovado">aprovado</option>
-            <option value="bloqueado">bloqueado</option>
-            <option value="reprovado">reprovado</option>
-          </select>
-        </label>
-        <label>
-          pH
-          <input name="ph" inputMode="decimal" required />
-        </label>
-        <label>
-          Densidade kg/L
-          <input name="densidade_kg_l" inputMode="decimal" required />
-        </label>
-        <label>
-          Volume L
-          <input name="volume_l" inputMode="decimal" required />
-        </label>
-        <label>
-          Massa kg
-          <input name="massa_kg" inputMode="decimal" required />
-        </label>
-        <label>
-          Temperatura C
-          <input name="temperatura_c" inputMode="decimal" required />
-        </label>
-        <label>
-          Separador MP
-          <select name="separador_pessoa_id" defaultValue="" required>
-            <option value="">Selecione</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Conferente MP
-          <select name="conferente_pessoa_id" defaultValue="" required>
-            <option value="">Selecione</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Formulador principal
-          <select name="formulador_1_pessoa_id" defaultValue="" required>
-            <option value="">Selecione</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Formulador 2
-          <select name="formulador_2_pessoa_id" defaultValue="">
-            <option value="">Nenhum</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Formulador 3
-          <select name="formulador_3_pessoa_id" defaultValue="">
-            <option value="">Nenhum</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label className="wide-field">
-          Observacao
-          <input name="observacao_finalizacao" placeholder="Opcional" />
-        </label>
-      </div>
-      <OutputRows targets={{ produtos: lookups.produtos, produtoEmbalagens: lookups.produtoEmbalagens }} />
-      <div className="form-footer compact-footer">
-        <span>PA usa produto+embalagem. PI usa produto base. O lote e automatico.</span>
-        <button className="primary-button" type="submit">
-          Finalizar OP
-        </button>
-      </div>
-    </form>
   );
 }
 

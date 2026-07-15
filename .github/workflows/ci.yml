@@ -104,6 +104,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/technical_catalog_operational_workbench.sql
+      - name: Run production catalog view access smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/production_catalog_view_access.sql
       - name: Run administrator email change workflow smoke
         env:
           PGPASSWORD: postgres

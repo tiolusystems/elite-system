@@ -3622,6 +3622,28 @@ h1 {
   font-weight: 800;
 }
 
+.quality-rule-panel {
+  margin-bottom: 16px;
+  border-left: 4px solid #b7791f;
+}
+
+.quality-op-list,
+.quality-history-grid {
+  margin-top: 12px;
+}
+
+.quality-op-card {
+  border-left: 4px solid #2f6fd6;
+}
+
+.quality-history-card {
+  align-content: start;
+}
+
+.quality-history-card .guarantee-result-grid {
+  margin-top: 4px;
+}
+
 .status-chip.pending_review,
 .status-chip.inactive {
   border-color: var(--warning-border);

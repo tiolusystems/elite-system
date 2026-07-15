@@ -10,7 +10,7 @@ const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: strin
   { key: "formulas", href: "/producao/formulas", label: "Formulas" },
   { key: "garantias", href: "/producao/garantias", label: "Garantias" },
   { key: "ordens", href: "/producao/ordens", label: "Ordens" },
-  { key: "qualidade", href: "/pcp#ops", label: "CQ e finalizacao" },
+  { key: "qualidade", href: "/producao/qualidade", label: "CQ e finalizacao" },
   { key: "estoque", href: "/pcp#lotes", label: "Lotes e transformacoes" }
 ];
 
@@ -106,6 +106,8 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   component_reserved: { kind: "ok", title: "Lote reservado", detail: "A reserva reduziu o saldo disponivel sem baixar o saldo fisico." },
   op_started: { kind: "ok", title: "OP iniciada", detail: "A ordem passou para execucao industrial." },
   op_cancelled: { kind: "ok", title: "OP cancelada", detail: "As reservas relacionadas foram tratadas pelo fluxo auditado." },
+  op_finished: { kind: "ok", title: "OP finalizada", detail: "Consumos, CQ e lotes gerados foram gravados na mesma transacao." },
+  guarantees_calculated: { kind: "ok", title: "Garantias calculadas", detail: "O resultado foi versionado a partir dos lotes efetivamente consumidos." },
   not_allowed: { kind: "warning", title: "Sem alcada", detail: "O usuario atual nao possui a permissao exigida." },
   not_configured: { kind: "warning", title: "Ambiente indisponivel", detail: "O Supabase nao esta configurado neste ambiente." },
   missing_formula_required: { kind: "warning", title: "Campos obrigatorios", detail: "Informe produto, tipo e justificativa." },
@@ -122,7 +124,14 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   missing_reservation_required: { kind: "warning", title: "Reserva incompleta", detail: "Informe componente, lote e quantidade." },
   invalid_component_type: { kind: "warning", title: "Componente invalido", detail: "A reserva aceita somente MP, PA ou PI." },
   invalid_positive_number: { kind: "warning", title: "Quantidade invalida", detail: "Informe um numero maior que zero." },
-  missing_cancel_required: { kind: "warning", title: "Cancelamento incompleto", detail: "Informe a OP e o motivo do cancelamento." }
+  missing_cancel_required: { kind: "warning", title: "Cancelamento incompleto", detail: "Informe a OP e o motivo do cancelamento." },
+  missing_finish_required: { kind: "warning", title: "Finalizacao incompleta", detail: "Informe OP, separador, conferente e ao menos um formulador." },
+  invalid_cq_status: { kind: "warning", title: "Resultado de CQ invalido", detail: "Use aprovado, bloqueado ou reprovado." },
+  missing_cq_numbers: { kind: "warning", title: "Dados de processo incompletos", detail: "Informe pH, densidade, volume, massa e temperatura." },
+  missing_outputs: { kind: "warning", title: "Produto gerado obrigatorio", detail: "Informe ao menos uma saida PA ou PI." },
+  invalid_participants: { kind: "warning", title: "Participantes invalidos", detail: "Separador, conferente e formuladores devem estar ativos." },
+  invalid_output_row: { kind: "warning", title: "Saida invalida", detail: "Revise tipo, produto e quantidade da saida." },
+  missing_guarantee_calculation: { kind: "warning", title: "Calculo incompleto", detail: "Informe a OP e a justificativa do calculo." }
 };
 
 export function ProductionFeedback({ result }: { result: string | null }) {

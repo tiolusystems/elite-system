@@ -201,7 +201,7 @@ export async function startPcpOpAction(formData: FormData) {
 
 export async function finishPcpOpAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#ops");
+    redirect("/producao/qualidade?result=not_configured#cq-pendente");
   }
 
   const opId = optionalInteger(formData, "op_id");
@@ -219,16 +219,16 @@ export async function finishPcpOpAction(formData: FormData) {
   const outputs = parseOutputs(formData);
 
   if (!opId || opId <= 0 || !separadorPessoaId || !conferentePessoaId || formuladorIds.length === 0) {
-    redirect("/pcp?result=missing_finish_required#ops");
+    redirect("/producao/qualidade?result=missing_finish_required#cq-pendente");
   }
   if (!ALLOWED_CQ_STATUS.has(cqStatus)) {
-    redirect("/pcp?result=invalid_cq_status#ops");
+    redirect("/producao/qualidade?result=invalid_cq_status#cq-pendente");
   }
   if ([ph, densidade, volume, massa, temperatura].some((value) => value === null || !Number.isFinite(value))) {
-    redirect("/pcp?result=missing_cq_numbers#ops");
+    redirect("/producao/qualidade?result=missing_cq_numbers#cq-pendente");
   }
   if (outputs.length === 0) {
-    redirect("/pcp?result=missing_outputs#ops");
+    redirect("/producao/qualidade?result=missing_outputs#cq-pendente");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -239,14 +239,14 @@ export async function finishPcpOpAction(formData: FormData) {
     .in("id", participantIds)
     .eq("status", "active");
   if (participants.error || (participants.data ?? []).length !== participantIds.length) {
-    redirect("/pcp?result=invalid_participants#ops");
+    redirect("/producao/qualidade?result=invalid_participants#cq-pendente");
   }
   const participantNames = new Map((participants.data ?? []).map((person) => [Number(person.id), String(person.nome)]));
   const separadorMp = participantNames.get(separadorPessoaId);
   const conferenteMp = participantNames.get(conferentePessoaId);
   const formuladores = formuladorIds.map((id) => participantNames.get(id)).filter((name): name is string => Boolean(name));
   if (!separadorMp || !conferenteMp || formuladores.length !== formuladorIds.length) {
-    redirect("/pcp?result=invalid_participants#ops");
+    redirect("/producao/qualidade?result=invalid_participants#cq-pendente");
   }
   const correlationId = `pcp_op:${opId}:finish`;
   const { error } = await auditedRpc(supabase, "finalizar_pcp_op", {
@@ -276,12 +276,15 @@ export async function finishPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirect(`/producao/qualidade?result=${encodeURIComponent(mapPcpError(error.message))}#cq-pendente`);
   }
 
   revalidatePath("/pcp");
+  revalidatePath("/producao");
+  revalidatePath("/producao/ordens");
+  revalidatePath("/producao/qualidade");
   revalidatePath("/relatorios");
-  redirect("/pcp?result=op_finished#ops");
+  redirect("/producao/qualidade?result=op_finished#historico-cq");
 }
 
 export async function cancelPcpOpAction(formData: FormData) {
@@ -402,13 +405,13 @@ export async function registerMpLotGuaranteeAction(formData: FormData) {
 
 export async function calculateOpGuaranteesAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/producao?result=not_configured#ops");
+    redirect("/producao/qualidade?result=not_configured#historico-cq");
   }
 
   const opId = optionalInteger(formData, "op_id");
   const justificativa = field(formData, "justificativa");
   if (!opId || !justificativa) {
-    redirect("/producao?result=missing_guarantee_calculation#ops");
+    redirect("/producao/qualidade?result=missing_guarantee_calculation#historico-cq");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -417,11 +420,12 @@ export async function calculateOpGuaranteesAction(formData: FormData) {
     p_op_id: opId
   });
   if (error) {
-    redirect(`/producao?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirect(`/producao/qualidade?result=${encodeURIComponent(mapPcpError(error.message))}#historico-cq`);
   }
 
   revalidateProductionPaths();
-  redirect("/producao?result=guarantees_calculated#ops");
+  revalidatePath("/producao/qualidade");
+  redirect("/producao/qualidade?result=guarantees_calculated#historico-cq");
 }
 
 export async function releaseBlockedLotAction(formData: FormData) {
@@ -500,7 +504,7 @@ function parseOutputs(formData: FormData): OutputPayload[] {
       continue;
     }
     if (!ALLOWED_OUTPUT_TYPES.has(tipo) || !targetId || targetId <= 0 || quantidade === null || quantidade <= 0) {
-      redirect("/pcp?result=invalid_output_row#ops");
+      redirect("/producao/qualidade?result=invalid_output_row#cq-pendente");
     }
 
     const payload: OutputPayload = {

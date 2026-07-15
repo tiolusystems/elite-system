@@ -143,7 +143,7 @@ export const SYSTEM_MODULE_CATALOG = [
     moduleKey: "expedicao",
     displayName: "Romaneio e expedicao",
     shortName: "Romaneio",
-    description: "Separacao parcial ou total, reserva multilote, confirmacao e estorno.",
+    description: "Separacao total/parcial, reserva multilote, logistica, confirmacao e passagem fiscal.",
     ownerDomain: "expedicao",
     isCore: false,
     sortOrder: 500,
@@ -155,7 +155,13 @@ export const SYSTEM_MODULE_CATALOG = [
       { moduleKey: "pedidos", access: "read_write", required: true },
       { moduleKey: "estoque", access: "read_write", required: true }
     ],
-    capabilities: ["Multi-item e multilote", "Separacao parcial", "Baixa de PA confirmada", "Estorno auditado"]
+    capabilities: [
+      "Multi-item e multilote",
+      "Entregador e veiculo",
+      "Baixa de PA confirmada",
+      "Situacao fiscal",
+      "Estorno auditado"
+    ]
   },
   {
     moduleKey: "importacao",

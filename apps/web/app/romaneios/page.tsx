@@ -2,9 +2,11 @@ import Link from "next/link";
 
 import {
   addRomaneioItemAction,
+  assignRomaneioLogisticsAction,
   cancelRomaneioAction,
   confirmRomaneioAction,
   createRomaneioAction,
+  removeRomaneioLogisticsAction,
   reserveRomaneioPaLotAction,
   reverseRomaneioAction
 } from "@/app/romaneios/actions";
@@ -80,8 +82,6 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
           </div>
         </div>
 
-        <LookupDatalists lookups={dashboard.lookups} />
-
         <section className="kpi-grid" aria-label="Resumo romaneio">
           <article className="kpi-card accent-blue">
             <span>Pedidos com pendencia</span>
@@ -126,10 +126,15 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
               <span className="pill">sem baixa</span>
             </div>
             <form action={createRomaneioAction}>
-              <div className="form-grid">
+              <div className="form-grid romaneio-form-grid">
                 <label className="wide-field">
                   Item pendente do pedido
-                  <input name="pedido_item_id" list="romaneio-pending-items-options" placeholder="Buscar item pendente" required />
+                  <select name="pedido_item_id" defaultValue="" required>
+                    <option value="" disabled>
+                      Selecione um item pendente
+                    </option>
+                    <LookupSelectOptions options={dashboard.lookups.pendingItems} />
+                  </select>
                 </label>
                 <label>
                   Separacao
@@ -162,14 +167,24 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
               <span className="pill">multi-item</span>
             </div>
             <form action={addRomaneioItemAction}>
-              <div className="form-grid">
+              <div className="form-grid romaneio-form-grid">
                 <label className="wide-field">
                   Romaneio aberto
-                  <input name="romaneio_id" list="romaneios-abertos-options" placeholder="Buscar romaneio" required />
+                  <select name="romaneio_id" defaultValue="" required>
+                    <option value="" disabled>
+                      Selecione um romaneio
+                    </option>
+                    <LookupSelectOptions options={dashboard.lookups.romaneiosAbertos} />
+                  </select>
                 </label>
                 <label className="wide-field">
                   Item pendente
-                  <input name="pedido_item_id" list="romaneio-pending-items-options" placeholder="Mesmo pedido do romaneio" required />
+                  <select name="pedido_item_id" defaultValue="" required>
+                    <option value="" disabled>
+                      Selecione um item do mesmo pedido
+                    </option>
+                    <LookupSelectOptions options={dashboard.lookups.pendingItems} />
+                  </select>
                 </label>
                 <label>
                   Quantidade
@@ -197,14 +212,24 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
               <span className="pill">multilote</span>
             </div>
             <form action={reserveRomaneioPaLotAction}>
-              <div className="form-grid">
+              <div className="form-grid romaneio-form-grid">
                 <label className="wide-field">
                   Item do romaneio
-                  <input name="romaneio_item_id" list="romaneio-items-abertos-options" placeholder="Buscar item" required />
+                  <select name="romaneio_item_id" defaultValue="" required>
+                    <option value="" disabled>
+                      Selecione o item a reservar
+                    </option>
+                    <LookupSelectOptions options={dashboard.lookups.romaneioItemsAbertos} />
+                  </select>
                 </label>
                 <label className="wide-field">
                   Lote PA
-                  <input name="lote_pa_id" list="lotes-pa-options" placeholder="Buscar lote disponivel" required />
+                  <select name="lote_pa_id" defaultValue="" required>
+                    <option value="" disabled>
+                      Selecione um lote disponivel
+                    </option>
+                    <LookupSelectOptions options={dashboard.lookups.lotesPa} />
+                  </select>
                 </label>
                 <label>
                   Quantidade
@@ -252,7 +277,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
           {dashboard.romaneios.length > 0 ? (
             <div className="romaneio-list">
               {dashboard.romaneios.slice(0, 18).map((romaneio) => (
-                <RomaneioCard key={romaneio.id} romaneio={romaneio} />
+                <RomaneioCard key={romaneio.id} romaneio={romaneio} lookups={dashboard.lookups} />
               ))}
             </div>
           ) : (
@@ -335,10 +360,11 @@ function PendingItemCard({ item }: { item: RomaneioPendingItem }) {
   );
 }
 
-function RomaneioCard({ romaneio }: { romaneio: RomaneioRecord }) {
+function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups: RomaneioLookups }) {
   const canConfirm = romaneio.status === "draft" || romaneio.status === "separacao";
   const canCancel = romaneio.status === "draft" || romaneio.status === "separacao";
   const canReverse = romaneio.status === "confirmado";
+  const canManageLogistics = ["draft", "separacao", "confirmado"].includes(romaneio.status);
 
   return (
     <article className={`romaneio-card romaneio-${romaneio.status}`}>
@@ -374,6 +400,83 @@ function RomaneioCard({ romaneio }: { romaneio: RomaneioRecord }) {
             <strong>Sem item</strong>
             <span>Adicione itens pendentes ao romaneio.</span>
           </div>
+        )}
+      </section>
+
+      <section className="romaneio-subsection">
+        <div className="romaneio-subsection-title">
+          <strong>Entrega e expedicao</strong>
+          <span>{romaneio.logistics ? "atribuicao ativa" : "a definir"}</span>
+        </div>
+        {romaneio.logistics ? (
+          <div className="tag-row">
+            <span className="tag">entregador: {romaneio.logistics.entregadorNome ?? "nao atribuido"}</span>
+            <span className="tag">veiculo: {romaneio.logistics.veiculoLabel ?? "nao atribuido"}</span>
+          </div>
+        ) : (
+          <p className="muted">Nenhum entregador ou veiculo foi atribuido a este romaneio.</p>
+        )}
+        {canManageLogistics ? (
+          <div className="romaneio-actions">
+            <form className="compact-action-form logistics-assignment-form" action={assignRomaneioLogisticsAction}>
+              <input type="hidden" name="romaneio_id" value={romaneio.id} />
+              <label>
+                Entregador
+                <select name="entregador_id" defaultValue={romaneio.logistics?.entregadorId ?? ""}>
+                  <option value="">Sem entregador</option>
+                  <LookupSelectOptions options={lookups.entregadores} />
+                </select>
+              </label>
+              <label>
+                Veiculo
+                <select name="veiculo_id" defaultValue={romaneio.logistics?.veiculoId ?? ""}>
+                  <option value="">Sem veiculo</option>
+                  <LookupSelectOptions options={lookups.veiculos} />
+                </select>
+              </label>
+              <input name="motivo" placeholder="Observacao da atribuicao" />
+              <button className="secondary-button" type="submit">
+                {romaneio.logistics ? "Atualizar entrega" : "Atribuir entrega"}
+              </button>
+            </form>
+            {romaneio.logistics ? (
+              <form className="compact-action-form" action={removeRomaneioLogisticsAction}>
+                <input type="hidden" name="romaneio_id" value={romaneio.id} />
+                <input name="motivo" placeholder="Motivo da remocao" required />
+                <button className="secondary-button" type="submit">
+                  Remover atribuicao
+                </button>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="romaneio-subsection">
+        <div className="romaneio-subsection-title">
+          <strong>Faturamento</strong>
+          <span>
+            {romaneio.fiscalDocuments.length > 0
+              ? `${romaneio.fiscalDocuments.length} documento(s)`
+              : romaneio.status === "confirmado"
+                ? "aguardando documento fiscal"
+                : "aguarda confirmacao"}
+          </span>
+        </div>
+        {romaneio.fiscalDocuments.length > 0 ? (
+          <div className="tag-row">
+            {romaneio.fiscalDocuments.map((document) => (
+              <span className="tag" key={document.id}>
+                {document.type}: {document.numberLabel} / {document.status} / {currency(document.value)}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">
+            {romaneio.status === "confirmado"
+              ? "A separacao esta confirmada e pronta para o fluxo fiscal."
+              : "O fluxo fiscal sera liberado somente depois da confirmacao e da baixa de PA."}
+          </p>
         )}
       </section>
 
@@ -449,29 +552,16 @@ function RomaneioItemRow({ item }: { item: RomaneioItem }) {
   );
 }
 
-function LookupDatalists({ lookups }: { lookups: RomaneioLookups }) {
+function LookupSelectOptions({ options }: { options: RomaneioLookupOption[] }) {
   return (
     <>
-      <LookupDatalist id="romaneio-pending-items-options" options={lookups.pendingItems} />
-      <LookupDatalist id="romaneios-abertos-options" options={lookups.romaneiosAbertos} />
-      <LookupDatalist id="romaneio-items-abertos-options" options={lookups.romaneioItemsAbertos} />
-      <LookupDatalist id="lotes-pa-options" options={lookups.lotesPa} />
+      {options.map((option) => (
+        <option key={`${option.id}-${option.label}`} value={option.id}>
+          {option.detail ? `${option.label} - ${option.detail}` : option.label}
+        </option>
+      ))}
     </>
   );
-}
-
-function LookupDatalist({ id, options }: { id: string; options: RomaneioLookupOption[] }) {
-  return (
-    <datalist id={id}>
-      {options.map((option) => (
-        <option key={`${id}-${option.id}-${option.label}`} value={lookupValue(option)} />
-      ))}
-    </datalist>
-  );
-}
-
-function lookupValue(option: RomaneioLookupOption): string {
-  return option.detail ? `${option.id} | ${option.label} | ${option.detail}` : `${option.id} | ${option.label}`;
 }
 
 function singleValue(value: string | string[] | undefined): string | undefined {
@@ -487,6 +577,10 @@ function numberOrDash(value: number | null): string {
     return "-";
   }
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(value);
+}
+
+function currency(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
 function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {
@@ -508,6 +602,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "ok",
       title: "Lote reservado",
       detail: "A reserva foi registrada. A baixa fisica ainda depende da confirmacao."
+    },
+    logistics_assigned: {
+      kind: "ok",
+      title: "Entrega atribuida",
+      detail: "Entregador e veiculo foram vinculados ao romaneio com historico auditavel."
+    },
+    logistics_removed: {
+      kind: "ok",
+      title: "Atribuicao removida",
+      detail: "A remocao foi registrada sem apagar o historico anterior."
     },
     romaneio_confirmed: {
       kind: "ok",
@@ -543,6 +647,31 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Reserva incompleta",
       detail: "Informe item do romaneio e lote PA."
+    },
+    missing_logistics_required: {
+      kind: "warning",
+      title: "Entrega incompleta",
+      detail: "Selecione ao menos um entregador ou um veiculo."
+    },
+    missing_logistics_removal_required: {
+      kind: "warning",
+      title: "Remocao incompleta",
+      detail: "Informe o motivo para remover a atribuicao atual."
+    },
+    logistics_already_active: {
+      kind: "warning",
+      title: "Atribuicao sem alteracao",
+      detail: "O entregador e o veiculo selecionados ja estao ativos neste romaneio."
+    },
+    invalid_logistics_actor: {
+      kind: "warning",
+      title: "Entrega indisponivel",
+      detail: "O entregador precisa estar ativo nessa funcao e o veiculo precisa estar ativo."
+    },
+    missing_logistics_assignment: {
+      kind: "warning",
+      title: "Sem atribuicao ativa",
+      detail: "Este romaneio nao possui entregador ou veiculo para remover."
     },
     duplicated_item: {
       kind: "warning",

@@ -114,6 +114,60 @@ export async function reserveRomaneioPaLotAction(formData: FormData) {
   redirect("/romaneios?result=lot_reserved#romaneios");
 }
 
+export async function assignRomaneioLogisticsAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/romaneios?result=not_configured#romaneios");
+  }
+
+  const romaneioId = optionalInteger(formData, "romaneio_id");
+  const entregadorId = optionalInteger(formData, "entregador_id");
+  const veiculoId = optionalInteger(formData, "veiculo_id");
+
+  if (!romaneioId || romaneioId <= 0 || (!entregadorId && !veiculoId)) {
+    redirect("/romaneios?result=missing_logistics_required#romaneios");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_exp_romaneio_logistica_atribuicao", {
+    p_entregador_id: entregadorId,
+    p_motivo: optionalField(formData, "motivo"),
+    p_romaneio_id: romaneioId,
+    p_veiculo_id: veiculoId
+  });
+
+  if (error) {
+    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+  }
+
+  revalidatePath("/romaneios");
+  redirect("/romaneios?result=logistics_assigned#romaneios");
+}
+
+export async function removeRomaneioLogisticsAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/romaneios?result=not_configured#romaneios");
+  }
+
+  const romaneioId = optionalInteger(formData, "romaneio_id");
+  const motivo = field(formData, "motivo");
+  if (!romaneioId || romaneioId <= 0 || !motivo) {
+    redirect("/romaneios?result=missing_logistics_removal_required#romaneios");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_exp_romaneio_logistica_remocao", {
+    p_motivo: motivo,
+    p_romaneio_id: romaneioId
+  });
+
+  if (error) {
+    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+  }
+
+  revalidatePath("/romaneios");
+  redirect("/romaneios?result=logistics_removed#romaneios");
+}
+
 export async function confirmRomaneioAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/romaneios?result=not_configured#romaneios");
@@ -215,8 +269,8 @@ function optionalInteger(formData: FormData, name: string): number | null {
   if (value === null) {
     return null;
   }
-  const idPrefix = value.match(/^\s*(\d+)/);
-  return Number(idPrefix ? idPrefix[1] : value);
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 function mapRomaneioError(message: string): string {
@@ -229,6 +283,9 @@ function mapRomaneioError(message: string): string {
   }
   if (normalized.includes("already exists")) {
     return "duplicated_item";
+  }
+  if (normalized.includes("already active")) {
+    return "logistics_already_active";
   }
   if (normalized.includes("exceeds pending")) {
     return "exceeds_pending";
@@ -250,6 +307,12 @@ function mapRomaneioError(message: string): string {
   }
   if (normalized.includes("product does not match")) {
     return "lot_product_mismatch";
+  }
+  if (normalized.includes("active entregador not found") || normalized.includes("active vehicle not found")) {
+    return "invalid_logistics_actor";
+  }
+  if (normalized.includes("no active logistics assignment")) {
+    return "missing_logistics_assignment";
   }
   if (normalized.includes("required") || normalized.includes("must be")) {
     return "missing_required";

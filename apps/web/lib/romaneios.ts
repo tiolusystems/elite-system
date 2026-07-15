@@ -53,6 +53,24 @@ export type RomaneioMovement = {
   createdAt: string;
 };
 
+export type RomaneioLogistics = {
+  eventId: number;
+  entregadorId: number | null;
+  entregadorNome: string | null;
+  veiculoId: number | null;
+  veiculoLabel: string | null;
+  occurredAt: string;
+};
+
+export type RomaneioFiscalDocument = {
+  id: number;
+  numberLabel: string;
+  type: string;
+  status: string;
+  issuedAt: string;
+  value: number;
+};
+
 export type RomaneioRecord = {
   id: number;
   codigoRomaneio: string;
@@ -69,6 +87,8 @@ export type RomaneioRecord = {
   createdAt: string;
   items: RomaneioItem[];
   movements: RomaneioMovement[];
+  logistics: RomaneioLogistics | null;
+  fiscalDocuments: RomaneioFiscalDocument[];
 };
 
 export type RomaneioAvailableLot = {
@@ -89,6 +109,8 @@ export type RomaneioLookups = {
   romaneiosAbertos: RomaneioLookupOption[];
   romaneioItemsAbertos: RomaneioLookupOption[];
   lotesPa: RomaneioLookupOption[];
+  entregadores: RomaneioLookupOption[];
+  veiculos: RomaneioLookupOption[];
 };
 
 export type RomaneioDashboard = {
@@ -112,7 +134,9 @@ const EMPTY_LOOKUPS: RomaneioLookups = {
   pendingItems: [],
   romaneiosAbertos: [],
   romaneioItemsAbertos: [],
-  lotesPa: []
+  lotesPa: [],
+  entregadores: [],
+  veiculos: []
 };
 
 export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
@@ -132,7 +156,12 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       romaneioItems,
       reservas,
       movimentos,
-      lotesPa
+      lotesPa,
+      logisticaAtual,
+      pessoasComerciais,
+      papeisAtivos,
+      veiculos,
+      notasFiscais
     ] = await Promise.all([
       supabase
         .from("exp_pedido_item_romaneio_saldos")
@@ -184,7 +213,34 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
           "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,updated_at"
         )
         .order("updated_at", { ascending: false })
-        .limit(400)
+        .limit(400),
+      supabase
+        .from("exp_romaneio_logistica_atual")
+        .select("romaneio_id,entregador_id,veiculo_id,ocorrido_em,evento_id")
+        .limit(200),
+      supabase
+        .from("cad_pessoas_comerciais")
+        .select("id,nome,tipo_comercial,status")
+        .eq("status", "active")
+        .order("nome", { ascending: true })
+        .limit(500),
+      supabase
+        .from("cad_pessoas_comerciais_papeis_ativos")
+        .select("pessoa_id,papel,vigencia_inicio")
+        .eq("papel", "entregador")
+        .limit(500),
+      supabase
+        .from("cad_veiculos")
+        .select("id,descricao,placa,status,capacidade")
+        .eq("status", "active")
+        .order("descricao", { ascending: true })
+        .limit(300),
+      supabase
+        .from("fat_notas_fiscais")
+        .select("id,romaneio_id,numero,serie,tipo,status_atual,data_emissao,valor_nf")
+        .not("romaneio_id", "is", null)
+        .order("data_emissao", { ascending: false })
+        .limit(300)
     ]);
 
     const orderRows = rows(orders);
@@ -194,6 +250,33 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
     const lotRows = rows(lotesPa);
     const availableLots = lotRows.map((row) => mapLot(row, productPackageMap));
     const lotMap = new Map(availableLots.map((lot) => [lot.id, `${lot.codigoLote} - ${lot.itemLabel}`]));
+    const personRows = rows(pessoasComerciais);
+    const personMap = new Map(personRows.map((row) => [Number(row.id), String(row.nome)]));
+    const courierIds = new Set(rows(papeisAtivos).map((row) => Number(row.pessoa_id)));
+    const vehicleRows = rows(veiculos);
+    const vehicleMap = new Map(vehicleRows.map((row) => [Number(row.id), vehicleLabel(row)]));
+    const logisticsByRomaneio = new Map(
+      rows(logisticaAtual).map((row) => {
+        const romaneioId = Number(row.romaneio_id);
+        const entregadorId = nullableNumber(row.entregador_id);
+        const veiculoId = nullableNumber(row.veiculo_id);
+        return [
+          romaneioId,
+          {
+            eventId: Number(row.evento_id),
+            entregadorId,
+            entregadorNome: entregadorId ? personMap.get(entregadorId) ?? `entregador ${entregadorId}` : null,
+            veiculoId,
+            veiculoLabel: veiculoId ? vehicleMap.get(veiculoId) ?? `veiculo ${veiculoId}` : null,
+            occurredAt: String(row.ocorrido_em)
+          } satisfies RomaneioLogistics
+        ] as const;
+      })
+    );
+    const fiscalDocumentsByRomaneio = groupBy(
+      rows(notasFiscais).map(mapFiscalDocument),
+      (document) => document.romaneioId
+    );
 
     const pendingItems = rows(pendingBalances)
       .map((row) => mapPendingItem(row, orderMap, productPackageMap))
@@ -230,7 +313,16 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         estornadoAt: nullableString(row.estornado_at),
         createdAt: String(row.created_at),
         items: itemsByRomaneio.get(id) ?? [],
-        movements: movementsByRomaneio.get(id) ?? []
+        movements: movementsByRomaneio.get(id) ?? [],
+        logistics: logisticsByRomaneio.get(id) ?? null,
+        fiscalDocuments: (fiscalDocumentsByRomaneio.get(id) ?? []).map((document) => ({
+          id: document.id,
+          numberLabel: document.numberLabel,
+          type: document.type,
+          status: document.status,
+          issuedAt: document.issuedAt,
+          value: document.value
+        }))
       } satisfies RomaneioRecord;
     });
 
@@ -245,7 +337,12 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       romaneioItems,
       reservas,
       movimentos,
-      lotesPa
+      lotesPa,
+      logisticaAtual,
+      pessoasComerciais,
+      papeisAtivos,
+      veiculos,
+      notasFiscais
     ]);
 
     return {
@@ -279,7 +376,22 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
             id: lot.id,
             label: `${lot.codigoLote} - ${lot.itemLabel}`,
             detail: `disp ${numberText(lot.saldoDisponivel)} / val ${lot.dataValidade ?? "-"}`
-          }))
+          })),
+        entregadores: personRows
+          .filter((row) => courierIds.has(Number(row.id)))
+          .map((row) => ({
+            id: Number(row.id),
+            label: String(row.nome),
+            detail: nullableString(row.tipo_comercial)
+          })),
+        veiculos: vehicleRows.map((row) => ({
+          id: Number(row.id),
+          label: vehicleLabel(row),
+          detail:
+            row.capacidade === null || row.capacidade === undefined
+              ? null
+              : `capacidade ${numberText(Number(row.capacidade))}`
+        }))
       },
       pendingItems,
       romaneios: romaneioRecords,
@@ -371,6 +483,20 @@ function mapMovement(row: Record<string, unknown>, lotMap: Map<number, string>):
   };
 }
 
+function mapFiscalDocument(row: Record<string, unknown>): RomaneioFiscalDocument & { romaneioId: number } {
+  const number = nullableString(row.numero);
+  const series = nullableString(row.serie);
+  return {
+    id: Number(row.id),
+    romaneioId: Number(row.romaneio_id),
+    numberLabel: number ? `${number}${series ? ` / serie ${series}` : ""}` : "numero pendente",
+    type: String(row.tipo),
+    status: String(row.status_atual),
+    issuedAt: String(row.data_emissao),
+    value: Number(row.valor_nf ?? 0)
+  };
+}
+
 function mapLot(row: Record<string, unknown>, productPackageMap: Map<number, string>): RomaneioAvailableLot {
   const produtoEmbalagemId = Number(row.produto_embalagem_id);
   return {
@@ -393,6 +519,11 @@ function packageLabel(row: Record<string, unknown>): string {
   const produtoLabel = produto ? `${produto.codigo_produto ?? ""} ${produto.nome ?? ""}`.trim() : `produto ${row.produto_id}`;
   const embalagemLabel = embalagem ? `${embalagem.descricao ?? ""}`.trim() : `embalagem ${row.embalagem_id}`;
   return `${row.codigo_item ?? "sem item"} - ${produtoLabel} / ${embalagemLabel}`;
+}
+
+function vehicleLabel(row: Record<string, unknown>): string {
+  const plate = nullableString(row.placa);
+  return plate ? `${row.descricao} - ${plate}` : String(row.descricao);
 }
 
 function rows(response: { data: unknown[] | null; error: { message: string } | null }): Array<Record<string, unknown>> {

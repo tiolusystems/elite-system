@@ -61,7 +61,7 @@ Direcao obrigatoria: `tela -> aplicacao -> RPC auditada -> dominio proprietario 
 | `pedidos` | Pedido, itens, credito, comissionados, transicoes e Kanban | `com_pedidos`, `com_pedido_*` | `core`, `seguranca`, `cadastros` | `/pedidos`, `/kanban` | validacao tecnica |
 | `estoque` | Lotes MP/PA/PI, reservas, movimentos, reversoes e saldos derivados | `est_*` | `core`, `seguranca`, `cadastros` | integrado em `/producao` e `/romaneios` | validacao de negocio |
 | `pcp` | Formulas, OP, reserva/consumo, CQ, garantias e transformacoes | `pcp_*` | `core`, `seguranca`, `cadastros`, `estoque` | `/producao` | validacao de negocio |
-| `expedicao` | Romaneio total/parcial, separacao multilote, confirmacao e estorno | `exp_*` | `core`, `seguranca`, `pedidos`, `estoque` | `/romaneios` | validacao tecnica |
+| `expedicao` | Romaneio total/parcial, separacao multilote, entregador/veiculo, confirmacao e estorno | `exp_*` | `core`, `seguranca`, `pedidos`, `estoque` | `/romaneios` | validacao tecnica |
 | `importacao` | Staging de NF XML, match de MP, conversao e geracao de lote | `imp_*` | `core`, `seguranca`, `cadastros`, `estoque` | `/importacao-xml` | validacao tecnica |
 | `faturamento` | NF total, simples faturamento, remessa vinculada, complemento e eventos fiscais | `fat_*` | `core`, `seguranca`, `pedidos`, `expedicao` | integrada ao pedido; tela dedicada pendente | validacao tecnica |
 | `financeiro` | Recebimentos, alocacoes, liberacao proporcional e conta corrente de comissao | `fin_*` e contratos financeiros | `core`, `seguranca`, `pedidos`, `faturamento` | integrada ao pedido; tela dedicada pendente | validacao tecnica |

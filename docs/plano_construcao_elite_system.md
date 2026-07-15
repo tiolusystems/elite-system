@@ -252,6 +252,10 @@ Status atual:
 - Confirmacao do romaneio agora exige reserva ativa em `est_reservas_pa` no fluxo novo e gera `saida_romaneio` em `est_movimentos_pa`.
 - Cancelamento libera reservas ativas e estorno devolve saldo fisico ao mesmo lote PA.
 - Migration `0009_pcp_op_foundation.sql` removeu a limitacao de um unico lote por item de romaneio.
+- A DEC-008 criou o ledger relacional append-only de entregador e veiculo por romaneio.
+- Migration `0059_romaneio_logistics_operational_contract.sql` adicionou RPCs auditadas de atribuicao e remocao, sem edicao do historico.
+- `/romaneios` usa IDs relacionais em todos os seletores, exibe a logistica atual e informa se o romaneio aguarda documento fiscal ou ja possui NF vinculada.
+- Instalacao limpa e smoke transacional da 0059 foram aprovados; homologacao visual autenticada no staging permanece pendente.
 - O mesmo item de romaneio agora pode ter varias reservas PA ativas, uma por lote.
 - Confirmacao do romaneio valida que a soma das reservas ativas fecha a quantidade romaneada e baixa cada lote separadamente.
 - Migration `0012_romaneio_multi_item_web.sql` adicionou `add_exp_romaneio_item` para permitir varios itens no mesmo romaneio por RPC auditavel.

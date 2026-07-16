@@ -18,6 +18,9 @@ export type RomaneioPendingItem = {
   quantidadeConfirmada: number;
   quantidadeEmSeparacao: number;
   quantidadePendente: number;
+  quantidadeComprometida: number;
+  quantidadeDisponivelRomaneio: number;
+  quantidadeExcedente: number;
 };
 
 export type RomaneioReservation = {
@@ -121,6 +124,7 @@ export type RomaneioDashboard = {
     romaneiosSeparacao: number | null;
     romaneiosConfirmados: number | null;
     quantidadePendente: number | null;
+    quantidadeDisponivelRomaneio: number | null;
   };
   lookups: RomaneioLookups;
   pendingItems: RomaneioPendingItem[];
@@ -166,7 +170,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       supabase
         .from("exp_pedido_item_romaneio_saldos")
         .select(
-          "pedido_item_id,pedido_id,produto_embalagem_id,quantidade_pedido,quantidade_confirmada,quantidade_em_separacao,quantidade_pendente"
+          "pedido_item_id,pedido_id,produto_embalagem_id,quantidade_pedido,quantidade_confirmada,quantidade_em_separacao,quantidade_pendente,quantidade_comprometida,quantidade_disponivel_romaneio,quantidade_excedente"
         )
         .gt("quantidade_pendente", 0)
         .limit(300),
@@ -281,6 +285,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
     const pendingItems = rows(pendingBalances)
       .map((row) => mapPendingItem(row, orderMap, productPackageMap))
       .sort((left, right) => right.quantidadePendente - left.quantidadePendente);
+    const allocatableItems = pendingItems.filter((item) => item.quantidadeDisponivelRomaneio > 0);
 
     const reservationsByItem = groupBy(
       rows(reservas).map((row) => mapReservation(row, lotMap)),
@@ -352,13 +357,17 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         romaneiosRascunho: romaneioRecords.filter((romaneio) => romaneio.status === "draft").length,
         romaneiosSeparacao: romaneioRecords.filter((romaneio) => romaneio.status === "separacao").length,
         romaneiosConfirmados: romaneioRecords.filter((romaneio) => romaneio.status === "confirmado").length,
-        quantidadePendente: pendingItems.reduce((sum, item) => sum + item.quantidadePendente, 0)
+        quantidadePendente: pendingItems.reduce((sum, item) => sum + item.quantidadePendente, 0),
+        quantidadeDisponivelRomaneio: allocatableItems.reduce(
+          (sum, item) => sum + item.quantidadeDisponivelRomaneio,
+          0
+        )
       },
       lookups: {
-        pendingItems: pendingItems.map((item) => ({
+        pendingItems: allocatableItems.map((item) => ({
           id: item.pedidoItemId,
           label: `${item.codigoPedido} - ${item.clienteNome} - ${item.itemLabel}`,
-          detail: `pendente ${numberText(item.quantidadePendente)} / pedido ${item.pedidoId}`
+          detail: `livre ${numberText(item.quantidadeDisponivelRomaneio)} / pendente ${numberText(item.quantidadePendente)}`
         })),
         romaneiosAbertos: openRomaneios.map((romaneio) => ({
           id: romaneio.id,
@@ -432,7 +441,10 @@ function mapPendingItem(
     quantidadePedido: Number(row.quantidade_pedido ?? 0),
     quantidadeConfirmada: Number(row.quantidade_confirmada ?? 0),
     quantidadeEmSeparacao: Number(row.quantidade_em_separacao ?? 0),
-    quantidadePendente: Number(row.quantidade_pendente ?? 0)
+    quantidadePendente: Number(row.quantidade_pendente ?? 0),
+    quantidadeComprometida: Number(row.quantidade_comprometida ?? 0),
+    quantidadeDisponivelRomaneio: Number(row.quantidade_disponivel_romaneio ?? 0),
+    quantidadeExcedente: Number(row.quantidade_excedente ?? 0)
   };
 }
 
@@ -575,7 +587,8 @@ function emptyDashboard(source: RomaneioDashboard["source"], error: string | nul
       romaneiosRascunho: null,
       romaneiosSeparacao: null,
       romaneiosConfirmados: null,
-      quantidadePendente: null
+      quantidadePendente: null,
+      quantidadeDisponivelRomaneio: null
     },
     lookups: EMPTY_LOOKUPS,
     pendingItems: [],

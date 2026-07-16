@@ -99,9 +99,9 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
             <p>Com lote reservado ou aguardando completar reserva.</p>
           </article>
           <article className="kpi-card accent-red">
-            <span>Qtd pendente</span>
-            <strong>{valueOrDash(dashboard.metrics.quantidadePendente)}</strong>
-            <p>Saldo agregado dos itens pendentes carregados.</p>
+            <span>Livre para novo romaneio</span>
+            <strong>{valueOrDash(dashboard.metrics.quantidadeDisponivelRomaneio)}</strong>
+            <p>Ja desconta rascunhos, separacoes e confirmacoes ativas.</p>
           </article>
         </section>
 
@@ -131,7 +131,9 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
                   Item pendente do pedido
                   <select name="pedido_item_id" defaultValue="" required>
                     <option value="" disabled>
-                      Selecione um item pendente
+                      {dashboard.lookups.pendingItems.length > 0
+                        ? "Selecione um item com saldo livre"
+                        : "Nenhum item com saldo livre"}
                     </option>
                     <LookupSelectOptions options={dashboard.lookups.pendingItems} />
                   </select>
@@ -153,8 +155,8 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
                 </label>
               </div>
               <div className="form-footer">
-                <span>Cria cabecalho e primeiro item. Use adicionar item para romaneio com varios produtos.</span>
-                <button className="primary-button" type="submit">
+                <span>A quantidade nao pode superar o saldo livre informado no item.</span>
+                <button className="primary-button" type="submit" disabled={dashboard.lookups.pendingItems.length === 0}>
                   Criar romaneio
                 </button>
               </div>
@@ -181,7 +183,9 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
                   Item pendente
                   <select name="pedido_item_id" defaultValue="" required>
                     <option value="" disabled>
-                      Selecione um item do mesmo pedido
+                      {dashboard.lookups.pendingItems.length > 0
+                        ? "Selecione um item do mesmo pedido"
+                        : "Nenhum item com saldo livre"}
                     </option>
                     <LookupSelectOptions options={dashboard.lookups.pendingItems} />
                   </select>
@@ -197,7 +201,11 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
               </div>
               <div className="form-footer">
                 <span>Permite varios itens no mesmo romaneio, preservando o pedido vinculado.</span>
-                <button className="primary-button" type="submit">
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={dashboard.lookups.pendingItems.length === 0 || dashboard.lookups.romaneiosAbertos.length === 0}
+                >
                   Adicionar item
                 </button>
               </div>
@@ -347,14 +355,15 @@ function PendingItemCard({ item }: { item: RomaneioPendingItem }) {
         <span>{item.clienteNome}</span>
       </div>
       <div className="module-card-meta">
-        <span>pendente</span>
-        <strong>{numberOrDash(item.quantidadePendente)}</strong>
+        <span>livre</span>
+        <strong>{numberOrDash(item.quantidadeDisponivelRomaneio)}</strong>
       </div>
       <p>{item.itemLabel}</p>
       <div className="tag-row">
         <span className="tag">pedido: {numberOrDash(item.quantidadePedido)}</span>
         <span className="tag">confirmado: {numberOrDash(item.quantidadeConfirmada)}</span>
-        <span className="tag">separacao: {numberOrDash(item.quantidadeEmSeparacao)}</span>
+        <span className="tag">comprometido: {numberOrDash(item.quantidadeComprometida)}</span>
+        <span className="tag">pendente de atendimento: {numberOrDash(item.quantidadePendente)}</span>
       </div>
     </article>
   );
@@ -680,8 +689,8 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     },
     exceeds_pending: {
       kind: "warning",
-      title: "Quantidade excede pendente",
-      detail: "A quantidade romaneada nao pode ultrapassar o saldo do pedido."
+      title: "Quantidade excede saldo livre",
+      detail: "A quantidade romaneada nao pode ultrapassar o pedido menos os demais romaneios ativos."
     },
     reservation_mismatch: {
       kind: "warning",

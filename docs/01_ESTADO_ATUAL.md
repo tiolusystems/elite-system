@@ -7,8 +7,8 @@ Atualizado em: 2026-07-15
 - branch: `feature/0044-production-module-release`;
 - ultima entrega publicada: Bloco 6 de Romaneio/Expedicao no commit `c54c328`
   e no staging;
-- entrega atual: Bloco 6 validado localmente, instalado no Supabase staging e
-  publicado na Vercel, ainda sem homologacao funcional autenticada;
+- entrega atual: correcao 0060 de integridade quantitativa do Romaneio validada
+  localmente e ainda nao publicada;
 - ultima migration no staging: `0059_romaneio_logistics_operational_contract.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -20,42 +20,36 @@ Atualizado em: 2026-07-15
 
 ## Tarefa concluida mais recente
 
-Bloco 6 - Romaneio e Expedicao operacional:
+Correcao 0060 - integridade quantitativa do Romaneio:
 
-- a DEC-008 continua sendo a fonte relacional de entregador, veiculo e eventos
-  logisticos append-only;
-- a 0059 adiciona RPC separada para atribuir e remover logistica, ambas com
-  permissao atomica, `before/after` e `correlation_id`;
-- a tela `/romaneios` deixou de interpretar texto `id | nome`: pedido, item,
-  romaneio e lote agora enviam IDs relacionais reais;
-- somente pessoas ativas com papel `entregador` vigente e veiculos ativos sao
-  oferecidos;
-- cada romaneio mostra a atribuicao atual sem apagar historico;
-- a tela informa se o romaneio confirmado aguarda faturamento e mostra as NFs
-  vinculadas quando existirem, sem mover regra fiscal para Expedicao;
-- criacao total/parcial, multi-item, reserva multilote, confirmacao, baixa PA,
-  cancelamento e estorno continuam usando as RPCs auditadas existentes;
+- o staging revelou que a view descontava somente quantidade confirmada e
+  oferecia novamente quantidades ja comprometidas em rascunho/separacao;
+- nenhum excesso estava persistido no cenario observado, mas a interface
+  apresentava capacidade incorreta e induzia uma operacao invalida;
+- a view agora separa pendencia de atendimento, quantidade comprometida e
+  saldo livre para novo romaneio;
+- trigger relacional com lock no item do pedido impede excesso inclusive fora
+  da RPC;
+- criacao e inclusao de item negam sem alçada antes de ler dados, usam o saldo
+  livre e registram auditoria padronizada;
+- a RPC textual antiga de separacao foi fechada; lote PA e reservado apenas
+  pelo contrato relacional de Estoque;
+- `PUBLIC` e `anon` perderam execucao nas RPCs operacionais do Romaneio;
+- a tela oferece para nova separacao apenas itens com saldo livre positivo;
 - nenhum dado operacional ou workbook foi adicionado ao Git.
 
 ## Validacao desta tarefa
 
-- 8 testes direcionados do contrato 0059: aprovados;
-- TypeScript com `--noEmit --incremental false`: aprovado;
-- ESLint direcionado: aprovado sem warning;
-- build de producao Next.js 16.2.10: aprovado, com 24 paginas geradas e a
-  rota `/romaneios` presente;
-- migrations `0001` a `0059` instaladas do zero no projeto separado
-  `elite-validation-0059`;
-- smoke transacional: `PG_VALIDATE_0059_WITH_SMOKE_OK`;
+- 14 testes direcionados dos contratos de Romaneio: aprovados;
+- migrations `0001` a `0060` instaladas do zero no projeto separado
+  `elite-validation-0060`;
+- smoke quantitativo: `PG_VALIDATE_0060_WITH_SMOKE_OK`;
+- regressao 0059: `PG_VALIDATE_0059_WITH_SMOKE_OK`;
+- zero grant sweep: `66/66` negadas;
 - lint PostgreSQL: nenhum erro de schema;
-- ator sem grants negado antes da validacao de parametros nas RPCs 0059;
+- ESLint, TypeScript e build Next.js: aprovados;
 - runtime local ativo `elite-system` nao foi resetado, migrado ou alterado;
-- branch privada publicada e sincronizada;
-- migration 0059 aplicada somente no Supabase `elite-system-staging`;
-- deploy atualizado em `https://elite-system-staging.vercel.app`;
-- `/api/health`: `status=ok` e backend configurado;
-- acesso anonimo a `/romaneios`: redirecionado para login;
-- homologacao visual autenticada: unico gate pendente desta entrega.
+- migration 0060, commit, push e staging: pendentes de fechamento/publicacao.
 
 ## Estado funcional resumido
 
@@ -73,8 +67,8 @@ Bloco 6 - Romaneio e Expedicao operacional:
 - decisoes funcionais de Luciano: ainda nao preenchidas; I2 bloqueada;
 - carga bruta, simulacao, aplicacao e reconciliacao: pendentes;
 - homologacao cloud: ambiente ativo, com login e banco declarando `staging`;
-- `expedicao`: Bloco 6 completo e publicado no staging; homologacao funcional
-  autenticada da 0059 pendente;
+- `expedicao`: Bloco 6 publicado; homologacao encontrou a falha quantitativa e
+  fica bloqueada ate a publicacao e revalidacao da 0060;
 - producao cloud: continua bloqueada por homologacao, backup, monitoramento,
   migracao historica ensaiada, seguranca externa e piloto;
 - Auth: convite e troca de email governados; MFA obrigatorio ainda pendente.
@@ -84,9 +78,9 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Homologar o Bloco 6 no staging com usuario autenticado: criacao total/parcial,
-multi-item, reserva multilote, logistica, confirmacao, baixa PA, situacao fiscal,
-cancelamento e estorno. Nao iniciar o encadeamento de status antes desse gate.
+Revisar o diff, criar o commit unico da 0060 e, mediante autorizacao, publicar
+branch, migration e deploy no staging. Repetir visualmente o cenario de saldo
+livre, excesso negado e cancelamento liberando capacidade.
 
 ## Tarefa seguinte de produto
 

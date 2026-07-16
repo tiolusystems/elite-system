@@ -6,25 +6,18 @@ export default async function ModuleUnavailablePage({ searchParams }: { searchPa
   const params = searchParams ? await searchParams : {};
   const moduleKey = singleValue(params.module) ?? "rota";
   const reason = singleValue(params.reason) ?? "module_unavailable";
-  const next = safeInternalPath(singleValue(params.next));
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Acesso controlado</span>
-        </div>
-      </header>
       <section className="workspace unavailable-workspace">
-        <section className="panel unavailable-panel">
-          <span className="eyebrow">modulo protegido</span>
-          <h1>{moduleKey}</h1>
+        <section className="shell-state shell-state-blocked">
+          <span className="eyebrow">Acesso controlado</span>
+          <p className="shell-state-label">Modulo indisponivel</p>
+          <h1>{moduleName(moduleKey)}</h1>
           <p className="muted">{reasonMessage(reason)}</p>
-          <div className="toolbar-actions">
-            <Link className="primary-button" href="/modulos">Ver prontidao</Link>
-            <Link className="secondary-button" href="/">Voltar ao inicio</Link>
-            {next ? <Link className="secondary-button" href={next}>Tentar novamente</Link> : null}
+          <div className="shell-state-actions">
+            <Link className="primary-button" href="/modulos">Ver modulos disponiveis</Link>
+            <Link className="secondary-button" href="/">Ir para o inicio</Link>
           </div>
         </section>
       </section>
@@ -34,13 +27,6 @@ export default async function ModuleUnavailablePage({ searchParams }: { searchPa
 
 function singleValue(value: string | string[] | undefined): string | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
-}
-
-function safeInternalPath(value: string | null): string | null {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/modulo-indisponivel")) {
-    return null;
-  }
-  return value;
 }
 
 function reasonMessage(reason: string): string {
@@ -55,4 +41,18 @@ function reasonMessage(reason: string): string {
     module_unavailable: "O modulo nao esta disponivel para operacao neste momento."
   };
   return messages[reason] ?? messages.module_unavailable;
+}
+
+function moduleName(moduleKey: string): string {
+  const names: Record<string, string> = {
+    auditoria: "Auditoria e importacao historica",
+    cadastros: "Cadastros",
+    expedicao: "Romaneio e expedicao",
+    importacao: "Importacao XML de materia-prima",
+    pedidos: "Pedidos",
+    pcp: "Producao",
+    relatorios: "Relatorios",
+    seguranca: "Seguranca"
+  };
+  return names[moduleKey] ?? "Area protegida";
 }

@@ -73,9 +73,9 @@ export async function getAuthStatus(): Promise<AuthStatus> {
           }
         : null,
       source: profileResult.error ? "error" : "supabase",
-      error: profileResult.error?.message ?? null
+      error: profileResult.error ? "Não foi possível carregar o perfil desta conta." : null
     };
-  } catch (error) {
+  } catch {
     return {
       isConfigured: true,
       isAuthenticated: false,
@@ -84,7 +84,7 @@ export async function getAuthStatus(): Promise<AuthStatus> {
       email: null,
       profile: null,
       source: "error",
-      error: error instanceof Error ? error.message : "Erro desconhecido"
+      error: "O serviço de acesso não respondeu. Tente novamente em alguns instantes."
     };
   }
 }

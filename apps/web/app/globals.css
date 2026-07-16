@@ -406,6 +406,374 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+/* UX-01A: public authentication has an isolated shell and never inherits the operational menu. */
+.auth-public-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100svh;
+  background:
+    linear-gradient(180deg, #eef4f8 0, #f7f9fb 52%, #ffffff 100%);
+}
+
+.auth-public-header,
+.auth-public-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 18px clamp(20px, 4vw, 56px);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.auth-public-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-public-brand,
+.auth-public-environment,
+.auth-public-footer > div,
+.auth-public-release {
+  display: grid;
+  gap: 3px;
+}
+
+.auth-public-brand strong {
+  font-size: 19px;
+}
+
+.auth-public-brand span,
+.auth-public-environment span,
+.auth-public-footer span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.auth-public-environment {
+  text-align: right;
+}
+
+.auth-public-environment strong {
+  color: #31526f;
+  font-size: 13px;
+}
+
+.auth-public-main {
+  width: min(100% - 40px, 760px);
+  margin: auto;
+  padding: clamp(34px, 7vh, 76px) 0;
+}
+
+.auth-public-intro {
+  margin-bottom: 22px;
+}
+
+.auth-public-intro h1 {
+  max-width: 640px;
+  font-size: clamp(28px, 4vw, 38px);
+}
+
+.auth-public-intro p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.auth-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.auth-card + .auth-card,
+.auth-notice + .auth-card {
+  margin-top: 16px;
+}
+
+.auth-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-card-heading h2 {
+  margin: 3px 0 0;
+  font-size: 21px;
+}
+
+.auth-card-kicker {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.auth-card form,
+.auth-empty-state,
+.auth-account-details > :not(summary) {
+  margin: 0;
+}
+
+.auth-form-fields {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.auth-form-fields label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: #344454;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.auth-form-fields input,
+.auth-form-fields select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: white;
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.auth-password-control {
+  position: relative;
+  display: block;
+}
+
+.auth-password-control input {
+  padding-right: 84px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  min-height: 32px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 5px;
+  background: var(--surface-muted);
+  color: #31526f;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.auth-form-footer,
+.auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-form-footer {
+  border-top: 1px solid var(--border);
+  padding: 16px 22px;
+}
+
+.auth-form-footer > a,
+.auth-account-links a {
+  color: #245fae;
+  font-weight: 700;
+}
+
+.auth-actions-primary {
+  padding: 18px 22px 22px;
+}
+
+.auth-actions form {
+  flex: 1 1 0;
+}
+
+.auth-actions .primary-button,
+.auth-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.auth-session-list {
+  margin: 0;
+  padding: 0 22px;
+}
+
+.auth-session-list > div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.auth-session-list dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.auth-session-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.auth-account-links {
+  display: flex;
+  gap: 18px;
+  padding: 0 22px 20px;
+  font-size: 13px;
+}
+
+.auth-account-details summary {
+  cursor: pointer;
+  padding: 18px 22px;
+  font-weight: 800;
+}
+
+.auth-account-details[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-account-details > p,
+.auth-account-details > form {
+  padding: 18px 22px;
+}
+
+.auth-account-details .auth-form-fields {
+  padding: 0 0 16px;
+}
+
+.auth-notice {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+  border: 1px solid var(--warning-border);
+  border-radius: 7px;
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  padding: 14px 16px;
+}
+
+.auth-notice.ok {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.auth-privacy-note {
+  margin: 0;
+  padding: 0 22px 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.auth-empty-state {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+}
+
+.auth-empty-state span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.auth-public-footer {
+  border-top: 1px solid var(--border);
+}
+
+.auth-public-release {
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .auth-public-header,
+  .auth-public-footer {
+    align-items: flex-start;
+    padding: 15px 18px;
+  }
+
+  .auth-public-main {
+    width: min(100% - 28px, 760px);
+    padding: 28px 0;
+  }
+
+  .auth-public-intro h1 {
+    font-size: 28px;
+  }
+
+  .auth-card-heading,
+  .auth-form-fields,
+  .auth-form-footer,
+  .auth-actions-primary,
+  .auth-empty-state {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+
+  .auth-form-footer,
+  .auth-actions,
+  .auth-account-links {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .auth-form-footer .primary-button,
+  .auth-form-footer .secondary-button,
+  .auth-actions .primary-button,
+  .auth-actions .secondary-button {
+    width: 100%;
+  }
+
+  .auth-session-list {
+    padding: 0 17px;
+  }
+
+  .auth-session-list > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .auth-account-links {
+    padding: 0 17px 18px;
+  }
+
+  .auth-public-footer {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .auth-public-header,
+  .auth-public-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+
+  .auth-public-environment,
+  .auth-public-release {
+    max-width: 150px;
+  }
+
+  .auth-public-footer > div:first-child span {
+    max-width: 165px;
+  }
+}
+
 .flow-board,
 .queue-list,
 .module-radar,

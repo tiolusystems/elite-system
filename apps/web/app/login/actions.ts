@@ -266,6 +266,17 @@ export async function logoutAction() {
   redirect("/login?result=logged_out");
 }
 
+export async function switchUserAction() {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/login?result=not_configured");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut({ scope: "local" });
+  revalidatePath("/", "layout");
+  redirect("/login?result=switch_user");
+}
+
 function field(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }

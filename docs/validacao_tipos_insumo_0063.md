@@ -29,6 +29,10 @@ local ativo `elite-system` não foi parado, resetado ou migrado.
 - ESLint dirigido: aprovado;
 - TypeScript `--noEmit --incremental false`: aprovado;
 - build Next.js de produção em cópia descartável: aprovado.
+- instalação limpa pelo `pnpm-lock.yaml` e build Turbopack equivalente ao
+  ambiente Vercel: aprovados;
+- migration 0063 registrada no Supabase cloud `elite-system-staging`, sem
+  aplicar a migration paralela 0062.
 
 ## Cenário pela interface
 

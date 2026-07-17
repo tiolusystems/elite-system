@@ -10,7 +10,7 @@ Atualizado em: 2026-07-17
 - entrega atual: UX-01C - macrociclo completo de Cadastros; o pacote estrutural
   de Tipos de insumo foi implementado e validado em ambiente descartavel, sem
   classificacao automatica do legado;
-- ultima migration no staging: `0059_romaneio_logistics_operational_contract.sql`;
+- ultima migration no staging: `0063_govern_raw_material_input_types.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em

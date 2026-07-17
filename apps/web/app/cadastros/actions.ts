@@ -159,7 +159,7 @@ export async function deactivateClienteAction(formData: FormData) {
 export async function createPessoaComercialAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&modo=novo&result=not_configured#cadastro-pessoa");
   }
 
   const nome = field(formData, "nome");
@@ -176,19 +176,19 @@ export async function createPessoaComercialAction(formData: FormData) {
     .filter((item) => ALLOWED_PAPEIS.has(item));
 
   if (!nome || papeis.length === 0) {
-    redirect("/cadastros?result=missing_person_required#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&modo=novo&result=missing_person_required#cadastro-pessoa");
   }
   if (!ALLOWED_STATUS.has(status)) {
-    redirect("/cadastros?result=invalid_status#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&modo=novo&result=invalid_status#cadastro-pessoa");
   }
   if (tipoComercial && !ALLOWED_TIPO_COMERCIAL.has(tipoComercial)) {
-    redirect("/cadastros?result=invalid_commercial_type#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&modo=novo&result=invalid_commercial_type#cadastro-pessoa");
   }
   if (tipoComercial === "agente_vinculado" && !vendedorResponsavelId) {
-    redirect("/cadastros?result=missing_responsible_seller#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&modo=novo&result=missing_responsible_seller#cadastro-pessoa");
   }
   if (vendedorResponsavelIdNumber !== null && !Number.isInteger(vendedorResponsavelIdNumber)) {
-    redirect("/cadastros?result=invalid_responsible_seller#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&modo=novo&result=invalid_responsible_seller#cadastro-pessoa");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -209,17 +209,146 @@ export async function createPessoaComercialAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-pessoa`);
+    redirect(`/cadastros?grupo=pessoas&modo=novo&result=${encodeURIComponent(mapSupabaseError(error.message))}#cadastro-pessoa`);
   }
 
   revalidatePath("/cadastros");
-  redirect("/cadastros?result=pessoa_created#nova-pessoa");
+  redirect("/cadastros?grupo=pessoas&result=pessoa_created");
+}
+
+export type PersonDuplicateCandidate = {
+  pessoa_id: number;
+  nome: string;
+  codigo_legado: string | null;
+  status: string;
+  tipo_comercial: string | null;
+  vendedor_responsavel_id: number | null;
+  vendedor_responsavel_nome: string | null;
+  papeis: string[];
+  areas: string[];
+  motivos: string[];
+};
+
+export type GovernedPersonCreateState = {
+  status: "idle" | "review_required" | "created" | "error";
+  message?: string;
+  candidates: PersonDuplicateCandidate[];
+  values?: Record<string, string>;
+  roles?: string[];
+};
+
+export async function reviewAndCreatePessoaComercialAction(
+  _previous: GovernedPersonCreateState,
+  formData: FormData
+): Promise<GovernedPersonCreateState> {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    return { status: "error", message: "O ambiente de dados não está disponível.", candidates: [] };
+  }
+
+  const values = Object.fromEntries([
+    "nome", "codigo_legado", "tipo_comercial", "vendedor_responsavel_id", "apelidos", "grafias_incorretas"
+  ].map((key) => [key, field(formData, key)]));
+  const roles = formData.getAll("papeis").map(String).filter((role) => ALLOWED_PAPEIS.has(role));
+  const aliases = splitLines(values.apelidos || null);
+  const historicalSpellings = splitLines(values.grafias_incorretas || null);
+  const responsibleId = values.vendedor_responsavel_id ? Number(values.vendedor_responsavel_id) : null;
+
+  if (!values.nome || roles.length === 0) {
+    return { status: "error", message: "Informe o nome e ao menos um papel comercial.", candidates: [], values, roles };
+  }
+  if (!ALLOWED_TIPO_COMERCIAL.has(values.tipo_comercial)) {
+    return { status: "error", message: "Selecione um tipo comercial válido.", candidates: [], values, roles };
+  }
+  if (values.tipo_comercial === "agente_vinculado" && !responsibleId) {
+    return { status: "error", message: "Selecione o vendedor responsável pelo agente.", candidates: [], values, roles };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const reviewParameters = {
+    p_apelidos_json: aliases,
+    p_codigo_legado: values.codigo_legado || null,
+    p_grafias_incorretas_json: historicalSpellings,
+    p_nome: values.nome,
+    p_papeis_json: roles,
+    p_vendedor_responsavel_id: responsibleId
+  };
+  const { data: possible, error: reviewError } = await auditedRpc<PersonDuplicateCandidate[]>(
+    supabase,
+    "find_cad_pessoa_possible_duplicates",
+    reviewParameters,
+    {
+      metadata: {
+        action_key: "cadastros.pessoas.candidates.read",
+        axis: "change_type",
+        domain: "cadastros",
+        entity: "cad_pessoas_comerciais"
+      }
+    }
+  );
+  if (reviewError) {
+    return { status: "error", message: mapPersonCreateError(reviewError.message), candidates: [], values, roles };
+  }
+
+  const candidates = possible ?? [];
+  if (candidates.some((candidate) => candidate.motivos.includes("same_legacy_code"))) {
+    return {
+      status: "error",
+      message: "O código legado informado já pertence a outra pessoa.",
+      candidates,
+      values,
+      roles
+    };
+  }
+
+  const presentedIds = formData.getAll("candidatos_apresentados").map(Number).filter(Number.isInteger).sort((a, b) => a - b);
+  const currentIds = candidates.map((candidate) => candidate.pessoa_id).sort((a, b) => a - b);
+  const confirmed = field(formData, "confirmar_possivel_duplicidade") === "sim";
+  const duplicateReason = field(formData, "motivo_duplicidade");
+  const candidateSetUnchanged = currentIds.length === presentedIds.length
+    && currentIds.every((id, index) => id === presentedIds[index]);
+
+  if (candidates.length > 0 && (!confirmed || duplicateReason.length < 10 || !candidateSetUnchanged)) {
+    return {
+      status: "review_required",
+      message: candidateSetUnchanged || presentedIds.length === 0
+        ? "Revise as pessoas semelhantes e justifique por que este cadastro é distinto."
+        : "A lista de semelhantes mudou. Revise novamente antes de confirmar.",
+      candidates,
+      values,
+      roles
+    };
+  }
+
+  const { error } = await auditedRpc(supabase, "create_cad_pessoa_comercial", {
+    ...reviewParameters,
+    p_candidatos_apresentados: currentIds,
+    p_confirmar_possivel_duplicidade: confirmed,
+    p_motivo_duplicidade: duplicateReason || null,
+    p_nome_norm: normalizeKey(values.nome),
+    p_payload_origem_json: { source: "cadastros_pessoas", duplicate_review: true },
+    p_status: "active",
+    p_tipo_comercial: values.tipo_comercial
+  });
+  if (error) {
+    const needsReview = error.message.toLowerCase().includes("candidates changed")
+      || error.message.toLowerCase().includes("requires confirmation");
+    return {
+      status: needsReview ? "review_required" : "error",
+      message: needsReview ? "A lista de semelhantes mudou. Revise novamente." : mapPersonCreateError(error.message),
+      candidates,
+      values,
+      roles
+    };
+  }
+
+  revalidatePath("/cadastros");
+  return { status: "created", message: "Pessoa cadastrada com sucesso.", candidates: [] };
 }
 
 export async function updatePessoaComercialIdentityAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&result=not_configured");
   }
 
   const pessoaId = optionalInteger(formData, "pessoa_id");
@@ -230,10 +359,10 @@ export async function updatePessoaComercialIdentityAction(formData: FormData) {
   const motivo = field(formData, "motivo");
 
   if (!pessoaId || !nome || !motivo) {
-    redirect("/cadastros?result=missing_person_required#nova-pessoa");
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_person_required#identidade-pessoa-title`);
   }
   if (!Number.isInteger(pessoaId) || pessoaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&result=invalid_positive_number");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -248,17 +377,17 @@ export async function updatePessoaComercialIdentityAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-pessoa`);
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#identidade-pessoa-title`);
   }
 
   revalidatePath("/cadastros");
-  redirect("/cadastros?result=pessoa_identity_updated#nova-pessoa");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_identity_updated#identidade-pessoa-title`);
 }
 
 export async function updatePessoaComercialRoleAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&result=not_configured");
   }
 
   const pessoaId = optionalInteger(formData, "pessoa_id");
@@ -273,25 +402,25 @@ export async function updatePessoaComercialRoleAction(formData: FormData) {
     .filter((item) => ALLOWED_PAPEIS.has(item));
 
   if (!pessoaId || papeis.length === 0 || !motivoCodigo) {
-    redirect("/cadastros?result=missing_person_required#nova-pessoa");
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_person_required#papeis-pessoa-title`);
   }
   if (!Number.isInteger(pessoaId) || pessoaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&result=invalid_positive_number");
   }
   if (tipoComercial && !ALLOWED_TIPO_COMERCIAL.has(tipoComercial)) {
-    redirect("/cadastros?result=invalid_commercial_type#nova-pessoa");
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=invalid_commercial_type#papeis-pessoa-title`);
   }
   if (tipoComercial === "agente_vinculado" && !vendedorResponsavelId) {
-    redirect("/cadastros?result=missing_responsible_seller#nova-pessoa");
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=missing_responsible_seller#papeis-pessoa-title`);
   }
   if (vendedorResponsavelIdNumber !== null && !Number.isInteger(vendedorResponsavelIdNumber)) {
-    redirect("/cadastros?result=invalid_responsible_seller#nova-pessoa");
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=invalid_responsible_seller#papeis-pessoa-title`);
   }
   if (!ALLOWED_PESSOA_ROLE_REASONS.has(motivoCodigo)) {
-    redirect("/cadastros?result=invalid_role_reason#nova-pessoa");
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=invalid_role_reason#papeis-pessoa-title`);
   }
   if (motivoCodigo === "outro" && !motivoDetalhe) {
-    redirect("/cadastros?result=missing_role_reason_detail#nova-pessoa");
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=missing_role_reason_detail#papeis-pessoa-title`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -305,27 +434,27 @@ export async function updatePessoaComercialRoleAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-pessoa`);
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#papeis-pessoa-title`);
   }
 
   revalidatePath("/cadastros");
-  redirect("/cadastros?result=pessoa_role_updated#nova-pessoa");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_role_updated#papeis-pessoa-title`);
 }
 
 export async function deactivatePessoaComercialAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&result=not_configured");
   }
 
   const pessoaId = optionalInteger(formData, "pessoa_id");
   const motivo = field(formData, "motivo");
 
   if (!pessoaId || !motivo) {
-    redirect("/cadastros?result=missing_person_required#nova-pessoa");
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_person_required`);
   }
   if (!Number.isInteger(pessoaId) || pessoaId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#nova-pessoa");
+    redirect("/cadastros?grupo=pessoas&result=invalid_positive_number");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -335,11 +464,71 @@ export async function deactivatePessoaComercialAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#nova-pessoa`);
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}`);
   }
 
   revalidatePath("/cadastros");
-  redirect("/cadastros?result=pessoa_deactivated#nova-pessoa");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_deactivated`);
+}
+
+export async function reactivatePessoaComercialAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const motivo = field(formData, "motivo");
+  if (!getRuntimeStatus().supabaseConfigured) redirect("/cadastros?grupo=pessoas&result=not_configured");
+  if (!pessoaId || motivo.length < 10) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_reactivation_reason`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "reactivate_cad_pessoa_comercial", {
+    p_motivo: motivo,
+    p_pessoa_id: pessoaId
+  });
+  if (error) redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}`);
+  revalidatePath("/cadastros");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_reactivated`);
+}
+
+export async function linkPessoaAreaComercialAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const areaId = optionalInteger(formData, "area_id");
+  const papelArea = field(formData, "papel_area");
+  const vigenciaInicio = field(formData, "vigencia_inicio");
+  const motivo = field(formData, "motivo");
+  if (!getRuntimeStatus().supabaseConfigured) redirect("/cadastros?grupo=pessoas&result=not_configured");
+  if (!pessoaId || !areaId || !papelArea || !vigenciaInicio || motivo.length < 10) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_area_link_required#areas-pessoa-title`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "link_cad_pessoa_area_comercial", {
+    p_area_id: areaId,
+    p_motivo: motivo,
+    p_papel_area: papelArea,
+    p_pessoa_id: pessoaId,
+    p_vigencia_inicio: vigenciaInicio
+  });
+  if (error) redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#areas-pessoa-title`);
+  revalidatePath("/cadastros");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_area_linked#areas-pessoa-title`);
+}
+
+export async function closePessoaAreaComercialAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const vinculoId = optionalInteger(formData, "vinculo_id");
+  const vigenciaFim = field(formData, "vigencia_fim");
+  const motivo = field(formData, "motivo");
+  if (!getRuntimeStatus().supabaseConfigured) redirect("/cadastros?grupo=pessoas&result=not_configured");
+  if (!pessoaId || !vinculoId || !vigenciaFim || motivo.length < 10) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_area_close_required#areas-pessoa-title`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "close_cad_pessoa_area_comercial", {
+    p_motivo: motivo,
+    p_vigencia_fim: vigenciaFim,
+    p_vinculo_id: vinculoId
+  });
+  if (error) redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#areas-pessoa-title`);
+  revalidatePath("/cadastros");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_area_closed#areas-pessoa-title`);
 }
 
 export async function createMateriaPrimaAction(formData: FormData) {
@@ -404,7 +593,6 @@ export async function updateMateriaPrimaIdentityAction(formData: FormData) {
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
   const nome = field(formData, "nome");
-
   const motivo = field(formData, "motivo");
 
   if (!materiaPrimaId || !nome || !motivo) {
@@ -890,4 +1078,15 @@ function mapSupabaseError(message: string): string {
     return "permission_denied";
   }
   return "save_failed";
+}
+
+function mapPersonCreateError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("legacy code")) return "O código legado informado já está em uso.";
+  if (normalized.includes("alias repeated")) return "Nome, apelido e grafia histórica não podem se repetir no mesmo cadastro.";
+  if (normalized.includes("responsible seller")) return "O vendedor responsável não está disponível.";
+  if (normalized.includes("not allowed") || normalized.includes("permission")) {
+    return "Seu usuário não possui permissão para cadastrar pessoas.";
+  }
+  return "Não foi possível cadastrar a pessoa. Revise os dados e tente novamente.";
 }

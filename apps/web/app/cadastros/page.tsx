@@ -4,11 +4,11 @@ import {
   createConversaoUnidadeMpAction,
   createEmbalagemAction,
   createMateriaPrimaAction,
-  createPessoaComercialAction,
   createProdutoBaseAction,
   createProdutoEmbalagemAction
 } from "@/app/cadastros/actions";
 import { ClientesSection } from "@/app/cadastros/clientes-section";
+import { PessoasSection } from "@/app/cadastros/pessoas-section";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -52,7 +52,9 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
   const activeGroup = CADASTRO_GROUPS.find((group) => group.key === requestedGroup) ?? null;
   const query = (singleValue(params.busca) ?? "").trim().toLocaleLowerCase("pt-BR");
   const selectedClientId = positiveInteger(singleValue(params.cliente));
-  const newClientMode = singleValue(params.modo) === "novo";
+  const selectedPersonId = positiveInteger(singleValue(params.pessoa));
+  const newClientMode = activeGroup?.key === "clientes" && singleValue(params.modo) === "novo";
+  const newPersonMode = activeGroup?.key === "pessoas" && singleValue(params.modo) === "novo";
   const visibleGroups = query
     ? CADASTRO_GROUPS.filter((group) => `${group.title} ${group.description}`.toLocaleLowerCase("pt-BR").includes(query))
     : CADASTRO_GROUPS;
@@ -203,95 +205,20 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           />
         ) : null}
 
-        {activeGroup?.key === "pessoas" ? <section className="panel form-panel cadastros-focused-panel" aria-labelledby="nova-pessoa-title">
-          <div className="panel-header">
-            <h2 id="nova-pessoa-title">Nova pessoa comercial</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createPessoaComercialAction} id="nova-pessoa">
-            <div className="form-grid">
-              <label>
-                Nome
-                <input name="nome" placeholder="Nome da pessoa" required />
-              </label>
-              <label>
-                Codigo legado
-                <input name="codigo_legado" placeholder="Codigo, se houver" />
-              </label>
-              <label>
-                Tipo comercial
-                <select name="tipo_comercial" defaultValue="vendedor_direto_elite">
-                  <option value="funcionario_elite">funcionario_elite</option>
-                  <option value="agente_vinculado">agente_vinculado</option>
-                  <option value="agente_direto_elite">agente_direto_elite</option>
-                  <option value="vendedor_direto_elite">vendedor_direto_elite</option>
-                  <option value="tecnico_campo">tecnico_campo</option>
-                  <option value="entregador">entregador</option>
-                  <option value="gerente">gerente</option>
-                  <option value="vendedor_gerente">vendedor_gerente</option>
-                </select>
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                Vendedor responsavel
-                <select name="vendedor_responsavel_id" defaultValue="">
-                  <option value="">Nenhum</option>
-                  {lookups.pessoasComerciais.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="wide-field">
-                Apelidos
-                <input name="apelidos" placeholder="Separar por virgula, ponto e virgula ou linha" />
-              </label>
-              <label className="wide-field">
-                Grafias incorretas
-                <input name="grafias_incorretas" placeholder="Grafias usadas historicamente" />
-              </label>
-            </div>
-            <fieldset className="check-grid">
-              <legend>Papeis</legend>
-              <label>
-                <input name="papeis" type="checkbox" value="vendedor" defaultChecked />
-                Vendedor
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="agente" />
-                Agente
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="gerente" />
-                Gerente
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="tecnico_campo" />
-                Tecnico campo
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="entregador" />
-                Entregador
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="comissionado" defaultChecked />
-                Comissionado
-              </label>
-            </fieldset>
-            <div className="form-footer">
-              <span>Entregador nao vira vendedor automaticamente; papeis ficam separados para auditoria.</span>
-              <button className="primary-button" type="submit">
-                Salvar pessoa
-              </button>
-            </div>
-          </form>
-        </section> : null}
+        {activeGroup?.key === "pessoas" ? (
+          <PessoasSection
+            areas={dashboard.areasComerciais}
+            busca={singleValue(params.busca) ?? ""}
+            filtroPapel={singleValue(params.papel) ?? ""}
+            filtroSituacao={singleValue(params.situacao) ?? ""}
+            gravacaoDisponivel={runtime.supabaseConfigured}
+            modoNovo={newPersonMode}
+            papeis={dashboard.pessoaPapeis}
+            pessoaSelecionadaId={selectedPersonId}
+            pessoas={dashboard.pessoas}
+            vinculosAreas={dashboard.pessoaAreas}
+          />
+        ) : null}
 
         {activeGroup?.key === "materias-primas" ? <section className="panel form-panel cadastros-focused-panel" id="nova-mp" aria-labelledby="nova-mp-title">
           <div className="panel-header">
@@ -583,7 +510,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             <h2>Veiculos e logistica</h2>
             <p>Os vinculos de entregadores ja pertencem ao cadastro de pessoas. Veiculos e demais recursos logisticos ainda nao possuem tela operacional nesta central.</p>
             <div className="shell-state-actions">
-              <Link className="primary-button" href="/cadastros?grupo=pessoas#nova-pessoa">Ver entregadores</Link>
+              <Link className="primary-button" href="/cadastros?grupo=pessoas">Ver entregadores</Link>
               <Link className="secondary-button" href="/romaneios">Abrir romaneio</Link>
             </div>
           </section>
@@ -596,7 +523,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
 function actionHref(group: CadastroGroupKey): string {
   const hrefs: Record<CadastroGroupKey, string> = {
     clientes: "/cadastros?grupo=clientes&modo=novo#cadastro-cliente",
-    pessoas: "#nova-pessoa",
+    pessoas: "/cadastros?grupo=pessoas&modo=novo#cadastro-pessoa",
     "materias-primas": "#nova-mp",
     produtos: "#novo-produto",
     embalagens: "#nova-embalagem",
@@ -683,7 +610,22 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     pessoa_deactivated: {
       kind: "ok",
       title: "Pessoa desativada",
-      detail: "Cadastro preservado como historico e marcado como inactive por funcao auditavel."
+      detail: "O cadastro foi preservado para consulta e deixou de participar de novas operações."
+    },
+    pessoa_reactivated: {
+      kind: "ok",
+      title: "Pessoa reativada",
+      detail: "O mesmo cadastro voltou a ficar ativo; vínculos encerrados permaneceram históricos."
+    },
+    pessoa_area_linked: {
+      kind: "ok",
+      title: "Área comercial vinculada",
+      detail: "O vínculo temporal foi registrado com autoria e justificativa."
+    },
+    pessoa_area_closed: {
+      kind: "ok",
+      title: "Vínculo encerrado",
+      detail: "A vigência foi encerrada sem excluir o histórico comercial."
     },
     mp_created: {
       kind: "ok",

@@ -7,11 +7,11 @@ Atualizado em: 2026-07-17
 - branch: `feature/0044-production-module-release`;
 - ultima entrega publicada: UX-01B - shell global autenticado no commit
   `52f3dca`;
-- entrega atual: UX-01C - macrociclo completo de Cadastros; o pacote estrutural
-  de Tipos de insumo e materias-primas concluiu o gate tecnico 0064, sem
-  classificacao automatica do legado;
-- ultima migration validada localmente: `0064_harden_raw_material_relations_and_duplicates.sql`;
-- ultima migration no staging: `0063_govern_raw_material_input_types.sql`;
+- entrega atual: UX-01C - macrociclo completo de Cadastros; Pessoas e vinculos
+  comerciais concluiu o gate tecnico local da migration 0065 e aguarda
+  publicacao controlada no staging;
+- ultima migration validada localmente: `0065_govern_commercial_people_relationships.sql`;
+- ultima migration no staging: `0064_harden_raw_material_relations_and_duplicates.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -21,6 +21,20 @@ Atualizado em: 2026-07-17
 - GitHub: codigo e documentacao somente; push depende de autorizacao.
 
 ## Tarefa concluida mais recente
+
+UX-01C.3 - Pessoas e vinculos comerciais:
+
+- homonimos sao revisados, confirmados com justificativa e auditados;
+- codigo legado possui unicidade normalizada e criacao concorrente protegida;
+- aliases iguais podem pertencer a pessoas distintas sem repeticao interna;
+- areas comerciais usam relacionamentos por ID e vigencia temporal;
+- desativacao e reativacao preservam o historico e nao reabrem vinculos;
+- interface PT-BR oferece consulta, filtros, criacao, edicao e gestao dos
+  vinculos sem expor enums ou erros tecnicos;
+- instalacao limpa, upgrade, smoke e concorrencia foram validados somente em
+  projetos descartaveis `elite-validation-*`.
+
+Entrega anterior:
 
 UX-01C.4 - Tipos de insumo e classificacao de materias-primas:
 
@@ -35,7 +49,7 @@ UX-01C.4 - Tipos de insumo e classificacao de materias-primas:
 - SKU possui unicidade normalizada e protecao concorrente no banco;
 - homonimos exigem revisao, confirmacao motivada e auditoria.
 
-Entrega anterior:
+Entrega de base:
 
 UX-01C.1 - Central de Cadastros:
 
@@ -50,14 +64,14 @@ UX-01C.1 - Central de Cadastros:
 
 ## Validacao desta tarefa
 
-- smoke SQL 0063, instalacao limpa e upgrade: aprovados;
-- classificacao por inferencia: zero;
-- ESLint: aprovado;
-- TypeScript `--noEmit`: aprovado;
-- build Next.js de producao: aprovado;
-- 27 testes dirigidos de Cadastros em Python: aprovados;
-- Supabase e banco local nao foram parados, resetados, migrados ou alterados;
-- capturas de homologacao permaneceram fora do repositorio.
+- smoke SQL 0065 em instalacao limpa e upgrade: aprovado;
+- lock concorrente: uma criacao persistida e a concorrente recusada apos
+  recalculo de candidatos;
+- lint PostgreSQL: aprovado;
+- ESLint, TypeScript, build Next.js e 46 testes dirigidos: aprovados;
+- desktop `1366 x 768` e mobile `390 x 844`: aprovados sem rolagem horizontal;
+- runtime Supabase ativo nao foi parado, resetado, migrado ou alterado;
+- capturas de homologacao permanecem fora do repositorio.
 
 ## Estado funcional resumido
 

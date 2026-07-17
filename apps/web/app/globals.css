@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: light;
   --brand-primary: #1cabe3;
   --brand-primary-strong: #0879a8;
@@ -5286,6 +5286,49 @@ h1 {
 .danger-zone form { display: grid; gap: 12px; margin-top: 14px; }
 .danger-zone label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; }
 .danger-button { justify-self: start; border-color: #c98989; color: #8a3030; }
+.role-chip-list { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 16px 16px; }
+.role-chip {
+  padding: 5px 8px;
+  border: 1px solid #b8d8e6;
+  border-radius: 999px;
+  background: #eef8fc;
+  color: var(--brand-primary-strong);
+  font-size: 11px;
+  font-weight: 750;
+}
+.person-role-fieldset { margin: 16px; padding: 14px; border: 1px solid var(--brand-border); border-radius: 6px; }
+.person-role-fieldset legend { padding: 0 6px; color: var(--brand-text-muted); font-size: 12px; font-weight: 750; }
+.person-role-fieldset .check-grid { margin-top: 4px; }
+.role-reason-grid { padding-top: 0; }
+.access-link-summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 20px; }
+.access-link-summary > div { display: grid; gap: 6px; }
+.access-link-summary span { color: var(--text-muted); }
+.people-filter-form { display: grid; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--brand-border); }
+.people-filter-form label { display: grid; gap: 5px; color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
+.people-filter-form > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.people-filter-form .people-filter-actions { display: flex; grid-template-columns: none; align-items: center; }
+.person-duplicate-review { margin: 0 16px 16px; }
+.person-candidate-list { display: grid; gap: 10px; margin-top: 10px; }
+.person-candidate-list article { display: grid; gap: 10px; padding: 12px; border: 1px solid #e0c275; border-radius: 6px; background: #fffdf6; }
+.person-candidate-list article > div { display: grid; gap: 3px; }
+.person-candidate-list article span { color: var(--brand-text-muted); font-size: 12px; }
+.person-candidate-list dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin: 0; }
+.person-candidate-list dt { color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
+.person-candidate-list dd { margin: 2px 0 0; overflow-wrap: anywhere; font-size: 12px; }
+.area-link-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; border-top: 1px solid var(--brand-border); }
+.area-link-form label,
+.inline-relation-action label { display: grid; gap: 5px; color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
+.area-link-form .wide-field { grid-column: 1 / -1; }
+.area-link-form button { justify-self: start; }
+.inline-relation-action { margin-top: 5px; }
+.inline-relation-action summary { cursor: pointer; color: var(--brand-primary-strong); font-size: 12px; font-weight: 750; }
+.inline-relation-action form { display: grid; gap: 8px; min-width: min(320px, 76vw); margin-top: 8px; padding: 10px; border: 1px solid var(--brand-border); border-radius: 6px; background: var(--surface); text-align: left; }
+.reactivation-zone { padding: 14px 16px; border: 1px solid #a8d4bf; border-radius: 6px; background: #f4fbf7; }
+.reactivation-zone summary { cursor: pointer; color: #176447; font-weight: 750; }
+.reactivation-zone form { display: grid; gap: 12px; margin-top: 14px; }
+.reactivation-zone label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; }
+.reactivation-zone p { margin: 0; color: var(--brand-text-muted); font-size: 12px; }
+.reactivation-zone button { justify-self: start; }
 
 @media (max-width: 1100px) {
   .clients-workbench { grid-template-columns: minmax(230px, 0.7fr) minmax(0, 1.3fr); }
@@ -5300,6 +5343,9 @@ h1 {
   .clients-list { max-height: 330px; }
   .client-form-grid { grid-template-columns: 1fr; }
   .client-form-grid .wide-field { grid-column: auto; }
+  .access-link-summary { align-items: stretch; flex-direction: column; }
+  .area-link-form { grid-template-columns: 1fr; }
+  .area-link-form .wide-field { grid-column: auto; }
 }
 
 @media (max-width: 520px) {
@@ -5312,6 +5358,10 @@ h1 {
   .related-record-list article > div:last-child { align-items: flex-start; text-align: left; }
   .form-footer { align-items: stretch; flex-direction: column; }
   .form-footer button { width: 100%; }
+  .people-filter-form > div,
+  .person-candidate-list dl { grid-template-columns: 1fr; }
+  .area-link-form button,
+  .reactivation-zone button { width: 100%; }
 }
 
 .technical-kpis article.attention {

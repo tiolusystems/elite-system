@@ -53,6 +53,9 @@ Classificacao primaria: `Texto livre`, `Valor controlado`, `Relacionamento` ou
 | Propriedade atendida | Escopo do vinculo | FK composta | Relacionamento dependente | Propriedades do cliente | ID / Propriedade | Opcional | Existe |
 | Vigencia | Historico comercial | Datas | Valor controlado | Regra temporal | Datas / Inicio e fim | Intervalos nao podem sobrepor | Existe |
 | Area comercial | Regiao de atuacao | Relacao temporal | Relacionamento | `cad_areas_comerciais` | ID / Area | Opcional | Existe; sem manutencao governada |
+| Conta do sistema | Ligar a identidade comercial ao login individual | `user_profile_id` | Relacionamento exclusivo | `user_profiles` + Auth | UUID / Conta vinculada ou Sem acesso | Opcional; uma conta por pessoa e uma pessoa por conta | Ownership de Segurança; alterações locais correspondentes permanecem preservadas fora deste pacote |
+| E-mail de acesso | Autenticacao e recuperacao | Auth, fora de Cadastros | Valor controlado por Seguranca | Supabase Auth | E-mail confirmado / E-mail | Obrigatorio somente para conta humana | Nao duplicar em pessoa comercial |
+| Perfil e alcadas | Autorizar operacoes do sistema | Perfil + permissoes atomicas | Relacionamento de Seguranca | `user_profiles`, actions e overrides | IDs internos / rotulos PT-BR | Administracao exclusiva de Seguranca | Cadastros apenas encaminha; nao altera |
 
 ## UX-01C.4 - Materias-primas e insumos
 
@@ -137,7 +140,7 @@ Classificacao primaria: `Texto livre`, `Valor controlado`, `Relacionamento` ou
 | Contatos | Papel livre | Catalogo de papeis de contato | Cadastros | Migration + FK/backfill pendente |
 | Vinculos comerciais | Sem operacao auditada | RPCs temporais para pessoa e area | Cadastros | RPC + alçadas + logs correlacionados |
 | Duplicidades | Sem unificacao segura | Evento append-only de unificacao e redirecionamento | Cadastros | Regra nova; exige decisao funcional |
-| Materias-primas | Tipo livre | Catalogo de tipos de insumo | Cadastros/Estoque | Migration + FK; valores atuais ficam em revisao |
+| Materias-primas | Tipo livre | Catalogo de tipos de insumo | Cadastros/Estoque | Proposta detalhada em `UX01C_DECISAO_TIPOS_INSUMO.md`; migration + FK somente apos autorizacao; valores atuais ficam em revisao |
 | Produtos/embalagens | Apenas criacao | RPCs de edicao por eixo e desativacao | Cadastros/Producao/Estoque | Alçadas e auditoria por risco |
 | Composicao de embalagem | Sem fluxo operacional | RPCs de versao, componentes e ativacao | Cadastros/Estoque | Usa tabelas DEC-008 existentes |
 | Veiculos | Sem RPC/tela | CRUD auditado com soft-delete | Cadastros/Expedicao | Permission actions + RPCs |

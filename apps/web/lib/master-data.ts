@@ -73,6 +73,40 @@ export type MasterDataClientSeller = {
   vigenciaFim: string | null;
 };
 
+export type MasterDataPerson = {
+  id: number;
+  userProfileId: string | null;
+  codigoLegado: string | null;
+  nome: string;
+  tipoComercial: string | null;
+  status: string;
+  vendedorResponsavelId: number | null;
+  apelidos: string[];
+  grafiasIncorretas: string[];
+};
+
+export type MasterDataPersonRole = {
+  pessoaId: number;
+  papel: string;
+  vigenciaInicio: string | null;
+};
+
+export type MasterDataCommercialArea = {
+  id: number;
+  nome: string;
+  status: string;
+};
+
+export type MasterDataPersonArea = {
+  id: number;
+  pessoaId: number;
+  areaId: number;
+  papelArea: string;
+  status: string;
+  vigenciaInicio: string | null;
+  vigenciaFim: string | null;
+};
+
 export type MasterDataDashboard = {
   modules: MasterDataModule[];
   metrics: MasterDataMetric[];
@@ -81,6 +115,10 @@ export type MasterDataDashboard = {
   clientes: MasterDataClient[];
   propriedades: MasterDataProperty[];
   clienteVendedores: MasterDataClientSeller[];
+  pessoas: MasterDataPerson[];
+  pessoaPapeis: MasterDataPersonRole[];
+  areasComerciais: MasterDataCommercialArea[];
+  pessoaAreas: MasterDataPersonArea[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -175,7 +213,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [metrics, validationResult, lookups, clientData] = await Promise.all([
+    const [metrics, validationResult, lookups, clientData, peopleData] = await Promise.all([
       Promise.all(
         MASTER_DATA_MODULES.map(async (module) => {
           const { count, error } = await supabase.from(module.table).select("*", { count: "exact", head: true });
@@ -194,7 +232,8 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
         .order("created_at", { ascending: false })
         .limit(8),
       getMasterDataLookups(supabase),
-      getClientMasterData(supabase)
+      getClientMasterData(supabase),
+      getPeopleMasterData(supabase)
     ]);
 
     return {
@@ -205,12 +244,84 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       clientes: clientData.clientes,
       propriedades: clientData.propriedades,
       clienteVendedores: clientData.clienteVendedores,
+      pessoas: peopleData.pessoas,
+      pessoaPapeis: peopleData.pessoaPapeis,
+      areasComerciais: peopleData.areasComerciais,
+      pessoaAreas: peopleData.pessoaAreas,
       source: "supabase",
       error: validationResult.error?.message ?? null
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
   }
+}
+
+async function getPeopleMasterData(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+): Promise<Pick<MasterDataDashboard, "pessoas" | "pessoaPapeis" | "areasComerciais" | "pessoaAreas">> {
+  const [peopleResult, rolesResult, areasResult, membershipsResult] = await Promise.all([
+    supabase
+      .from("cad_pessoas_comerciais")
+      .select("id,user_profile_id,codigo_legado,nome,tipo_comercial,status,vendedor_responsavel_id,apelidos_json,grafias_incorretas_json")
+      .order("nome", { ascending: true })
+      .limit(250),
+    supabase
+      .from("cad_pessoas_comerciais_papeis_ativos")
+      .select("pessoa_id,papel,vigencia_inicio")
+      .order("pessoa_id", { ascending: true })
+      .limit(1000),
+    supabase
+      .from("cad_areas_comerciais")
+      .select("id,nome,status")
+      .order("nome", { ascending: true })
+      .limit(250),
+    supabase
+      .from("cad_pessoa_areas_comerciais")
+      .select("id,pessoa_id,area_id,papel_area,status,vigencia_inicio,vigencia_fim")
+      .order("vigencia_inicio", { ascending: false })
+      .limit(1000)
+  ]);
+
+  return {
+    pessoas: peopleResult.error
+      ? []
+      : (peopleResult.data ?? []).map((item) => ({
+          id: Number(item.id),
+          userProfileId: item.user_profile_id,
+          codigoLegado: item.codigo_legado,
+          nome: item.nome,
+          tipoComercial: item.tipo_comercial,
+          status: item.status,
+          vendedorResponsavelId: item.vendedor_responsavel_id === null ? null : Number(item.vendedor_responsavel_id),
+          apelidos: stringArray(item.apelidos_json),
+          grafiasIncorretas: stringArray(item.grafias_incorretas_json)
+        })),
+    pessoaPapeis: rolesResult.error
+      ? []
+      : (rolesResult.data ?? []).map((item) => ({
+          pessoaId: Number(item.pessoa_id),
+          papel: item.papel,
+          vigenciaInicio: item.vigencia_inicio
+        })),
+    areasComerciais: areasResult.error
+      ? []
+      : (areasResult.data ?? []).map((item) => ({
+          id: Number(item.id),
+          nome: item.nome,
+          status: item.status
+        })),
+    pessoaAreas: membershipsResult.error
+      ? []
+      : (membershipsResult.data ?? []).map((item) => ({
+          id: Number(item.id),
+          pessoaId: Number(item.pessoa_id),
+          areaId: Number(item.area_id),
+          papelArea: item.papel_area,
+          status: item.status,
+          vigenciaInicio: item.vigencia_inicio,
+          vigenciaFim: item.vigencia_fim
+        }))
+  };
 }
 
 async function getClientMasterData(
@@ -350,7 +461,15 @@ function emptyDashboard(source: MasterDataDashboard["source"], error: string | n
     clientes: [],
     propriedades: [],
     clienteVendedores: [],
+    pessoas: [],
+    pessoaPapeis: [],
+    areasComerciais: [],
+    pessoaAreas: [],
     source,
     error
   };
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }

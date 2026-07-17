@@ -7,9 +7,9 @@ Atualizado em: 2026-07-17
 - branch: `feature/0044-production-module-release`;
 - ultima entrega publicada: UX-01B - shell global autenticado no commit
   `52f3dca`;
-- entrega atual: UX-01C - macrociclo completo de Cadastros; a Onda 1 de
-  Clientes e propriedades foi homologada visualmente para o fluxo atual de
-  agricultor e esta fechada localmente sobre contratos existentes;
+- entrega atual: UX-01C - macrociclo completo de Cadastros; o pacote estrutural
+  de Tipos de insumo foi implementado e validado em ambiente descartavel, sem
+  classificacao automatica do legado;
 - ultima migration no staging: `0059_romaneio_logistics_operational_contract.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -21,17 +21,15 @@ Atualizado em: 2026-07-17
 
 ## Tarefa concluida mais recente
 
-UX-01C - Onda 1 - Clientes e propriedades:
+UX-01C.4 - Tipos de insumo e classificacao de materias-primas:
 
-- consulta, busca, criacao e edicao de clientes usam actions auditadas;
-- UF e situacao usam controles governados com rotulos em PT-BR;
-- propriedades e responsaveis sao lidos por relacionamentos existentes;
-- estados vazio, sucesso e indisponibilidade usam linguagem operacional;
-- desktop, notebook e mobile foram validados sem rolagem horizontal;
-- Luciano homologou o layout para o fluxo atual de agricultor;
-- revendas, lojas, distribuidores e filiais nao foram encaixados no formulario:
-  exigem classificacao e contratos proprios antes de uso operacional;
-- nenhuma migration, RPC, RLS, tabela ou regra de negocio foi alterada.
+- catalogo relacional, FK opcional, RLS e seis RPCs auditadas na migration 0063;
+- texto legado preservado e bloqueado para novas escritas operacionais;
+- nenhuma classificacao historica foi inferida;
+- fila de revisao explicita para materias-primas sem decisao humana;
+- tela PT-BR permite criar, editar, ativar, inativar e classificar por ID;
+- instalacao limpa, upgrade e smoke ocorreram somente em ambiente descartavel;
+- runtime local ativo e dados existentes permaneceram intactos.
 
 Entrega anterior:
 
@@ -48,11 +46,12 @@ UX-01C.1 - Central de Cadastros:
 
 ## Validacao desta tarefa
 
-- 11 testes dirigidos de UX-01C.1 e regressao UX-01B: aprovados;
+- smoke SQL 0063, instalacao limpa e upgrade: aprovados;
+- classificacao por inferencia: zero;
 - ESLint: aprovado;
 - TypeScript `--noEmit`: aprovado;
 - build Next.js de producao: aprovado;
-- `git diff --check`: aprovado;
+- teste estatico Python: pendente por ausencia de runtime local; pronto para CI;
 - Supabase e banco local nao foram parados, resetados, migrados ou alterados;
 - capturas de homologacao permaneceram fora do repositorio.
 
@@ -83,15 +82,13 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-UX-01C - Onda 2 - Pessoas e vinculos comerciais, somente com contratos
-existentes. O modelo de revendas e lojas permanece registrado como lacuna do
-dominio Clientes e nao sera inventado na interface.
+Continuar o UX-01C com Produtos, apresentacoes, embalagens e conversoes,
+inventariando contratos existentes antes de qualquer nova alteracao estrutural.
 
 ## Tarefa seguinte
 
-Depois da Onda 2, executar a Onda 3 - Materias-primas e cadastros tecnicos.
-As demais ondas do UX-01C seguem sem novo gate intermediario; UX-01D permanece
-proibido ate a homologacao final de Cadastros.
+Depois, concluir Veiculos, logistica, cadastros tecnicos e validacao consolidada.
+UX-01D permanece proibido ate a homologacao final de Cadastros.
 
 ## Sequencia vigente
 

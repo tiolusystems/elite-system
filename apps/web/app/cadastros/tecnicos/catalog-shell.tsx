@@ -1,14 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { getRuntimeStatus } from "@/lib/runtime";
-
-type CatalogRoute = "overview" | "units" | "materials" | "packages" | "products";
+type CatalogRoute = "overview" | "units" | "input-types" | "materials" | "packages" | "products";
 
 const CATALOG_LINKS: Array<{ key: CatalogRoute; href: string; label: string }> = [
   { key: "overview", href: "/cadastros/tecnicos", label: "Visao geral" },
   { key: "units", href: "/cadastros/unidades", label: "Unidades" },
-  { key: "materials", href: "/cadastros/materias-primas", label: "Materias-primas" },
+  { key: "input-types", href: "/cadastros/tipos-insumo", label: "Tipos de insumo" },
+  { key: "materials", href: "/cadastros/materias-primas", label: "Matérias-primas" },
   { key: "packages", href: "/cadastros/embalagens", label: "Embalagens" },
   { key: "products", href: "/cadastros/produtos", label: "Produtos PA/PI" }
 ];
@@ -23,36 +22,10 @@ type CatalogShellProps = {
   children: ReactNode;
 };
 
-export function CatalogShell({ active, title, description, source, error, actions, children }: CatalogShellProps) {
-  const runtime = getRuntimeStatus();
-
+export function CatalogShell({ active, title, description, source, actions, children }: CatalogShellProps) {
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Cadastros tecnicos</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <Link href="/modulos">Modulos</Link>
-          <Link href="/cadastros" aria-current="page">Cadastros</Link>
-          <Link href="/pedidos">Pedidos</Link>
-          <Link href="/producao">Producao</Link>
-          <Link href="/romaneios">Romaneio</Link>
-          <Link href="/relatorios">Relatorios</Link>
-          <Link href="/seguranca">Seguranca</Link>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
-      <section className="workspace technical-workspace">
-        <nav className="catalog-tabs" aria-label="Cadastros tecnicos">
+    <main className="workspace technical-workspace">
+        <nav className="catalog-tabs" aria-label="Cadastros técnicos">
           {CATALOG_LINKS.map((item) => (
             <Link key={item.key} href={item.href} aria-current={active === item.key ? "page" : undefined}>
               {item.label}
@@ -63,7 +36,7 @@ export function CatalogShell({ active, title, description, source, error, action
 
         <div className="toolbar technical-toolbar">
           <div>
-            <span className="eyebrow">Base industrial</span>
+            <span className="eyebrow">Cadastros técnicos</span>
             <h1>{title}</h1>
             <p className="muted">{description}</p>
           </div>
@@ -71,20 +44,19 @@ export function CatalogShell({ active, title, description, source, error, action
         </div>
 
         {source === "not_configured" ? (
-          <div className="notice-panel warning">
-            <strong>Banco nao configurado</strong>
-            <span>Os catalogos tecnicos ficam disponiveis quando o ambiente Supabase estiver ativo.</span>
+          <div className="notice-panel warning" role="alert">
+            <strong>Banco não configurado</strong>
+            <span>Os catálogos técnicos ficam disponíveis quando o ambiente Supabase estiver ativo.</span>
           </div>
         ) : null}
         {source === "error" ? (
-          <div className="notice-panel warning">
-            <strong>Falha ao carregar catalogos</strong>
-            <span>{error ?? "Nao foi possivel consultar o banco."}</span>
+          <div className="notice-panel warning" role="alert">
+            <strong>Não foi possível carregar os cadastros</strong>
+            <span>Tente novamente. Se o problema continuar, acione o administrador do sistema.</span>
           </div>
         ) : null}
 
         {children}
-      </section>
     </main>
   );
 }
@@ -97,6 +69,11 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   mp_stock_policy_updated: { kind: "ok", title: "Politica de estoque atualizada", detail: "O estoque minimo foi registrado." },
   mp_regulatory_updated: { kind: "ok", title: "Dados regulatorios atualizados", detail: "NCM, IBAMA e ADS foram auditados." },
   mp_deactivated: { kind: "ok", title: "Materia-prima desativada", detail: "O historico foi preservado." },
+  input_type_created: { kind: "ok", title: "Tipo de insumo criado", detail: "O registro foi salvo e auditado." },
+  input_type_updated: { kind: "ok", title: "Tipo de insumo atualizado", detail: "As alterações foram registradas no histórico." },
+  input_type_activated: { kind: "ok", title: "Tipo de insumo ativado", detail: "O tipo voltou a ficar disponível para novas classificações." },
+  input_type_deactivated: { kind: "ok", title: "Tipo de insumo inativado", detail: "Vínculos históricos foram preservados." },
+  material_input_type_saved: { kind: "ok", title: "Classificação atualizada", detail: "O tipo de insumo da matéria-prima foi registrado." },
   produto_created: { kind: "ok", title: "Produto salvo", detail: "O produto-base esta disponivel para formulas e embalagens." },
   embalagem_created: { kind: "ok", title: "Embalagem salva", detail: "A embalagem foi registrada no catalogo tecnico." },
   item_vendavel_created: { kind: "ok", title: "Item vendavel salvo", detail: "Produto e embalagem foram vinculados." },
@@ -114,6 +91,10 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   invalid_non_negative_number: { kind: "warning", title: "Valor invalido", detail: "Use zero ou um numero positivo." },
   invalid_ncm: { kind: "warning", title: "NCM invalido", detail: "O NCM deve ter oito digitos." },
   invalid_sku: { kind: "warning", title: "SKU invalido", detail: "O SKU nao pode conter espacos." },
+  invalid_input_type: { kind: "warning", title: "Tipo indisponível", detail: "Selecione um tipo de insumo ativo." },
+  invalid_value: { kind: "warning", title: "Valor inválido", detail: "Revise os campos informados." },
+  not_found: { kind: "warning", title: "Registro não encontrado", detail: "Atualize a página e tente novamente." },
+  operation_failed: { kind: "warning", title: "Operação não concluída", detail: "Não foi possível salvar. Tente novamente ou acione o administrador." },
   invalid_unit_conversion: { kind: "warning", title: "Conversao invalida", detail: "Origem e destino devem ser diferentes." },
   invalid_date_range: { kind: "warning", title: "Vigencia invalida", detail: "A data final nao pode ser anterior a inicial." }
 };

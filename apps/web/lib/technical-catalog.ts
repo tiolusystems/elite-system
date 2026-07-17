@@ -26,6 +26,10 @@ export type TechnicalMaterial = {
   baseUnit: string;
   status: string;
   type: string | null;
+  inputTypeId: number | null;
+  inputTypeName: string;
+  inputTypeStatus: string | null;
+  inputTypeReviewStatus: string;
   density: number | null;
   minimumStock: number | null;
   ncm: string | null;
@@ -33,6 +37,25 @@ export type TechnicalMaterial = {
   adsCode: string | null;
   source: string;
   updatedAt: string;
+};
+
+export type TechnicalInputType = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  status: string;
+  displayOrder: number;
+  updatedAt: string;
+};
+
+export type TechnicalInputTypeSummary = {
+  totalMaterials: number;
+  classified: number;
+  unclassified: number;
+  governedSource: number;
+  manualSource: number;
+  inferred: number;
 };
 
 export type TechnicalConversion = {
@@ -96,6 +119,8 @@ export type TechnicalCatalog = {
   units: TechnicalUnit[];
   nutrients: TechnicalNutrient[];
   materials: TechnicalMaterial[];
+  inputTypes: TechnicalInputType[];
+  inputTypeSummary: TechnicalInputTypeSummary;
   conversions: TechnicalConversion[];
   products: TechnicalProduct[];
   productGroups: TechnicalProductGroup[];
@@ -109,6 +134,15 @@ const EMPTY_CATALOG: Omit<TechnicalCatalog, "source" | "error"> = {
   units: [],
   nutrients: [],
   materials: [],
+  inputTypes: [],
+  inputTypeSummary: {
+    totalMaterials: 0,
+    classified: 0,
+    unclassified: 0,
+    governedSource: 0,
+    manualSource: 0,
+    inferred: 0
+  },
   conversions: [],
   products: [],
   productGroups: [],
@@ -124,7 +158,7 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [units, nutrients, materials, conversions, products, productGroups, packages, saleItems] = await Promise.all([
+    const [units, nutrients, materials, inputTypes, inputTypeSummary, conversions, products, productGroups, packages, saleItems] = await Promise.all([
       supabase
         .from("cad_unidades_medida")
         .select("id,codigo,nome,simbolo,dimensao,status,origem_dados")
@@ -138,10 +172,20 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
       supabase
         .from("cad_materias_primas")
         .select(
-          "id,codigo_legado,sku_corrigido,nome,unidade_base_estoque,status,tipo,densidade,estoque_minimo,ncm,ibama,codigo_ads,origem_dados,updated_at"
+          "id,codigo_legado,sku_corrigido,nome,unidade_base_estoque,status,tipo,tipo_insumo_id,tipo_insumo_review_status,densidade,estoque_minimo,ncm,ibama,codigo_ads,origem_dados,updated_at,cad_tipos_insumo(nome,status)"
         )
         .order("nome", { ascending: true })
         .limit(800),
+      supabase
+        .from("cad_tipos_insumo")
+        .select("id,codigo,nome,descricao,status,ordem_exibicao,updated_at")
+        .order("ordem_exibicao", { ascending: true })
+        .order("nome", { ascending: true })
+        .limit(300),
+      supabase
+        .from("cad_materias_primas_tipos_resumo")
+        .select("total_materias_primas,total_classificadas,total_sem_classificacao,classificadas_fonte_governada,classificadas_manual_governado,classificadas_por_inferencia")
+        .maybeSingle(),
       supabase
         .from("cad_conversoes_unidade_mp")
         .select(
@@ -175,7 +219,7 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         .limit(1000)
     ]);
 
-    const firstError = [units, nutrients, materials, conversions, products, productGroups, packages, saleItems].find(
+    const firstError = [units, nutrients, materials, inputTypes, inputTypeSummary, conversions, products, productGroups, packages, saleItems].find(
       (result) => result.error
     )?.error;
     if (firstError) {
@@ -217,6 +261,10 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         baseUnit: String(item.unidade_base_estoque),
         status: String(item.status),
         type: item.tipo ? String(item.tipo) : null,
+        inputTypeId: item.tipo_insumo_id === null ? null : Number(item.tipo_insumo_id),
+        inputTypeName: relationName(item.cad_tipos_insumo) ?? "Tipo de insumo não definido",
+        inputTypeStatus: relationStatus(item.cad_tipos_insumo),
+        inputTypeReviewStatus: String(item.tipo_insumo_review_status ?? "pending_review"),
         density: toNullableNumber(item.densidade),
         minimumStock: toNullableNumber(item.estoque_minimo),
         ncm: item.ncm ? String(item.ncm) : null,
@@ -225,6 +273,23 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         source: String(item.origem_dados ?? "sistema"),
         updatedAt: String(item.updated_at)
       })),
+      inputTypes: (inputTypes.data ?? []).map((item) => ({
+        id: Number(item.id),
+        code: String(item.codigo),
+        name: String(item.nome),
+        description: item.descricao ? String(item.descricao) : null,
+        status: String(item.status),
+        displayOrder: Number(item.ordem_exibicao),
+        updatedAt: String(item.updated_at)
+      })),
+      inputTypeSummary: {
+        totalMaterials: Number(inputTypeSummary.data?.total_materias_primas ?? 0),
+        classified: Number(inputTypeSummary.data?.total_classificadas ?? 0),
+        unclassified: Number(inputTypeSummary.data?.total_sem_classificacao ?? 0),
+        governedSource: Number(inputTypeSummary.data?.classificadas_fonte_governada ?? 0),
+        manualSource: Number(inputTypeSummary.data?.classificadas_manual_governado ?? 0),
+        inferred: Number(inputTypeSummary.data?.classificadas_por_inferencia ?? 0)
+      },
       conversions: (conversions.data ?? []).map((item) => ({
         id: Number(item.id),
         materialId: Number(item.materia_prima_id),
@@ -290,6 +355,20 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
       error: error instanceof Error ? error.message : "Erro desconhecido"
     };
   }
+}
+
+function relationName(value: unknown): string | null {
+  const relation = Array.isArray(value) ? value[0] : value;
+  if (!relation || typeof relation !== "object" || !("nome" in relation)) return null;
+  const name = (relation as { nome?: unknown }).nome;
+  return name ? String(name) : null;
+}
+
+function relationStatus(value: unknown): string | null {
+  const relation = Array.isArray(value) ? value[0] : value;
+  if (!relation || typeof relation !== "object" || !("status" in relation)) return null;
+  const status = (relation as { status?: unknown }).status;
+  return status ? String(status) : null;
 }
 
 function toNullableNumber(value: unknown): number | null {

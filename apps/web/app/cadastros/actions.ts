@@ -39,7 +39,7 @@ const ALLOWED_CADASTRO_RETURN_PATHS = new Set([
 export async function createClienteAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&modo=novo&result=not_configured#cadastro-cliente");
   }
 
   const nome = field(formData, "nome");
@@ -50,13 +50,13 @@ export async function createClienteAction(formData: FormData) {
   const apelidos = splitLines(optionalField(formData, "apelidos"));
 
   if (!nome || !cidade || !uf) {
-    redirect("/cadastros?result=missing_required#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&modo=novo&result=missing_required#cadastro-cliente");
   }
   if (uf.length !== 2) {
-    redirect("/cadastros?result=invalid_uf#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&modo=novo&result=invalid_uf#cadastro-cliente");
   }
   if (!ALLOWED_STATUS.has(status)) {
-    redirect("/cadastros?result=invalid_status#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&modo=novo&result=invalid_status#cadastro-cliente");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -75,17 +75,17 @@ export async function createClienteAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-cadastro`);
+    redirect(`/cadastros?grupo=clientes&modo=novo&result=${encodeURIComponent(mapSupabaseError(error.message))}#cadastro-cliente`);
   }
 
   revalidatePath("/cadastros");
-  redirect("/cadastros?result=cliente_created#novo-cadastro");
+  redirect("/cadastros?grupo=clientes&result=cliente_created");
 }
 
 export async function updateClienteAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&result=not_configured");
   }
 
   const clienteId = optionalInteger(formData, "cliente_id");
@@ -97,13 +97,13 @@ export async function updateClienteAction(formData: FormData) {
   const apelidos = splitLines(optionalField(formData, "apelidos"));
 
   if (!clienteId || !nome || !cidade || !uf || !motivo) {
-    redirect("/cadastros?result=missing_required#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&result=missing_required");
   }
   if (!Number.isInteger(clienteId) || clienteId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&result=invalid_positive_number");
   }
   if (uf.length !== 2) {
-    redirect("/cadastros?result=invalid_uf#novo-cadastro");
+    redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&result=invalid_uf#cadastro-cliente`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -119,27 +119,27 @@ export async function updateClienteAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-cadastro`);
+    redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#cadastro-cliente`);
   }
 
   revalidatePath("/cadastros");
-  redirect("/cadastros?result=cliente_updated#novo-cadastro");
+  redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&result=cliente_updated#cadastro-cliente`);
 }
 
 export async function deactivateClienteAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    redirect("/cadastros?result=not_configured#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&result=not_configured");
   }
 
   const clienteId = optionalInteger(formData, "cliente_id");
   const motivo = field(formData, "motivo");
 
   if (!clienteId || !motivo) {
-    redirect("/cadastros?result=missing_required#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&result=missing_required");
   }
   if (!Number.isInteger(clienteId) || clienteId <= 0) {
-    redirect("/cadastros?result=invalid_positive_number#novo-cadastro");
+    redirect("/cadastros?grupo=clientes&result=invalid_positive_number");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -149,11 +149,11 @@ export async function deactivateClienteAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/cadastros?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-cadastro`);
+    redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&result=${encodeURIComponent(mapSupabaseError(error.message))}`);
   }
 
   revalidatePath("/cadastros");
-  redirect("/cadastros?result=cliente_deactivated#novo-cadastro");
+  redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&result=cliente_deactivated`);
 }
 
 export async function createPessoaComercialAction(formData: FormData) {

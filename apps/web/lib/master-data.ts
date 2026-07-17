@@ -42,11 +42,45 @@ export type MasterDataLookups = {
   pessoasComerciais: LookupOption[];
 };
 
+export type MasterDataClient = {
+  id: number;
+  codigoLegado: string | null;
+  nome: string;
+  cidade: string;
+  uf: string;
+  status: string;
+  apelidos: string[];
+  valorTotalCompras: number | null;
+};
+
+export type MasterDataProperty = {
+  id: number;
+  clienteId: number;
+  nome: string;
+  cnpj: string | null;
+  cidade: string | null;
+  uf: string | null;
+  status: string;
+};
+
+export type MasterDataClientSeller = {
+  id: number;
+  clienteId: number;
+  pessoaId: number;
+  propriedadeId: number | null;
+  status: string;
+  vigenciaInicio: string | null;
+  vigenciaFim: string | null;
+};
+
 export type MasterDataDashboard = {
   modules: MasterDataModule[];
   metrics: MasterDataMetric[];
   validationIssues: ValidationIssue[];
   lookups: MasterDataLookups;
+  clientes: MasterDataClient[];
+  propriedades: MasterDataProperty[];
+  clienteVendedores: MasterDataClientSeller[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -141,7 +175,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [metrics, validationResult, lookups] = await Promise.all([
+    const [metrics, validationResult, lookups, clientData] = await Promise.all([
       Promise.all(
         MASTER_DATA_MODULES.map(async (module) => {
           const { count, error } = await supabase.from(module.table).select("*", { count: "exact", head: true });
@@ -159,7 +193,8 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(8),
-      getMasterDataLookups(supabase)
+      getMasterDataLookups(supabase),
+      getClientMasterData(supabase)
     ]);
 
     return {
@@ -167,12 +202,76 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       metrics,
       validationIssues: validationResult.error ? [] : ((validationResult.data ?? []) as ValidationIssue[]),
       lookups,
+      clientes: clientData.clientes,
+      propriedades: clientData.propriedades,
+      clienteVendedores: clientData.clienteVendedores,
       source: "supabase",
       error: validationResult.error?.message ?? null
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
   }
+}
+
+async function getClientMasterData(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+): Promise<Pick<MasterDataDashboard, "clientes" | "propriedades" | "clienteVendedores">> {
+  const [clientsResult, propertiesResult, sellersResult] = await Promise.all([
+    supabase
+      .from("cad_clientes")
+      .select("id,codigo_legado,nome,cidade,uf,status,apelidos_json,valor_total_compras")
+      .order("nome", { ascending: true })
+      .limit(250),
+    supabase
+      .from("cad_cliente_propriedades")
+      .select("id,cliente_id,nome,cnpj,cidade,uf,status")
+      .order("nome", { ascending: true })
+      .limit(500),
+    supabase
+      .from("cad_cliente_vendedores")
+      .select("id,cliente_id,pessoa_id,propriedade_id,status,vigencia_inicio,vigencia_fim")
+      .order("vigencia_inicio", { ascending: false })
+      .limit(500)
+  ]);
+
+  return {
+    clientes: clientsResult.error
+      ? []
+      : (clientsResult.data ?? []).map((item) => ({
+          id: Number(item.id),
+          codigoLegado: item.codigo_legado,
+          nome: item.nome,
+          cidade: item.cidade,
+          uf: item.uf,
+          status: item.status,
+          apelidos: Array.isArray(item.apelidos_json)
+            ? item.apelidos_json.filter((value): value is string => typeof value === "string")
+            : [],
+          valorTotalCompras: item.valor_total_compras === null ? null : Number(item.valor_total_compras)
+        })),
+    propriedades: propertiesResult.error
+      ? []
+      : (propertiesResult.data ?? []).map((item) => ({
+          id: Number(item.id),
+          clienteId: Number(item.cliente_id),
+          nome: item.nome,
+          cnpj: item.cnpj,
+          cidade: item.cidade,
+          uf: item.uf,
+          status: item.status
+        })),
+    clienteVendedores: sellersResult.error
+      ? []
+      : (sellersResult.data ?? []).map((item) => ({
+          id: Number(item.id),
+          clienteId: Number(item.cliente_id),
+          pessoaId: Number(item.pessoa_id),
+          propriedadeId: item.propriedade_id === null ? null : Number(item.propriedade_id),
+          status: item.status,
+          vigenciaInicio: item.vigencia_inicio,
+          vigenciaFim: item.vigencia_fim
+        }))
+  };
 }
 
 async function getMasterDataLookups(
@@ -248,6 +347,9 @@ function emptyDashboard(source: MasterDataDashboard["source"], error: string | n
     })),
     validationIssues: [],
     lookups: EMPTY_LOOKUPS,
+    clientes: [],
+    propriedades: [],
+    clienteVendedores: [],
     source,
     error
   };

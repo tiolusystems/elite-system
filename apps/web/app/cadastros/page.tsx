@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import {
-  createClienteAction,
   createConversaoUnidadeMpAction,
   createEmbalagemAction,
   createMateriaPrimaAction,
@@ -9,6 +8,7 @@ import {
   createProdutoBaseAction,
   createProdutoEmbalagemAction
 } from "@/app/cadastros/actions";
+import { ClientesSection } from "@/app/cadastros/clientes-section";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -51,6 +51,8 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
   const requestedGroup = singleValue(params.grupo);
   const activeGroup = CADASTRO_GROUPS.find((group) => group.key === requestedGroup) ?? null;
   const query = (singleValue(params.busca) ?? "").trim().toLocaleLowerCase("pt-BR");
+  const selectedClientId = positiveInteger(singleValue(params.cliente));
+  const newClientMode = singleValue(params.modo) === "novo";
   const visibleGroups = query
     ? CADASTRO_GROUPS.filter((group) => `${group.title} ${group.description}`.toLocaleLowerCase("pt-BR").includes(query))
     : CADASTRO_GROUPS;
@@ -77,7 +79,6 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           <a href="/seguranca">Seguranca</a>
           <a href="/login">Login</a>
           <a href="#validacao">Validacao</a>
-          <a href="#credito">Credito</a>
         </nav>
       </header>
 
@@ -101,7 +102,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             {activeGroup ? (
               <a className="primary-button" href={actionHref(activeGroup.key)}>{activeGroup.action}</a>
             ) : (
-              <Link className="primary-button" href="/cadastros?grupo=clientes#novo-cadastro">Novo cliente</Link>
+              <Link className="primary-button" href="/cadastros?grupo=clientes&modo=novo#cadastro-cliente">Novo cliente</Link>
             )}
           </div>
         </div>
@@ -124,8 +125,8 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
 
         {dashboard.error ? (
           <section className="notice-panel" role="status">
-            <strong>Conexao pendente</strong>
-            <span>{dashboard.error}</span>
+            <strong>Cadastros temporariamente indisponíveis</strong>
+            <span>Não foi possível carregar todos os dados. Tente novamente ou solicite análise ao administrador.</span>
           </section>
         ) : null}
 
@@ -189,56 +190,18 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           </section>
         ) : null}
 
-        {activeGroup?.key === "clientes" ? <section className="panel form-panel cadastros-focused-panel" id="novo-cadastro" aria-labelledby="novo-title">
-          <div className="panel-header">
-            <h2 id="novo-title">Novo cliente</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createClienteAction}>
-            <div className="form-grid">
-              <label>
-                Tipo
-                <select name="tipo" defaultValue="cliente">
-                  <option value="cliente">Cliente</option>
-                </select>
-              </label>
-              <label>
-                Nome principal
-                <input name="nome" placeholder="Nome do cliente" required />
-              </label>
-              <label>
-                Codigo legado
-                <input name="codigo_legado" placeholder="Codigo do Excel, se houver" />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                Cidade
-                <input name="cidade" placeholder="Cidade" required />
-              </label>
-              <label>
-                UF
-                <input name="uf" placeholder="SP" required maxLength={2} />
-              </label>
-              <label className="wide-field">
-                Apelidos e grafias
-                <input name="apelidos" placeholder="Separar por virgula, ponto e virgula ou linha" />
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Salvar chama funcao PostgreSQL auditavel e registra `action_logs`.</span>
-              <button className="primary-button" type="submit">
-                Salvar cliente
-              </button>
-            </div>
-          </form>
-        </section> : null}
+        {activeGroup?.key === "clientes" ? (
+          <ClientesSection
+            busca={singleValue(params.busca) ?? ""}
+            clienteSelecionadoId={selectedClientId}
+            clientes={dashboard.clientes}
+            gravacaoDisponivel={runtime.supabaseConfigured}
+            modoNovo={newClientMode}
+            pessoas={lookups.pessoasComerciais}
+            propriedades={dashboard.propriedades}
+            vinculos={dashboard.clienteVendedores}
+          />
+        ) : null}
 
         {activeGroup?.key === "pessoas" ? <section className="panel form-panel cadastros-focused-panel" aria-labelledby="nova-pessoa-title">
           <div className="panel-header">
@@ -603,31 +566,6 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           </form>
         </section> : null}
 
-        {activeGroup?.key === "clientes" ? <section className="panel cadastros-focused-panel" id="credito" aria-labelledby="credito-title">
-          <div className="panel-header">
-            <h2 id="credito-title">Credito e alcadas</h2>
-            <span className="pill">controle inicial</span>
-          </div>
-          <dl className="status-list">
-            <div className="status-row">
-              <dt>Vendedor</dt>
-              <dd>Cria rascunho, ve limite autorizado e nao aprova bloqueio.</dd>
-            </div>
-            <div className="status-row">
-              <dt>Gerente</dt>
-              <dd>Aprova excecoes conforme alcada e acompanha equipe/regiao.</dd>
-            </div>
-            <div className="status-row">
-              <dt>Financeiro</dt>
-              <dd>Define limite manual, bloqueio, reducao e motivo auditado.</dd>
-            </div>
-            <div className="status-row">
-              <dt>Auditoria</dt>
-              <dd>Compara snapshot de credito, pedido, recebimento, comissao e devolucao.</dd>
-            </div>
-          </dl>
-        </section> : null}
-
         {activeGroup?.key === "tecnicos" ? (
           <section className="cadastros-destination-grid" aria-label="Catalogos tecnicos disponiveis">
             <Link href="/cadastros/unidades"><strong>Unidades e conversoes</strong><span>Padroes de medida usados em XML, estoque e formulas.</span></Link>
@@ -657,7 +595,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
 
 function actionHref(group: CadastroGroupKey): string {
   const hrefs: Record<CadastroGroupKey, string> = {
-    clientes: "#novo-cadastro",
+    clientes: "/cadastros?grupo=clientes&modo=novo#cadastro-cliente",
     pessoas: "#nova-pessoa",
     "materias-primas": "#nova-mp",
     produtos: "#novo-produto",
@@ -701,6 +639,12 @@ function singleValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function positiveInteger(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {
   if (!result) {
     return null;
@@ -708,18 +652,18 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
   const messages: Record<string, { kind: "ok" | "warning"; title: string; detail: string }> = {
     cliente_created: {
       kind: "ok",
-      title: "Cliente salvo",
-      detail: "Cadastro criado via funcao auditavel. A fila e as contagens serao atualizadas pelo Supabase."
+      title: "Cliente cadastrado",
+      detail: "O cadastro foi criado e já está disponível para consulta."
     },
     cliente_updated: {
       kind: "ok",
       title: "Cliente atualizado",
-      detail: "Cadastro editado via funcao auditavel com before/after registrado em action_logs."
+      detail: "As alterações foram salvas e o histórico da operação foi preservado."
     },
     cliente_deactivated: {
       kind: "ok",
       title: "Cliente desativado",
-      detail: "Cadastro preservado como historico e marcado como inactive por funcao auditavel."
+      detail: "O cadastro foi preservado para consulta e não poderá ser usado em novas operações."
     },
     pessoa_created: {
       kind: "ok",
@@ -803,8 +747,8 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     },
     invalid_status: {
       kind: "warning",
-      title: "Status invalido",
-      detail: "Use active, pending_review ou inactive."
+      title: "Situação inválida",
+      detail: "Escolha uma das situações disponíveis no cadastro."
     },
     invalid_uf: {
       kind: "warning",
@@ -919,7 +863,7 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     save_failed: {
       kind: "warning",
       title: "Falha ao salvar",
-      detail: "O cadastro nao foi gravado. Consulte logs do Supabase para o detalhe tecnico."
+      detail: "O cadastro não foi gravado. Tente novamente ou solicite análise ao administrador."
     }
   };
   return messages[result] ?? messages.save_failed;

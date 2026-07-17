@@ -192,6 +192,9 @@ Uma tela de Cadastros somente pode ser homologada quando:
 
 ## Aplicacao imediata
 
-O primeiro uso desta governanca sera no UX-01C.2 - Clientes e propriedades.
-O inventario de campos dessa tela sera criado no inicio da etapa, sem antecipar
-os campos de Pessoas, Materias-primas, Produtos, Embalagens ou demais modulos.
+O primeiro uso desta governanca foi ampliado por autorizacao para o macrociclo
+UX-01C completo. O inventario consolidado vigente esta em
+`docs/UX01C_INVENTARIO_CONSOLIDADO.md` e abrange somente os grupos de
+Cadastros. A implementacao permanece bloqueada no gate estrutural registrado
+nesse documento; nenhum catalogo, relacionamento ou regra ausente pode ser
+inventado pela interface.

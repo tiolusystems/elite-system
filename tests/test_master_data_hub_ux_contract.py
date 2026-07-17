@@ -6,12 +6,13 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "apps" / "web" / "app" / "cadastros" / "page.tsx"
+CLIENTS = ROOT / "apps" / "web" / "app" / "cadastros" / "clientes-section.tsx"
 CSS = ROOT / "apps" / "web" / "app" / "globals.css"
 
 
 class MasterDataHubUxContractTests(unittest.TestCase):
     def test_hub_exposes_the_eight_approved_groups(self) -> None:
-        text = PAGE.read_text(encoding="utf-8")
+        text = PAGE.read_text(encoding="utf-8") + CLIENTS.read_text(encoding="utf-8")
         for title in (
             "Clientes e propriedades",
             "Pessoas e vinculos comerciais",
@@ -25,13 +26,13 @@ class MasterDataHubUxContractTests(unittest.TestCase):
             self.assertIn(title, text)
 
     def test_hub_uses_governed_url_state_and_keeps_existing_actions(self) -> None:
-        text = PAGE.read_text(encoding="utf-8")
+        text = PAGE.read_text(encoding="utf-8") + CLIENTS.read_text(encoding="utf-8")
         self.assertIn("params.grupo", text)
         self.assertIn("params.busca", text)
         self.assertIn('action="/cadastros"', text)
         self.assertIn("activeGroup?.key", text)
+        self.assertIn("createClienteAction", text)
         for action in (
-            "createClienteAction",
             "createPessoaComercialAction",
             "createMateriaPrimaAction",
             "createProdutoBaseAction",

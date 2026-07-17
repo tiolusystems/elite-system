@@ -1,14 +1,15 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-16
+Atualizado em: 2026-07-17
 
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
 - ultima entrega publicada: UX-01B - shell global autenticado no commit
   `52f3dca`;
-- entrega atual: UX-01C.1 - Central de Cadastros homologada visualmente,
-  validada tecnicamente e ainda nao publicada;
+- entrega atual: UX-01C - macrociclo completo de Cadastros; a Onda 1 de
+  Clientes e propriedades foi homologada visualmente para o fluxo atual de
+  agricultor e esta fechada localmente sobre contratos existentes;
 - ultima migration no staging: `0059_romaneio_logistics_operational_contract.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -19,6 +20,20 @@ Atualizado em: 2026-07-16
 - GitHub: codigo e documentacao somente; push depende de autorizacao.
 
 ## Tarefa concluida mais recente
+
+UX-01C - Onda 1 - Clientes e propriedades:
+
+- consulta, busca, criacao e edicao de clientes usam actions auditadas;
+- UF e situacao usam controles governados com rotulos em PT-BR;
+- propriedades e responsaveis sao lidos por relacionamentos existentes;
+- estados vazio, sucesso e indisponibilidade usam linguagem operacional;
+- desktop, notebook e mobile foram validados sem rolagem horizontal;
+- Luciano homologou o layout para o fluxo atual de agricultor;
+- revendas, lojas, distribuidores e filiais nao foram encaixados no formulario:
+  exigem classificacao e contratos proprios antes de uso operacional;
+- nenhuma migration, RPC, RLS, tabela ou regra de negocio foi alterada.
+
+Entrega anterior:
 
 UX-01C.1 - Central de Cadastros:
 
@@ -68,17 +83,23 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-UX-01C.2 - Clientes e propriedades: revisar e organizar a experiencia completa
-de identidade do cliente, propriedades com CNPJ proprio, enderecos, contatos,
-vendedores vinculados, duplicidades e unificacao. Antes do codigo, aplicar o
-gate de `docs/UX_DATA_GOVERNANCE_PTBR.md` e inventariar somente os campos dessa
-tela. Nao iniciada.
+UX-01C - Onda 2 - Pessoas e vinculos comerciais, somente com contratos
+existentes. O modelo de revendas e lojas permanece registrado como lacuna do
+dominio Clientes e nao sera inventado na interface.
+
+## Tarefa seguinte
+
+Depois da Onda 2, executar a Onda 3 - Materias-primas e cadastros tecnicos.
+As demais ondas do UX-01C seguem sem novo gate intermediario; UX-01D permanece
+proibido ate a homologacao final de Cadastros.
 
 ## Sequencia vigente
 
-Concluir UX-01C.2 com inventario de campos, implementacao, testes, capturas e
-homologacao explicita. As demais telas de UX-01C e os blocos UX-01D a UX-01H
-permanecem posteriores e nao devem ser iniciados antecipadamente.
+Concluir o UX-01C como um unico macrociclo, sem gates intermediarios entre
+Clientes, Pessoas, Materias-primas, Produtos, Embalagens, Logistica, Tecnicos e
+Validacao. Depois da autorizacao estrutural: migrations proporcionais por
+ownership, implementacao integrada, testes dirigidos e gate visual conjunto.
+UX-01D a UX-01H permanecem posteriores e nao devem ser iniciados.
 
 ## Tarefas temporariamente adiadas
 

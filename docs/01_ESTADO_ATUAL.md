@@ -1,14 +1,14 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-15
+Atualizado em: 2026-07-16
 
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- ultima entrega publicada: Bloco 6 de Romaneio/Expedicao no commit `c54c328`
-  e no staging;
-- entrega atual: correcao 0060 de integridade quantitativa do Romaneio validada
-  localmente e ainda nao publicada;
+- ultima entrega publicada: UX-01B - shell global autenticado no commit
+  `52f3dca`;
+- entrega atual: UX-01C.1 - Central de Cadastros homologada visualmente,
+  validada tecnicamente e ainda nao publicada;
 - ultima migration no staging: `0059_romaneio_logistics_operational_contract.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -20,36 +20,26 @@ Atualizado em: 2026-07-15
 
 ## Tarefa concluida mais recente
 
-Correcao 0060 - integridade quantitativa do Romaneio:
+UX-01C.1 - Central de Cadastros:
 
-- o staging revelou que a view descontava somente quantidade confirmada e
-  oferecia novamente quantidades ja comprometidas em rascunho/separacao;
-- nenhum excesso estava persistido no cenario observado, mas a interface
-  apresentava capacidade incorreta e induzia uma operacao invalida;
-- a view agora separa pendencia de atendimento, quantidade comprometida e
-  saldo livre para novo romaneio;
-- trigger relacional com lock no item do pedido impede excesso inclusive fora
-  da RPC;
-- criacao e inclusao de item negam sem alçada antes de ler dados, usam o saldo
-  livre e registram auditoria padronizada;
-- a RPC textual antiga de separacao foi fechada; lote PA e reservado apenas
-  pelo contrato relacional de Estoque;
-- `PUBLIC` e `anon` perderam execucao nas RPCs operacionais do Romaneio;
-- a tela oferece para nova separacao apenas itens com saldo livre positivo;
-- nenhum dado operacional ou workbook foi adicionado ao Git.
+- `/cadastros` organiza os dados mestres em oito grupos funcionais;
+- busca, grupo ativo, retorno a visao geral e acao contextual usam a mesma rota;
+- somente o conteudo do grupo selecionado permanece visivel;
+- os formularios existentes preservam as Server Actions e contratos auditados;
+- os estados da central usam linguagem operacional;
+- responsividade validada nas resolucoes previstas, sem rolagem horizontal;
+- nenhuma migration, RPC, RLS, tabela ou regra de negocio foi alterada;
+- nenhum dado operacional, workbook ou captura foi adicionado ao Git.
 
 ## Validacao desta tarefa
 
-- 14 testes direcionados dos contratos de Romaneio: aprovados;
-- migrations `0001` a `0060` instaladas do zero no projeto separado
-  `elite-validation-0060`;
-- smoke quantitativo: `PG_VALIDATE_0060_WITH_SMOKE_OK`;
-- regressao 0059: `PG_VALIDATE_0059_WITH_SMOKE_OK`;
-- zero grant sweep: `66/66` negadas;
-- lint PostgreSQL: nenhum erro de schema;
-- ESLint, TypeScript e build Next.js: aprovados;
-- runtime local ativo `elite-system` nao foi resetado, migrado ou alterado;
-- migration 0060, commit, push e staging: pendentes de fechamento/publicacao.
+- 11 testes dirigidos de UX-01C.1 e regressao UX-01B: aprovados;
+- ESLint: aprovado;
+- TypeScript `--noEmit`: aprovado;
+- build Next.js de producao: aprovado;
+- `git diff --check`: aprovado;
+- Supabase e banco local nao foram parados, resetados, migrados ou alterados;
+- capturas de homologacao permaneceram fora do repositorio.
 
 ## Estado funcional resumido
 
@@ -78,9 +68,9 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Revisar o diff, criar o commit unico da 0060 e, mediante autorizacao, publicar
-branch, migration e deploy no staging. Repetir visualmente o cenario de saldo
-livre, excesso negado e cancelamento liberando capacidade.
+UX-01C.2 - Clientes e propriedades: revisar e organizar a experiencia completa
+de identidade do cliente, propriedades com CNPJ proprio, enderecos, contatos,
+vendedores vinculados, duplicidades e unificacao. Nao iniciada.
 
 ## Tarefa seguinte de produto
 

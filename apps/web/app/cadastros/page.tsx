@@ -14,6 +14,32 @@ import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
+type CadastroGroupKey =
+  | "clientes"
+  | "pessoas"
+  | "materias-primas"
+  | "produtos"
+  | "embalagens"
+  | "logistica"
+  | "tecnicos"
+  | "validacao";
+
+const CADASTRO_GROUPS: Array<{
+  key: CadastroGroupKey;
+  title: string;
+  description: string;
+  action: string;
+}> = [
+  { key: "clientes", title: "Clientes e propriedades", description: "Identidade, fazendas, enderecos, contatos e credito.", action: "Novo cliente" },
+  { key: "pessoas", title: "Pessoas e vinculos comerciais", description: "Vendedores, agentes, gerentes, tecnicos e papeis.", action: "Nova pessoa" },
+  { key: "materias-primas", title: "Materias-primas e insumos", description: "SKU, unidade, densidade, estoque e dados regulatorios.", action: "Nova materia-prima" },
+  { key: "produtos", title: "Produtos e apresentacoes", description: "Produto-base, validade e combinacao produto + embalagem.", action: "Novo produto" },
+  { key: "embalagens", title: "Embalagens e conversoes", description: "Volumes, insumos de embalagem e conversoes de unidade.", action: "Nova embalagem" },
+  { key: "logistica", title: "Veiculos e logistica", description: "Cadastros de apoio para entrega, carga e expedicao.", action: "Ver estrutura" },
+  { key: "tecnicos", title: "Cadastros tecnicos", description: "Unidades, nutrientes, garantias e catalogos industriais.", action: "Abrir catalogos" },
+  { key: "validacao", title: "Validacao e pendencias", description: "Duplicidades, revisoes e cadastros incompletos.", action: "Abrir fila" }
+];
+
 export default async function CadastrosPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
@@ -22,6 +48,12 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
   const pendingCount = dashboard.validationIssues.length;
   const result = singleValue(params.result);
   const formMessage = messageForResult(result);
+  const requestedGroup = singleValue(params.grupo);
+  const activeGroup = CADASTRO_GROUPS.find((group) => group.key === requestedGroup) ?? null;
+  const query = (singleValue(params.busca) ?? "").trim().toLocaleLowerCase("pt-BR");
+  const visibleGroups = query
+    ? CADASTRO_GROUPS.filter((group) => `${group.title} ${group.description}`.toLocaleLowerCase("pt-BR").includes(query))
+    : CADASTRO_GROUPS;
 
   return (
     <main className="app-shell">
@@ -56,44 +88,38 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
       </aside>
 
       <section className="workspace">
-        <div className="toolbar">
+        <div className="cadastros-heading">
           <div>
-            <h1>Cadastros mestres</h1>
+            <span className="eyebrow">Dados mestres</span>
+            <h1>{activeGroup?.title ?? "Cadastros"}</h1>
             <p className="muted">
-              Operacao inicial para revisar, cadastrar e auditar clientes, pessoas comerciais, MP, produtos,
-              embalagens, itens vendaveis, conversoes e credito.
+              {activeGroup?.description ?? "Encontre, revise e mantenha os dados que sustentam toda a operacao Elite."}
             </p>
           </div>
-          <div className="toolbar-actions" aria-label="Acoes de cadastro">
-            <Link className="primary-button" href="/cadastros/tecnicos">
-              Cadastros tecnicos
-            </Link>
-            <a className="secondary-button" href="#validacao">
-              Fila
-            </a>
-            <a className="secondary-button" href="#novo-cadastro">
-              Novo cadastro
-            </a>
+          <div className="cadastros-heading-actions">
+            {activeGroup ? <Link className="secondary-button" href="/cadastros">Visao geral</Link> : null}
+            {activeGroup ? (
+              <a className="primary-button" href={actionHref(activeGroup.key)}>{activeGroup.action}</a>
+            ) : (
+              <Link className="primary-button" href="/cadastros?grupo=clientes#novo-cadastro">Novo cliente</Link>
+            )}
           </div>
         </div>
 
-        <section className="summary-grid" aria-label="Resumo dos cadastros">
-          <div className="summary-card">
-            <span>Modulos prontos</span>
-            <strong>{dashboard.modules.length}</strong>
+        <form className="cadastros-search" action="/cadastros" method="get" role="search">
+          {activeGroup ? <input type="hidden" name="grupo" value={activeGroup.key} /> : null}
+          <label htmlFor="cadastros-search-input">Buscar nos cadastros</label>
+          <div>
+            <input id="cadastros-search-input" name="busca" defaultValue={singleValue(params.busca)} placeholder="Cliente, produto, materia-prima ou area" />
+            <button className="secondary-button" type="submit">Buscar</button>
+            {query ? <Link className="text-button" href={activeGroup ? `/cadastros?grupo=${activeGroup.key}` : "/cadastros"}>Limpar</Link> : null}
           </div>
-          <div className="summary-card">
-            <span>Alertas pendentes</span>
-            <strong>{pendingCount}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Fonte</span>
-            <strong>{dashboard.source === "supabase" ? "Supabase" : "Aguardando ambiente"}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Alcadas</span>
-            <strong>Autonomia inicial</strong>
-          </div>
+        </form>
+
+        <section className="cadastros-context" aria-label="Situacao dos cadastros">
+          <div><strong>{dashboard.modules.length}</strong><span>cadastros monitorados</span></div>
+          <div className={pendingCount > 0 ? "attention" : ""}><strong>{pendingCount}</strong><span>pendencias relevantes</span></div>
+          <div><strong>{dashboard.source === "supabase" ? "Conectado" : "Indisponivel"}</strong><span>estado da consulta</span></div>
         </section>
 
         {dashboard.error ? (
@@ -110,40 +136,31 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           </section>
         ) : null}
 
-        <section className="two-column">
-          <section className="panel" aria-labelledby="modulos-title">
-            <div className="panel-header">
-              <h2 id="modulos-title">Modulos de cadastro</h2>
-              <span className="pill">cad_*</span>
-            </div>
-            <div className="module-list">
-              {dashboard.modules.map((module) => {
-                const metric = dashboard.metrics.find((item) => item.moduleKey === module.key);
-                return (
-                  <article className="module-card" key={module.key}>
-                    <div className="module-card-main">
-                      <h3>{module.title}</h3>
-                      <span>{module.table}</span>
-                    </div>
-                    <div className="module-card-meta">
-                      <span>{module.owner}</span>
-                      <strong>{metric?.count ?? "sem conexao"}</strong>
-                    </div>
-                    <p>{module.audit}</p>
-                    <div className="tag-row" aria-label={`Campos obrigatorios de ${module.title}`}>
-                      {module.requiredFields.map((field) => (
-                        <span className="tag" key={field}>
-                          {field}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+        {!activeGroup ? (
+          <section className="cadastros-group-grid" aria-label="Areas de cadastro">
+            {visibleGroups.map((group) => {
+              const groupCount = countForGroup(group.key, dashboard.metrics);
+              return (
+                <Link className="cadastros-group-card" href={`/cadastros?grupo=${group.key}`} key={group.key}>
+                  <span className="cadastros-group-icon" aria-hidden="true">{groupInitials(group.key)}</span>
+                  <span className="cadastros-group-copy"><strong>{group.title}</strong><small>{group.description}</small></span>
+                  <span className="cadastros-group-meta">{group.key === "validacao" ? `${pendingCount} pendente(s)` : groupCount}</span>
+                </Link>
+              );
+            })}
+            {visibleGroups.length === 0 ? (
+              <div className="shell-state shell-state-empty cadastros-no-results">
+                <span className="shell-state-label">Sem resultados</span>
+                <h2>Nenhuma area encontrada</h2>
+                <p>Revise a busca ou limpe o filtro para ver todos os grupos.</p>
+                <div className="shell-state-actions"><Link className="secondary-button" href="/cadastros">Limpar busca</Link></div>
+              </div>
+            ) : null}
           </section>
+        ) : null}
 
-          <section className="panel" id="validacao" aria-labelledby="validacao-title">
+        {activeGroup?.key === "validacao" ? (
+          <section className="panel cadastros-focused-panel" id="validacao" aria-labelledby="validacao-title">
             <div className="panel-header">
               <h2 id="validacao-title">Fila de validacao</h2>
               <span className="pill">{pendingCount} pendente(s)</span>
@@ -165,15 +182,14 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               <div className="empty-state">
                 <strong>Nenhum alerta carregado</strong>
                 <span>
-                  Quando Supabase estiver configurado, esta lista mostrara duplicidades, SKU de MP para revisar e
-                  cadastros pendentes.
+                  Nao ha duplicidades, revisoes de SKU ou cadastros incompletos aguardando tratamento.
                 </span>
               </div>
             )}
           </section>
-        </section>
+        ) : null}
 
-        <section className="panel form-panel" id="novo-cadastro" aria-labelledby="novo-title">
+        {activeGroup?.key === "clientes" ? <section className="panel form-panel cadastros-focused-panel" id="novo-cadastro" aria-labelledby="novo-title">
           <div className="panel-header">
             <h2 id="novo-title">Novo cliente</h2>
             <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
@@ -222,9 +238,9 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               </button>
             </div>
           </form>
-        </section>
+        </section> : null}
 
-        <section className="panel form-panel" aria-labelledby="nova-pessoa-title">
+        {activeGroup?.key === "pessoas" ? <section className="panel form-panel cadastros-focused-panel" aria-labelledby="nova-pessoa-title">
           <div className="panel-header">
             <h2 id="nova-pessoa-title">Nova pessoa comercial</h2>
             <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
@@ -312,9 +328,9 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               </button>
             </div>
           </form>
-        </section>
+        </section> : null}
 
-        <section className="panel form-panel" id="nova-mp" aria-labelledby="nova-mp-title">
+        {activeGroup?.key === "materias-primas" ? <section className="panel form-panel cadastros-focused-panel" id="nova-mp" aria-labelledby="nova-mp-title">
           <div className="panel-header">
             <h2 id="nova-mp-title">Nova materia-prima</h2>
             <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
@@ -377,9 +393,9 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               </button>
             </div>
           </form>
-        </section>
+        </section> : null}
 
-        <section className="panel form-panel" id="novo-produto" aria-labelledby="novo-produto-title">
+        {activeGroup?.key === "produtos" ? <section className="panel form-panel cadastros-focused-panel" id="novo-produto" aria-labelledby="novo-produto-title">
           <div className="panel-header">
             <h2 id="novo-produto-title">Novo produto-base</h2>
             <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
@@ -438,9 +454,9 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               </button>
             </div>
           </form>
-        </section>
+        </section> : null}
 
-        <section className="panel form-panel" id="nova-embalagem" aria-labelledby="nova-embalagem-title">
+        {activeGroup?.key === "embalagens" ? <section className="panel form-panel cadastros-focused-panel" id="nova-embalagem" aria-labelledby="nova-embalagem-title">
           <div className="panel-header">
             <h2 id="nova-embalagem-title">Nova embalagem</h2>
             <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
@@ -492,9 +508,9 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               </button>
             </div>
           </form>
-        </section>
+        </section> : null}
 
-        <section className="panel form-panel" id="novo-item-vendavel" aria-labelledby="novo-item-vendavel-title">
+        {activeGroup?.key === "produtos" ? <section className="panel form-panel cadastros-focused-panel" id="novo-item-vendavel" aria-labelledby="novo-item-vendavel-title">
           <div className="panel-header">
             <h2 id="novo-item-vendavel-title">Novo item vendavel</h2>
             <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
@@ -539,9 +555,9 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               </button>
             </div>
           </form>
-        </section>
+        </section> : null}
 
-        <section className="panel form-panel" id="nova-conversao-mp" aria-labelledby="nova-conversao-mp-title">
+        {activeGroup?.key === "embalagens" ? <section className="panel form-panel cadastros-focused-panel" id="nova-conversao-mp" aria-labelledby="nova-conversao-mp-title">
           <div className="panel-header">
             <h2 id="nova-conversao-mp-title">Nova conversao de MP</h2>
             <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
@@ -585,9 +601,9 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               </button>
             </div>
           </form>
-        </section>
+        </section> : null}
 
-        <section className="panel" id="credito" aria-labelledby="credito-title">
+        {activeGroup?.key === "clientes" ? <section className="panel cadastros-focused-panel" id="credito" aria-labelledby="credito-title">
           <div className="panel-header">
             <h2 id="credito-title">Credito e alcadas</h2>
             <span className="pill">controle inicial</span>
@@ -610,10 +626,75 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
               <dd>Compara snapshot de credito, pedido, recebimento, comissao e devolucao.</dd>
             </div>
           </dl>
-        </section>
+        </section> : null}
+
+        {activeGroup?.key === "tecnicos" ? (
+          <section className="cadastros-destination-grid" aria-label="Catalogos tecnicos disponiveis">
+            <Link href="/cadastros/unidades"><strong>Unidades e conversoes</strong><span>Padroes de medida usados em XML, estoque e formulas.</span></Link>
+            <Link href="/cadastros/materias-primas"><strong>Materias-primas</strong><span>Edicao completa por identidade, SKU, tecnica e regulatorio.</span></Link>
+            <Link href="/cadastros/embalagens"><strong>Embalagens</strong><span>Volumes e controle como insumo de estoque.</span></Link>
+            <Link href="/cadastros/produtos"><strong>Produtos PA/PI</strong><span>Produto-base, validade e apresentacoes vendaveis.</span></Link>
+            <Link href="/producao/garantias"><strong>Garantias</strong><span>Referencias MAPA e garantias dos lotes de MP.</span></Link>
+            <Link href="/producao/formulas"><strong>Formulas</strong><span>Receitas de producao e documentacao tecnica.</span></Link>
+          </section>
+        ) : null}
+
+        {activeGroup?.key === "logistica" ? (
+          <section className="shell-state shell-state-empty cadastros-focused-state">
+            <span className="shell-state-label">Estrutura em preparacao</span>
+            <h2>Veiculos e logistica</h2>
+            <p>Os vinculos de entregadores ja pertencem ao cadastro de pessoas. Veiculos e demais recursos logisticos ainda nao possuem tela operacional nesta central.</p>
+            <div className="shell-state-actions">
+              <Link className="primary-button" href="/cadastros?grupo=pessoas#nova-pessoa">Ver entregadores</Link>
+              <Link className="secondary-button" href="/romaneios">Abrir romaneio</Link>
+            </div>
+          </section>
+        ) : null}
       </section>
     </main>
   );
+}
+
+function actionHref(group: CadastroGroupKey): string {
+  const hrefs: Record<CadastroGroupKey, string> = {
+    clientes: "#novo-cadastro",
+    pessoas: "#nova-pessoa",
+    "materias-primas": "#nova-mp",
+    produtos: "#novo-produto",
+    embalagens: "#nova-embalagem",
+    logistica: "#",
+    tecnicos: "/cadastros/tecnicos",
+    validacao: "#validacao"
+  };
+  return hrefs[group];
+}
+
+function groupInitials(group: CadastroGroupKey): string {
+  const initials: Record<CadastroGroupKey, string> = {
+    clientes: "CL",
+    pessoas: "PV",
+    "materias-primas": "MP",
+    produtos: "PA",
+    embalagens: "EM",
+    logistica: "LG",
+    tecnicos: "CT",
+    validacao: "VP"
+  };
+  return initials[group];
+}
+
+function countForGroup(group: CadastroGroupKey, metrics: Array<{ moduleKey: string; count: number | null }>): string {
+  const moduleKeys: Partial<Record<CadastroGroupKey, string[]>> = {
+    clientes: ["clientes", "credito"],
+    pessoas: ["pessoas"],
+    "materias-primas": ["materias-primas"],
+    produtos: ["produtos", "produto-embalagens"],
+    embalagens: ["embalagens", "conversoes-mp"]
+  };
+  const counts = (moduleKeys[group] ?? []).map((key) => metrics.find((metric) => metric.moduleKey === key)?.count);
+  if (counts.length === 0) return "Abrir";
+  if (counts.some((count) => count === null || count === undefined)) return "Sem leitura";
+  return `${counts.reduce<number>((total, count) => total + (count ?? 0), 0)} registro(s)`;
 }
 
 function singleValue(value: string | string[] | undefined): string | undefined {

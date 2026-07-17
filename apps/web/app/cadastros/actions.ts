@@ -385,7 +385,7 @@ export async function createMateriaPrimaAction(formData: FormData) {
     p_sku_corrigido: skuCorrigido.toUpperCase(),
     p_status: status,
     p_tipo: optionalField(formData, "tipo"),
-    p_unidade_base_estoque_id: unidadeBaseEstoqueId.toUpperCase()
+    p_unidade_base_estoque: unidadeBaseEstoque.toUpperCase()
   });
 
   if (error) {

@@ -70,17 +70,15 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 UX-01C.2 - Clientes e propriedades: revisar e organizar a experiencia completa
 de identidade do cliente, propriedades com CNPJ proprio, enderecos, contatos,
-vendedores vinculados, duplicidades e unificacao. Nao iniciada.
+vendedores vinculados, duplicidades e unificacao. Antes do codigo, aplicar o
+gate de `docs/UX_DATA_GOVERNANCE_PTBR.md` e inventariar somente os campos dessa
+tela. Nao iniciada.
 
-## Tarefa seguinte de produto
+## Sequencia vigente
 
-Depois da homologacao do Romaneio, implementar a atualizacao encadeada de status
-entre pedido, expedicao, faturamento, financeiro e comissoes. `DEC-013` continua
-bloqueando apenas a escala proporcional de formula; o lote padrao absoluto
-permanece funcional.
-
-`H1` continua em paralelo como tarefa funcional de Luciano: decidir as 269
-fontes. `I2` permanece bloqueada ate o artefato final homologado existir.
+Concluir UX-01C.2 com inventario de campos, implementacao, testes, capturas e
+homologacao explicita. As demais telas de UX-01C e os blocos UX-01D a UX-01H
+permanecem posteriores e nao devem ser iniciados antecipadamente.
 
 ## Tarefas temporariamente adiadas
 

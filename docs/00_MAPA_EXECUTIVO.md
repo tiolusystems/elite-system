@@ -33,6 +33,7 @@ O mapa detalhado continua sendo
 | perfis combinaveis e permissoes atomicas | `seguranca` | `docs/seguranca/00_MATRIZ_INICIAL_PERFIS_PERMISSOES.md` |
 | ajuda, suporte e solicitacoes | `core` no portal; `seguranca` nas acoes sensiveis | `docs/suporte/00_PLANO_EVOLUCAO_SUPORTE.md`; futura `/suporte` |
 | MP, produto, embalagem, cliente | `cadastros` | `apps/web/app/cadastros` |
+| linguagem PT-BR e campos controlados de Cadastros | `cadastros` | `docs/UX_DATA_GOVERNANCE_PTBR.md` |
 | pedido, credito, Kanban | `pedidos` | `apps/web/app/pedidos` |
 | lotes, movimentos e saldos | `estoque` | RPCs e migrations `est_*` |
 | formula, OP, CQ, transformacao | `pcp` | `apps/web/app/pcp`, `apps/web/app/producao` |

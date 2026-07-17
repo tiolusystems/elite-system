@@ -385,7 +385,7 @@ export async function createMateriaPrimaAction(formData: FormData) {
     p_sku_corrigido: skuCorrigido.toUpperCase(),
     p_status: status,
     p_tipo: optionalField(formData, "tipo"),
-    p_unidade_base_estoque: unidadeBaseEstoque.toUpperCase()
+    p_unidade_base_estoque_id: unidadeBaseEstoqueId.toUpperCase()
   });
 
   if (error) {
@@ -404,7 +404,7 @@ export async function updateMateriaPrimaIdentityAction(formData: FormData) {
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
   const nome = field(formData, "nome");
-  const tipo = optionalField(formData, "tipo");
+
   const motivo = field(formData, "motivo");
 
   if (!materiaPrimaId || !nome || !motivo) {
@@ -420,7 +420,7 @@ export async function updateMateriaPrimaIdentityAction(formData: FormData) {
     p_motivo: motivo,
     p_nome: nome,
     p_nome_norm: normalizeKey(nome),
-    p_tipo: tipo
+    p_tipo: null
   });
 
   if (error) {
@@ -475,11 +475,11 @@ export async function updateMateriaPrimaTechnicalAction(formData: FormData) {
   }
 
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
-  const unidadeBaseEstoque = field(formData, "unidade_base_estoque").toUpperCase();
+  const unidadeBaseEstoqueId = optionalInteger(formData, "unidade_base_estoque_id");
   const densidade = optionalNumber(formData, "densidade");
   const motivo = field(formData, "motivo");
 
-  if (!materiaPrimaId || !unidadeBaseEstoque || !motivo) {
+  if (!materiaPrimaId || !unidadeBaseEstoqueId || !motivo) {
     redirectCadastroAction(formData, "missing_mp_required", "#editar", materiaPrimaId);
   }
   if (!Number.isInteger(materiaPrimaId) || materiaPrimaId <= 0) {
@@ -490,11 +490,11 @@ export async function updateMateriaPrimaTechnicalAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "update_cad_materia_prima_technical", {
+  const { error } = await auditedRpc(supabase, "update_cad_materia_prima_technical_governada", {
     p_densidade: densidade,
     p_materia_prima_id: materiaPrimaId,
     p_motivo: motivo,
-    p_unidade_base_estoque: unidadeBaseEstoque
+    p_unidade_base_estoque_id: unidadeBaseEstoqueId
   });
 
   if (error) {

@@ -8,8 +8,9 @@ Atualizado em: 2026-07-17
 - ultima entrega publicada: UX-01B - shell global autenticado no commit
   `52f3dca`;
 - entrega atual: UX-01C - macrociclo completo de Cadastros; o pacote estrutural
-  de Tipos de insumo foi implementado e validado em ambiente descartavel, sem
+  de Tipos de insumo e materias-primas concluiu o gate tecnico 0064, sem
   classificacao automatica do legado;
+- ultima migration validada localmente: `0064_harden_raw_material_relations_and_duplicates.sql`;
 - ultima migration no staging: `0063_govern_raw_material_input_types.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -30,6 +31,9 @@ UX-01C.4 - Tipos de insumo e classificacao de materias-primas:
 - tela PT-BR permite criar, editar, ativar, inativar e classificar por ID;
 - instalacao limpa, upgrade e smoke ocorreram somente em ambiente descartavel;
 - runtime local ativo e dados existentes permaneceram intactos.
+- unidade base passou a ser enviada por FK de catalogo;
+- SKU possui unicidade normalizada e protecao concorrente no banco;
+- homonimos exigem revisao, confirmacao motivada e auditoria.
 
 Entrega anterior:
 
@@ -51,7 +55,7 @@ UX-01C.1 - Central de Cadastros:
 - ESLint: aprovado;
 - TypeScript `--noEmit`: aprovado;
 - build Next.js de producao: aprovado;
-- teste estatico Python: pendente por ausencia de runtime local; pronto para CI;
+- 27 testes dirigidos de Cadastros em Python: aprovados;
 - Supabase e banco local nao foram parados, resetados, migrados ou alterados;
 - capturas de homologacao permaneceram fora do repositorio.
 

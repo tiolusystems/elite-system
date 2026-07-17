@@ -8,6 +8,7 @@ PAGE = ROOT / "apps" / "web" / "app" / "cadastros" / "tipos-insumo" / "page.tsx"
 MATERIALS = ROOT / "apps" / "web" / "app" / "cadastros" / "materias-primas" / "page.tsx"
 LOADER = ROOT / "apps" / "web" / "lib" / "technical-catalog.ts"
 SMOKE = ROOT / "tests" / "sql" / "raw_material_input_types.sql"
+HARDENING = ROOT / "supabase" / "migrations" / "0064_harden_raw_material_relations_and_duplicates.sql"
 
 
 class RawMaterialInputTypesContractTests(unittest.TestCase):
@@ -42,11 +43,15 @@ class RawMaterialInputTypesContractTests(unittest.TestCase):
         loader = LOADER.read_text(encoding="utf-8")
         self.assertIn('.from("cad_tipos_insumo")', loader)
         self.assertIn('name="tipo_insumo_id"', page + materials)
+        self.assertIn("GovernedRelationCombobox", materials)
+        self.assertIn('type="hidden" name={name}', (ROOT / "apps" / "web" / "app" / "cadastros" / "tecnicos" / "governed-relation-combobox.tsx").read_text(encoding="utf-8"))
         self.assertNotIn('name="tipo" placeholder=', materials)
         self.assertIn("Tipo de insumo não definido", page + materials + loader)
-        self.assertIn("Sem classificação", materials)
+        self.assertIn("Classificação pendente", materials)
         for raw in (">active<", ">pending_review<", ">inactive<"):
             self.assertNotIn(raw, page)
+        for internal_unit in ("{unit.code} · {unit.name}", "{material.baseUnit}", "{selectedMaterial.baseUnit}"):
+            self.assertNotIn(internal_unit, materials)
 
     def test_smoke_covers_integrity_audit_and_anonymous_denial(self) -> None:
         smoke = SMOKE.read_text(encoding="utf-8")
@@ -56,6 +61,20 @@ class RawMaterialInputTypesContractTests(unittest.TestCase):
             "PG_VALIDATE_0063_WITH_SMOKE_OK",
         ):
             self.assertIn(evidence, smoke)
+
+    def test_final_gate_uses_relational_units_and_database_duplicate_guards(self) -> None:
+        hardening = HARDENING.read_text(encoding="utf-8")
+        actions = (ROOT / "apps/web/app/cadastros/tipos-insumo/actions.ts").read_text(encoding="utf-8")
+        materials = MATERIALS.read_text(encoding="utf-8")
+        form = (ROOT / "apps/web/app/cadastros/materias-primas/governed-material-create-form.tsx").read_text(encoding="utf-8")
+        self.assertIn("cad_materias_primas_sku_norm_key", hardening)
+        self.assertIn("find_cad_materia_prima_possible_duplicates", hardening)
+        self.assertIn("p_confirmar_possivel_duplicidade", hardening)
+        self.assertIn("duplicate_reason", hardening)
+        self.assertIn("p_unidade_base_estoque_id", actions)
+        self.assertIn('name="unidade_base_estoque_id"', materials + form)
+        self.assertNotIn('name="tipo"', materials)
+        self.assertIn("Possível cadastro duplicado", form)
 
 
 if __name__ == "__main__":

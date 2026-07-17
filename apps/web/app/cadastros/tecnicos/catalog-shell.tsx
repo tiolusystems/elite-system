@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 type CatalogRoute = "overview" | "units" | "input-types" | "materials" | "packages" | "products";
 
 const CATALOG_LINKS: Array<{ key: CatalogRoute; href: string; label: string }> = [
-  { key: "overview", href: "/cadastros/tecnicos", label: "Visao geral" },
+  { key: "overview", href: "/cadastros/tecnicos", label: "Visão geral" },
   { key: "units", href: "/cadastros/unidades", label: "Unidades" },
   { key: "input-types", href: "/cadastros/tipos-insumo", label: "Tipos de insumo" },
   { key: "materials", href: "/cadastros/materias-primas", label: "Matérias-primas" },
@@ -31,7 +31,7 @@ export function CatalogShell({ active, title, description, source, actions, chil
               {item.label}
             </Link>
           ))}
-          <Link href="/producao/formulas">Formulas</Link>
+          <Link href="/producao/formulas">Fórmulas</Link>
         </nav>
 
         <div className="toolbar technical-toolbar">
@@ -62,49 +62,49 @@ export function CatalogShell({ active, title, description, source, actions, chil
 }
 
 const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: string }> = {
-  mp_created: { kind: "ok", title: "Materia-prima salva", detail: "SKU, unidade e dados tecnicos foram registrados." },
+  mp_created: { kind: "ok", title: "Matéria-prima salva", detail: "SKU, unidade e dados técnicos foram registrados." },
   mp_identity_updated: { kind: "ok", title: "Identidade atualizada", detail: "Nome e tipo foram auditados." },
-  mp_sku_updated: { kind: "ok", title: "SKU atualizado", detail: "A troca do codigo operacional foi auditada." },
-  mp_technical_updated: { kind: "ok", title: "Dados tecnicos atualizados", detail: "Unidade e densidade foram auditadas." },
-  mp_stock_policy_updated: { kind: "ok", title: "Politica de estoque atualizada", detail: "O estoque minimo foi registrado." },
-  mp_regulatory_updated: { kind: "ok", title: "Dados regulatorios atualizados", detail: "NCM, IBAMA e ADS foram auditados." },
-  mp_deactivated: { kind: "ok", title: "Materia-prima desativada", detail: "O historico foi preservado." },
+  mp_sku_updated: { kind: "ok", title: "SKU atualizado", detail: "A troca do código operacional foi auditada." },
+  mp_technical_updated: { kind: "ok", title: "Dados técnicos atualizados", detail: "Unidade e densidade foram auditadas." },
+  mp_stock_policy_updated: { kind: "ok", title: "Política de estoque atualizada", detail: "O estoque mínimo foi registrado." },
+  mp_regulatory_updated: { kind: "ok", title: "Dados regulatórios atualizados", detail: "NCM, IBAMA e ADS foram auditados." },
+  mp_deactivated: { kind: "ok", title: "Matéria-prima desativada", detail: "O histórico foi preservado." },
   input_type_created: { kind: "ok", title: "Tipo de insumo criado", detail: "O registro foi salvo e auditado." },
   input_type_updated: { kind: "ok", title: "Tipo de insumo atualizado", detail: "As alterações foram registradas no histórico." },
   input_type_activated: { kind: "ok", title: "Tipo de insumo ativado", detail: "O tipo voltou a ficar disponível para novas classificações." },
   input_type_deactivated: { kind: "ok", title: "Tipo de insumo inativado", detail: "Vínculos históricos foram preservados." },
   material_input_type_saved: { kind: "ok", title: "Classificação atualizada", detail: "O tipo de insumo da matéria-prima foi registrado." },
-  produto_created: { kind: "ok", title: "Produto salvo", detail: "O produto-base esta disponivel para formulas e embalagens." },
-  embalagem_created: { kind: "ok", title: "Embalagem salva", detail: "A embalagem foi registrada no catalogo tecnico." },
-  item_vendavel_created: { kind: "ok", title: "Item vendavel salvo", detail: "Produto e embalagem foram vinculados." },
-  conversion_created: { kind: "ok", title: "Conversao salva", detail: "A regra de unidade foi registrada com vigencia." },
-  duplicated: { kind: "warning", title: "Registro duplicado", detail: "Ja existe um cadastro com a mesma chave." },
-  not_allowed: { kind: "warning", title: "Sem alcada", detail: "O usuario atual nao possui a permissao exigida." },
-  not_configured: { kind: "warning", title: "Ambiente indisponivel", detail: "O Supabase nao esta configurado neste ambiente." },
-  missing_mp_required: { kind: "warning", title: "Campos obrigatorios", detail: "Informe MP, nome, SKU, unidade e motivo quando solicitado." },
+  produto_created: { kind: "ok", title: "Produto salvo", detail: "O produto-base está disponível para fórmulas e embalagens." },
+  embalagem_created: { kind: "ok", title: "Embalagem salva", detail: "A embalagem foi registrada no catálogo técnico." },
+  item_vendavel_created: { kind: "ok", title: "Item vendável salvo", detail: "Produto e embalagem foram vinculados." },
+  conversion_created: { kind: "ok", title: "Conversão salva", detail: "A regra de unidade foi registrada com vigência." },
+  duplicated: { kind: "warning", title: "Registro duplicado", detail: "Já existe um cadastro com a mesma chave." },
+  not_allowed: { kind: "warning", title: "Sem alçada", detail: "O usuário atual não possui a permissão exigida." },
+  not_configured: { kind: "warning", title: "Ambiente indisponível", detail: "O Supabase não está configurado neste ambiente." },
+  missing_mp_required: { kind: "warning", title: "Campos obrigatórios", detail: "Informe MP, nome, SKU, unidade e motivo quando solicitado." },
   missing_product_required: { kind: "warning", title: "Campos obrigatorios", detail: "Informe codigo e nome do produto." },
   missing_package_required: { kind: "warning", title: "Campos obrigatorios", detail: "Informe descricao e unidade da embalagem." },
   missing_package_stock_item: { kind: "warning", title: "MP obrigatoria", detail: "Embalagem com estoque deve estar vinculada a uma MP." },
   missing_sale_item_required: { kind: "warning", title: "Campos obrigatorios", detail: "Informe produto, embalagem e codigo do item." },
   missing_conversion_required: { kind: "warning", title: "Campos obrigatorios", detail: "Informe MP, unidades e fator." },
-  invalid_positive_number: { kind: "warning", title: "Valor invalido", detail: "Use um numero maior que zero." },
-  invalid_non_negative_number: { kind: "warning", title: "Valor invalido", detail: "Use zero ou um numero positivo." },
-  invalid_ncm: { kind: "warning", title: "NCM invalido", detail: "O NCM deve ter oito digitos." },
-  invalid_sku: { kind: "warning", title: "SKU invalido", detail: "O SKU nao pode conter espacos." },
+  invalid_positive_number: { kind: "warning", title: "Valor inválido", detail: "Use um número maior que zero." },
+  invalid_non_negative_number: { kind: "warning", title: "Valor inválido", detail: "Use zero ou um número positivo." },
+  invalid_ncm: { kind: "warning", title: "NCM inválido", detail: "O NCM deve ter oito dígitos." },
+  invalid_sku: { kind: "warning", title: "SKU inválido", detail: "O SKU não pode conter espaços." },
   invalid_input_type: { kind: "warning", title: "Tipo indisponível", detail: "Selecione um tipo de insumo ativo." },
   invalid_value: { kind: "warning", title: "Valor inválido", detail: "Revise os campos informados." },
   not_found: { kind: "warning", title: "Registro não encontrado", detail: "Atualize a página e tente novamente." },
   operation_failed: { kind: "warning", title: "Operação não concluída", detail: "Não foi possível salvar. Tente novamente ou acione o administrador." },
-  invalid_unit_conversion: { kind: "warning", title: "Conversao invalida", detail: "Origem e destino devem ser diferentes." },
-  invalid_date_range: { kind: "warning", title: "Vigencia invalida", detail: "A data final nao pode ser anterior a inicial." }
+  invalid_unit_conversion: { kind: "warning", title: "Conversão inválida", detail: "Origem e destino devem ser diferentes." },
+  invalid_date_range: { kind: "warning", title: "Vigência inválida", detail: "A data final não pode ser anterior à inicial." }
 };
 
 export function CatalogFeedback({ result }: { result: string | null }) {
   if (!result) return null;
   const feedback = FEEDBACK[result] ?? {
     kind: "warning" as const,
-    title: "Operacao nao concluida",
-    detail: `Codigo retornado: ${result}`
+    title: "Operação não concluída",
+    detail: "Não foi possível concluir a ação. Atualize a página e tente novamente."
   };
 
   return (
@@ -123,7 +123,7 @@ function statusLabel(value: string): string {
   const labels: Record<string, string> = {
     active: "Ativo",
     inactive: "Inativo",
-    pending_review: "Em revisao",
+    pending_review: "Em revisão",
     approved: "Aprovado",
     rejected: "Rejeitado"
   };

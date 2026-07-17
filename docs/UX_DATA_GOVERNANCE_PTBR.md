@@ -198,3 +198,19 @@ UX-01C completo. O inventario consolidado vigente esta em
 Cadastros. A implementacao permanece bloqueada no gate estrutural registrado
 nesse documento; nenhum catalogo, relacionamento ou regra ausente pode ser
 inventado pela interface.
+
+## Evolucao segura dos cadastros
+
+- Campo estrutural novo exige regra definida, ownership, tipo, impacto
+  historico e backfill sem dados inventados.
+- Campo controlado aponta para catalogo governado ou constraint fechada; o
+  frontend envia ID ou valor interno e exibe rotulo PT-BR.
+- Relacionamento consultavel exige PK, FK, cardinalidade, comportamento de
+  exclusao, indice, RLS, grants e RPC auditada. Texto e JSON nao substituem FK.
+- Campos complementares configuraveis poderao existir futuramente apenas para
+  informacao auxiliar e nao critica, apos decisao arquitetural especifica.
+- Campos configuraveis ficam proibidos para SKU, unidade, tipo de insumo,
+  identidade fiscal, estoque, formula, garantia, permissao, comissao ou dado
+  usado em integridade, calculo, rastreabilidade ou conformidade.
+- Nao sera criado construtor generico de campos nesta fase.
+- Toda extensao segue `migration -> RPC -> interface -> testes -> staging`.

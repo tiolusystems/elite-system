@@ -8,8 +8,10 @@ import {
   updateMateriaPrimaStockPolicyAction,
   updateMateriaPrimaTechnicalAction
 } from "@/app/cadastros/actions";
-import { createGovernedMaterialAction, setMaterialInputTypeAction } from "@/app/cadastros/tipos-insumo/actions";
+import { setMaterialInputTypeAction } from "@/app/cadastros/tipos-insumo/actions";
 import { CatalogFeedback, CatalogShell, StatusChip, singleParam } from "@/app/cadastros/tecnicos/catalog-shell";
+import { GovernedRelationCombobox } from "@/app/cadastros/tecnicos/governed-relation-combobox";
+import { GovernedMaterialCreateForm } from "./governed-material-create-form";
 import { getTechnicalCatalog } from "@/lib/technical-catalog";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -22,6 +24,7 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
   const requestedId = Number(singleParam(params.selected));
   const activeUnits = catalog.units.filter((unit) => unit.status === "active");
   const activeInputTypes = catalog.inputTypes.filter((item) => item.status === "active");
+  const unitLabels = new Map(catalog.units.map((unit) => [unit.code, formatUnitLabel(unit.name, unit.symbol)]));
   const filteredMaterials = catalog.materials.filter((material) => {
     const matchesQuery = !query || `${material.sku} ${material.name} ${material.legacyCode ?? ""}`.toLocaleLowerCase("pt-BR").includes(query);
     const matchesStatus = status === "all" || material.status === status;
@@ -51,7 +54,7 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
           <select name="status" defaultValue={status}>
             <option value="all">Todos</option>
             <option value="active">Ativos</option>
-            <option value="pending_review">Em revisao</option>
+            <option value="pending_review">Em revisão</option>
             <option value="inactive">Inativos</option>
           </select>
         </label>
@@ -62,7 +65,7 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
       <section className="catalog-split">
         <article className="panel catalog-list-panel">
           <div className="panel-header">
-            <h2>Catalogo</h2>
+            <h2>Catálogo</h2>
             <span className="pill">{filteredMaterials.length}</span>
           </div>
           <div className="catalog-record-list">
@@ -78,7 +81,7 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
                 </span>
                 <span className="catalog-record-meta">
                   <StatusChip value={material.status} />
-                  <small>{material.baseUnit}</small>
+                  <small>{unitLabels.get(material.baseUnit) ?? "Unidade não identificada"}</small>
                 </span>
               </Link>
             ))}
@@ -93,14 +96,14 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
                 <div>
                   <span className="eyebrow">{selectedMaterial.sku}</span>
                   <h2>{selectedMaterial.name}</h2>
-                  <p>{selectedMaterial.inputTypeName} · {selectedMaterial.baseUnit}</p>
+                  <p>{selectedMaterial.inputTypeName} · {unitLabels.get(selectedMaterial.baseUnit) ?? "Unidade não identificada"}</p>
                 </div>
                 <StatusChip value={selectedMaterial.status} />
               </div>
 
               <div className="detail-facts">
                 <p><span>Densidade</span><strong>{formatNumber(selectedMaterial.density)}</strong></p>
-                <p><span>Estoque minimo</span><strong>{formatNumber(selectedMaterial.minimumStock)}</strong></p>
+                <p><span>Estoque mínimo</span><strong>{formatNumber(selectedMaterial.minimumStock)}</strong></p>
                 <p><span>Tipo de insumo</span><strong>{selectedMaterial.inputTypeName}</strong></p>
                 <p><span>NCM</span><strong>{selectedMaterial.ncm ?? "-"}</strong></p>
                 <p><span>Atualizada</span><strong>{formatDate(selectedMaterial.updatedAt)}</strong></p>
@@ -112,26 +115,28 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
                   <form action={updateMateriaPrimaIdentityAction} className="compact-edit-form">
                     <TechnicalReturnInput />
                     <input type="hidden" name="materia_prima_id" value={selectedMaterial.id} />
-                    <input type="hidden" name="tipo" value={selectedMaterial.type ?? ""} />
                     <label>Nome<input name="nome" defaultValue={selectedMaterial.name} required /></label>
                     <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da alteracao" /></label>
                     <button className="primary-button" type="submit">Salvar identidade</button>
                   </form>
                 </details>
 
-                <details open id="classificacao">
+                <details open id="classificacao" style={{ scrollMarginTop: 76 }}>
                   <summary>Classificação do insumo</summary>
                   <form action={setMaterialInputTypeAction} className="compact-edit-form">
                     <input type="hidden" name="materia_prima_id" value={selectedMaterial.id} />
-                    <label className="wide-field">
-                      Tipo de insumo
-                      <select name="tipo_insumo_id" defaultValue={selectedMaterial.inputTypeId ?? ""}>
-                        <option value="">Tipo de insumo não definido</option>
-                        {catalog.inputTypes
+                    <div className="wide-field">
+                      <GovernedRelationCombobox
+                        name="tipo_insumo_id"
+                        label="Tipo de insumo"
+                        defaultValue={selectedMaterial.inputTypeId}
+                        emptyLabel="Tipo de insumo não definido"
+                        placeholder="Buscar tipo de insumo"
+                        options={catalog.inputTypes
                           .filter((item) => item.status === "active" || item.id === selectedMaterial.inputTypeId)
-                          .map((item) => <option key={item.id} value={item.id}>{item.name}{item.status === "inactive" ? " (inativo)" : ""}</option>)}
-                      </select>
-                    </label>
+                          .map((item) => ({ id: item.id, label: item.name, detail: item.status === "inactive" ? "Inativo" : item.description }))}
+                      />
+                    </div>
                     <label className="wide-field">Motivo<input name="motivo" required placeholder="Justificativa obrigatória" /></label>
                     <button className="primary-button" type="submit">Salvar classificação</button>
                   </form>
@@ -144,60 +149,60 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
                     <TechnicalReturnInput />
                     <input type="hidden" name="materia_prima_id" value={selectedMaterial.id} />
                     <label>SKU<input name="sku_corrigido" defaultValue={selectedMaterial.sku} required /></label>
-                    <label>Codigo legado<input name="codigo_legado" defaultValue={selectedMaterial.legacyCode ?? ""} /></label>
-                    <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da alteracao" /></label>
-                    <button className="primary-button" type="submit">Salvar codigos</button>
+                    <label>Código legado<input name="codigo_legado" defaultValue={selectedMaterial.legacyCode ?? ""} /></label>
+                    <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da alteração" /></label>
+                    <button className="primary-button" type="submit">Salvar códigos</button>
                   </form>
                 </details>
 
                 <details>
-                  <summary>Dados tecnicos</summary>
+                  <summary>Dados técnicos</summary>
                   <form action={updateMateriaPrimaTechnicalAction} className="compact-edit-form">
                     <TechnicalReturnInput />
                     <input type="hidden" name="materia_prima_id" value={selectedMaterial.id} />
                     <label>
                       Unidade base
-                      <select name="unidade_base_estoque" defaultValue={selectedMaterial.baseUnit} required>
-                        {activeUnits.map((unit) => <option key={unit.id} value={unit.code}>{unit.code} · {unit.name}</option>)}
+                      <select name="unidade_base_estoque_id" defaultValue={selectedMaterial.baseUnitId} required>
+                        {activeUnits.map((unit) => <option key={unit.id} value={unit.id}>{formatUnitLabel(unit.name, unit.symbol)}</option>)}
                       </select>
                     </label>
                     <label>Densidade<input name="densidade" inputMode="decimal" defaultValue={selectedMaterial.density ?? ""} /></label>
-                    <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da alteracao" /></label>
-                    <button className="primary-button" type="submit">Salvar dados tecnicos</button>
+                    <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da alteração" /></label>
+                    <button className="primary-button" type="submit">Salvar dados técnicos</button>
                   </form>
                 </details>
 
                 <details>
-                  <summary>Politica de estoque</summary>
+                  <summary>Política de estoque</summary>
                   <form action={updateMateriaPrimaStockPolicyAction} className="compact-edit-form">
                     <TechnicalReturnInput />
                     <input type="hidden" name="materia_prima_id" value={selectedMaterial.id} />
-                    <label>Estoque minimo<input name="estoque_minimo" inputMode="decimal" defaultValue={selectedMaterial.minimumStock ?? 0} required /></label>
-                    <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da alteracao" /></label>
-                    <button className="primary-button" type="submit">Salvar politica</button>
+                    <label>Estoque mínimo<input name="estoque_minimo" inputMode="decimal" defaultValue={selectedMaterial.minimumStock ?? 0} required /></label>
+                    <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da alteração" /></label>
+                    <button className="primary-button" type="submit">Salvar política</button>
                   </form>
                 </details>
 
                 <details>
-                  <summary>Regulatorio</summary>
+                  <summary>Regulatório</summary>
                   <form action={updateMateriaPrimaRegulatoryAction} className="compact-edit-form">
                     <TechnicalReturnInput />
                     <input type="hidden" name="materia_prima_id" value={selectedMaterial.id} />
                     <label>NCM<input name="ncm" inputMode="numeric" defaultValue={selectedMaterial.ncm ?? ""} /></label>
                     <label>IBAMA<input name="ibama" defaultValue={selectedMaterial.ibama ?? ""} /></label>
-                    <label>Codigo ADS<input name="codigo_ads" defaultValue={selectedMaterial.adsCode ?? ""} /></label>
-                    <label>Motivo<input name="motivo" required placeholder="Motivo da alteracao" /></label>
-                    <button className="primary-button" type="submit">Salvar regulatorio</button>
+                    <label>Código ADS<input name="codigo_ads" defaultValue={selectedMaterial.adsCode ?? ""} /></label>
+                    <label>Motivo<input name="motivo" required placeholder="Motivo da alteração" /></label>
+                    <button className="primary-button" type="submit">Salvar regulatório</button>
                   </form>
                 </details>
 
                 {selectedMaterial.status !== "inactive" ? (
                   <details className="danger-zone">
-                    <summary>Desativar materia-prima</summary>
+                    <summary>Desativar matéria-prima</summary>
                     <form action={deactivateMateriaPrimaAction} className="compact-edit-form">
                       <TechnicalReturnInput />
                       <input type="hidden" name="materia_prima_id" value={selectedMaterial.id} />
-                      <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da desativacao" /></label>
+                      <label className="wide-field">Motivo<input name="motivo" required placeholder="Motivo da desativação" /></label>
                       <button className="danger-button" type="submit">Desativar</button>
                     </form>
                   </details>
@@ -210,51 +215,17 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
         </article>
       </section>
 
-      <section className="panel form-panel" id="nova-mp" aria-labelledby="nova-mp-title">
+      <section className="panel form-panel" id="nova-mp" aria-labelledby="nova-mp-title" style={{ scrollMarginTop: 76 }}>
         <div className="panel-header">
           <div>
             <span className="eyebrow">Novo registro</span>
             <h2 id="nova-mp-title">Cadastrar matéria-prima</h2>
           </div>
         </div>
-        <form action={createGovernedMaterialAction}>
-          <TechnicalReturnInput />
-          <div className="form-grid">
-            <label>SKU<input name="sku_corrigido" placeholder="MP-0001" required /></label>
-            <label>Nome<input name="nome" required /></label>
-            <label>Código legado<input name="codigo_legado" /></label>
-            <label>
-              Tipo de insumo
-              <select name="tipo_insumo_id" defaultValue="">
-                <option value="">Tipo de insumo não definido</option>
-                {activeInputTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </label>
-            <label>
-              Unidade base
-              <select name="unidade_base_estoque" defaultValue="KG" required>
-                {activeUnits.map((unit) => <option key={unit.id} value={unit.code}>{unit.code} · {unit.name}</option>)}
-              </select>
-            </label>
-            <label>Densidade<input name="densidade" inputMode="decimal" /></label>
-            <label>Estoque minimo<input name="estoque_minimo" inputMode="decimal" /></label>
-            <label>
-              Status
-              <select name="status" defaultValue="active">
-                <option value="active">Ativo</option>
-                <option value="pending_review">Em revisao</option>
-                <option value="inactive">Inativo</option>
-              </select>
-            </label>
-            <label>NCM<input name="ncm" inputMode="numeric" /></label>
-            <label>IBAMA<input name="ibama" /></label>
-            <label>Codigo ADS<input name="codigo_ads" /></label>
-          </div>
-          <div className="form-footer">
-            <span>Sem classificação, o registro ficará visível como pendência de revisão.</span>
-            <button className="primary-button" type="submit">Salvar matéria-prima</button>
-          </div>
-        </form>
+        <GovernedMaterialCreateForm
+          inputTypes={activeInputTypes.map((item) => ({ id: item.id, label: item.name, detail: item.description }))}
+          units={activeUnits.map((unit) => ({ id: unit.id, label: formatUnitLabel(unit.name, unit.symbol) }))}
+        />
       </section>
     </CatalogShell>
   );
@@ -270,4 +241,9 @@ function formatNumber(value: number | null): string {
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+}
+
+function formatUnitLabel(name: string, symbol: string): string {
+  const normalizedSymbol = symbol.trim();
+  return normalizedSymbol && normalizedSymbol !== "1" ? `${name} (${normalizedSymbol})` : name;
 }

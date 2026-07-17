@@ -24,8 +24,8 @@ export type TechnicalMaterial = {
   sku: string;
   name: string;
   baseUnit: string;
+  baseUnitId: number;
   status: string;
-  type: string | null;
   inputTypeId: number | null;
   inputTypeName: string;
   inputTypeStatus: string | null;
@@ -172,7 +172,7 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
       supabase
         .from("cad_materias_primas")
         .select(
-          "id,codigo_legado,sku_corrigido,nome,unidade_base_estoque,status,tipo,tipo_insumo_id,tipo_insumo_review_status,densidade,estoque_minimo,ncm,ibama,codigo_ads,origem_dados,updated_at,cad_tipos_insumo(nome,status)"
+          "id,codigo_legado,sku_corrigido,nome,unidade_base_estoque,unidade_base_estoque_id,status,tipo_insumo_id,tipo_insumo_review_status,densidade,estoque_minimo,ncm,ibama,codigo_ads,origem_dados,updated_at,cad_tipos_insumo(nome,status)"
         )
         .order("nome", { ascending: true })
         .limit(800),
@@ -259,8 +259,8 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         sku: String(item.sku_corrigido),
         name: String(item.nome),
         baseUnit: String(item.unidade_base_estoque),
+        baseUnitId: Number(item.unidade_base_estoque_id),
         status: String(item.status),
-        type: item.tipo ? String(item.tipo) : null,
         inputTypeId: item.tipo_insumo_id === null ? null : Number(item.tipo_insumo_id),
         inputTypeName: relationName(item.cad_tipos_insumo) ?? "Tipo de insumo não definido",
         inputTypeStatus: relationStatus(item.cad_tipos_insumo),

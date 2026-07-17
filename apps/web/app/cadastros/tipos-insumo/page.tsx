@@ -88,7 +88,7 @@ export default async function InputTypesPage({ searchParams }: { searchParams?: 
         </article>
       </section>
 
-      <section className="panel form-panel" id="novo-tipo" aria-labelledby="new-input-type-title">
+      <section className="panel form-panel" id="novo-tipo" aria-labelledby="new-input-type-title" style={{ scrollMarginTop: 76 }}>
         <div className="panel-header"><div><span className="eyebrow">Novo registro</span><h2 id="new-input-type-title">Cadastrar tipo de insumo</h2></div></div>
         <form action={createInputTypeAction}>
           <div className="form-grid">

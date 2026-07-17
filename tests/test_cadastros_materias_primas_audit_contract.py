@@ -43,7 +43,7 @@ class CadastrosMateriasPrimasAuditContractTests(unittest.TestCase):
         for function_name in (
             "update_cad_materia_prima_identity",
             "update_cad_materia_prima_sku",
-            "update_cad_materia_prima_technical",
+            "update_cad_materia_prima_technical_governada",
             "update_cad_materia_prima_stock_policy",
             "update_cad_materia_prima_regulatory",
             "deactivate_cad_materia_prima",

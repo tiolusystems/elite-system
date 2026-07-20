@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 
+import { DeveloperSignature } from "@/app/developer-signature";
 import { logoutAction, switchUserAction } from "@/app/login/actions";
 import { navigationGroups, navigationItemForPath } from "@/lib/app-navigation";
 import type { AuthStatus } from "@/lib/auth";
@@ -135,7 +136,7 @@ export function AuthenticatedAppShell({ auth, build, modules, runtime, children 
           <span>Elite Agrociências</span>
           <span>{environmentLabel(runtime.databaseMode)}</span>
           <span>Versao {build.version}</span>
-          <span>Desenvolvido por TioLu Systems</span>
+          <DeveloperSignature />
           <span>© {new Date().getFullYear()}</span>
         </footer>
       </div>

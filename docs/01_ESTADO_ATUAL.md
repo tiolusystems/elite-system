@@ -33,6 +33,19 @@ UX-01C.3 - Pessoas e vinculos comerciais:
 - instalacao limpa, upgrade, smoke e concorrencia foram validados somente em
   projetos descartaveis `elite-validation-*`.
 
+Entrega institucional paralela - assinatura da desenvolvedora:
+
+- assinatura reutilizavel `by ☧ SYSTEMS` aplicada exclusivamente nos creditos
+  de desenvolvedor ja existentes nos rodapes publico e autenticado;
+- identidade, paleta, tipografia, navegacao, favicon e componentes operacionais
+  do Elite System preservados;
+- nenhum ativo raster ou SVG, dependencia, banco, migration, Supabase, regra de
+  negocio ou seguranca foi alterado;
+- teste de contrato, ESLint, build Next.js e verificacao visual desktop/mobile
+  aprovados; captura do rodape autenticado depende de sessao real e nao foi
+  obtida por contorno de autenticacao;
+- nenhum rebranding foi realizado.
+
 Entrega anterior:
 
 UX-01C.4 - Tipos de insumo e classificacao de materias-primas:

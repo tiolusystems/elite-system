@@ -10,7 +10,7 @@ Atualizado em: 2026-07-20
 - entrega atual: gate critico de RLS e escrita direta; UX-01C e a promocao do
   Preview permanecem pausados;
 - ultima migration validada localmente: `0066_close_direct_write_and_rpc_exposure.sql`;
-- ultima migration no staging confirmada por ledger: `0065_govern_commercial_people_relationships.sql`;
+- ultima migration no staging confirmada por ledger: `0066_close_direct_write_and_rpc_exposure.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -74,7 +74,8 @@ UX-01C.1 - Central de Cadastros:
   alteracao dos fingerprints;
 - smoke de RPC governada com permissao valida: aprovado;
 - ESLint e build Next.js: aprovados;
-- staging ainda nao recebeu a migration 0066;
+- staging recebeu exclusivamente a migration 0066; a auditoria final read-only,
+  o gate SQL, o health-check e a resposta da tela de login foram aprovados;
 - detalhes: `docs/auditoria_rls_escrita_direta_0066.md`.
 
 Validacao anterior da UX-01C.3:

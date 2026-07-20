@@ -74,6 +74,27 @@ operacionais normais.
 
 ## Situacao de publicacao
 
-A migration 0066 ainda nao foi aplicada ao staging. UX-01C e a promocao do
-Preview permanecem pausados ate commit, push, aplicacao isolada da 0066,
-repeticao da auditoria read-only, health-check e smoke final.
+A migration 0066 foi aplicada isoladamente ao staging depois de dry-run que
+listou somente esse arquivo. A tentativa posterior da CLI de criar cache local
+do catalogo em `pgdelta` emitiu aviso por certificado temporario ausente, sem
+reverter ou invalidar a migration.
+
+Validacao final do staging:
+
+- ledger local/remoto: `0066`;
+- tabelas publicas: 132;
+- tabelas criticas: 0;
+- politicas latentes de escrita: 0;
+- escrita direta para `anon`: 0;
+- escrita direta para `authenticated`: 0;
+- escrita direta para `PUBLIC`: 0;
+- tabelas sem RLS: 0;
+- funcoes executaveis por `anon`: 0;
+- funcoes executaveis por `PUBLIC`: 0;
+- gate SQL completo em transacao read-only: aprovado;
+- health-check: `status=ok`, `backendConfigured=true`;
+- tela de login: HTTP 200 e marca principal `Elite System` preservada.
+
+Nenhum dado operacional real foi usado. `main` e producao real nao foram
+alterados. A retomada de UX-01C e da promocao do Preview continua dependente da
+aprovacao deste resultado final.

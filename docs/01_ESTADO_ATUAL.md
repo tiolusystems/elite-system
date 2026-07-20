@@ -1,17 +1,16 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-17
+Atualizado em: 2026-07-20
 
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
 - ultima entrega publicada: UX-01B - shell global autenticado no commit
   `52f3dca`;
-- entrega atual: UX-01C - macrociclo completo de Cadastros; Pessoas e vinculos
-  comerciais concluiu o gate tecnico local da migration 0065 e aguarda
-  publicacao controlada no staging;
-- ultima migration validada localmente: `0065_govern_commercial_people_relationships.sql`;
-- ultima migration no staging: `0064_harden_raw_material_relations_and_duplicates.sql`;
+- entrega atual: gate critico de RLS e escrita direta; UX-01C e a promocao do
+  Preview permanecem pausados;
+- ultima migration validada localmente: `0066_close_direct_write_and_rpc_exposure.sql`;
+- ultima migration no staging confirmada por ledger: `0065_govern_commercial_people_relationships.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -63,6 +62,22 @@ UX-01C.1 - Central de Cadastros:
 - nenhum dado operacional, workbook ou captura foi adicionado ao Git.
 
 ## Validacao desta tarefa
+
+- auditoria somente leitura do staging: 132 tabelas publicas, todas com RLS,
+  zero escrita direta para `anon`, `authenticated` ou `PUBLIC` e zero politica
+  permissiva de escrita residual;
+- instalacao limpa `0001` a `0066` e upgrade `0065 -> 0066`: aprovados somente
+  em projetos `elite-validation-*`;
+- gate de metadados: aprovado;
+- sweep zero-grant: 79 de 79 RPCs negadas com auditoria;
+- Data API: 99 tentativas de escrita em 11 dominios e tres contextos, sem
+  alteracao dos fingerprints;
+- smoke de RPC governada com permissao valida: aprovado;
+- ESLint e build Next.js: aprovados;
+- staging ainda nao recebeu a migration 0066;
+- detalhes: `docs/auditoria_rls_escrita_direta_0066.md`.
+
+Validacao anterior da UX-01C.3:
 
 - smoke SQL 0065 em instalacao limpa e upgrade: aprovado;
 - lock concorrente: uma criacao persistida e a concorrente recusada apos

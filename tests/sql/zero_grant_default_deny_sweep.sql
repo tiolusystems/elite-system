@@ -28,6 +28,30 @@ begin
         role = excluded.role,
         status = excluded.status;
 
+  if exists (
+    select 1
+      from public.sys_runtime_environment_current
+     where environment = 'unconfigured'
+  ) then
+    update public.user_profiles
+       set role = 'admin'
+     where id = v_zero_actor;
+    insert into public.user_permission_overrides(user_id, action_key, allowed, updated_by)
+    values (v_zero_actor, 'system.admin', true, v_zero_actor)
+    on conflict (user_id, action_key) do update
+      set allowed = true,
+          updated_by = excluded.updated_by;
+    perform set_config('request.jwt.claim.sub', v_zero_actor::text, true);
+    perform public.set_system_runtime_environment(
+      'test',
+      'test_reset',
+      'Zero-grant security sweep disposable fixture'
+    );
+    update public.user_profiles
+       set role = 'auditoria'
+     where id = v_zero_actor;
+  end if;
+
   delete from public.user_permission_overrides
    where user_id = v_zero_actor;
 
@@ -79,20 +103,21 @@ begin
       pg_get_functiondef(proc.oid) as definition,
       (
         select string_agg(
-          case typ.typname
-            when 'int2' then '0::smallint'
-            when 'int4' then '0::integer'
-            when 'int8' then '0::bigint'
-            when 'numeric' then '0::numeric'
-            when 'float4' then '0::real'
-            when 'float8' then '0::double precision'
-            when 'bool' then 'false::boolean'
-            when 'date' then 'current_date::date'
-            when 'timestamp' then 'clock_timestamp()::timestamp'
-            when 'timestamptz' then 'clock_timestamp()::timestamptz'
-            when 'uuid' then quote_literal('00000000-0000-4000-8000-000000000037') || '::uuid'
-            when 'jsonb' then quote_literal('{}') || '::jsonb'
-            when 'json' then quote_literal('{}') || '::json'
+          case
+            when typ.typcategory = 'A' then quote_literal('{}') || '::' || format_type(arg_type, null)
+            when typ.typname = 'int2' then '0::smallint'
+            when typ.typname = 'int4' then '0::integer'
+            when typ.typname = 'int8' then '0::bigint'
+            when typ.typname = 'numeric' then '0::numeric'
+            when typ.typname = 'float4' then '0::real'
+            when typ.typname = 'float8' then '0::double precision'
+            when typ.typname = 'bool' then 'false::boolean'
+            when typ.typname = 'date' then 'current_date::date'
+            when typ.typname = 'timestamp' then 'clock_timestamp()::timestamp'
+            when typ.typname = 'timestamptz' then 'clock_timestamp()::timestamptz'
+            when typ.typname = 'uuid' then quote_literal('00000000-0000-4000-8000-000000000037') || '::uuid'
+            when typ.typname = 'jsonb' then quote_literal('{}') || '::jsonb'
+            when typ.typname = 'json' then quote_literal('{}') || '::json'
             else quote_literal('__zero_grant_sweep__') || '::' || format_type(arg_type, null)
           end,
           ', ' order by arg_ord

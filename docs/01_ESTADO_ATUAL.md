@@ -21,6 +21,22 @@ Atualizado em: 2026-07-17
 
 ## Tarefa concluida mais recente
 
+Entrega institucional paralela - assinatura da desenvolvedora:
+
+- assinatura reutilizavel `by ☧ SYSTEMS` aplicada exclusivamente nos creditos
+  de desenvolvedor ja existentes nos rodapes publico e autenticado;
+- identidade, paleta, tipografia, navegacao, favicon e componentes operacionais
+  do Elite System preservados;
+- nenhum ativo raster ou SVG, dependencia, banco, migration, Supabase, regra de
+  negocio ou seguranca foi alterado;
+- teste de contrato, ESLint, build Next.js e verificacao visual desktop/mobile
+  aprovados; captura do rodape autenticado depende de sessao real e nao foi
+  obtida por contorno de autenticacao;
+- proxima tarefa objetiva permanece o UX-01C de Produtos, apresentacoes,
+  embalagens e conversoes.
+
+Entrega funcional mais recente:
+
 UX-01C.4 - Tipos de insumo e classificacao de materias-primas:
 
 - catalogo relacional, FK opcional, RLS e seis RPCs auditadas na migration 0063;

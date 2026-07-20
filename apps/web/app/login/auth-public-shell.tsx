@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { DeveloperSignature } from "@/app/developer-signature";
 import { getBuildInfo } from "@/lib/build-info";
 import type { RuntimeStatus } from "@/lib/runtime";
 
@@ -31,7 +32,7 @@ export function AuthPublicShell({ children, runtime, section }: AuthPublicShellP
       <footer className="auth-public-footer">
         <div>
           <strong>Elite Agrociências</strong>
-          <span>Desenvolvido por TioLu Systems</span>
+          <DeveloperSignature />
         </div>
         <div className="auth-public-release" aria-label="Versão do sistema">
           <span>Versão {build.version}</span>

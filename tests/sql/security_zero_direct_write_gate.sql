@@ -4,6 +4,7 @@ do $gate$
 declare
   v_table record;
   v_function record;
+  v_policy_dependency record;
   v_privilege text;
 begin
   for v_table in
@@ -36,6 +37,36 @@ begin
         raise exception 'authenticated retains % on public table %', v_privilege, v_table.relname;
       end if;
     end loop;
+  end loop;
+
+  for v_policy_dependency in
+    select distinct
+           pol.polname as policy_name,
+           rel.relname as table_name,
+           proc.oid as function_oid,
+           proc.oid::regprocedure as function_signature
+      from pg_policy pol
+      join pg_class rel on rel.oid = pol.polrelid
+      join pg_namespace rel_ns on rel_ns.oid = rel.relnamespace
+      join pg_depend dep
+        on dep.classid = 'pg_policy'::regclass
+       and dep.objid = pol.oid
+       and dep.refclassid = 'pg_proc'::regclass
+      join pg_proc proc on proc.oid = dep.refobjid
+      join pg_namespace proc_ns on proc_ns.oid = proc.pronamespace
+     where rel_ns.nspname = 'public'
+       and proc_ns.nspname = 'public'
+       and (
+         0::oid = any(pol.polroles)
+         or (select oid from pg_roles where rolname = 'authenticated') = any(pol.polroles)
+       )
+  loop
+    if not has_function_privilege('authenticated', v_policy_dependency.function_oid, 'EXECUTE') then
+      raise exception 'authenticated policy %.% depends on non-executable function %',
+        v_policy_dependency.table_name,
+        v_policy_dependency.policy_name,
+        v_policy_dependency.function_signature;
+    end if;
   end loop;
 
   for v_function in

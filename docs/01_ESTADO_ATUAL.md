@@ -9,7 +9,7 @@ Atualizado em: 2026-07-20
   `52f3dca`;
 - entrega atual: gate critico de RLS e escrita direta; UX-01C e a promocao do
   Preview permanecem pausados;
-- ultima migration validada localmente: `0066_close_direct_write_and_rpc_exposure.sql`;
+- ultima migration validada localmente: `0067_restore_rls_read_helper_access.sql`;
 - ultima migration no staging confirmada por ledger: `0066_close_direct_write_and_rpc_exposure.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -76,6 +76,20 @@ UX-01C.1 - Central de Cadastros:
 
 ## Validacao desta tarefa
 
+- smoke visual de Pessoas revelou regressao de leitura apos a `0066`;
+- causa confirmada: `authenticated` perdeu `EXECUTE` sobre
+  `current_actor_id()`, helper exigido pelas policies RLS de leitura;
+- frontend `f70bfbe` foi revertido no staging conforme gate de rollback;
+- `0067` restaura somente o helper autenticado e amplia o gate para dependencias
+  de policies;
+- instalacao limpa e upgrade `0066 -> 0067` aprovados em projetos, containers
+  e volumes independentes `elite-validation-*`;
+- gates finais aprovados: escrita direta continua negada e leitura autenticada
+  voltou a funcionar nos dominios representativos;
+- detalhes: `docs/auditoria_rls_continuidade_leitura_0067.md`.
+
+Validacao anterior da `0066`:
+
 - auditoria somente leitura do staging: 132 tabelas publicas, todas com RLS,
   zero escrita direta para `anon`, `authenticated` ou `PUBLIC` e zero politica
   permissiva de escrita residual;
@@ -129,12 +143,14 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Continuar o UX-01C com Produtos, apresentacoes, embalagens e conversoes,
-inventariando contratos existentes antes de qualquer nova alteracao estrutural.
+Fechar e publicar o pacote tecnico da `0067`. Depois, aplicar somente a `0067`
+no staging, repetir leitura autenticada e promover novamente o frontend
+`f70bfbe` se o smoke de Pessoas estiver saudavel.
 
 ## Tarefa seguinte
 
-Depois, concluir Veiculos, logistica, cadastros tecnicos e validacao consolidada.
+Retomar o UX-01C com Produtos, apresentacoes, embalagens e conversoes. Depois,
+concluir Veiculos, logistica, cadastros tecnicos e validacao consolidada.
 UX-01D permanece proibido ate a homologacao final de Cadastros.
 
 ## Sequencia vigente

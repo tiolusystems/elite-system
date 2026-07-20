@@ -98,3 +98,12 @@ Validacao final do staging:
 Nenhum dado operacional real foi usado. `main` e producao real nao foram
 alterados. A retomada de UX-01C e da promocao do Preview continua dependente da
 aprovacao deste resultado final.
+
+## Correcao posterior de continuidade de leitura
+
+O smoke visual posterior identificou uma lacuna que os gates de escrita nao
+cobriam: `current_actor_id()` perdeu o `EXECUTE` de `authenticated`, embora seja
+dependencia das policies RLS de leitura. A `0067` restaura exclusivamente esse
+helper e adiciona ao gate a verificacao das dependencias funcionais de cada
+policy. Evidencias e limite de publicacao estao em
+`docs/auditoria_rls_continuidade_leitura_0067.md`.

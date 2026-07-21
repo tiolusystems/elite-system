@@ -47,6 +47,15 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
         self.assertIn("saldo_empenhado", sql)
         self.assertIn("volumes_empenhados", sql)
 
+    def test_operational_ui_hides_raw_status_and_requires_all_issue_prerequisites(self):
+        page = PAGE.read_text(encoding="utf-8")
+        actions = ACTIONS.read_text(encoding="utf-8")
+        self.assertIn("romaneioStatusLabel(romaneio.status)", page)
+        self.assertIn("reservationsComplete && logisticsComplete && emittedFiscalDocuments.length > 0", page)
+        self.assertIn("Antes da baixa de estoque", page)
+        self.assertNotIn('placeholder="Observacao da atribuicao"', page)
+        self.assertIn("p_motivo: null", actions)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -87,7 +87,7 @@ export async function assignRomaneioLogisticsAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "registrar_exp_romaneio_logistica_atribuicao", {
     p_entregador_id: entregadorId,
-    p_motivo: optionalField(formData, "motivo"),
+    p_motivo: null,
     p_romaneio_id: romaneioId,
     p_veiculo_id: veiculoId
   });

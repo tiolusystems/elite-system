@@ -264,7 +264,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
                       </td>
                       <td>{lot.itemLabel}</td>
                       <td>
-                        <span className={`status-chip ${lot.status}`}>{lot.status}</span>
+                        <span className={`status-chip ${lot.status}`}>{lotStatusLabel(lot.status)}</span>
                       </td>
                       <td>{numberOrDash(lot.saldoFisico)}</td>
                       <td>{numberOrDash(lot.quantidadeReservada)}</td>
@@ -310,10 +310,16 @@ function PendingItemCard({ item }: { item: RomaneioPendingItem }) {
 }
 
 function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups: RomaneioLookups }) {
-  const canConfirm = romaneio.status === "draft" || romaneio.status === "separacao";
+  const statusAllowsConfirmation = romaneio.status === "draft" || romaneio.status === "separacao";
   const canCancel = romaneio.status === "draft" || romaneio.status === "separacao";
   const canReverse = romaneio.status === "confirmado";
   const canManageLogistics = ["draft", "separacao", "confirmado"].includes(romaneio.status);
+  const reservationsComplete =
+    romaneio.items.length > 0 &&
+    romaneio.items.every((item) => item.quantidadeReservada >= item.quantidadeRomaneada);
+  const logisticsComplete = Boolean(romaneio.logistics?.entregadorId && romaneio.logistics?.veiculoId);
+  const emittedFiscalDocuments = romaneio.fiscalDocuments.filter((document) => document.status === "emitida");
+  const canConfirm = statusAllowsConfirmation && reservationsComplete && logisticsComplete && emittedFiscalDocuments.length > 0;
 
   return (
     <article className={`romaneio-card romaneio-${romaneio.status}`}>
@@ -323,8 +329,8 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
           <p>{romaneio.pedidoLabel}</p>
         </div>
         <div className="romaneio-meta">
-          <span className={`status-chip ${romaneio.status}`}>{romaneio.status}</span>
-          <strong>{romaneio.tipoSeparacao}</strong>
+          <span className={`status-chip ${romaneio.status}`}>{romaneioStatusLabel(romaneio.status)}</span>
+          <strong>{separationTypeLabel(romaneio.tipoSeparacao)}</strong>
         </div>
       </div>
       <div className="tag-row">
@@ -388,7 +394,6 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
                   <LookupSelectOptions options={lookups.veiculos} />
                 </select>
               </label>
-              <input name="motivo" placeholder="Observacao da atribuicao" />
               <button className="secondary-button" type="submit">
                 {romaneio.logistics ? "Atualizar entrega" : "Atribuir entrega"}
               </button>
@@ -421,15 +426,15 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
           <div className="tag-row">
             {romaneio.fiscalDocuments.map((document) => (
               <span className="tag" key={document.id}>
-                {document.type}: {document.numberLabel} / {document.status} / {currency(document.value)}
+                {fiscalDocumentTypeLabel(document.type)}: {document.numberLabel} / {fiscalStatusLabel(document.status)} / {currency(document.value)}
               </span>
             ))}
           </div>
         ) : (
           <p className="muted">
             {romaneio.status === "confirmado"
-              ? "A separacao esta confirmada e pronta para o fluxo fiscal."
-              : "O fluxo fiscal sera liberado somente depois da confirmacao e da baixa de PA."}
+              ? "A NF emitida consolidou a baixa fisica do estoque."
+              : "Emita e vincule a NF no faturamento. A baixa fisica ocorrera somente ao confirmar esta NF."}
           </p>
         )}
       </section>
@@ -443,7 +448,7 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
           <div className="tag-row">
             {romaneio.movements.slice(0, 8).map((movement) => (
               <span className="tag" key={movement.id}>
-                {movement.tipoMovimento}: {numberOrDash(movement.quantidade)} / {movement.loteLabel}
+                {movementTypeLabel(movement.tipoMovimento)}: {numberOrDash(movement.quantidade)} / {movement.loteLabel}
               </span>
             ))}
           </div>
@@ -451,12 +456,20 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
       ) : null}
 
       <div className="romaneio-actions">
+        {statusAllowsConfirmation && !canConfirm ? (
+          <div className="notice-panel warning romaneio-confirmation-checklist" role="status">
+            <strong>Antes da baixa de estoque</strong>
+            <span>{reservationsComplete ? "Reserva completa" : "1. Reserve todos os produtos por lote"}</span>
+            <span>{logisticsComplete ? "Entregador e veiculo informados" : "2. Informe entregador e veiculo"}</span>
+            <span>{emittedFiscalDocuments.length > 0 ? "NF emitida vinculada" : "3. Emita e vincule a NF"}</span>
+          </div>
+        ) : null}
         {canConfirm ? (
           <form className="compact-action-form" action={confirmRomaneioAction}>
             <input type="hidden" name="romaneio_id" value={romaneio.id} />
             <select name="nota_fiscal_id" defaultValue="" required>
               <option value="" disabled>Selecione a NF emitida</option>
-              {romaneio.fiscalDocuments.filter((document) => document.status === "emitida").map((document) => (
+              {emittedFiscalDocuments.map((document) => (
                 <option key={document.id} value={document.id}>{document.numberLabel}</option>
               ))}
             </select>
@@ -465,7 +478,7 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
             </button>
           </form>
         ) : null}
-        {canConfirm ? <Link className="secondary-button" href={`/romaneios/${romaneio.id}/imprimir`}>Imprimir romaneio</Link> : null}
+        {statusAllowsConfirmation ? <Link className="secondary-button" href={`/romaneios/${romaneio.id}/imprimir`}>Imprimir romaneio</Link> : null}
         {canCancel ? (
           <form className="compact-action-form" action={cancelRomaneioAction}>
             <input type="hidden" name="romaneio_id" value={romaneio.id} />
@@ -498,13 +511,13 @@ function RomaneioItemRow({ item }: { item: RomaneioItem }) {
           item {item.id} / lote {item.lotePaRef ?? "-"}
         </span>
       </div>
-      <span className={`status-chip ${item.status}`}>{item.status}</span>
+      <span className={`status-chip ${item.status}`}>{romaneioItemStatusLabel(item.status)}</span>
       <div className="tag-row">
         <span className="tag">romaneado: {numberOrDash(item.quantidadeRomaneada)}</span>
         <span className="tag">reservado: {numberOrDash(item.quantidadeReservada)}</span>
         {item.reservations.map((reservation) => (
           <span className="tag" key={reservation.id}>
-            {reservation.loteLabel}: {numberOrDash(reservation.quantidadeReservada)} / {reservation.status}
+            {reservation.loteLabel}: {numberOrDash(reservation.quantidadeReservada)} / {reservationStatusLabel(reservation.status)}
           </span>
         ))}
       </div>
@@ -549,6 +562,60 @@ function groupPendingByOrder(items: RomaneioPendingItem[]): Array<[number, Roman
 
 function currency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
+function labelFromMap(value: string, labels: Record<string, string>): string {
+  return labels[value] ?? "Estado nao reconhecido";
+}
+
+function romaneioStatusLabel(value: string): string {
+  return labelFromMap(value, {
+    draft: "Rascunho",
+    separacao: "Em separacao",
+    confirmado: "Confirmado",
+    cancelado: "Cancelado",
+    estornado: "Estornado"
+  });
+}
+
+function separationTypeLabel(value: string): string {
+  return labelFromMap(value, { parcial: "Parcial", total: "Total" });
+}
+
+function romaneioItemStatusLabel(value: string): string {
+  return labelFromMap(value, {
+    draft: "Rascunho",
+    reservado: "Reservado",
+    confirmado: "Confirmado",
+    cancelado: "Cancelado",
+    estornado: "Estornado"
+  });
+}
+
+function reservationStatusLabel(value: string): string {
+  return labelFromMap(value, { ativa: "Ativa", baixada: "Baixada", liberada: "Liberada" });
+}
+
+function lotStatusLabel(value: string): string {
+  return labelFromMap(value, { disponivel: "Disponivel", bloqueado: "Bloqueado", vencido: "Vencido" });
+}
+
+function fiscalStatusLabel(value: string): string {
+  return labelFromMap(value, { emitida: "Emitida", cancelada: "Cancelada", substituida: "Substituida" });
+}
+
+function fiscalDocumentTypeLabel(value: string): string {
+  return labelFromMap(value, {
+    remessa_total: "Remessa total",
+    simples_faturamento: "Simples faturamento",
+    remessa_vinculada: "Remessa vinculada",
+    complementar: "Complementar",
+    devolucao: "Devolucao"
+  });
+}
+
+function movementTypeLabel(value: string): string {
+  return labelFromMap(value, { saida_romaneio: "Saida por romaneio", estorno_saida: "Estorno de saida" });
 }
 
 function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {

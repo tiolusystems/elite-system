@@ -9,6 +9,9 @@ ACTIONS = ROOT / "apps/web/app/romaneios/actions.ts"
 PREPARATION = ROOT / "apps/web/app/romaneios/romaneio-preparation.tsx"
 PRINT_PAGE = ROOT / "apps/web/app/romaneios/[id]/imprimir/page.tsx"
 MANUAL_PAGE = ROOT / "apps/web/app/romaneios/manual/page.tsx"
+ROMANEIO_DATA = ROOT / "apps/web/lib/romaneios.ts"
+CONTEXTUAL_LOTS_ROUTE = ROOT / "apps/web/app/romaneios/api/lotes/route.ts"
+OLD_LOTS_ROUTE = ROOT / "apps/web/app/api/romaneios/lotes/route.ts"
 
 
 class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
@@ -18,7 +21,7 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
         actions = ACTIONS.read_text(encoding="utf-8")
         self.assertIn("gravar_exp_romaneio_pedido", sql)
         self.assertIn("for update", sql.lower())
-        self.assertIn("Gravar romaneio", page)
+        self.assertIn("Gravar rascunho do romaneio", PREPARATION.read_text(encoding="utf-8"))
         self.assertIn('name="pedido_item_id"', page)
         self.assertIn('name={`quantidade_${item.pedidoItemId}`}', page)
         self.assertIn('"gravar_exp_romaneio_pedido"', actions)
@@ -27,12 +30,22 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
     def test_stock_issue_requires_invoice_and_logistics(self):
         sql = MIGRATION.read_text(encoding="utf-8")
         actions = ACTIONS.read_text(encoding="utf-8")
+        page = PAGE.read_text(encoding="utf-8")
         self.assertIn("driver and vehicle are required before stock issue", sql)
         self.assertIn("an emitted shipping invoice is required", sql)
         self.assertIn("invoice items must match romaneio quantities", sql)
         self.assertIn("confirmar_exp_romaneio_impl_0071", sql)
         self.assertIn("p_nota_fiscal_id", actions)
         self.assertNotIn("p_observacao: optionalField(formData, \"observacao\")", actions)
+        for result_key in (
+            "logistics_incomplete_for_issue",
+            "invoice_link_mismatch",
+            "invoice_not_ready",
+            "invoice_items_mismatch",
+            "load_measurements_pending",
+        ):
+            self.assertIn(result_key, actions)
+            self.assertIn(result_key, page)
 
     def test_missing_measurements_are_not_invented(self):
         sql = MIGRATION.read_text(encoding="utf-8")
@@ -64,10 +77,36 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
         preparation = PREPARATION.read_text(encoding="utf-8")
         self.assertIn("Escolha o pedido", preparation)
         self.assertIn("Escolha o produto e consulte os lotes", preparation)
-        self.assertIn("/api/romaneios/lotes?produto_embalagem_id=", preparation)
+        self.assertIn("/romaneios/api/lotes?produto_embalagem_id=", preparation)
         self.assertIn("Estoque ainda não consultado", preparation)
         self.assertIn("Saldo insuficiente para completar a reserva", preparation)
+        self.assertIn("reservableFromSelectedLot", preparation)
+        self.assertIn("Math.min(remaining, selectedLot.saldoDisponivel)", preparation)
+        self.assertIn("disabled={!selectedLot}", preparation)
+        self.assertIn("item.quantidadeReservada < item.quantidadeRomaneada", preparation)
+        self.assertIn('value.replace(",", ".")', preparation)
+        self.assertIn("Record<number, string>", preparation)
         self.assertIn("legacy-romaneio-ui", page)
+        self.assertIn("Prévia consultiva da carga", preparation)
+        self.assertIn("Esta prévia não grava nem reserva estoque", preparation)
+        self.assertIn("Planejar carga", page)
+        self.assertIn("Consultar romaneios", page)
+        self.assertTrue(CONTEXTUAL_LOTS_ROUTE.exists())
+        self.assertFalse(OLD_LOTS_ROUTE.exists())
+
+    def test_consultation_shortcuts_open_governed_views(self):
+        page = PAGE.read_text(encoding="utf-8")
+        self.assertIn('href="#novo-romaneio"', page)
+        self.assertIn("?status=romaneios-rascunho#romaneios-rascunho", page)
+        self.assertIn("?status=romaneios-separacao#romaneios-separacao", page)
+        self.assertIn("open={activeGroup === group.id}", page)
+        self.assertIn("Nenhum registro", page)
+
+    def test_logistics_upgrade_gap_does_not_hide_the_dashboard(self):
+        source = ROMANEIO_DATA.read_text(encoding="utf-8")
+        self.assertIn('completeResult.error?.message.includes("unidades_por_volume_logistico")', source)
+        self.assertIn('result.error?.message.includes("exp_romaneio_carga_resumo")', source)
+        self.assertIn("configuracao logistica como pendente", source)
 
     def test_status_navigation_manual_and_print_traceability_are_present(self):
         page = PAGE.read_text(encoding="utf-8")

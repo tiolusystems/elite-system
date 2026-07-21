@@ -21,6 +21,10 @@ export type RomaneioPendingItem = {
   quantidadeComprometida: number;
   quantidadeDisponivelRomaneio: number;
   quantidadeExcedente: number;
+  volumeUnitarioL: number | null;
+  unidadesPorVolume: number | null;
+  densidadeReferenciaKgL: number | null;
+  taraVolumeKg: number | null;
 };
 
 export type RomaneioReservation = {
@@ -159,11 +163,45 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
+    const produtoEmbalagensPromise = (async () => {
+      const completeResult = await supabase
+        .from("cad_produto_embalagens")
+        .select(
+          "id,codigo_item,status,produto_id,embalagem_id,unidades_por_volume_logistico,cad_produtos_base(codigo_produto,nome,densidade_kg_l),cad_embalagens(descricao,volume_litros,unidade)"
+        )
+        .limit(500);
+
+      if (!completeResult.error?.message.includes("unidades_por_volume_logistico")) {
+        return completeResult;
+      }
+
+      // Durante upgrade controlado, a tela continua consultiva e marca a
+      // configuracao logistica como pendente em vez de ocultar todo o painel.
+      return supabase
+        .from("cad_produto_embalagens")
+        .select(
+          "id,codigo_item,status,produto_id,embalagem_id,cad_produtos_base(codigo_produto,nome,densidade_kg_l),cad_embalagens(descricao,volume_litros,unidade)"
+        )
+        .limit(500);
+    })();
+    const cargasPromise = (async () => {
+      const result = await supabase
+        .from("exp_romaneio_carga_resumo")
+        .select("romaneio_id,volume_liquido_l,volumes_logisticos,peso_liquido_kg,peso_bruto_kg,itens_sem_volume_configurado,itens_sem_densidade,itens_sem_tara")
+        .limit(200);
+
+      if (result.error?.message.includes("exp_romaneio_carga_resumo")) {
+        return { data: [], error: null };
+      }
+
+      return result;
+    })();
     const [
       pendingBalances,
       orders,
       clientes,
       produtoEmbalagens,
+      configuracoesEmbalagem,
       romaneios,
       romaneioItems,
       reservas,
@@ -191,11 +229,10 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         .order("data_pedido", { ascending: false })
         .limit(300),
       supabase.from("cad_clientes").select("id,nome,cidade,uf").limit(500),
+      produtoEmbalagensPromise,
       supabase
-        .from("cad_produto_embalagens")
-        .select(
-          "id,codigo_item,status,produto_id,embalagem_id,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)"
-        )
+        .from("cad_embalagem_configuracoes_atuais")
+        .select("embalagem_id,peso_tara_kg")
         .limit(500),
       supabase
         .from("exp_romaneios")
@@ -255,10 +292,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         .not("romaneio_id", "is", null)
         .order("data_emissao", { ascending: false })
         .limit(300),
-      supabase
-        .from("exp_romaneio_carga_resumo")
-        .select("romaneio_id,volume_liquido_l,volumes_logisticos,peso_liquido_kg,peso_bruto_kg,itens_sem_volume_configurado,itens_sem_densidade,itens_sem_tara")
-        .limit(200),
+      cargasPromise,
       supabase.from("user_profiles").select("id,display_name").limit(500)
     ]);
 
@@ -266,6 +300,17 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
     const clienteMap = new Map(rows(clientes).map((row) => [Number(row.id), String(row.nome)]));
     const orderMap = new Map(orderRows.map((row) => [Number(row.id), mapOrder(row, clienteMap)]));
     const productPackageMap = new Map(rows(produtoEmbalagens).map((row) => [Number(row.id), packageLabel(row)]));
+    const tareByPackageId = new Map(rows(configuracoesEmbalagem).map((row) => [Number(row.embalagem_id), nullableNumber(row.peso_tara_kg)]));
+    const productPackageMetrics = new Map(rows(produtoEmbalagens).map((row) => {
+      const product = firstNested(row.cad_produtos_base);
+      const packaging = firstNested(row.cad_embalagens);
+      return [Number(row.id), {
+        volumeUnitarioL: packaging ? nullableNumber(packaging.volume_litros) : null,
+        unidadesPorVolume: nullableNumber(row.unidades_por_volume_logistico),
+        densidadeReferenciaKgL: product ? nullableNumber(product.densidade_kg_l) : null,
+        taraVolumeKg: tareByPackageId.get(Number(row.embalagem_id)) ?? null
+      }] as const;
+    }));
     const lotRows = rows(lotesPa);
     const availableLots = lotRows.map((row) => mapLot(row, productPackageMap));
     const lotMap = new Map(availableLots.map((lot) => [lot.id, `${lot.codigoLote} - ${lot.itemLabel}`]));
@@ -300,7 +345,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
     const userNameById = new Map(rows(usuarios).map((row) => [String(row.id), String(row.display_name)]));
 
     const pendingItems = rows(pendingBalances)
-      .map((row) => mapPendingItem(row, orderMap, productPackageMap))
+      .map((row) => mapPendingItem(row, orderMap, productPackageMap, productPackageMetrics))
       .sort((left, right) => right.quantidadePendente - left.quantidadePendente);
     const allocatableItems = pendingItems.filter((item) => item.quantidadeDisponivelRomaneio > 0);
 
@@ -357,6 +402,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       orders,
       clientes,
       produtoEmbalagens,
+      configuracoesEmbalagem,
       romaneios,
       romaneioItems,
       reservas,
@@ -461,11 +507,13 @@ function mapCarga(row: Record<string, unknown>) {
 function mapPendingItem(
   row: Record<string, unknown>,
   orderMap: Map<number, { id: number; label: string; clienteNome: string; status: string }>,
-  productPackageMap: Map<number, string>
+  productPackageMap: Map<number, string>,
+  productPackageMetrics: Map<number, { volumeUnitarioL: number | null; unidadesPorVolume: number | null; densidadeReferenciaKgL: number | null; taraVolumeKg: number | null }>
 ): RomaneioPendingItem {
   const pedidoId = Number(row.pedido_id);
   const order = orderMap.get(pedidoId);
   const produtoEmbalagemId = Number(row.produto_embalagem_id);
+  const metrics = productPackageMetrics.get(produtoEmbalagemId);
   return {
     pedidoItemId: Number(row.pedido_item_id),
     pedidoId,
@@ -479,7 +527,11 @@ function mapPendingItem(
     quantidadePendente: Number(row.quantidade_pendente ?? 0),
     quantidadeComprometida: Number(row.quantidade_comprometida ?? 0),
     quantidadeDisponivelRomaneio: Number(row.quantidade_disponivel_romaneio ?? 0),
-    quantidadeExcedente: Number(row.quantidade_excedente ?? 0)
+    quantidadeExcedente: Number(row.quantidade_excedente ?? 0),
+    volumeUnitarioL: metrics?.volumeUnitarioL ?? null,
+    unidadesPorVolume: metrics?.unidadesPorVolume ?? null,
+    densidadeReferenciaKgL: metrics?.densidadeReferenciaKgL ?? null,
+    taraVolumeKg: metrics?.taraVolumeKg ?? null
   };
 }
 

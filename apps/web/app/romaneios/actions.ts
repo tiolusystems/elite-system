@@ -272,6 +272,21 @@ function mapRomaneioError(message: string): string {
   if (normalized.includes("no active logistics assignment")) {
     return "missing_logistics_assignment";
   }
+  if (normalized.includes("driver and vehicle are required")) {
+    return "logistics_incomplete_for_issue";
+  }
+  if (normalized.includes("invoice must belong")) {
+    return "invoice_link_mismatch";
+  }
+  if (normalized.includes("an emitted shipping invoice is required")) {
+    return "invoice_not_ready";
+  }
+  if (normalized.includes("invoice items must match")) {
+    return "invoice_items_mismatch";
+  }
+  if (normalized.includes("load volumes and weights must be fully configured")) {
+    return "load_measurements_pending";
+  }
   if (normalized.includes("required") || normalized.includes("must be")) {
     return "missing_required";
   }

@@ -4,7 +4,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const productPackageId = Number(request.nextUrl.searchParams.get("produto_embalagem_id"));
-  if (!Number.isInteger(productPackageId) || productPackageId <= 0) return NextResponse.json({ error: "Produto inválido." }, { status: 400 });
+  if (!Number.isInteger(productPackageId) || productPackageId <= 0) {
+    return NextResponse.json({ error: "Produto inválido." }, { status: 400 });
+  }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -15,7 +17,9 @@ export async function GET(request: NextRequest) {
     .gt("saldo_disponivel", 0)
     .order("data_validade", { ascending: true, nullsFirst: false })
     .limit(200);
-  if (error) return NextResponse.json({ error: "Não foi possível consultar o estoque deste produto." }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: "Não foi possível consultar o estoque deste produto." }, { status: 500 });
+  }
 
   return NextResponse.json({
     lots: (data ?? []).map((row) => ({

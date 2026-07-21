@@ -27,6 +27,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
   const runtime = getRuntimeStatus();
   const dashboard = await getRomaneioDashboard();
   const result = singleValue(params.result);
+  const statusView = singleValue(params.status) ?? null;
   const formMessage = messageForResult(result);
 
   return (
@@ -70,8 +71,8 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de romaneio">
-            <Link className="secondary-button" href="/romaneios/manual">
-              Como fazer um romaneio
+            <Link className="secondary-button contextual-help-link" href="/romaneios/manual" aria-label="Abrir ajuda do Romaneio">
+              <span aria-hidden="true">?</span> Ajuda
             </Link>
             <a className="secondary-button" href="#novo-romaneio">
               Iniciar separação
@@ -80,26 +81,26 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
         </div>
 
         <section className="kpi-grid" aria-label="Resumo romaneio">
-          <article className="kpi-card accent-blue">
+          <a className="kpi-card romaneio-kpi accent-blue" href="#novo-romaneio">
             <span>Pedidos com pendencia</span>
             <strong>{valueOrDash(dashboard.metrics.pedidosComPendencia)}</strong>
             <p>{valueOrDash(dashboard.metrics.itensPendentes)} item(ns) com saldo a separar.</p>
-          </article>
-          <article className="kpi-card accent-amber">
+          </a>
+          <Link className="kpi-card romaneio-kpi accent-amber" href="/romaneios?status=romaneios-rascunho#romaneios-rascunho">
             <span>Em rascunho</span>
             <strong>{valueOrDash(dashboard.metrics.romaneiosRascunho)}</strong>
             <p>Ainda sem baixa de estoque.</p>
-          </article>
-          <article className="kpi-card accent-green">
+          </Link>
+          <Link className="kpi-card romaneio-kpi accent-green" href="/romaneios?status=romaneios-separacao#romaneios-separacao">
             <span>Em separacao</span>
             <strong>{valueOrDash(dashboard.metrics.romaneiosSeparacao)}</strong>
             <p>Com lote reservado ou aguardando completar reserva.</p>
-          </article>
-          <article className="kpi-card accent-red">
+          </Link>
+          <a className="kpi-card romaneio-kpi accent-red" href="#novo-romaneio">
             <span>Livre para novo romaneio</span>
             <strong>{valueOrDash(dashboard.metrics.quantidadeDisponivelRomaneio)}</strong>
             <p>Ja desconta rascunhos, separacoes e confirmacoes ativas.</p>
-          </article>
+          </a>
         </section>
 
         {dashboard.error ? (
@@ -115,6 +116,11 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
             <span>{formMessage.detail}</span>
           </section>
         ) : null}
+
+        <nav className="romaneio-mode-navigation" aria-label="Modos do Romaneio">
+          <a className="primary-button" href="#novo-romaneio">Planejar carga</a>
+          <a className="secondary-button" href="#romaneios">Consultar romaneios</a>
+        </nav>
 
         <RomaneioPreparation pendingItems={dashboard.pendingItems} romaneios={dashboard.romaneios} />
 
@@ -219,17 +225,10 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
 
         <section className="panel" id="romaneios" aria-labelledby="romaneios-title">
           <div className="panel-header">
-            <h2 id="romaneios-title">Romaneios recentes</h2>
+            <h2 id="romaneios-title">Consultar romaneios</h2>
             <span className="pill">{dashboard.romaneios.length} registro(s)</span>
           </div>
-          {dashboard.romaneios.length > 0 ? (
-            <RomaneioStatusGroups romaneios={dashboard.romaneios} lookups={dashboard.lookups} />
-          ) : (
-            <div className="empty-state">
-              <strong>Sem romaneios</strong>
-              <span>Crie um romaneio a partir de um item pendente de pedido.</span>
-            </div>
-          )}
+          <RomaneioStatusGroups romaneios={dashboard.romaneios} lookups={dashboard.lookups} activeGroup={statusView} />
         </section>
 
         <section className="panel legacy-romaneio-ui" aria-hidden="true" aria-labelledby="lotes-pa-title">
@@ -283,7 +282,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
   );
 }
 
-function RomaneioStatusGroups({ romaneios, lookups }: { romaneios: RomaneioRecord[]; lookups: RomaneioLookups }) {
+function RomaneioStatusGroups({ romaneios, lookups, activeGroup }: { romaneios: RomaneioRecord[]; lookups: RomaneioLookups; activeGroup: string | null }) {
   const groups = [
     { id: "romaneios-rascunho", label: "Rascunhos", statuses: ["draft"] },
     { id: "romaneios-separacao", label: "Em separação", statuses: ["separacao"] },
@@ -294,7 +293,7 @@ function RomaneioStatusGroups({ romaneios, lookups }: { romaneios: RomaneioRecor
       {groups.map((group) => {
         const records = romaneios.filter((romaneio) => group.statuses.includes(romaneio.status));
         return (
-          <details className="romaneio-status-group" id={group.id} key={group.id}>
+          <details className="romaneio-status-group" id={group.id} key={group.id} open={activeGroup === group.id}>
             <summary><strong>{group.label}</strong><span>{records.length} registro(s)</span></summary>
             {records.length ? <div className="romaneio-list">{records.map((romaneio) => <RomaneioCard key={romaneio.id} romaneio={romaneio} lookups={lookups} />)}</div> : <div className="empty-state compact-empty"><strong>Nenhum registro</strong><span>Não há romaneios nesta situação.</span></div>}
           </details>
@@ -724,6 +723,31 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Sem atribuicao ativa",
       detail: "Este romaneio nao possui entregador ou veiculo para remover."
+    },
+    logistics_incomplete_for_issue: {
+      kind: "warning",
+      title: "Entrega incompleta",
+      detail: "Informe entregador e veículo antes de confirmar a nota fiscal e baixar o estoque."
+    },
+    invoice_link_mismatch: {
+      kind: "warning",
+      title: "Nota fiscal não pertence ao romaneio",
+      detail: "Selecione uma nota fiscal emitida para este mesmo pedido e romaneio."
+    },
+    invoice_not_ready: {
+      kind: "warning",
+      title: "Nota fiscal ainda não emitida",
+      detail: "A baixa exige uma nota fiscal de remessa emitida e vinculada ao romaneio."
+    },
+    invoice_items_mismatch: {
+      kind: "warning",
+      title: "Itens da nota fiscal divergentes",
+      detail: "Produtos e quantidades da nota fiscal precisam coincidir com o romaneio."
+    },
+    load_measurements_pending: {
+      kind: "warning",
+      title: "Medidas da carga pendentes",
+      detail: "Complete volumes logísticos, densidades e taras antes da baixa do estoque."
     },
     duplicated_item: {
       kind: "warning",

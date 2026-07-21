@@ -23,7 +23,9 @@ export function RomaneioPreparation({
 }) {
   const [pedidoId, setPedidoId] = useState("");
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectedQuantities, setSelectedQuantities] = useState<Record<number, string>>({});
   const [openItemId, setOpenItemId] = useState("");
+  const [selectedLotId, setSelectedLotId] = useState("");
   const [compatibleLots, setCompatibleLots] = useState<RomaneioAvailableLot[]>([]);
   const [lotsLoading, setLotsLoading] = useState(false);
   const [lotsError, setLotsError] = useState("");
@@ -33,12 +35,37 @@ export function RomaneioPreparation({
     for (const item of pendingItems) grouped.set(item.pedidoId, [...(grouped.get(item.pedidoId) ?? []), item]);
     return [...grouped.entries()];
   }, [pendingItems]);
-  const orderItems = orders.find(([id]) => String(id) === pedidoId)?.[1] ?? [];
+  const orderItems = useMemo(() => orders.find(([id]) => String(id) === pedidoId)?.[1] ?? [], [orders, pedidoId]);
+  const loadPreview = useMemo(() => {
+    const selected = orderItems.filter((item) => selectedItems.includes(item.pedidoItemId));
+    let liters = 0;
+    let volumes = 0;
+    let netWeight = 0;
+    let grossWeight = 0;
+    let totalQuantity = 0;
+    let hasLiters = selected.length > 0;
+    let hasVolumes = selected.length > 0;
+    let hasNetWeight = selected.length > 0;
+    let hasGrossWeight = selected.length > 0;
+    for (const item of selected) {
+      const quantity = parseDecimalInput(selectedQuantities[item.pedidoItemId]);
+      totalQuantity += quantity;
+      if (item.volumeUnitarioL === null) hasLiters = false;
+      else liters += quantity * item.volumeUnitarioL;
+      if (item.unidadesPorVolume === null) hasVolumes = false;
+      else volumes += Math.ceil(quantity / item.unidadesPorVolume);
+      if (item.volumeUnitarioL === null || item.densidadeReferenciaKgL === null) hasNetWeight = false;
+      else netWeight += quantity * item.volumeUnitarioL * item.densidadeReferenciaKgL;
+      if (item.volumeUnitarioL === null || item.densidadeReferenciaKgL === null || item.unidadesPorVolume === null || item.taraVolumeKg === null) hasGrossWeight = false;
+      else grossWeight += quantity * item.volumeUnitarioL * item.densidadeReferenciaKgL + Math.ceil(quantity / item.unidadesPorVolume) * item.taraVolumeKg;
+    }
+    return { totalQuantity, liters: hasLiters ? liters : null, volumes: hasVolumes ? volumes : null, netWeight: hasNetWeight ? netWeight : null, grossWeight: hasGrossWeight ? grossWeight : null };
+  }, [orderItems, selectedItems, selectedQuantities]);
   const openItems: OpenItem[] = romaneios
     .filter((romaneio) => ["draft", "separacao"].includes(romaneio.status))
     .flatMap((romaneio) =>
       romaneio.items
-        .filter((item) => ["draft", "reservado"].includes(item.status))
+        .filter((item) => ["draft", "reservado"].includes(item.status) && item.quantidadeReservada < item.quantidadeRomaneada)
         .map((item) => ({
           id: item.id,
           produtoEmbalagemId: item.produtoEmbalagemId,
@@ -52,7 +79,7 @@ export function RomaneioPreparation({
   useEffect(() => {
     if (!openItem) return;
     const controller = new AbortController();
-    fetch(`/api/romaneios/lotes?produto_embalagem_id=${openItem.produtoEmbalagemId}`, { signal: controller.signal })
+    fetch(`/romaneios/api/lotes?produto_embalagem_id=${openItem.produtoEmbalagemId}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Não foi possível consultar os lotes deste produto.");
         return response.json() as Promise<{ lots: RomaneioAvailableLot[] }>;
@@ -64,6 +91,8 @@ export function RomaneioPreparation({
   }, [openItem]);
   const remaining = openItem ? Math.max(0, openItem.quantidadeRomaneada - openItem.quantidadeReservada) : 0;
   const compatibleBalance = compatibleLots.reduce((sum, lot) => sum + lot.saldoDisponivel, 0);
+  const selectedLot = compatibleLots.find((lot) => String(lot.id) === selectedLotId);
+  const reservableFromSelectedLot = selectedLot ? Math.min(remaining, selectedLot.saldoDisponivel) : 0;
 
   return (
     <div className="romaneio-preparation">
@@ -77,7 +106,7 @@ export function RomaneioPreparation({
         </div>
         <label className="wide-field">
           Pedido com saldo a entregar
-          <select value={pedidoId} onChange={(event) => { setPedidoId(event.target.value); setSelectedItems([]); }}>
+          <select value={pedidoId} onChange={(event) => { setPedidoId(event.target.value); setSelectedItems([]); setSelectedQuantities({}); }}>
             <option value="">Selecione o pedido</option>
             {orders.map(([id, items]) => (
               <option key={id} value={id}>
@@ -120,14 +149,24 @@ export function RomaneioPreparation({
                       placeholder="Quanto entregar"
                       disabled={!checked}
                       required={checked}
+                      value={selectedQuantities[item.pedidoItemId] ?? ""}
+                      onChange={(event) => setSelectedQuantities((current) => ({ ...current, [item.pedidoItemId]: event.target.value }))}
                     />
                   </label>
                 );
               })}
             </div>
+            <section className="romaneio-load-preview" aria-label="Prévia consultiva da carga">
+              <div><span>Quantidade selecionada</span><strong>{formatNumber(loadPreview.totalQuantity)}</strong></div>
+              <div><span>Volume líquido</span><strong>{previewValue(loadPreview.liters, "L")}</strong></div>
+              <div><span>Volumes logísticos</span><strong>{previewValue(loadPreview.volumes)}</strong></div>
+              <div><span>Peso líquido estimado</span><strong>{previewValue(loadPreview.netWeight, "kg")}</strong></div>
+              <div><span>Peso bruto estimado</span><strong>{previewValue(loadPreview.grossWeight, "kg")}</strong></div>
+              <p>Esta prévia não grava nem reserva estoque. Pesos são estimados pela densidade de referência; após escolher os lotes, o sistema usa a densidade do CQ.</p>
+            </section>
             <div className="form-footer">
-              <span>Selecione apenas os produtos e quantidades desta entrega.</span>
-              <button className="primary-button" type="submit" disabled={selectedItems.length === 0}>Gravar romaneio</button>
+              <span>Confira a carga. Somente este botão cria o rascunho.</span>
+              <button className="primary-button" type="submit" disabled={selectedItems.length === 0 || loadPreview.totalQuantity <= 0}>Gravar rascunho do romaneio</button>
             </div>
           </form>
         ) : <div className="empty-state compact-empty"><strong>Nenhum pedido selecionado</strong><span>Os produtos serão carregados depois da escolha do pedido.</span></div>}
@@ -140,7 +179,7 @@ export function RomaneioPreparation({
         </div>
         <label className="wide-field">
           Produto em romaneio aberto
-          <select value={openItemId} onChange={(event) => { setOpenItemId(event.target.value); setCompatibleLots([]); setLotsError(""); setLotsLoading(Boolean(event.target.value)); }}>
+          <select value={openItemId} onChange={(event) => { setOpenItemId(event.target.value); setSelectedLotId(""); setCompatibleLots([]); setLotsError(""); setLotsLoading(Boolean(event.target.value)); }}>
             <option value="">Selecione o produto</option>
             {openItems.map((item) => <option key={item.id} value={item.id}>{item.codigoRomaneio} - {item.itemLabel} - falta reservar {formatNumber(Math.max(0, item.quantidadeRomaneada - item.quantidadeReservada))}</option>)}
           </select>
@@ -156,14 +195,14 @@ export function RomaneioPreparation({
             </div>
             <div className="form-grid romaneio-form-grid">
               <label className="wide-field">Lote compatível
-                <select name="lote_pa_id" defaultValue="" required disabled={compatibleLots.length === 0}>
+                <select name="lote_pa_id" value={selectedLotId} onChange={(event) => setSelectedLotId(event.target.value)} required disabled={compatibleLots.length === 0}>
                   <option value="">{lotsLoading ? "Consultando lotes..." : compatibleLots.length ? "Selecione o lote" : "Nenhum lote disponível para este produto"}</option>
                   {compatibleLots.map((lot) => <option key={lot.id} value={lot.id}>{lot.codigoLote} - disponível {formatNumber(lot.saldoDisponivel)} - validade {lot.dataValidade ?? "não informada"}</option>)}
                 </select>
               </label>
-              <label>Quantidade a reservar<input name="quantidade_reservada" inputMode="decimal" min="0" max={Math.min(remaining, compatibleBalance)} step="any" required /></label>
+              <label>Quantidade a reservar<input name="quantidade_reservada" inputMode="decimal" min="0" max={reservableFromSelectedLot} step="any" required disabled={!selectedLot} /></label>
             </div>
-            <div className="form-footer"><span>A reserva reduz o disponível, sem baixar o estoque físico.</span><button className="primary-button" type="submit" disabled={!compatibleLots.length || remaining <= 0}>Reservar lote</button></div>
+            <div className="form-footer"><span>{selectedLot ? `Neste lote: ${formatNumber(selectedLot.saldoDisponivel)} disponível.` : "Escolha o lote antes de informar a quantidade."} A reserva reduz o disponível, sem baixar o estoque físico.</span><button className="primary-button" type="submit" disabled={!selectedLot || remaining <= 0}>Reservar lote</button></div>
           </form>
         ) : <div className="empty-state compact-empty"><strong>Estoque ainda não consultado</strong><span>Escolha um produto de um romaneio aberto para ver apenas seus lotes compatíveis.</span></div>}
       </section>
@@ -173,4 +212,14 @@ export function RomaneioPreparation({
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(value);
+}
+
+function parseDecimalInput(value: string | undefined) {
+  if (!value) return 0;
+  const parsed = Number(value.replace(",", "."));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function previewValue(value: number | null, unit = "") {
+  return value === null ? "Pendente" : `${formatNumber(value)}${unit ? ` ${unit}` : ""}`;
 }

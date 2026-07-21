@@ -17,7 +17,7 @@ export default async function ImprimirRomaneioPage({ params }: { params: Promise
       </header>
       <section className="print-summary">
         <p><strong>Pedido:</strong> {romaneio.pedidoLabel}</p><p><strong>Cliente:</strong> {romaneio.clienteNome}</p>
-        <p><strong>Data:</strong> {romaneio.dataRomaneio}</p><p><strong>Status:</strong> {romaneio.status}</p>
+        <p><strong>Data:</strong> {formatDate(romaneio.dataRomaneio)}</p><p><strong>Situação:</strong> {statusLabel(romaneio.status)}</p>
         <p><strong>Entregador:</strong> {romaneio.logistics?.entregadorNome ?? "Pendente"}</p>
         <p><strong>Veículo:</strong> {romaneio.logistics?.veiculoLabel ?? "Pendente"}</p>
         <p><strong>NF:</strong> {romaneio.fiscalDocuments.map((document) => document.numberLabel).join(", ") || "Pendente"}</p>
@@ -49,4 +49,18 @@ function format(value: number | null | undefined) {
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function statusLabel(value: string) {
+  return {
+    draft: "Rascunho",
+    separacao: "Em separação",
+    confirmado: "Confirmado",
+    cancelado: "Cancelado",
+    estornado: "Estornado"
+  }[value] ?? "Situação não reconhecida";
 }

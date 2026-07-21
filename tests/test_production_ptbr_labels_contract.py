@@ -15,6 +15,8 @@ class ProductionPtBrLabelsContractTest(unittest.TestCase):
         self.assertIn('"Matéria-prima"', labels)
         self.assertIn('"Produto acabado"', labels)
         self.assertIn('"Produto intermediário"', labels)
+        self.assertIn('replace(/\\bactive\\b/gi, "Ativo")', labels)
+        self.assertIn('replace(/\\binactive\\b/gi, "Inativo")', labels)
 
     def test_operational_surfaces_use_shared_labels(self) -> None:
         paths = (
@@ -31,6 +33,8 @@ class ProductionPtBrLabelsContractTest(unittest.TestCase):
 
         editor = (ROOT / paths[0]).read_text(encoding="utf-8")
         self.assertNotIn('<option value="">ignorar</option>', editor)
+        self.assertIn("productionOptionLabel(option)", editor)
+        self.assertNotIn("{option.label}{option.detail ?", editor)
 
         guarantees = (ROOT / paths[2]).read_text(encoding="utf-8")
         self.assertEqual(guarantees.count("{option.label} - {option.detail}"), 1)

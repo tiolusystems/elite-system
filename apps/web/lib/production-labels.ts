@@ -43,6 +43,16 @@ export function unitOptionLabel(option: PcpLookupOption): string {
   return unitLabel(option.label);
 }
 
+export function productionOptionLabel(option: PcpLookupOption): string {
+  if (!option.detail) return option.label;
+
+  const detail = option.detail
+    .replace(/\bactive\b/gi, "Ativo")
+    .replace(/\binactive\b/gi, "Inativo");
+
+  return `${option.label} - ${detail}`;
+}
+
 export function componentTypeLabel(type: PcpComponentType): string {
   return COMPONENT_LABELS[type];
 }

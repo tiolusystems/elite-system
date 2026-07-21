@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { PcpLookupOption } from "@/lib/pcp";
-import { unitOptionLabel } from "@/lib/production-labels";
+import { productionOptionLabel, unitOptionLabel } from "@/lib/production-labels";
 
 type FormulaTargets = {
   materiasPrimas: PcpLookupOption[];
@@ -45,7 +45,7 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
           <option value="">Selecione</option>
           {options.map((option) => (
             <option key={`${type}-${option.id}`} value={option.id}>
-              {option.label}{option.detail ? ` - ${option.detail}` : ""}
+              {productionOptionLabel(option)}
             </option>
           ))}
         </select>
@@ -102,7 +102,7 @@ function OutputRow({ index, targets }: { index: number; targets: Pick<FormulaTar
           <option value="">Selecione</option>
           {options.map((option) => (
             <option key={`${type}-${option.id}`} value={option.id}>
-              {option.label}{option.detail ? ` - ${option.detail}` : ""}
+              {productionOptionLabel(option)}
             </option>
           ))}
         </select>

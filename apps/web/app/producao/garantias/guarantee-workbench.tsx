@@ -1,4 +1,8 @@
-import { registerMpLotGuaranteeAction, registerProductGuaranteeAction } from "@/app/pcp/actions";
+import {
+  registerMpLotGuaranteeAction,
+  registerMpLotParametersAction,
+  registerProductGuaranteeAction
+} from "@/app/pcp/actions";
 import type { PcpDashboard } from "@/lib/pcp";
 import { unitLabel, unitOptionLabel } from "@/lib/production-labels";
 
@@ -150,6 +154,52 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
         </form>
       </section>
 
+      <section className="panel production-form" aria-labelledby="lot-physical-basis-title">
+        <div className="panel-header">
+          <div>
+            <h2 id="lot-physical-basis-title">Base física do lote de matéria-prima</h2>
+            <p className="muted">A densidade do lote converte litros e quilogramas sem estimativas do cadastro geral.</p>
+          </div>
+          <span className="pill">versionado por lote</span>
+        </div>
+        <form action={registerMpLotParametersAction} className="form-grid">
+          <label className="wide-field">
+            Lote de matéria-prima
+            <select name="lote_mp_id" defaultValue="" required>
+              <option value="">Selecione</option>
+              {dashboard.availableLots.filter((lot) => lot.tipo === "MP").map((lot) => (
+                <option key={lot.id} value={lot.id}>{lot.codigoLote} - {lot.targetLabel}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Densidade (kg/L)
+            <input name="densidade_kg_l" inputMode="decimal" placeholder="Ex.: 1,20" required />
+          </label>
+          <label>
+            Data de referência
+            <input name="data_referencia" type="date" defaultValue={today} required />
+          </label>
+          <label>
+            Fonte
+            <select name="fonte" defaultValue="laboratorio">
+              <option value="laboratorio">Laboratório</option>
+              <option value="fornecedor">Fornecedor</option>
+              <option value="manual">Informação manual</option>
+            </select>
+          </label>
+          <label className="wide-field">
+            Documento
+            <input name="documento_referencia" placeholder="Laudo ou certificado" />
+          </label>
+          <label className="full-field">
+            Justificativa
+            <input name="justificativa" placeholder="Origem e motivo deste valor" required />
+          </label>
+          <button className="primary-button" type="submit">Registrar densidade do lote</button>
+        </form>
+      </section>
+
       <section className="panel" aria-labelledby="guarantee-history-title">
         <div className="panel-header">
           <h2 id="guarantee-history-title">Garantias vigentes</h2>
@@ -183,6 +233,34 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
               ))}
               {dashboard.productGuarantees.length + dashboard.mpLotGuarantees.length === 0 ? (
                 <tr><td colSpan={6}>Nenhuma garantia vigente cadastrada.</td></tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="panel" aria-labelledby="lot-density-history-title">
+        <div className="panel-header">
+          <h2 id="lot-density-history-title">Densidades vigentes por lote</h2>
+          <span className="pill">{dashboard.mpLotParameters.length} registro(s)</span>
+        </div>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr><th>Lote</th><th>Densidade</th><th>Referência</th><th>Fonte</th><th>Documento</th></tr>
+            </thead>
+            <tbody>
+              {dashboard.mpLotParameters.map((parameter) => (
+                <tr key={parameter.id}>
+                  <td>{parameter.loteLabel}</td>
+                  <td>{formatNumber(parameter.densidadeKgL)} kg/L</td>
+                  <td>{parameter.dataReferencia}</td>
+                  <td>{sourceLabel(parameter.fonte)}</td>
+                  <td>{parameter.documentoReferencia ?? "-"}</td>
+                </tr>
+              ))}
+              {dashboard.mpLotParameters.length === 0 ? (
+                <tr><td colSpan={5}>Nenhuma densidade por lote registrada.</td></tr>
               ) : null}
             </tbody>
           </table>

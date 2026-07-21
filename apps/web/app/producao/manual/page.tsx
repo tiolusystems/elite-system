@@ -11,7 +11,7 @@ const STEPS = [
   },
   {
     title: "2. Registrar garantias",
-    detail: "Cadastre a garantia declarada do produto e, quando houver laudo, a garantia analisada por lote de matéria-prima.",
+    detail: "Cadastre a garantia declarada do produto, a garantia analisada e a densidade de cada lote de matéria-prima. Sem a base física completa, o sistema não estima o resultado.",
     href: "/producao/garantias",
     action: "Abrir garantias"
   },
@@ -76,6 +76,11 @@ export default function ProductionManualPage() {
       <section className="notice-panel ok">
         <strong>Regra de estoque</strong>
         <span>Reserva não baixa saldo físico. A baixa de MP acontece na finalização da OP; a baixa de PI e embalagens acontece na finalização do envase.</span>
+      </section>
+
+      <section className="notice-panel ok">
+        <strong>Como o sistema calcula as garantias</strong>
+        <span>O cálculo usa a quantidade realmente consumida de cada lote, a garantia vigente desse lote, sua densidade quando houver conversão entre litros e quilogramas e a massa ou o volume final informado no CQ. Dados ausentes ficam pendentes e nunca são substituídos por estimativa silenciosa.</span>
       </section>
     </ProductionShell>
   );

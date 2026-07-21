@@ -23,7 +23,15 @@ Publicar neste bloco nao significa liberar o ambiente `production`. Promocao par
 - garantia de faixa exige valor minimo e maximo;
 - garantia de laboratorio ou fornecedor exige documento de referencia;
 - calculo por OP gera snapshot versionado e imutavel;
-- o calculo pondera garantias dos lotes MP pelas quantidades efetivamente consumidas;
+- o cálculo usa balanço físico por lote: quantidade efetivamente consumida,
+  garantia vigente do lote, densidade versionada quando houver conversão e
+  massa/volume final do CQ;
+- percentual representa pontos percentuais (`12` significa `12%`) e valores
+  acima de `100%` são recusados pelo banco;
+- garantias em percentual fecham contra a massa final do CQ e garantias em
+  `kg/L` fecham contra o volume final do CQ;
+- densidade é registrada por lote, em histórico append-only auditado; o sistema
+  não usa a densidade genérica da MP como substituta silenciosa;
 - ausencia ou incompatibilidade de dados gera status explicito, nunca valor inventado;
 - `declarado` e informativo ate existir tolerancia de laboratorio formalizada.
 

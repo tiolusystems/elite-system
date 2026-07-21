@@ -405,6 +405,46 @@ export async function registerMpLotGuaranteeAction(formData: FormData) {
   redirect("/producao/garantias?result=mp_lot_guarantee_registered");
 }
 
+export async function registerMpLotParametersAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/producao/garantias?result=not_configured");
+  }
+
+  const loteMpId = optionalInteger(formData, "lote_mp_id");
+  const densidadeKgL = optionalNumber(formData, "densidade_kg_l");
+  const dataReferencia = field(formData, "data_referencia");
+  const fonte = field(formData, "fonte").toLowerCase();
+  const documentoReferencia = optionalField(formData, "documento_referencia");
+  const justificativa = field(formData, "justificativa");
+
+  if (!loteMpId || densidadeKgL === null || densidadeKgL <= 0 || !dataReferencia || !justificativa) {
+    redirect("/producao/garantias?result=missing_lot_parameters");
+  }
+  if (!new Set(["manual", "laboratorio", "fornecedor"]).has(fonte)) {
+    redirect("/producao/garantias?result=invalid_guarantee_type");
+  }
+  if ((fonte === "laboratorio" || fonte === "fornecedor") && !documentoReferencia) {
+    redirect("/producao/garantias?result=missing_guarantee_document");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_pcp_parametros_lote_mp", {
+    p_data_referencia: dataReferencia,
+    p_densidade_kg_l: densidadeKgL,
+    p_documento_referencia: documentoReferencia,
+    p_fonte: fonte,
+    p_justificativa: justificativa,
+    p_lote_mp_id: loteMpId
+  });
+
+  if (error) {
+    redirect(`/producao/garantias?result=${encodeURIComponent(mapPcpError(error.message))}`);
+  }
+
+  revalidateProductionPaths();
+  redirect("/producao/garantias?result=mp_lot_parameters_registered");
+}
+
 export async function calculateOpGuaranteesAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/producao/qualidade?result=not_configured#historico-cq");

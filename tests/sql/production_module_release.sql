@@ -8,12 +8,17 @@ declare
   v_materia_prima_id bigint;
   v_produto_id bigint;
   v_lote_mp_id bigint;
+  v_lote_sem_densidade_id bigint;
+  v_lote_sem_garantia_id bigint;
   v_formula_id bigint;
   v_op_id bigint;
+  v_op_sem_densidade_id bigint;
+  v_op_sem_garantia_id bigint;
   v_componente_id bigint;
   v_garantia_produto_1 bigint;
   v_garantia_produto_2 bigint;
   v_garantia_lote bigint;
+  v_parametro_lote bigint;
   v_calculo_1 integer;
   v_calculo_2 integer;
   v_valor numeric;
@@ -66,6 +71,22 @@ begin
       and action.runtime_access_kind = 'write'
   ) then
     raise exception 'production guarantee permission is not mapped to PCP write runtime';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.cad_lote_mp_parametros_tecnicos', 'INSERT')
+     or has_table_privilege('authenticated', 'public.cad_lote_mp_parametros_tecnicos', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.cad_lote_mp_parametros_tecnicos', 'DELETE') then
+    raise exception 'authenticated still has direct write on MP lot physical parameters';
+  end if;
+  if has_table_privilege('anon', 'public.cad_lote_mp_parametros_tecnicos', 'SELECT') then
+    raise exception 'anon can read MP lot physical parameters';
+  end if;
+  if has_function_privilege(
+    'anon',
+    'public.registrar_pcp_parametros_lote_mp(bigint,numeric,date,text,text,text)',
+    'EXECUTE'
+  ) then
+    raise exception 'anon can execute MP lot physical parameter RPC';
   end if;
 
   v_materia_prima_id := public.create_cad_materia_prima(
@@ -155,10 +176,37 @@ begin
     'LAUDO-0044',
     'Analise do lote para o smoke'
   );
+  v_parametro_lote := public.registrar_pcp_parametros_lote_mp(
+    v_lote_mp_id,
+    1,
+    current_date,
+    'manual',
+    null,
+    'Densidade medida para o smoke de balanco fisico'
+  );
 
-  if v_garantia_produto_1 is null or v_garantia_lote is null then
+  if v_garantia_produto_1 is null or v_garantia_lote is null or v_parametro_lote is null then
     raise exception 'guarantee registration did not return ids';
   end if;
+
+  begin
+    perform public.registrar_pcp_garantia_lote_mp(
+      v_lote_mp_id,
+      'N',
+      101,
+      '%',
+      'manual',
+      current_date,
+      null,
+      'Percentual acima de cem deve falhar'
+    );
+    raise exception 'percentage above 100 was accepted';
+  exception
+    when others then
+      if sqlerrm <> 'percentage guarantee must be between zero and 100' then
+        raise;
+      end if;
+  end;
 
   v_formula_id := public.create_pcp_formula_versao(
     v_produto_id,
@@ -203,9 +251,9 @@ begin
     ),
     'aprovado',
     6.5,
-    1.1,
+    1,
     10,
-    11,
+    10,
     25,
     'Separador Smoke 0044',
     'Conferente Smoke 0044',
@@ -223,7 +271,19 @@ begin
      and result.unidade = '%';
 
   if v_valor <> 10 or v_status <> 'atende' then
-    raise exception 'weighted guarantee calculation mismatch: value %, status %', v_valor, v_status;
+    raise exception 'physical guarantee calculation mismatch: value %, status %', v_valor, v_status;
+  end if;
+
+  if not exists (
+    select 1
+      from public.pcp_op_garantia_resultados result
+     where result.op_id = v_op_id
+       and result.calculo_versao = v_calculo_1
+       and result.base_calculo_json ->> 'metodo' = 'balanco_fisico_v1'
+       and jsonb_array_length(result.base_calculo_json -> 'inputs') = 1
+       and (result.base_calculo_json #>> '{inputs,0,parametro_lote_id}')::bigint = v_parametro_lote
+  ) then
+    raise exception 'physical guarantee calculation evidence is incomplete';
   end if;
 
   v_garantia_produto_2 := public.registrar_pcp_garantia_produto(
@@ -269,6 +329,85 @@ begin
     raise exception 'previous guarantee calculation was not preserved';
   end if;
 
+  v_lote_sem_densidade_id := public.create_est_lote_mp(
+    v_materia_prima_id, 100, null, 'importacao_inicial', 'disponivel',
+    current_date, current_date + 365, 'smoke-0044-sem-densidade',
+    'Lote sem densidade para validar fechamento seguro'
+  );
+  perform public.registrar_pcp_garantia_lote_mp(
+    v_lote_sem_densidade_id, 'N', 10, '%', 'manual', current_date, null,
+    'Garantia sem densidade para validar base incompleta'
+  );
+
+  v_formula_id := public.create_pcp_formula_versao(
+    v_produto_id, 'producao', 'Formula em litros para validar densidade obrigatoria',
+    jsonb_build_array(jsonb_build_object(
+      'tipo_componente', 'MP', 'materia_prima_id', v_materia_prima_id,
+      'quantidade', 10, 'unidade', 'L'
+    ))
+  );
+  perform public.activate_pcp_formula_versao(v_formula_id, 'Ativacao do teste de base incompleta');
+  v_op_sem_densidade_id := public.create_pcp_op(v_formula_id, 'estoque', 1, 'OP sem densidade do lote');
+  select id into v_componente_id from public.pcp_op_componentes_planejados
+   where op_id = v_op_sem_densidade_id and tipo_componente = 'MP';
+  perform public.reservar_pcp_op_componente(
+    v_componente_id, v_lote_sem_densidade_id, null, null, 10, 'Reserva sem densidade'
+  );
+  perform public.iniciar_pcp_op(v_op_sem_densidade_id, 'Inicio sem densidade');
+  perform public.finalizar_pcp_op(
+    v_op_sem_densidade_id,
+    jsonb_build_array(jsonb_build_object(
+      'tipo_produto', 'PI', 'produto_id', v_produto_id,
+      'quantidade', 10, 'observacao', 'PI com base fisica incompleta'
+    )),
+    'aprovado', 6.5, 1, 10, 10, 25,
+    'Separador Smoke', 'Conferente Smoke', '["Formulador Smoke"]'::jsonb,
+    'Finalizacao sem densidade'
+  );
+  perform public.calcular_pcp_garantias_op(v_op_sem_densidade_id, 'Calculo deve fechar sem estimativa');
+  if not exists (
+    select 1 from public.pcp_op_garantia_resultados
+     where op_id = v_op_sem_densidade_id
+       and status_resultado = 'base_incompleta'
+       and valor_calculado is null
+       and base_calculo_json -> 'pendencias' @> '[{"motivo":"densidade_lote_ausente_para_percentual"}]'::jsonb
+  ) then
+    raise exception 'missing lot density did not produce base_incompleta';
+  end if;
+
+  v_lote_sem_garantia_id := public.create_est_lote_mp(
+    v_materia_prima_id, 100, null, 'importacao_inicial', 'disponivel',
+    current_date, current_date + 365, 'smoke-0044-sem-garantia',
+    'Lote sem garantia para validar fechamento seguro'
+  );
+  v_op_sem_garantia_id := public.create_pcp_op(v_formula_id, 'estoque', 1, 'OP sem garantia do lote');
+  select id into v_componente_id from public.pcp_op_componentes_planejados
+   where op_id = v_op_sem_garantia_id and tipo_componente = 'MP';
+  perform public.reservar_pcp_op_componente(
+    v_componente_id, v_lote_sem_garantia_id, null, null, 10, 'Reserva sem garantia'
+  );
+  perform public.iniciar_pcp_op(v_op_sem_garantia_id, 'Inicio sem garantia');
+  perform public.finalizar_pcp_op(
+    v_op_sem_garantia_id,
+    jsonb_build_array(jsonb_build_object(
+      'tipo_produto', 'PI', 'produto_id', v_produto_id,
+      'quantidade', 10, 'observacao', 'PI sem garantia do lote'
+    )),
+    'aprovado', 6.5, 1, 10, 10, 25,
+    'Separador Smoke', 'Conferente Smoke', '["Formulador Smoke"]'::jsonb,
+    'Finalizacao sem garantia'
+  );
+  perform public.calcular_pcp_garantias_op(v_op_sem_garantia_id, 'Calculo deve apontar garantia ausente');
+  if not exists (
+    select 1 from public.pcp_op_garantia_resultados
+     where op_id = v_op_sem_garantia_id
+       and status_resultado = 'sem_dados_lote'
+       and valor_calculado is null
+       and base_calculo_json -> 'pendencias' @> '[{"motivo":"garantia_lote_ausente"}]'::jsonb
+  ) then
+    raise exception 'missing lot guarantee did not produce sem_dados_lote';
+  end if;
+
   begin
     update public.cad_garantias_produto_mapa
        set valor = 99
@@ -311,10 +450,11 @@ begin
       and log.action_key in (
         'pcp.guarantee.product.register',
         'pcp.guarantee.mp_lot.register',
+        'pcp.guarantee.mp_lot.parameters.register',
         'pcp.guarantee.calculate'
       )
       and log.status = 'success'
-  ) <> 3 then
+  ) <> 4 then
     raise exception 'production guarantee audit logs are incomplete';
   end if;
 end;

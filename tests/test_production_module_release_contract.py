@@ -6,6 +6,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = REPO_ROOT / "supabase" / "migrations" / "0044_production_module_release.sql"
+PHYSICAL_BALANCE_MIGRATION = REPO_ROOT / "supabase" / "migrations" / "0073_pcp_physical_guarantee_balance.sql"
 SMOKE = REPO_ROOT / "tests" / "sql" / "production_module_release.sql"
 PCP_ACTIONS = REPO_ROOT / "apps" / "web" / "app" / "pcp" / "actions.ts"
 PCP_PAGE = REPO_ROOT / "apps" / "web" / "app" / "pcp" / "page.tsx"
@@ -46,30 +47,52 @@ class ProductionModuleReleaseContractTests(unittest.TestCase):
         self.assertIn("supersedes_id", text)
 
     def test_calculation_uses_actual_consumption_and_fails_closed(self) -> None:
-        text = MIGRATION.read_text(encoding="utf-8")
+        text = PHYSICAL_BALANCE_MIGRATION.read_text(encoding="utf-8")
 
-        self.assertIn("guarantee.valor * consumption.quantidade_consumida", text)
-        self.assertIn("nullif(sum(consumption.quantidade_consumida), 0)", text)
+        self.assertIn("v_consumed_mass_kg * v_lot_guarantee.valor / 100", text)
+        self.assertIn("v_consumed_volume_l * v_lot_guarantee.valor", text)
+        self.assertIn("v_total_nutrient_kg / nullif(v_cq.massa_kg, 0) * 100", text)
+        self.assertIn("v_total_nutrient_kg / nullif(v_cq.volume_l, 0)", text)
+        self.assertIn("'balanco_fisico_v1'", text)
         self.assertIn("'sem_dados_lote'", text)
+        self.assertIn("'base_incompleta'", text)
         self.assertIn("'unidade_incompativel'", text)
         self.assertIn("'sem_referencia_mapa'", text)
         self.assertIn("perform pg_advisory_xact_lock", text)
-        self.assertGreaterEqual(text.count("'laboratorio', 'fornecedor', 'calculado'"), 2)
-        self.assertGreaterEqual(text.count("documento_referencia is required for laboratorio or fornecedor"), 2)
+        self.assertNotIn("nullif(sum(consumption.quantidade_consumida), 0)", text)
+
+    def test_lot_physical_parameters_are_append_only_audited_and_governed(self) -> None:
+        text = PHYSICAL_BALANCE_MIGRATION.read_text(encoding="utf-8")
+
+        self.assertIn("create table public.cad_lote_mp_parametros_tecnicos", text)
+        self.assertIn("before update or delete on public.cad_lote_mp_parametros_tecnicos", text)
+        self.assertIn("before truncate on public.cad_lote_mp_parametros_tecnicos", text)
+        self.assertIn("registrar_pcp_parametros_lote_mp", text)
+        self.assertIn("public.begin_audited_rpc(", text)
+        self.assertIn("public.log_audited_rpc_change(", text)
+        self.assertIn("revoke all on public.cad_lote_mp_parametros_tecnicos from anon", text)
 
     def test_guarantee_rpcs_start_with_audited_permission_contract(self) -> None:
         text = MIGRATION.read_text(encoding="utf-8")
 
-        for function_name in (
-            "registrar_pcp_garantia_produto",
-            "registrar_pcp_garantia_lote_mp",
-            "calcular_pcp_garantias_op",
-        ):
-            start = text.index(f"create or replace function public.{function_name}")
-            end = text.index("$$;", start)
-            body = text[start:end]
-            self.assertIn("public.begin_audited_rpc(", body)
-            self.assertIn("public.log_audited_rpc_change(", body)
+        functions_by_migration = {
+            MIGRATION: (
+                "registrar_pcp_garantia_produto",
+                "registrar_pcp_garantia_lote_mp",
+            ),
+            PHYSICAL_BALANCE_MIGRATION: (
+                "registrar_pcp_parametros_lote_mp",
+                "calcular_pcp_garantias_op",
+            ),
+        }
+        for migration, function_names in functions_by_migration.items():
+            text = migration.read_text(encoding="utf-8")
+            for function_name in function_names:
+                start = text.index(f"create or replace function public.{function_name}")
+                end = text.index("$$;", start)
+                body = text[start:end]
+                self.assertIn("public.begin_audited_rpc(", body)
+                self.assertIn("public.log_audited_rpc_change(", body)
 
     def test_web_exposes_audited_guarantee_and_release_operations(self) -> None:
         actions = PCP_ACTIONS.read_text(encoding="utf-8")

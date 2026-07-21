@@ -10,7 +10,7 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada localmente: `0072_fix_master_data_source_lineage.sql`;
+- ultima migration validada em upgrade descartável: `0073_pcp_physical_guarantee_balance.sql`;
 - ultima migration no staging confirmada por ledger: `0072_fix_master_data_source_lineage.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -41,10 +41,15 @@ Validacao com recorte real do Tio Lu System:
   sem ativacao automatica;
 - garantias sem classificacao inequivoca de nutriente, unidade e natureza foram
   registradas como pendencias; nenhuma garantia ambigua foi promovida;
-- a revisao do calculo atual encontrou risco de superestimacao por usar media
-  apenas entre lotes com garantia, sem fechar a base fisica contra massa ou
-  volume final do CQ. O calculo real permanece bloqueado ate a regra de balanco
-  de massa e conversao de unidades ser homologada.
+- o risco de superestimação do cálculo anterior foi corrigido pela migration
+  0073: o resultado passa a fechar massa/volume dos lotes consumidos contra o
+  CQ final, com densidade versionada por lote;
+- lote sem garantia ou sem densidade necessária gera pendência explícita e
+  valor calculado nulo; nenhuma estimativa silenciosa é aceita;
+- instalação limpa 0001 -> 0073, upgrade 0072 -> 0073, smoke SQL, ESLint,
+  TypeScript, build e 25 testes dirigidos foram aprovados em ambientes
+  descartáveis; a 0073 permanece fora do staging até commit, push e conferência
+  controlada do ledger.
 
 Romaneio consultivo e retomada da cadeia industrial:
 

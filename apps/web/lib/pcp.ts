@@ -51,6 +51,18 @@ export type PcpMpLotGuarantee = {
   createdAt: string;
 };
 
+export type PcpMpLotParameters = {
+  id: number;
+  loteMpId: number;
+  loteLabel: string;
+  densidadeKgL: number;
+  dataReferencia: string;
+  fonte: string;
+  documentoReferencia: string | null;
+  justificativa: string;
+  createdAt: string;
+};
+
 export type PcpOpGuaranteeResult = {
   id: number;
   opId: number;
@@ -195,6 +207,7 @@ export type PcpDashboard = {
   availableLots: PcpAvailableLot[];
   productGuarantees: PcpProductGuarantee[];
   mpLotGuarantees: PcpMpLotGuarantee[];
+  mpLotParameters: PcpMpLotParameters[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -236,6 +249,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       unidades,
       productGuarantees,
       mpLotGuarantees,
+      mpLotParameters,
       opGuaranteeResults
     ] = await Promise.all([
       supabase
@@ -355,6 +369,11 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         .order("data_referencia", { ascending: false })
         .limit(800),
       supabase
+        .from("cad_lote_mp_parametros_tecnicos_atuais")
+        .select("id,lote_mp_id,densidade_kg_l,data_referencia,fonte,documento_referencia,justificativa,created_at")
+        .order("data_referencia", { ascending: false })
+        .limit(800),
+      supabase
         .from("pcp_op_garantia_resultados_atuais")
         .select(
           "id,op_id,produto_gerado_id,produto_id,calculo_versao,nutriente,unidade,valor_calculado,tipo_limite,valor_referencia,valor_maximo_referencia,status_resultado,atende,justificativa,created_at"
@@ -378,6 +397,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     const unitRows = rows(unidades);
     const productGuaranteeRows = rows(productGuarantees);
     const mpLotGuaranteeRows = rows(mpLotGuarantees);
+    const mpLotParameterRows = rows(mpLotParameters);
     const opGuaranteeResultRows = rows(opGuaranteeResults);
 
     const produtoMap = new Map<number, string>(
@@ -490,6 +510,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
 
     const currentProductGuarantees = productGuaranteeRows.map((row) => mapProductGuarantee(row, produtoMap));
     const currentMpLotGuarantees = mpLotGuaranteeRows.map((row) => mapMpLotGuarantee(row, lotMap));
+    const currentMpLotParameters = mpLotParameterRows.map((row) => mapMpLotParameters(row, lotMap));
 
     const lookups: PcpLookups = {
       produtos: produtoRows.map((row) => ({
@@ -549,6 +570,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       unidades,
       productGuarantees,
       mpLotGuarantees,
+      mpLotParameters,
       opGuaranteeResults
     ]);
 
@@ -570,6 +592,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       availableLots,
       productGuarantees: currentProductGuarantees,
       mpLotGuarantees: currentMpLotGuarantees,
+      mpLotParameters: currentMpLotParameters,
       source: firstError ? "error" : "supabase",
       error: firstError
     };
@@ -615,6 +638,21 @@ function mapMpLotGuarantee(row: Record<string, unknown>, lotMap: Map<string, str
     dataReferencia: nullableString(row.data_referencia),
     documentoReferencia: nullableString(row.documento_referencia),
     justificativa: nullableString(row.justificativa),
+    createdAt: String(row.created_at)
+  };
+}
+
+function mapMpLotParameters(row: Record<string, unknown>, lotMap: Map<string, string>): PcpMpLotParameters {
+  const loteMpId = Number(row.lote_mp_id);
+  return {
+    id: Number(row.id),
+    loteMpId,
+    loteLabel: lotMap.get(`MP:${loteMpId}`) ?? `lote MP ${loteMpId}`,
+    densidadeKgL: Number(row.densidade_kg_l),
+    dataReferencia: String(row.data_referencia),
+    fonte: String(row.fonte),
+    documentoReferencia: nullableString(row.documento_referencia),
+    justificativa: String(row.justificativa),
     createdAt: String(row.created_at)
   };
 }
@@ -857,6 +895,7 @@ function emptyDashboard(source: PcpDashboard["source"], error: string | null): P
     availableLots: [],
     productGuarantees: [],
     mpLotGuarantees: [],
+    mpLotParameters: [],
     source,
     error
   };

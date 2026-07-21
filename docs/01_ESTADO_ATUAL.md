@@ -10,8 +10,8 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada localmente: `0067_restore_rls_read_helper_access.sql`;
-- ultima migration no staging confirmada por ledger: `0067_restore_rls_read_helper_access.sql`;
+- ultima migration validada localmente: `0072_fix_master_data_source_lineage.sql`;
+- ultima migration no staging confirmada por ledger: `0072_fix_master_data_source_lineage.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -35,8 +35,16 @@ Validacao com recorte real do Tio Lu System:
   pendentes de revisao; nenhum valor ausente foi promovido como fato;
 - a carga real revelou e a migration 0072 corrige a validacao de linhagem entre
   `source_rows`, `source_tables`, `source_workbooks` e `migration_batches`;
-- proxima acao: publicar a 0072 e, depois de autorizada no staging, retomar a
-  cadeia MP -> formula operacional -> OP -> PI com dados revisados.
+- a migration 0072 foi publicada, aplicada isoladamente no staging e confirmada
+  no ledger; o health-check permaneceu saudavel e nenhum frontend foi alterado;
+- uma formula historica do recorte real foi preservada como `pending_review`,
+  sem ativacao automatica;
+- garantias sem classificacao inequivoca de nutriente, unidade e natureza foram
+  registradas como pendencias; nenhuma garantia ambigua foi promovida;
+- a revisao do calculo atual encontrou risco de superestimacao por usar media
+  apenas entre lotes com garantia, sem fechar a base fisica contra massa ou
+  volume final do CQ. O calculo real permanece bloqueado ate a regra de balanco
+  de massa e conversao de unidades ser homologada.
 
 Romaneio consultivo e retomada da cadeia industrial:
 
@@ -120,7 +128,7 @@ UX-01C.1 - Central de Cadastros:
 - nenhuma migration, RPC, RLS, tabela ou regra de negocio foi alterada;
 - nenhum dado operacional, workbook ou captura foi adicionado ao Git.
 
-## Validacao da tarefa atual
+## Validacao desta tarefa
 
 Fluxo PI -> OP MAPA -> Envase -> PA em validação local:
 
@@ -240,14 +248,16 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Homologar com dados sintéticos o fluxo Fórmula operacional -> garantia declarada
-e por lote -> OP -> reserva -> CQ -> cálculo de garantias -> lote PI.
+Fechar o contrato de calculo de garantias por balanco de massa/volume, com
+unidades canonicas, densidade, tratamento explicito de lote sem garantia e
+snapshot auditavel dos insumos efetivamente consumidos.
 
 ## Tarefa seguinte
 
-Homologar Envase + OP MAPA -> baixa de PI e embalagens -> lote PA; depois validar
-estoque e relatórios separados por MP, PI e PA. Veículos e logística deixam de
-ser prioridade imediata.
+Reexecutar com dados reais revisados o fluxo Formula operacional -> OP ->
+reserva -> CQ -> garantia calculada -> lote PI. Depois homologar Envase + OP
+MAPA -> baixa de PI e embalagens -> lote PA e os relatorios separados por MP,
+PI e PA. Veiculos e logistica deixam de ser prioridade imediata.
 
 ## Sequencia vigente
 

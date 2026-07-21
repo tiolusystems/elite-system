@@ -46,6 +46,16 @@ Marcador:
 
 `PG_VALIDATE_0076_PCP_FIFO_COMPONENT_RESERVATION_OK`
 
+## Staging
+
+- migration 0076 aplicada isoladamente após dry-run indicar somente esse arquivo;
+- ledger remoto confirmado em 0076;
+- health-check do domínio estável: HTTP 200, `status=ok` e
+  `backendConfigured=true`;
+- Preview `dpl_Af9tVhkHuq3MevfLDq3W6NNVLBm2` não foi promovido porque a Vercel
+  retornou `Resource provisioning failed` antes da compilação;
+- o deployment estável anterior não foi substituído.
+
 ## Limite conhecido
 
 Este pacote governa quantidade e escolha de lotes. Ele não calcula custo

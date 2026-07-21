@@ -11,7 +11,7 @@ Atualizado em: 2026-07-21
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
 - ultima migration validada em instalação limpa descartável: `0076_pcp_fifo_component_reservation.sql`;
-- ultima migration no staging confirmada por ledger: `0075_pcp_formula_per_liter_op_scaling.sql`;
+- ultima migration no staging confirmada por ledger: `0076_pcp_fifo_component_reservation.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -45,7 +45,11 @@ DEC-013 - reserva FIFO governada:
 - uma trava transacional por componente impede duas reservas concorrentes de
   decidirem sobre a mesma disponibilidade simultaneamente;
 - instalação limpa 0001 -> 0076 e smoke transacional foram aprovados somente no
-  container e volume descartáveis `elite-validation-0076-clean`.
+  container e volume descartáveis `elite-validation-0076-clean`;
+- migration 0076 aplicada isoladamente e confirmada no ledger do staging;
+- frontend compilado localmente, mas o novo Preview não foi promovido porque a
+  Vercel falhou antes do build com `Resource provisioning failed`; o deployment
+  estável anterior permanece saudável e conectado ao backend de staging.
 
 ## Próxima tarefa
 

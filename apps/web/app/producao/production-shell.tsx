@@ -11,7 +11,8 @@ export type ProductionRoute =
   | "qualidade"
   | "envase"
   | "estoque"
-  | "transformacoes";
+  | "transformacoes"
+  | "manual";
 
 const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: string }> = [
   { key: "overview", href: "/producao", label: "Visao geral" },
@@ -21,7 +22,8 @@ const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: strin
   { key: "qualidade", href: "/producao/qualidade", label: "CQ e finalizacao" },
   { key: "envase", href: "/producao/envase", label: "OP MAPA e envase" },
   { key: "estoque", href: "/producao/estoque", label: "Lotes e estoque" },
-  { key: "transformacoes", href: "/producao/transformacoes", label: "Transformacoes" }
+  { key: "transformacoes", href: "/producao/transformacoes", label: "Transformacoes" },
+  { key: "manual", href: "/producao/manual", label: "Como operar" }
 ];
 
 type ProductionShellProps = {

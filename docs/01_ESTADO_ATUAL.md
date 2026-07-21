@@ -8,7 +8,8 @@ Atualizado em: 2026-07-21
 - ultima entrega publicada: continuidade de leitura RLS restaurada no commit
   `eb5a218`, sobre Pessoas e vinculos `8ae5904`;
 - entrega atual: Produção liberada no staging para validação de negócio, com
-  rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ;
+  rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
+  contextual da cadeia MP -> PI -> envase -> PA;
 - ultima migration validada localmente: `0067_restore_rls_read_helper_access.sql`;
 - ultima migration no staging confirmada por ledger: `0067_restore_rls_read_helper_access.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
@@ -33,6 +34,12 @@ Romaneio consultivo e retomada da cadeia industrial:
   banco, mas deixam de aparecer crus nas telas operacionais de Produção;
 - nenhuma migration ou regra de cálculo foi criada: garantias continuam sendo
   calculadas no CQ a partir dos lotes efetivamente consumidos.
+- cenário sintético no staging criou e ativou a fórmula operacional v1 e abriu
+  a OP `OP-20260721-0000001`; a reserva foi corretamente bloqueada porque ainda
+  não existe lote de MP com saldo, sem criação artificial de estoque;
+- o manual de Produção registra a sequência operacional e a separação entre a
+  fórmula que consome MP e gera PI e a fórmula MAPA documental que dispara o
+  envase para gerar PA.
 
 Continuidade de leitura RLS `0067`:
 

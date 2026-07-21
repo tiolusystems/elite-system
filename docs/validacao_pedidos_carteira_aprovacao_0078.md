@@ -31,6 +31,8 @@
 - gerente libera pedido e o status passa a aberto;
 - escrita direta permanece negada;
 - `anon` nao executa as RPCs governadas.
+- RPC legada de pedido nao permite escolher outro vendedor nem abrir a venda;
+- RPC legada de credito nao permite ao vendedor liberar o proprio pedido.
 
 ## Aplicacao
 
@@ -45,3 +47,9 @@
 A primeira versao governada cria um item por pedido. O proximo incremento deve
 permitir varios itens no mesmo pedido sem reabrir o escopo de carteira, credito
 ou aprovacao aqui validado.
+
+## Compatibilidade 0079
+
+Como a Vercel nao conseguiu provisionar o novo Preview, a migration 0079 fecha
+tambem as RPCs consumidas pelo frontend estavel anterior. Assim, a indisponibilidade
+temporaria do novo layout nao reabre os atalhos de vendedor e aprovacao.

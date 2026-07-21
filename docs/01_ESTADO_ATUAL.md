@@ -68,6 +68,8 @@ Pedidos por carteira e liberação gerencial:
   0078, exclusivamente em containers `elite-validation-*`;
 - ESLint, TypeScript, build, smoke SQL e 13 testes dirigidos aprovados;
 - manual operacional criado em `docs/manuais/pedidos/PEDIDOS_E_APROVACAO.md`.
+- compatibilidade do frontend anterior endurecida na migration 0079: as RPCs
+  legadas também derivam carteira/vendedor da sessão e exigem escopo gerencial.
 
 ## Entrega industrial anterior
 

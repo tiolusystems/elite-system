@@ -84,6 +84,25 @@ exception when others then
   if sqlerrm = 'seller unexpectedly approved own order' then raise; end if;
 end $$;
 
+do $$ begin
+  perform public.registrar_com_pedido_decisao_credito((select id from public.com_pedidos limit 1), 'liberado', 'Tentativa pela RPC legada', null, null, null);
+  raise exception 'legacy credit RPC allowed seller approval';
+exception when others then
+  if sqlerrm = 'legacy credit RPC allowed seller approval' then raise; end if;
+end $$;
+
+do $$
+declare v_item bigint; v_client bigint; v_manager bigint;
+begin
+  select id into v_item from public.cad_produto_embalagens where codigo_item = '0078-1L';
+  select id into v_client from public.cad_clientes where nome = 'Cliente Carteira A';
+  select id into v_manager from public.cad_pessoas_comerciais where nome = 'Gerente Teste';
+  perform public.create_com_pedido_operacional(v_client, v_item, 1, 10, null, 'venda', 'open', current_date, v_manager, null, null);
+  raise exception 'legacy order RPC allowed seller spoofing';
+exception when others then
+  if sqlerrm = 'legacy order RPC allowed seller spoofing' then raise; end if;
+end $$;
+
 select set_config('request.jwt.claim.sub', '78000000-0000-4000-8000-000000000003', true);
 do $$ begin
   if (select count(*) from public.com_pedidos) <> 0 then raise exception 'unrelated seller can read another portfolio'; end if;

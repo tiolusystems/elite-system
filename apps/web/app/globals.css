@@ -3603,6 +3603,7 @@ h1 {
 
 .legacy-romaneio-ui { display: none !important; }
 .romaneio-preparation { display: grid; gap: 1rem; }
+.dashboard-header:has(+ .kpi-grid) .toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
 .romaneio-order-item.is-unavailable { background: #f5f7f8; color: #66737d; }
 .field-warning { color: #9a5b00; }
 .romaneio-status-groups { display: grid; gap: 0.75rem; }
@@ -3631,6 +3632,11 @@ h1 {
     grid-column: 2;
     width: 100%;
   }
+}
+
+@media (max-width: 1100px) {
+  .dashboard-header:has(+ .kpi-grid) { grid-template-columns: 1fr; align-items: start; }
+  .dashboard-header:has(+ .kpi-grid) .toolbar-actions { justify-content: flex-start; }
 }
 
 .print-document {

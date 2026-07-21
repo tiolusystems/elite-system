@@ -74,13 +74,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
               Como fazer um romaneio
             </Link>
             <a className="secondary-button" href="#novo-romaneio">
-              Novo romaneio
-            </a>
-            <a className="secondary-button" href="#reservar-lote">
-              Reservar lote
-            </a>
-            <a className="primary-button" href="#romaneios">
-              Operar
+              Iniciar separação
             </a>
           </div>
         </div>

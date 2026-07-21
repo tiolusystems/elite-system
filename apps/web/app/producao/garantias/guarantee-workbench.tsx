@@ -1,5 +1,6 @@
 import { registerMpLotGuaranteeAction, registerProductGuaranteeAction } from "@/app/pcp/actions";
 import type { PcpDashboard } from "@/lib/pcp";
+import { unitLabel, unitOptionLabel } from "@/lib/production-labels";
 
 export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboard; today: string }) {
   return (
@@ -25,7 +26,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
               <select name="nutriente" defaultValue="" required>
                 <option value="">Selecione</option>
                 {dashboard.lookups.nutrientes.map((option) => (
-                  <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+                  <option key={option.id} value={option.label}>{unitOptionLabel(option)}</option>
                 ))}
               </select>
             </label>
@@ -51,7 +52,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
               <select name="unidade" defaultValue="" required>
                 <option value="">Selecione</option>
                 {dashboard.lookups.unidades.map((option) => (
-                  <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+                  <option key={option.id} value={option.label}>{unitOptionLabel(option)}</option>
                 ))}
               </select>
             </label>
@@ -165,7 +166,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
                   <td>Produto</td>
                   <td>{guarantee.produtoLabel}</td>
                   <td>{guarantee.nutriente}</td>
-                  <td>{formatNumber(guarantee.valor)}{guarantee.valorMaximo === null ? "" : ` a ${formatNumber(guarantee.valorMaximo)}`} {guarantee.unidade}</td>
+                  <td>{formatNumber(guarantee.valor)}{guarantee.valorMaximo === null ? "" : ` a ${formatNumber(guarantee.valorMaximo)}`} {unitLabel(guarantee.unidade)}</td>
                   <td>{limitLabel(guarantee.tipoLimite)} / {sourceLabel(guarantee.fonte)}</td>
                   <td>{guarantee.documentoReferencia ?? "-"}</td>
                 </tr>
@@ -175,7 +176,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
                   <td>Lote MP</td>
                   <td>{guarantee.loteLabel}</td>
                   <td>{guarantee.nutriente}</td>
-                  <td>{formatNumber(guarantee.valor)} {guarantee.unidade}</td>
+                  <td>{formatNumber(guarantee.valor)} {unitLabel(guarantee.unidade)}</td>
                   <td>{sourceLabel(guarantee.fonte)}</td>
                   <td>{guarantee.documentoReferencia ?? guarantee.dataReferencia ?? "-"}</td>
                 </tr>

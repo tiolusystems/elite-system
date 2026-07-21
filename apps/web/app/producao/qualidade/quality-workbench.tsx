@@ -1,6 +1,7 @@
 import { calculateOpGuaranteesAction, finishPcpOpAction } from "@/app/pcp/actions";
 import { OutputRows } from "@/app/pcp/production-editors";
 import type { PcpLookups, PcpRecentOp } from "@/lib/pcp";
+import { productionStatusLabel, unitLabel } from "@/lib/production-labels";
 
 export function QualityWorkbench({ inProcess, completed, lookups }: { inProcess: PcpRecentOp[]; completed: PcpRecentOp[]; lookups: PcpLookups }) {
   return (
@@ -176,7 +177,7 @@ function CompletedQualityCard({ op }: { op: PcpRecentOp }) {
       </div>
       <div className="tag-row">
         {op.outputs.map((output) => (
-          <span className="tag" key={output.id}>{output.tipoProduto} {formatNumber(output.quantidade)} - {output.loteLabel} / {output.statusLote}</span>
+          <span className="tag" key={output.id}>{output.tipoProduto} {formatNumber(output.quantidade)} - {output.loteLabel} / {productionStatusLabel(output.statusLote)}</span>
         ))}
         {op.outputs.length === 0 ? <span className="tag">sem saida fisica</span> : null}
       </div>
@@ -185,8 +186,8 @@ function CompletedQualityCard({ op }: { op: PcpRecentOp }) {
           {op.guaranteeResults.map((result) => (
             <div className="guarantee-result" key={result.id}>
               <span>{result.nutriente}</span>
-              <strong>{result.valorCalculado === null ? "-" : formatNumber(result.valorCalculado)} {result.unidade}</strong>
-              <span className={`status-chip ${result.statusResultado}`}>{result.statusResultado}</span>
+              <strong>{result.valorCalculado === null ? "-" : formatNumber(result.valorCalculado)} {unitLabel(result.unidade)}</strong>
+              <span className={`status-chip ${result.statusResultado}`}>{productionStatusLabel(result.statusResultado)}</span>
             </div>
           ))}
         </div>

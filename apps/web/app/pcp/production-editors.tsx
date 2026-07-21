@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { PcpLookupOption } from "@/lib/pcp";
+import { unitOptionLabel } from "@/lib/production-labels";
 
 type FormulaTargets = {
   materiasPrimas: PcpLookupOption[];
@@ -32,10 +33,10 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
       <label>
         Tipo
         <select name={`component_${index}_tipo`} value={type} onChange={(event) => setType(event.target.value)}>
-          <option value="">ignorar</option>
-          <option value="MP">MP</option>
-          <option value="PA">PA</option>
-          <option value="PI">PI</option>
+          <option value="">Não utilizar esta linha</option>
+          <option value="MP">Matéria-prima</option>
+          <option value="PA">Produto acabado</option>
+          <option value="PI">Produto intermediário</option>
         </select>
       </label>
       <label className="wide-field">
@@ -58,12 +59,12 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
         <select name={`component_${index}_unidade`} defaultValue="" disabled={!type}>
           <option value="">Selecione</option>
           {targets.unidades.map((option) => (
-            <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+            <option key={option.id} value={option.label}>{unitOptionLabel(option)}</option>
           ))}
         </select>
       </label>
       <label className="wide-field">
-        Observacao
+        Observação
         <input name={`component_${index}_observacao`} placeholder="Opcional" />
       </label>
     </div>
@@ -88,11 +89,11 @@ function OutputRow({ index, targets }: { index: number; targets: Pick<FormulaTar
     <div className="pcp-output-row">
       <span className="pcp-row-index">{index}</span>
       <label>
-        Saida
+        Saída
         <select name={`output_${index}_tipo`} value={type} onChange={(event) => setType(event.target.value)}>
-          <option value="">ignorar</option>
-          <option value="PA">PA</option>
-          <option value="PI">PI</option>
+          <option value="">Não utilizar esta linha</option>
+          <option value="PA">Produto acabado</option>
+          <option value="PI">Produto intermediário</option>
         </select>
       </label>
       <label className="wide-field">
@@ -111,7 +112,7 @@ function OutputRow({ index, targets }: { index: number; targets: Pick<FormulaTar
         <input name={`output_${index}_quantidade`} inputMode="decimal" />
       </label>
       <label className="wide-field">
-        Observacao
+        Observação
         <input name={`output_${index}_observacao`} placeholder="Opcional" />
       </label>
     </div>

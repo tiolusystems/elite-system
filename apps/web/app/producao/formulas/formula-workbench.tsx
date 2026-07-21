@@ -1,6 +1,7 @@
 import { activatePcpFormulaAction } from "@/app/pcp/actions";
 import { FormulaCreationForm } from "@/app/producao/formulas/formula-creation-form";
 import type { PcpDashboard, PcpFormulaVersion } from "@/lib/pcp";
+import { componentTypeLabel, unitLabel } from "@/lib/production-labels";
 
 export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboard: PcpDashboard; includeActive?: boolean }) {
   return (
@@ -84,7 +85,7 @@ function FormulaCard({ formula }: { formula: PcpFormulaVersion }) {
         {formula.components.length > 0 ? (
           formula.components.slice(0, 8).map((component) => (
             <span className="tag" key={component.id}>
-              {component.tipoComponente} {formatNumber(component.quantidade)} {component.unidade ?? ""} - {component.targetLabel}
+              {componentTypeLabel(component.tipoComponente)} {formatNumber(component.quantidade)} {unitLabel(component.unidade)} - {component.targetLabel}
             </span>
           ))
         ) : (

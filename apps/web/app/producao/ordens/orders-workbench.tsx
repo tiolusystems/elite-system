@@ -7,6 +7,7 @@ import {
   startPcpOpAction
 } from "@/app/pcp/actions";
 import type { PcpAvailableLot, PcpDashboard, PcpOpComponent, PcpRecentOp } from "@/lib/pcp";
+import { componentTypeLabel, productionStatusLabel, unitLabel } from "@/lib/production-labels";
 
 export function OrdersWorkbench({ dashboard, orders }: { dashboard: PcpDashboard; orders: PcpRecentOp[] }) {
   return (
@@ -169,7 +170,7 @@ export function PlanningOrderCard({
           <div className="tag-row">
             {op.outputs.map((output) => (
               <span className="tag" key={output.id}>
-                {output.tipoProduto} {output.loteLabel}: {formatNumber(output.quantidade)} / {output.statusLote}
+                {output.tipoProduto} {output.loteLabel}: {formatNumber(output.quantidade)} / {productionStatusLabel(output.statusLote)}
               </span>
             ))}
           </div>
@@ -228,9 +229,9 @@ function PlanningComponentRow({
   return (
     <div className="pcp-op-component">
       <div>
-        <strong>{component.tipoComponente} - {component.targetLabel}</strong>
+        <strong>{componentTypeLabel(component.tipoComponente)} - {component.targetLabel}</strong>
         <span>
-          planejado {formatNumber(component.quantidadePlanejada)} {component.unidade ?? ""} / reservado {formatNumber(component.quantidadeReservada)}
+          planejado {formatNumber(component.quantidadePlanejada)} {unitLabel(component.unidade)} / reservado {formatNumber(component.quantidadeReservada)}
         </span>
       </div>
       <span className={`status-chip ${component.status}`}>{componentStatusLabel(component.status)}</span>
@@ -238,7 +239,7 @@ function PlanningComponentRow({
         <div className="tag-row">
           {component.reservations.map((reservation) => (
             <span className="tag" key={reservation.id}>
-              {reservation.loteLabel}: {formatNumber(reservation.quantidadeReservada)} / {reservation.status}
+              {reservation.loteLabel}: {formatNumber(reservation.quantidadeReservada)} / {productionStatusLabel(reservation.status)}
             </span>
           ))}
         </div>
@@ -249,7 +250,7 @@ function PlanningComponentRow({
           <input type="hidden" name="tipo_componente" value={component.tipoComponente} />
           <input type="hidden" name="return_to" value={returnTo} />
           <label className="wide-field">
-            Lote {component.tipoComponente}
+            Lote de {componentTypeLabel(component.tipoComponente).toLowerCase()}
             <select name="lote_id" defaultValue="" required>
               <option value="">Selecione</option>
               {compatibleLots.map((lot) => (

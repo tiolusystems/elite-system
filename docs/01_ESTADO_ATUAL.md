@@ -1,14 +1,14 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-20
+Atualizado em: 2026-07-21
 
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
 - ultima entrega publicada: continuidade de leitura RLS restaurada no commit
   `eb5a218`, sobre Pessoas e vinculos `8ae5904`;
-- entrega atual: UX-01C - Produtos, apresentacoes, embalagens e composicao
-  versionada em `UN/L`, migration proposta `0068`;
+- entrega atual: Produção liberada no staging para validação de negócio, com
+  rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ;
 - ultima migration validada localmente: `0067_restore_rls_read_helper_access.sql`;
 - ultima migration no staging confirmada por ledger: `0067_restore_rls_read_helper_access.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
@@ -20,6 +20,19 @@ Atualizado em: 2026-07-20
 - GitHub: codigo e documentacao somente; push depende de autorizacao.
 
 ## Tarefa concluida mais recente
+
+Romaneio consultivo e retomada da cadeia industrial:
+
+- Romaneio `3b12101` publicado no staging com pedido, seleção individual de
+  produtos, quantidade parcial, prévia sem gravação, botão explícito de
+  rascunho, consulta contextual de lotes e manual por tarefa;
+- homologação do Romaneio permanece provisória até o ensaio com dados reais;
+- Produção passou de bloqueada para Validação de negócio com leitura e escrita
+  por evento auditado no rollout do staging;
+- códigos internos de unidade, componente e resultado permanecem estáveis no
+  banco, mas deixam de aparecer crus nas telas operacionais de Produção;
+- nenhuma migration ou regra de cálculo foi criada: garantias continuam sendo
+  calculadas no CQ a partir dos lotes efetivamente consumidos.
 
 Continuidade de leitura RLS `0067`:
 
@@ -204,15 +217,14 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Fechar tecnicamente e publicar de forma controlada a `0068` depois de
-autorizacao explicita. Em seguida, implementar Veiculos e Logistica com escrita
-governada; a tabela existe, mas faltam RPCs auditadas de manutencao.
+Homologar com dados sintéticos o fluxo Fórmula operacional -> garantia declarada
+e por lote -> OP -> reserva -> CQ -> cálculo de garantias -> lote PI.
 
 ## Tarefa seguinte
 
-Concluir Veiculos, logistica, cadastros tecnicos e validacao consolidada do
-UX-01C. UX-01D
-permanece proibido ate a homologacao final de Cadastros.
+Homologar Envase + OP MAPA -> baixa de PI e embalagens -> lote PA; depois validar
+estoque e relatórios separados por MP, PI e PA. Veículos e logística deixam de
+ser prioridade imediata.
 
 ## Sequencia vigente
 

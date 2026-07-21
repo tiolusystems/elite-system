@@ -155,7 +155,10 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   missing_release_required: { kind: "warning", title: "Liberacao incompleta", detail: "Informe um lote PA ou PI bloqueado e o motivo da liberacao." },
   invalid_participants: { kind: "warning", title: "Participantes invalidos", detail: "Separador, conferente e formuladores devem estar ativos." },
   invalid_output_row: { kind: "warning", title: "Saida invalida", detail: "Revise tipo, produto e quantidade da saida." },
-  missing_guarantee_calculation: { kind: "warning", title: "Calculo incompleto", detail: "Informe a OP e a justificativa do calculo." }
+  missing_guarantee_calculation: { kind: "warning", title: "Calculo incompleto", detail: "Informe a OP e a justificativa do calculo." },
+  invalid_historical_review: { kind: "warning", title: "Revisao incompleta", detail: "Escolha uma decisao e informe uma justificativa com pelo menos 10 caracteres." },
+  missing_historical_catalogs: { kind: "warning", title: "Classificacao incompleta", detail: "Para classificar, selecione o nutriente e as duas unidades governadas." },
+  historical_guarantee_reviewed: { kind: "ok", title: "Revisao registrada", detail: "A classificacao historica foi auditada sem criar garantia operacional." }
 };
 
 export function ProductionFeedback({ result }: { result: string | null }) {

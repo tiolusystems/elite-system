@@ -10,7 +10,7 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em upgrade descartável: `0073_pcp_physical_guarantee_balance.sql`;
+- ultima migration validada em upgrade descartável: `0074_pcp_historical_guarantee_reconciliation.sql`;
 - ultima migration no staging confirmada por ledger: `0073_pcp_physical_guarantee_balance.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -21,6 +21,18 @@ Atualizado em: 2026-07-21
 - GitHub: codigo e documentacao somente; push depende de autorizacao.
 
 ## Tarefa concluida mais recente
+
+Conciliação de garantias históricas:
+
+- cálculos PP/PV do Excel passam a ter fonte relacional própria, vinculada ao
+  lote de migração e à linha original;
+- revisão classifica nutriente e unidades por IDs governados, ou mantém a linha
+  pendente/descartada com justificativa;
+- decisões são append-only e auditadas; nenhuma delas promove automaticamente
+  garantia MAPA, garantia de lote, resultado de OP ou saldo;
+- migration 0074 e smoke transacional foram aprovados somente em containers
+  descartáveis `elite-validation-*`; staging permanece na 0073 até autorização
+  específica de aplicação.
 
 Validacao com recorte real do Tio Lu System:
 

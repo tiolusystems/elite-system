@@ -63,6 +63,22 @@ export type PcpMpLotParameters = {
   createdAt: string;
 };
 
+export type PcpHistoricalGuaranteeReview = {
+  id: number;
+  produtoLabel: string;
+  descricaoOrigem: string;
+  valorPpPercentualL: number | null;
+  valorPvKgL: number | null;
+  decisao: string;
+  nutrienteLabel: string | null;
+  unidadePp: string | null;
+  unidadePv: string | null;
+  justificativa: string | null;
+  sourceBatchId: number;
+  sourceRowId: number;
+  linhaExcel: number | null;
+};
+
 export type PcpOpGuaranteeResult = {
   id: number;
   opId: number;
@@ -208,6 +224,7 @@ export type PcpDashboard = {
   productGuarantees: PcpProductGuarantee[];
   mpLotGuarantees: PcpMpLotGuarantee[];
   mpLotParameters: PcpMpLotParameters[];
+  historicalGuarantees: PcpHistoricalGuaranteeReview[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -250,6 +267,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       productGuarantees,
       mpLotGuarantees,
       mpLotParameters,
+      historicalGuarantees,
       opGuaranteeResults
     ] = await Promise.all([
       supabase
@@ -374,6 +392,13 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         .order("data_referencia", { ascending: false })
         .limit(800),
       supabase
+        .from("pcp_garantias_historicas_conciliacao_atual")
+        .select(
+          "id,produto_id,codigo_produto,produto_nome,descricao_origem,valor_pp_percentual_l,valor_pv_kg_l,decisao,nutriente_nome,nutriente_simbolo,unidade_pp_codigo,unidade_pv_codigo,justificativa,source_batch_id,source_row_id,linha_excel"
+        )
+        .order("id", { ascending: false })
+        .limit(500),
+      supabase
         .from("pcp_op_garantia_resultados_atuais")
         .select(
           "id,op_id,produto_gerado_id,produto_id,calculo_versao,nutriente,unidade,valor_calculado,tipo_limite,valor_referencia,valor_maximo_referencia,status_resultado,atende,justificativa,created_at"
@@ -398,6 +423,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     const productGuaranteeRows = rows(productGuarantees);
     const mpLotGuaranteeRows = rows(mpLotGuarantees);
     const mpLotParameterRows = rows(mpLotParameters);
+    const historicalGuaranteeRows = rows(historicalGuarantees);
     const opGuaranteeResultRows = rows(opGuaranteeResults);
 
     const produtoMap = new Map<number, string>(
@@ -571,6 +597,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       productGuarantees,
       mpLotGuarantees,
       mpLotParameters,
+      historicalGuarantees,
       opGuaranteeResults
     ]);
 
@@ -593,6 +620,23 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       productGuarantees: currentProductGuarantees,
       mpLotGuarantees: currentMpLotGuarantees,
       mpLotParameters: currentMpLotParameters,
+      historicalGuarantees: historicalGuaranteeRows.map((row) => ({
+        id: Number(row.id),
+        produtoLabel: `${row.codigo_produto} - ${row.produto_nome}`,
+        descricaoOrigem: String(row.descricao_origem),
+        valorPpPercentualL: nullableNumber(row.valor_pp_percentual_l),
+        valorPvKgL: nullableNumber(row.valor_pv_kg_l),
+        decisao: String(row.decisao),
+        nutrienteLabel: row.nutriente_id === null || row.nutriente_id === undefined
+          ? null
+          : String(row.nutriente_simbolo ?? row.nutriente_nome),
+        unidadePp: nullableString(row.unidade_pp_codigo),
+        unidadePv: nullableString(row.unidade_pv_codigo),
+        justificativa: nullableString(row.justificativa),
+        sourceBatchId: Number(row.source_batch_id),
+        sourceRowId: Number(row.source_row_id),
+        linhaExcel: nullableNumber(row.linha_excel)
+      })),
       source: firstError ? "error" : "supabase",
       error: firstError
     };
@@ -896,6 +940,7 @@ function emptyDashboard(source: PcpDashboard["source"], error: string | null): P
     productGuarantees: [],
     mpLotGuarantees: [],
     mpLotParameters: [],
+    historicalGuarantees: [],
     source,
     error
   };

@@ -1,5 +1,20 @@
 # Fórmulas e garantias
 
+## Conciliar cálculos históricos do Excel
+
+1. Acesse **Produção > Garantias > Conciliação do histórico**.
+2. Confira produto, termo original, valores PP/PV e a linha de origem.
+3. Quando a correspondência for segura, escolha **Classificar** e selecione o
+   nutriente e as duas unidades nos catálogos governados.
+4. Se houver dúvida, escolha **Manter pendente** e explique o motivo.
+5. Se a linha for apenas cálculo auxiliar sem utilidade futura, escolha
+   **Descartar como referência** e justifique.
+
+A revisão preserva o valor exatamente como veio do Excel. Ela não transforma o
+cálculo em garantia documental MAPA, garantia analisada de lote, resultado de OP
+ou saldo de estoque. Essa promoção exige outro ato de negócio e outra fonte
+documental. Nenhum termo ambíguo é classificado automaticamente.
+
 ## Finalidade
 
 Este fluxo define o que será produzido, quais componentes serão necessários e

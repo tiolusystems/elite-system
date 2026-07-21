@@ -445,6 +445,43 @@ export async function registerMpLotParametersAction(formData: FormData) {
   redirect("/producao/garantias?result=mp_lot_parameters_registered");
 }
 
+export async function reviewHistoricalGuaranteeAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/producao/garantias?result=not_configured#conciliacao-historica");
+  }
+
+  const fonteHistoricaId = optionalInteger(formData, "fonte_historica_id");
+  const decisao = field(formData, "decisao");
+  const justificativa = field(formData, "justificativa");
+  const classified = decisao === "classificada";
+  const nutrienteId = classified ? optionalInteger(formData, "nutriente_id") : null;
+  const unidadePpId = classified ? optionalInteger(formData, "unidade_pp_id") : null;
+  const unidadePvId = classified ? optionalInteger(formData, "unidade_pv_id") : null;
+
+  if (!fonteHistoricaId || !new Set(["classificada", "manter_pendente", "descartada"]).has(decisao) || justificativa.length < 10) {
+    redirect("/producao/garantias?result=invalid_historical_review#conciliacao-historica");
+  }
+  if (classified && (!nutrienteId || !unidadePpId || !unidadePvId)) {
+    redirect("/producao/garantias?result=missing_historical_catalogs#conciliacao-historica");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "revisar_pcp_garantia_historica", {
+    p_decisao: decisao,
+    p_fonte_historica_id: fonteHistoricaId,
+    p_justificativa: justificativa,
+    p_nutriente_id: nutrienteId,
+    p_unidade_pp_id: unidadePpId,
+    p_unidade_pv_id: unidadePvId
+  });
+  if (error) {
+    redirect(`/producao/garantias?result=${encodeURIComponent(mapPcpError(error.message))}#conciliacao-historica`);
+  }
+
+  revalidateProductionPaths();
+  redirect("/producao/garantias?result=historical_guarantee_reviewed#conciliacao-historica");
+}
+
 export async function calculateOpGuaranteesAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/producao/qualidade?result=not_configured#historico-cq");

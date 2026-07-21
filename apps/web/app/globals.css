@@ -6166,3 +6166,12 @@ h1 {
   .print-hidden { display: none !important; }
   .packaging-print-sheet { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
 }
+.production-history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+  gap: 1rem;
+}
+
+.production-history-grid .production-form {
+  margin: 0;
+}

@@ -1,7 +1,8 @@
 import {
   registerMpLotGuaranteeAction,
   registerMpLotParametersAction,
-  registerProductGuaranteeAction
+  registerProductGuaranteeAction,
+  reviewHistoricalGuaranteeAction
 } from "@/app/pcp/actions";
 import type { PcpDashboard } from "@/lib/pcp";
 import { unitLabel, unitOptionLabel } from "@/lib/production-labels";
@@ -200,6 +201,84 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
         </form>
       </section>
 
+      <section className="panel" id="conciliacao-historica" aria-labelledby="historical-guarantee-title">
+        <div className="panel-header">
+          <div>
+            <h2 id="historical-guarantee-title">Conciliação do histórico</h2>
+            <p className="muted">Classifique os cálculos encontrados no Excel. Esta revisão não cria garantia MAPA, garantia de lote ou movimento de estoque.</p>
+          </div>
+          <span className="pill">{dashboard.historicalGuarantees.length} fonte(s)</span>
+        </div>
+        <div className="production-history-grid">
+          {dashboard.historicalGuarantees.map((source) => (
+            <form className="panel production-form" action={reviewHistoricalGuaranteeAction} key={source.id}>
+              <input type="hidden" name="fonte_historica_id" value={source.id} />
+              <div className="panel-header">
+                <div>
+                  <h3>{source.produtoLabel}</h3>
+                  <p className="muted">Termo original: {source.descricaoOrigem}</p>
+                </div>
+                <span className="pill">{historicalDecisionLabel(source.decisao)}</span>
+              </div>
+              <dl className="operational-summary">
+                <div><dt>PP do Excel</dt><dd>{formatOptionalNumber(source.valorPpPercentualL)}</dd></div>
+                <div><dt>PV do Excel</dt><dd>{formatOptionalNumber(source.valorPvKgL)}</dd></div>
+                <div><dt>Linha de origem</dt><dd>Lote {source.sourceBatchId}, Excel {source.linhaExcel ?? "não informada"}</dd></div>
+                <div><dt>Classificação atual</dt><dd>{source.nutrienteLabel ?? "Ainda não classificada"}</dd></div>
+              </dl>
+              <div className="form-grid">
+                <label>
+                  Decisão
+                  <select name="decisao" defaultValue="manter_pendente">
+                    <option value="classificada">Classificar</option>
+                    <option value="manter_pendente">Manter pendente</option>
+                    <option value="descartada">Descartar como referência</option>
+                  </select>
+                </label>
+                <label>
+                  Nutriente governado
+                  <select name="nutriente_id" defaultValue="">
+                    <option value="">Selecione para classificar</option>
+                    {dashboard.lookups.nutrientes.map((option) => (
+                      <option key={option.id} value={option.id}>{unitOptionLabel(option)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Unidade do PP
+                  <select name="unidade_pp_id" defaultValue="">
+                    <option value="">Selecione para classificar</option>
+                    {dashboard.lookups.unidades.map((option) => (
+                      <option key={option.id} value={option.id}>{unitOptionLabel(option)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Unidade do PV
+                  <select name="unidade_pv_id" defaultValue="">
+                    <option value="">Selecione para classificar</option>
+                    {dashboard.lookups.unidades.map((option) => (
+                      <option key={option.id} value={option.id}>{unitOptionLabel(option)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="full-field">
+                  Justificativa da revisão
+                  <input name="justificativa" minLength={10} placeholder="Explique a classificação ou por que deve continuar pendente" required />
+                </label>
+              </div>
+              <button className="primary-button" type="submit">Registrar revisão</button>
+            </form>
+          ))}
+          {dashboard.historicalGuarantees.length === 0 ? (
+            <div className="empty-state">
+              <strong>Nenhuma fonte histórica carregada</strong>
+              <span>Os cálculos do Excel aparecerão aqui somente após a importação rastreável das linhas aprovadas.</span>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
       <section className="panel" aria-labelledby="guarantee-history-title">
         <div className="panel-header">
           <h2 id="guarantee-history-title">Garantias vigentes</h2>
@@ -272,6 +351,20 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 6 }).format(value);
+}
+
+function formatOptionalNumber(value: number | null): string {
+  return value === null ? "Não informado" : formatNumber(value);
+}
+
+function historicalDecisionLabel(value: string): string {
+  const labels: Record<string, string> = {
+    nao_revisada: "Não revisada",
+    classificada: "Classificada",
+    manter_pendente: "Pendente",
+    descartada: "Descartada"
+  };
+  return labels[value] ?? "Situação não reconhecida";
 }
 
 function limitLabel(value: string): string {

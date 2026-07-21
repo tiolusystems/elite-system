@@ -24,8 +24,10 @@ export function OrdersWorkbench({ dashboard, orders }: { dashboard: PcpDashboard
                 Formula
                 <select name="formula_versao_id" defaultValue="" required>
                   <option value="">Selecione a formula</option>
-                  {dashboard.lookups.formulas.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
+                  {dashboard.formulaVersions
+                    .filter((formula) => formula.tipoReceita === "producao" && formula.baseCalculo === "por_litro" && formula.isActive)
+                    .map((formula) => (
+                    <option key={formula.id} value={formula.id}>{formula.produtoLabel} - versão {formula.versao} - base 1 L</option>
                   ))}
                 </select>
               </label>
@@ -39,8 +41,8 @@ export function OrdersWorkbench({ dashboard, orders }: { dashboard: PcpDashboard
                 </select>
               </label>
               <label>
-                Quantidade de referencia
-                <input name="quantidade_planejada" inputMode="decimal" placeholder="Nao escala a formula" />
+                Volume planejado (L)
+                <input name="quantidade_planejada" inputMode="decimal" placeholder="Ex.: 1.000" required />
               </label>
               <label className="full-field">
                 Observacao operacional
@@ -48,7 +50,7 @@ export function OrdersWorkbench({ dashboard, orders }: { dashboard: PcpDashboard
               </label>
             </div>
             <div className="form-footer">
-              <span>A formula define os componentes do lote padrao; a baixa acontece somente na finalizacao.</span>
+              <span>O sistema multiplica cada quantidade por litro pelo volume planejado. A baixa acontece somente na finalizacao.</span>
               <button className="primary-button" type="submit">Abrir OP</button>
             </div>
           </form>
@@ -131,7 +133,7 @@ export function PlanningOrderCard({
       </div>
 
       <div className="tag-row">
-        <span className="tag">planejado: {op.quantidadePlanejada === null ? "-" : formatNumber(op.quantidadePlanejada)}</span>
+        <span className="tag">volume planejado: {op.quantidadePlanejada === null ? "-" : `${formatNumber(op.quantidadePlanejada)} L`}</span>
         <span className="tag">criada: {shortDate(op.createdAt)}</span>
         <span className="tag">CQ: {op.cqStatus ?? "nao informado"}</span>
       </div>

@@ -12,11 +12,16 @@ type FormulaTargets = {
   unidades: PcpLookupOption[];
 };
 
-export function FormulaComponentRows({ targets }: { targets: FormulaTargets }) {
+export function FormulaComponentRows({ targets, perLiterOnly = false }: { targets: FormulaTargets; perLiterOnly?: boolean }) {
+  const availableUnits = perLiterOnly
+    ? targets.unidades.filter((option) =>
+        ["kg_l_produzido", "l_l_produzido", "un_l_produzido"].includes(option.label)
+      )
+    : targets.unidades;
   return (
     <div className="pcp-component-editor" aria-label="Componentes da formula">
       {Array.from({ length: 6 }, (_, index) => (
-        <FormulaComponentRow key={index + 1} index={index + 1} targets={targets} />
+        <FormulaComponentRow key={index + 1} index={index + 1} targets={{ ...targets, unidades: availableUnits }} />
       ))}
     </div>
   );
@@ -51,15 +56,15 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
         </select>
       </label>
       <label>
-        Quantidade
+        Quantidade por 1 L
         <input name={`component_${index}_quantidade`} inputMode="decimal" />
       </label>
       <label>
         Unidade
-        <select name={`component_${index}_unidade`} defaultValue="" disabled={!type}>
+        <select name={`component_${index}_unidade_id`} defaultValue="" disabled={!type} required={Boolean(type)}>
           <option value="">Selecione</option>
           {targets.unidades.map((option) => (
-            <option key={option.id} value={option.label}>{unitOptionLabel(option)}</option>
+            <option key={option.id} value={option.id}>{unitOptionLabel(option)}</option>
           ))}
         </select>
       </label>

@@ -47,6 +47,12 @@ export function unitLabel(code: string | null | undefined): string {
 }
 
 export function unitOptionLabel(option: PcpLookupOption): string {
+  const governedFormulaUnits: Record<string, string> = {
+    kg_l_produzido: "kg/L produzido",
+    l_l_produzido: "L/L produzido",
+    un_l_produzido: "UN/L produzido"
+  };
+  if (governedFormulaUnits[option.label]) return governedFormulaUnits[option.label];
   return unitLabel(option.label);
 }
 

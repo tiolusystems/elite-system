@@ -11,7 +11,7 @@ Atualizado em: 2026-07-21
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
 - ultima migration validada em upgrade descartável: `0074_pcp_historical_guarantee_reconciliation.sql`;
-- ultima migration no staging confirmada por ledger: `0073_pcp_physical_guarantee_balance.sql`;
+- ultima migration no staging confirmada por ledger: `0074_pcp_historical_guarantee_reconciliation.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -31,8 +31,20 @@ Conciliação de garantias históricas:
 - decisões são append-only e auditadas; nenhuma delas promove automaticamente
   garantia MAPA, garantia de lote, resultado de OP ou saldo;
 - migration 0074 e smoke transacional foram aprovados somente em containers
-  descartáveis `elite-validation-*`; staging permanece na 0073 até autorização
-  específica de aplicação.
+  descartáveis `elite-validation-*`; a 0074 foi publicada e aplicada
+  isoladamente no staging, com health-check saudável.
+
+## Tarefa em execução
+
+DEC-013 - escala operacional da fórmula:
+
+- novas fórmulas de produção usam base explícita de 1 L;
+- componentes aceitam somente kg/L produzido, L/L produzido ou UN/L produzido;
+- a OP exige volume planejado em litros e congela quantidade por litro, volume,
+  unidade e total calculado;
+- fórmulas legadas permanecem legíveis, sem conversão silenciosa, e exigem nova
+  versão revisada antes de abrir OP;
+- a OP MAPA permanece documental e continua sendo emitida com a Ordem de Envase.
 
 Validacao com recorte real do Tio Lu System:
 

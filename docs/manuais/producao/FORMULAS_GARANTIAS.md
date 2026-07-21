@@ -32,6 +32,14 @@ anterior.
 
 ## Criar fórmula de produção
 
+Toda nova fórmula operacional usa uma base única de **1 L de produto
+produzido**. Isso significa que a quantidade de cada componente informa quanto
+é necessário para produzir exatamente 1 L, nas unidades controladas:
+
+- `kg/L produzido` para insumos medidos em massa;
+- `L/L produzido` para insumos medidos em volume;
+- `UN/L produzido` para componentes contados em unidades.
+
 1. Acesse **Produção > Fórmulas**.
 2. Acione **Nova versão**.
 3. Selecione o produto PA ou PI.
@@ -39,13 +47,33 @@ anterior.
 5. Informe a justificativa da versão.
 6. Para cada componente, escolha MP, PA ou PI.
 7. Selecione o item pelo cadastro, nunca digitando seu identificador.
-8. Informe quantidade e unidade governada.
+8. Informe a quantidade necessária para 1 L e selecione a unidade governada.
 9. Salve a versão.
 10. No histórico, informe o motivo e ative a versão que poderá abrir OP.
 
 Criar ou ativar fórmula não reserva e não baixa estoque. A reserva acontece na
 OP; a baixa ocorre somente na finalização da OP, com os lotes efetivamente
 consumidos.
+
+Fórmulas operacionais criadas antes desta regra continuam no histórico, mas não
+são convertidas automaticamente. Para utilizá-las em uma nova OP, crie e ative
+uma nova versão revisada na base de 1 L.
+
+## Abrir uma OP pelo volume planejado
+
+1. Acesse **Produção > Ordens e reservas**.
+2. Selecione uma fórmula operacional ativa e revisada na base de 1 L.
+3. Informe o **volume planejado (L)** da produção.
+4. Escolha o tipo de OP e confirme a abertura.
+
+O sistema calcula cada necessidade pela regra:
+
+`quantidade do componente por litro × volume planejado da OP`
+
+Exemplo: uma fórmula com `0,25 kg/L produzido`, em uma OP de `1.000 L`,
+planeja `250 kg` daquele componente. A OP congela a versão da fórmula, a
+quantidade por litro, o volume e o total calculado. Alterações futuras da
+fórmula não mudam a OP já aberta.
 
 ## Criar fórmula e OP documental MAPA
 

@@ -114,6 +114,7 @@ export type PcpFormulaVersion = {
   produtoId: number;
   produtoLabel: string;
   tipoReceita: string;
+  baseCalculo: string;
   versao: number;
   justificativa: string;
   observacao: string | null;
@@ -289,7 +290,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         .limit(400),
       supabase
         .from("pcp_formula_versoes")
-        .select("id,produto_id,tipo_receita,versao,justificativa,observacao,previous_hash,entry_hash,created_at")
+        .select("id,produto_id,tipo_receita,versao,base_calculo,justificativa,observacao,previous_hash,entry_hash,created_at")
         .order("created_at", { ascending: false })
         .limit(120),
       supabase
@@ -462,6 +463,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         produtoId,
         produtoLabel: produtoMap.get(produtoId) ?? `produto ${produtoId}`,
         tipoReceita: String(row.tipo_receita),
+        baseCalculo: String(row.base_calculo),
         versao: Number(row.versao),
         justificativa: String(row.justificativa),
         observacao: nullableString(row.observacao),

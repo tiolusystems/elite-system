@@ -22,7 +22,7 @@ type FormulaComponentPayload = {
   produto_embalagem_id?: number;
   produto_id?: number;
   quantidade: number;
-  unidade?: string;
+  unidade_id?: number;
   observacao?: string;
 };
 
@@ -118,7 +118,7 @@ export async function createPcpOpAction(formData: FormData) {
   if (!ALLOWED_OP_TYPES.has(tipoOp)) {
     redirectWithResult(returnTarget.path, "invalid_op_type", returnTarget.createAnchor);
   }
-  if (quantidadePlanejada !== null && (!Number.isFinite(quantidadePlanejada) || quantidadePlanejada <= 0)) {
+  if (quantidadePlanejada === null || !Number.isFinite(quantidadePlanejada) || quantidadePlanejada <= 0) {
     redirectWithResult(returnTarget.path, "invalid_positive_number", returnTarget.createAnchor);
   }
 
@@ -539,13 +539,13 @@ function parseFormulaComponents(formData: FormData): FormulaComponentPayload[] {
     const tipo = field(formData, `component_${index}_tipo`).toUpperCase();
     const targetId = optionalInteger(formData, `component_${index}_target_id`);
     const quantidade = optionalNumber(formData, `component_${index}_quantidade`);
-    const unidade = optionalField(formData, `component_${index}_unidade`);
+    const unidadeId = optionalInteger(formData, `component_${index}_unidade_id`);
     const observacao = optionalField(formData, `component_${index}_observacao`);
 
     if (!tipo && !targetId && quantidade === null) {
       continue;
     }
-    if (!ALLOWED_COMPONENT_TYPES.has(tipo) || !targetId || targetId <= 0 || quantidade === null || quantidade <= 0) {
+    if (!ALLOWED_COMPONENT_TYPES.has(tipo) || !targetId || targetId <= 0 || quantidade === null || quantidade <= 0 || !unidadeId) {
       redirect("/producao/formulas?result=invalid_component_row#nova-formula");
     }
 
@@ -553,9 +553,7 @@ function parseFormulaComponents(formData: FormData): FormulaComponentPayload[] {
       tipo_componente: tipo,
       quantidade
     };
-    if (unidade) {
-      payload.unidade = unidade;
-    }
+    payload.unidade_id = unidadeId;
     if (observacao) {
       payload.observacao = observacao;
     }
@@ -677,6 +675,12 @@ function mapPcpError(message: string): string {
   }
   if (normalized.includes("operational op requires")) {
     return "invalid_operational_formula";
+  }
+  if (normalized.includes("legacy formula requires")) {
+    return "legacy_formula_requires_review";
+  }
+  if (normalized.includes("per-liter formula unit")) {
+    return "invalid_formula_unit";
   }
   if (normalized.includes("exceeds planned") || normalized.includes("reservations must match")) {
     return "reservation_mismatch";

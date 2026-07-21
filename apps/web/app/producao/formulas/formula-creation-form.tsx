@@ -44,11 +44,12 @@ export function FormulaCreationForm({ lookups }: { lookups: PcpLookups }) {
         <strong>{recipeType === "producao" ? "Receita que será usada pela fábrica" : "Composição documental para o MAPA"}</strong>
         <span>
           {recipeType === "producao"
-            ? "Os componentes orientarão reserva e consumo na OP de produção."
+            ? "A fórmula produz 1 L. Informe cada componente em kg/L, L/L ou UN/L; a OP calculará os totais pelo volume planejado."
             : "Os componentes são declarações documentais opcionais e nunca movimentam estoque."}
         </span>
       </div>
       <FormulaComponentRows
+        perLiterOnly={recipeType === "producao"}
         targets={{
           materiasPrimas: lookups.materiasPrimas,
           produtos: lookups.produtos,
@@ -58,7 +59,7 @@ export function FormulaCreationForm({ lookups }: { lookups: PcpLookups }) {
       />
 
       <div className="form-footer">
-        <span>Salvar cria nova versão. Nenhuma versão anterior é alterada.</span>
+        <span>Salvar cria nova versão na base de 1 L. Nenhuma versão anterior é alterada.</span>
         <button className="primary-button" type="submit">Criar versão</button>
       </div>
     </form>

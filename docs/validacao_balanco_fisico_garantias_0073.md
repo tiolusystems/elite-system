@@ -94,6 +94,19 @@ mistura de escopo.
 
 ## Gate de staging
 
-A aplicação no staging somente pode ocorrer depois do commit e push deste
-pacote, com conferência do ledger mostrando a 0072 aplicada e somente a 0073
-pendente. Não usar `db reset` nem `db push` indiscriminado.
+O dry-run mostrou exclusivamente `0073_pcp_physical_guarantee_balance.sql`.
+A migration foi aplicada sem reset e o ledger passou a mostrar 0073 local e
+remota. O aviso posterior de cache `pg-delta` da CLI não afetou a aplicação e o
+ledger foi consultado novamente como verificação independente.
+
+O Preview Vercel do projeto `elite-system-staging`, vinculado ao commit
+`bf136b3`, foi promovido para `elite-system-staging.vercel.app`. Resultado:
+
+- `/api/health`: `status=ok`, `backendConfigured=true`;
+- sessão autenticada abriu `/producao/garantias`;
+- commit `bf136b3` visível no shell;
+- cadastro da base física e histórico de densidades presentes;
+- assinatura `by ☧ SYSTEMS` preservada;
+- viewport 390 x 844 sem rolagem horizontal.
+
+Nenhum dado sintético foi criado no staging durante esse smoke.

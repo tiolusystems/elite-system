@@ -11,7 +11,7 @@ Atualizado em: 2026-07-21
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
 - ultima migration validada em upgrade descartável: `0073_pcp_physical_guarantee_balance.sql`;
-- ultima migration no staging confirmada por ledger: `0072_fix_master_data_source_lineage.sql`;
+- ultima migration no staging confirmada por ledger: `0073_pcp_physical_guarantee_balance.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -48,8 +48,11 @@ Validacao com recorte real do Tio Lu System:
   valor calculado nulo; nenhuma estimativa silenciosa é aceita;
 - instalação limpa 0001 -> 0073, upgrade 0072 -> 0073, smoke SQL, ESLint,
   TypeScript, build e 25 testes dirigidos foram aprovados em ambientes
-  descartáveis; a 0073 permanece fora do staging até commit, push e conferência
-  controlada do ledger.
+  descartáveis;
+- a 0073 foi publicada, aplicada isoladamente no staging e confirmada no
+  ledger; o frontend `bf136b3` foi promovido para o domínio estável de
+  homologação, com health-check saudável e validação responsiva sem rolagem
+  horizontal em 390 x 844.
 
 Romaneio consultivo e retomada da cadeia industrial:
 

@@ -36,6 +36,15 @@ A migration `0077_pcp_mp_cost_layers_single_output.sql` implementa:
 Marcadores: `PG_VALIDATE_0077_COST_LAYERS_OK` e
 `PG_VALIDATE_0077_FINAL_OK`.
 
+## Staging
+
+- dry-run remoto apresentou somente a migration 0077;
+- migration 0077 aplicada isoladamente e confirmada no ledger;
+- `/api/health`: `status=ok` e `backendConfigured=true`;
+- nenhuma migration intermediária, reset ou dado sintético foi aplicado;
+- frontend estável permaneceu no release anterior enquanto o novo deployment
+  não foi promovido.
+
 ## Limites deliberados
 
 - custos operacionais, mão de obra e indiretos não são calculados;

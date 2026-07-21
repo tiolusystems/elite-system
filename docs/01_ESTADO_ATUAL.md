@@ -10,8 +10,8 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em instalação limpa descartável: `0076_pcp_fifo_component_reservation.sql`;
-- ultima migration no staging confirmada por ledger: `0076_pcp_fifo_component_reservation.sql`;
+- ultima migration validada em instalação limpa descartável: `0077_pcp_mp_cost_layers_single_output.sql`;
+- ultima migration no staging confirmada por ledger: `0077_pcp_mp_cost_layers_single_output.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -62,6 +62,9 @@ DEC-013 - custo direto industrial por camadas:
 - custos operacionais e indiretos permanecem fora do escopo;
 - instalação limpa e smoke funcional da migration 0077 foram aprovados apenas
   em `elite-validation-0077-final`, com container e volume próprios.
+- migration 0077 aplicada isoladamente no staging e confirmada no ledger;
+- backend do staging saudável; o frontend estável ainda exibe o release
+  `bf136b3` e aguarda promoção do commit `49518b7`.
 
 ## Próxima tarefa
 

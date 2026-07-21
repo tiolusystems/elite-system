@@ -30,14 +30,6 @@ export default async function ProductionStockPage({ searchParams }: { searchPara
     return queryMatches && familyMatches && statusMatches && validityMatches;
   });
 
-  const lotsWithBalance = dashboard.availableLots.filter((lot) => lot.saldoFisico > 0).length;
-  const reservedLots = dashboard.availableLots.filter((lot) => lot.quantidadeReservada > 0).length;
-  const blockedLots = dashboard.availableLots.filter((lot) => lot.status === "bloqueado").length;
-  const reprocessingCandidates = dashboard.availableLots.filter((lot) => {
-    const state = getLotValidity(lot, today);
-    return lot.saldoDisponivel > 0 && (lot.status === "bloqueado" || state === "vencido" || state === "vence_30_dias");
-  }).length;
-
   return (
     <ProductionShell
       active="estoque"
@@ -53,13 +45,6 @@ export default async function ProductionStockPage({ searchParams }: { searchPara
       )}
     >
       <ProductionFeedback result={singleProductionParam(params.result)} />
-
-      <section className="technical-kpis inventory-kpis" aria-label="Resumo dos lotes">
-        <article><span>Lotes com saldo</span><strong>{lotsWithBalance}</strong><small>Saldo fisico maior que zero.</small></article>
-        <article><span>Com reserva</span><strong>{reservedLots}</strong><small>Disponibilidade comprometida.</small></article>
-        <article><span>Bloqueados</span><strong>{blockedLots}</strong><small>Dependem de decisao auditada.</small></article>
-        <article><span>Candidatos</span><strong>{reprocessingCandidates}</strong><small>Bloqueados, vencidos ou proximos do vencimento.</small></article>
-      </section>
 
       <form className="catalog-filter inventory-filter" method="get">
         <label>

@@ -22,6 +22,22 @@ Atualizado em: 2026-07-21
 
 ## Tarefa concluida mais recente
 
+Validacao com recorte real do Tio Lu System:
+
+- workbook real analisado e mantido fora do Git;
+- banco PostgreSQL isolado `elite-validation-real-production` reconstruido da
+  migration 0001 ate a 0072, sem tocar runtime ativo, staging ou producao;
+- recorte SILIKON rastreado ate workbook, aba e linha, com MP `MP090`, duas
+  entradas de lote, dez consumos e uma OP historica;
+- reconciliacao aprovada: 1.000 L de entrada, 819 L de consumo e 181 L de
+  saldo, sendo um lote esgotado e outro disponivel;
+- natureza PA/PI, grupo relacional e codigo operacional do produto permanecem
+  pendentes de revisao; nenhum valor ausente foi promovido como fato;
+- a carga real revelou e a migration 0072 corrige a validacao de linhagem entre
+  `source_rows`, `source_tables`, `source_workbooks` e `migration_batches`;
+- proxima acao: publicar a 0072 e, depois de autorizada no staging, retomar a
+  cadeia MP -> formula operacional -> OP -> PI com dados revisados.
+
 Romaneio consultivo e retomada da cadeia industrial:
 
 - Romaneio `3b12101` publicado no staging com pedido, seleção individual de

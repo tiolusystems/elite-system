@@ -76,6 +76,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/historical_mp_import_foundation.sql
+      - name: Run master data source lineage smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/master_data_source_lineage.sql
       - name: Run DEC-007 technical catalogs smoke
         env:
           PGPASSWORD: postgres

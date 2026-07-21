@@ -84,7 +84,7 @@ export function QualityFinishForm({ opId, lookups }: { opId: number; lookups: Pc
       <input type="hidden" name="op_id" value={opId} />
       <div className="pcp-subsection-title">
         <strong>Dados de processo e CQ</strong>
-        <span>baixa insumos e gera lotes na mesma transacao</span>
+        <span>baixa insumos e gera um lote na mesma transação</span>
       </div>
       <div className="form-grid pcp-cq-grid">
         <label>
@@ -157,7 +157,7 @@ export function QualityFinishForm({ opId, lookups }: { opId: number; lookups: Pc
       </div>
       <OutputRows targets={{ produtos: lookups.produtos, produtoEmbalagens: lookups.produtoEmbalagens }} />
       <div className="form-footer compact-footer">
-        <span>PA usa produto e embalagem; PI usa produto-base. Os codigos de lote sao automaticos e unicos.</span>
+        <span>A OP gera um único lote do produto da fórmula. O código do lote é automático e único.</span>
         <button className="primary-button" type="submit">Finalizar OP</button>
       </div>
     </form>

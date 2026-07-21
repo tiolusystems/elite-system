@@ -186,3 +186,22 @@ O caminho auditável é:
   vencimento e reprocessamento; movimentos e produção ainda serão ampliados;
 - fórmulas combinadas por garantia-alvo ainda dependem de regra funcional futura;
 - custos por lote e DIFAL pertencem ao bloco de custo de MP, não à garantia.
+
+## Custo direto por lote
+
+- cada entrada de MP conserva sua própria camada de quantidade e preço, mesmo
+  quando pertence ao mesmo lote do fornecedor;
+- a baixa da OP consome essas camadas na ordem de entrada e preserva a origem
+  do valor, inclusive frete, DIFAL informado e demais despesas de aquisição;
+- uma OP de produção gera exatamente um produto e um lote PI;
+- quando o volume real é menor que o planejado, a diferença é registrada como
+  perda de processo e valorizada pelo custo dos insumos consumidos;
+- perda de estoque de MP ou PI usa o custo material da camada retirada;
+- perda de estoque de PA usa o custo completo do PA: PI mais embalagens;
+- o envase transfere o custo do PI consumido e soma o custo das embalagens
+  efetivamente consumidas;
+- custos operacionais e indiretos não entram no cálculo nesta fase;
+- o custo final do PA por embalagem fica preparado para a futura precificação.
+
+Se alguma entrada consumida ainda não tiver valor de aquisição, o custo fica
+pendente. O sistema não substitui informação ausente por zero.

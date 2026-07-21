@@ -248,6 +248,9 @@ export async function finishPcpOpAction(formData: FormData) {
   if (outputs.length === 0) {
     redirect("/producao/qualidade?result=missing_outputs#cq-pendente");
   }
+  if (outputs.length !== 1) {
+    redirect("/producao/qualidade?result=single_output_required#cq-pendente");
+  }
 
   const supabase = await createSupabaseServerClient();
   const participantIds = [...new Set([separadorPessoaId, conferentePessoaId, ...formuladorIds])];
@@ -586,7 +589,7 @@ function parseFormulaComponents(formData: FormData): FormulaComponentPayload[] {
 
 function parseOutputs(formData: FormData): OutputPayload[] {
   const outputs: OutputPayload[] = [];
-  for (let index = 1; index <= 3; index += 1) {
+  for (let index = 1; index <= 1; index += 1) {
     const tipo = field(formData, `output_${index}_tipo`).toUpperCase();
     const targetId = optionalInteger(formData, `output_${index}_target_id`);
     const quantidade = optionalNumber(formData, `output_${index}_quantidade`);

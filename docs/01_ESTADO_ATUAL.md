@@ -51,16 +51,23 @@ DEC-013 - reserva FIFO governada:
   Vercel falhou antes do build com `Resource provisioning failed`; o deployment
   estável anterior permanece saudável e conectado ao backend de staging.
 
+## Tarefa atual
+
+DEC-013 - custo direto industrial por camadas:
+
+- entradas da mesma MP/lote com preços diferentes permanecem separadas;
+- uma OP gera um único produto e lote PI;
+- perda de processo e perda de estoque possuem fatos e custos distintos;
+- PI recebe custo das MP; PA recebe PI mais embalagens do envase;
+- custos operacionais e indiretos permanecem fora do escopo;
+- instalação limpa e smoke funcional da migration 0077 foram aprovados apenas
+  em `elite-validation-0077-final`, com container e volume próprios.
+
 ## Próxima tarefa
 
-Mapear e governar o custo industrial por lote:
-
-- preservar o custo de aquisição de MP, incluindo diferencial de alíquota de
-  ICMS quando aplicável;
-- definir propagação de custo de MP consumida para PI e de PI/embalagens para
-  PA sem editar saldos ou fatos históricos;
-- não implementar rateio contábil, perdas, mão de obra ou custos indiretos sem
-  contrato empresarial aprovado.
+Expor consulta gerencial dos custos diretos e pendências por lote, preservando
+as moedas de origem e preparando o custo final do PA por embalagem para a futura
+precificação.
 
 ## Entrega anterior
 

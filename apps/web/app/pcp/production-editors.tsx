@@ -79,34 +79,26 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
 export function OutputRows({ targets }: { targets: Pick<FormulaTargets, "produtos" | "produtoEmbalagens"> }) {
   return (
     <div className="pcp-output-editor" aria-label="Produtos gerados">
-      {Array.from({ length: 3 }, (_, index) => (
-        <OutputRow key={index + 1} index={index + 1} targets={targets} />
-      ))}
+      <OutputRow index={1} targets={targets} />
     </div>
   );
 }
 
 function OutputRow({ index, targets }: { index: number; targets: Pick<FormulaTargets, "produtos" | "produtoEmbalagens"> }) {
-  const [type, setType] = useState("");
-  const options = type === "PA" ? targets.produtoEmbalagens : type === "PI" ? targets.produtos : [];
-
   return (
     <div className="pcp-output-row">
       <span className="pcp-row-index">{index}</span>
+      <input type="hidden" name={`output_${index}_tipo`} value="PI" />
       <label>
         Saída
-        <select name={`output_${index}_tipo`} value={type} onChange={(event) => setType(event.target.value)}>
-          <option value="">Não utilizar esta linha</option>
-          <option value="PA">Produto acabado</option>
-          <option value="PI">Produto intermediário</option>
-        </select>
+        <input value="Produto intermediário (PI)" readOnly />
       </label>
       <label className="wide-field">
         Produto gerado
-        <select key={`${index}-${type}`} name={`output_${index}_target_id`} defaultValue="" disabled={!type}>
+        <select name={`output_${index}_target_id`} defaultValue="" required>
           <option value="">Selecione</option>
-          {options.map((option) => (
-            <option key={`${type}-${option.id}`} value={option.id}>
+          {targets.produtos.map((option) => (
+            <option key={`PI-${option.id}`} value={option.id}>
               {productionOptionLabel(option)}
             </option>
           ))}

@@ -81,6 +81,90 @@ export type OrdersDashboard = {
   error: string | null;
 };
 
+export type PortfolioClient = {
+  linkId: number;
+  clientId: number;
+  clientName: string;
+  propertyId: number | null;
+  propertyName: string | null;
+  sellerName: string;
+  availableLimit: number | null;
+  creditStatus: string;
+};
+
+export type ScopedOrder = {
+  id: number;
+  code: string;
+  clientId: number;
+  clientName: string;
+  propertyName: string | null;
+  sellerId: number | null;
+  sellerName: string | null;
+  status: string;
+  type: string;
+  orderDate: string;
+  total: number;
+};
+
+export type ApprovalOrder = {
+  id: number;
+  code: string;
+  clientId: number;
+  clientName: string;
+  sellerId: number;
+  sellerName: string;
+  orderDate: string;
+  total: number;
+  availableLimit: number | null;
+  creditStatus: string;
+};
+
+export type SalesItem = { id: number; label: string };
+
+export async function getOrderWorkspace(search: string | null) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], error: "Banco de homologação indisponível." };
+  }
+  try {
+    const supabase = await createSupabaseServerClient();
+    const [clients, orders, approvals, items] = await Promise.all([
+      supabase.rpc("consultar_com_carteira_clientes", { p_busca: search }),
+      supabase.rpc("consultar_com_pedidos_escopo", { p_limite: 120 }),
+      supabase.rpc("consultar_com_pedidos_aprovacao"),
+      supabase.from("cad_produto_embalagens")
+        .select("id,codigo_item,status,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros)")
+        .eq("status", "active").order("codigo_item").limit(250)
+    ]);
+    const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? items.error?.message ?? null;
+    return {
+      clients: ((clients.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        linkId: Number(row.vinculo_id), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
+        propertyId: nullableNumber(row.propriedade_id), propertyName: row.propriedade_nome ? String(row.propriedade_nome) : null,
+        sellerName: String(row.vendedor_nome), availableLimit: nullableNumber(row.limite_disponivel), creditStatus: String(row.status_credito)
+      })),
+      orders: ((orders.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        id: Number(row.pedido_id), code: String(row.codigo_pedido), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
+        propertyName: row.propriedade_nome ? String(row.propriedade_nome) : null, sellerId: nullableNumber(row.vendedor_id),
+        sellerName: row.vendedor_nome ? String(row.vendedor_nome) : null, status: String(row.status), type: String(row.tipo_pedido),
+        orderDate: String(row.data_pedido), total: Number(row.valor_total ?? 0)
+      })),
+      approvals: ((approvals.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        id: Number(row.pedido_id), code: String(row.codigo_pedido), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
+        sellerId: Number(row.vendedor_id), sellerName: String(row.vendedor_nome), orderDate: String(row.data_pedido),
+        total: Number(row.valor_total ?? 0), availableLimit: nullableNumber(row.limite_disponivel), creditStatus: String(row.status_credito)
+      })),
+      items: ((items.data ?? []) as Array<Record<string, unknown>>).map((row) => {
+        const product = firstNested(row.cad_produtos_base); const pack = firstNested(row.cad_embalagens);
+        return { id: Number(row.id), label: `${row.codigo_item} - ${product?.nome ?? "Produto"} - ${pack?.descricao ?? "Embalagem"}` };
+      }),
+      error
+    };
+  } catch {
+    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], error: "Não foi possível carregar Pedidos agora." };
+  }
+}
+
 const EMPTY_LOOKUPS: OrderLookups = {
   clientes: [],
   propriedades: [],

@@ -48,6 +48,7 @@ Antes da homologacao final, confirmar:
 | Ordens | A criar no UX-01F | Pendente |
 | Qualidade | A criar no UX-01G | Pendente |
 | Romaneio | A criar no UX-01H | Pendente |
+| Pedidos e aprovacao | `pedidos/PEDIDOS_E_APROVACAO.md` | Implementado e validado tecnicamente na 0078 |
 
 ## Manutencao
 

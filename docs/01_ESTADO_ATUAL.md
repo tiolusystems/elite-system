@@ -10,7 +10,7 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em instalação limpa descartável: `0077_pcp_mp_cost_layers_single_output.sql`;
+- ultima migration validada em instalação limpa descartável: `0078_orders_seller_manager_credit_scope.sql`;
 - ultima migration no staging confirmada por ledger: `0077_pcp_mp_cost_layers_single_output.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -53,6 +53,24 @@ DEC-013 - reserva FIFO governada:
 
 ## Tarefa atual
 
+Pedidos por carteira e liberação gerencial:
+
+- vendedor pesquisa somente clientes vinculados à sua carteira e consulta o
+  limite disponível antes de preencher o pedido;
+- identidade do vendedor vem da sessão e não pode ser informada manualmente;
+- novo pedido de venda nasce bloqueado e aguardando liberação gerencial;
+- gerente consulta pedidos próprios e de vendedores subordinados por vínculo
+  direto ou área comercial, podendo liberar ou reprovar com justificativa;
+- alteração de limite exige justificativa e gera evento append-only;
+- RLS limita pedidos, itens, comissionados e decisões de crédito à carteira ou
+  equipe autorizada;
+- migration 0078 aprovada em upgrade 0077 -> 0078 e instalação limpa 0001 ->
+  0078, exclusivamente em containers `elite-validation-*`;
+- ESLint, TypeScript, build, smoke SQL e 13 testes dirigidos aprovados;
+- manual operacional criado em `docs/manuais/pedidos/PEDIDOS_E_APROVACAO.md`.
+
+## Entrega industrial anterior
+
 DEC-013 - custo direto industrial por camadas:
 
 - entradas da mesma MP/lote com preços diferentes permanecem separadas;
@@ -68,9 +86,8 @@ DEC-013 - custo direto industrial por camadas:
 
 ## Próxima tarefa
 
-Expor consulta gerencial dos custos diretos e pendências por lote, preservando
-as moedas de origem e preparando o custo final do PA por embalagem para a futura
-precificação.
+Evoluir o pedido para vários itens por cliente/propriedade e integrar a fila
+liberada ao romaneio, preservando o fluxo pedido -> saldo a entregar -> lote.
 
 ## Entrega anterior
 

@@ -13,6 +13,92 @@ const ALLOWED_DECISAO_CREDITO = new Set(["liberado", "bloqueado", "pendente_apro
 const ALLOWED_MOTIVO_TROCA = new Set(["qualidade", "avaria_transporte", "erro_separacao", "erro_comercial", "acordo_comercial", "outro"]);
 const DECIMAL_SEPARATOR = /,/g;
 
+export async function criarPedidoVendedorAction(formData: FormData) {
+  const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
+  const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
+  const quantidade = optionalNumber(formData, "quantidade");
+  const valorUnitario = optionalNumber(formData, "valor_unitario");
+  const dataPedido = field(formData, "data_pedido");
+  if (!vinculoId || !produtoEmbalagemId || !quantidade || valorUnitario === null || !dataPedido) {
+    redirect("/pedidos?result=missing_order_required#novo-pedido");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor", {
+    p_cliente_vendedor_vinculo_id: vinculoId,
+    p_data_pedido: dataPedido,
+    p_observacao: optionalField(formData, "observacao"),
+    p_produto_embalagem_id: produtoEmbalagemId,
+    p_quantidade: quantidade,
+    p_valor_unitario: valorUnitario
+  }, {
+    metadata: {
+      action_key: "pedidos.create.own",
+      axis: "own_any",
+      domain: "pedidos",
+      entity: "com_pedidos",
+      failure_action: "pedidos.create_failed"
+    }
+  });
+  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-pedido`);
+  revalidatePath("/pedidos");
+  redirect("/pedidos?result=pedido_pending_approval#historico");
+}
+
+export async function decidirPedidoGerencialAction(formData: FormData) {
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const decisao = field(formData, "decisao");
+  const justificativa = field(formData, "justificativa");
+  if (!pedidoId || !["liberado", "bloqueado"].includes(decisao) || justificativa.length < 10) {
+    redirect("/pedidos?result=invalid_manager_decision#aprovacoes");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_gerencial", {
+    p_decisao: decisao,
+    p_justificativa: justificativa,
+    p_pedido_id: pedidoId
+  }, {
+    metadata: {
+      action_key: "pedidos.credit.review",
+      axis: "status_transition",
+      domain: "pedidos",
+      entity: "com_pedidos",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.credit_review_failed"
+    }
+  });
+  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#aprovacoes`);
+  revalidatePath("/pedidos");
+  redirect(`/pedidos?result=${decisao === "liberado" ? "order_approved" : "order_rejected"}#aprovacoes`);
+}
+
+export async function ajustarLimiteCreditoAction(formData: FormData) {
+  const clienteId = optionalInteger(formData, "cliente_id");
+  const limiteNovo = optionalNumber(formData, "limite_novo");
+  const justificativa = field(formData, "justificativa_limite");
+  if (!clienteId || limiteNovo === null || limiteNovo < 0 || justificativa.length < 10) {
+    redirect("/pedidos?result=invalid_credit_limit#aprovacoes");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "ajustar_com_limite_credito_cliente", {
+    p_cliente_id: clienteId,
+    p_justificativa: justificativa,
+    p_limite_novo: limiteNovo
+  }, {
+    metadata: {
+      action_key: "pedidos.credit.limit.adjust",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "cad_limites_credito_cliente",
+      entity_id: String(clienteId),
+      failure_action: "pedidos.credit_limit_adjust_failed"
+    }
+  });
+  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#aprovacoes`);
+  revalidatePath("/pedidos");
+  redirect("/pedidos?result=credit_limit_adjusted#aprovacoes");
+}
+
 export async function createPedidoRascunhoAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
@@ -324,6 +410,12 @@ function mapSupabaseError(message: string): string {
   }
   if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
+  }
+  if (normalized.includes("outside seller portfolio") || normalized.includes("outside manager team")) {
+    return "permission_denied";
+  }
+  if (normalized.includes("justification")) {
+    return "invalid_justification";
   }
   return "save_failed";
 }

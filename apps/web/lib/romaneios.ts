@@ -92,6 +92,13 @@ export type RomaneioRecord = {
   movements: RomaneioMovement[];
   logistics: RomaneioLogistics | null;
   fiscalDocuments: RomaneioFiscalDocument[];
+  carga: {
+    volumeLiquidoL: number;
+    volumesLogisticos: number | null;
+    pesoLiquidoKg: number | null;
+    pesoBrutoKg: number | null;
+    pendencias: string[];
+  } | null;
 };
 
 export type RomaneioAvailableLot = {
@@ -165,7 +172,8 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       pessoasComerciais,
       papeisAtivos,
       veiculos,
-      notasFiscais
+      notasFiscais,
+      cargas
     ] = await Promise.all([
       supabase
         .from("exp_pedido_item_romaneio_saldos")
@@ -244,7 +252,11 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         .select("id,romaneio_id,numero,serie,tipo,status_atual,data_emissao,valor_nf")
         .not("romaneio_id", "is", null)
         .order("data_emissao", { ascending: false })
-        .limit(300)
+        .limit(300),
+      supabase
+        .from("exp_romaneio_carga_resumo")
+        .select("romaneio_id,volume_liquido_l,volumes_logisticos,peso_liquido_kg,peso_bruto_kg,itens_sem_volume_configurado,itens_sem_densidade,itens_sem_tara")
+        .limit(200)
     ]);
 
     const orderRows = rows(orders);
@@ -281,6 +293,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       rows(notasFiscais).map(mapFiscalDocument),
       (document) => document.romaneioId
     );
+    const cargaByRomaneio = new Map(rows(cargas).map((row) => [Number(row.romaneio_id), mapCarga(row)]));
 
     const pendingItems = rows(pendingBalances)
       .map((row) => mapPendingItem(row, orderMap, productPackageMap))
@@ -327,7 +340,8 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
           status: document.status,
           issuedAt: document.issuedAt,
           value: document.value
-        }))
+        })),
+        carga: cargaByRomaneio.get(id) ?? null
       } satisfies RomaneioRecord;
     });
 
@@ -347,7 +361,8 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       pessoasComerciais,
       papeisAtivos,
       veiculos,
-      notasFiscais
+      notasFiscais,
+      cargas
     ]);
 
     return {
@@ -420,6 +435,20 @@ function mapOrder(row: Record<string, unknown>, clienteMap: Map<number, string>)
     label: `${row.codigo_pedido} - ${clienteNome}`,
     clienteNome,
     status: String(row.status)
+  };
+}
+
+function mapCarga(row: Record<string, unknown>) {
+  const pendencias: string[] = [];
+  if (Number(row.itens_sem_volume_configurado) > 0) pendencias.push("configuração de volumes");
+  if (Number(row.itens_sem_densidade) > 0) pendencias.push("densidade do lote");
+  if (Number(row.itens_sem_tara) > 0) pendencias.push("tara da embalagem");
+  return {
+    volumeLiquidoL: Number(row.volume_liquido_l ?? 0),
+    volumesLogisticos: nullableNumber(row.volumes_logisticos),
+    pesoLiquidoKg: nullableNumber(row.peso_liquido_kg),
+    pesoBrutoKg: nullableNumber(row.peso_bruto_kg),
+    pendencias
   };
 }
 

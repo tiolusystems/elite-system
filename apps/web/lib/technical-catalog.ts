@@ -113,6 +113,7 @@ export type TechnicalSaleItem = {
   packageId: number;
   packageLabel: string;
   status: string;
+  unitsPerLogisticVolume: number | null;
 };
 
 export type TechnicalPackageVersion = {
@@ -242,7 +243,7 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         .limit(800),
       supabase
         .from("cad_produto_embalagens")
-        .select("id,codigo_item,produto_id,embalagem_id,status")
+        .select("id,codigo_item,produto_id,embalagem_id,status,unidades_por_volume_logistico")
         .order("codigo_item", { ascending: true })
         .limit(1000),
       supabase
@@ -424,7 +425,8 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         productLabel: productLabels.get(Number(item.produto_id)) ?? `Produto #${item.produto_id}`,
         packageId: Number(item.embalagem_id),
         packageLabel: packageLabels.get(Number(item.embalagem_id)) ?? `Embalagem #${item.embalagem_id}`,
-        status: String(item.status)
+        status: String(item.status),
+        unitsPerLogisticVolume: toNullableNumber(item.unidades_por_volume_logistico)
       })),
       packageVersions: (packageVersions.data ?? []).map((item) => {
         const current = latestActivationByPackage.get(Number(item.embalagem_id));

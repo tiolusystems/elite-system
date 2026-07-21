@@ -105,7 +105,7 @@ class RomaneioQuantityIntegrityContractTests(unittest.TestCase):
         self.assertIn("Livre para novo romaneio", self.page)
         self.assertIn("Nenhum item com saldo livre", self.page)
         self.assertIn("disabled={dashboard.lookups.pendingItems.length === 0}", self.page)
-        self.assertIn('auditedRpc(supabase, "create_exp_romaneio"', ACTIONS.read_text(encoding="utf-8"))
+        self.assertIn('auditedRpc(supabase, "gravar_exp_romaneio_pedido"', ACTIONS.read_text(encoding="utf-8"))
 
     def test_transactional_smoke_and_documentation_are_wired(self) -> None:
         smoke = SMOKE.read_text(encoding="utf-8")

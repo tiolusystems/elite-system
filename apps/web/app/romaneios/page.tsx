@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import {
-  addRomaneioItemAction,
   assignRomaneioLogisticsAction,
   cancelRomaneioAction,
   confirmRomaneioAction,
@@ -119,98 +118,43 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
           </section>
         ) : null}
 
-        <section className="two-column">
-          <section className="panel form-panel" id="novo-romaneio" aria-labelledby="novo-romaneio-title">
-            <div className="panel-header">
-              <h2 id="novo-romaneio-title">Novo romaneio</h2>
-              <span className="pill">sem baixa</span>
+        <section className="panel form-panel" id="novo-romaneio" aria-labelledby="novo-romaneio-title">
+          <div className="panel-header">
+            <div>
+              <h2 id="novo-romaneio-title">Pedidos com saldo a entregar</h2>
+              <p className="muted">Abra um pedido, marque os produtos e informe a quantidade de cada item. Consultar não grava.</p>
             </div>
-            <form action={createRomaneioAction}>
-              <div className="form-grid romaneio-form-grid">
-                <label className="wide-field">
-                  Item pendente do pedido
-                  <select name="pedido_item_id" defaultValue="" required>
-                    <option value="" disabled>
-                      {dashboard.lookups.pendingItems.length > 0
-                        ? "Selecione um item com saldo livre"
-                        : "Nenhum item com saldo livre"}
-                    </option>
-                    <LookupSelectOptions options={dashboard.lookups.pendingItems} />
-                  </select>
-                </label>
-                <label>
-                  Separacao
-                  <select name="tipo_separacao" defaultValue="parcial">
-                    <option value="parcial">parcial</option>
-                    <option value="total">total</option>
-                  </select>
-                </label>
-                <label>
-                  Quantidade
-                  <input name="quantidade_romaneada" inputMode="decimal" required />
-                </label>
-                <label className="full-field">
-                  Observacao
-                  <input name="observacao" placeholder="Opcional" />
-                </label>
-              </div>
-              <div className="form-footer">
-                <span>A quantidade nao pode superar o saldo livre informado no item.</span>
-                <button className="primary-button" type="submit" disabled={dashboard.lookups.pendingItems.length === 0}>
-                  Criar romaneio
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section className="panel form-panel" id="adicionar-item" aria-labelledby="adicionar-item-title">
-            <div className="panel-header">
-              <h2 id="adicionar-item-title">Adicionar item</h2>
-              <span className="pill">multi-item</span>
-            </div>
-            <form action={addRomaneioItemAction}>
-              <div className="form-grid romaneio-form-grid">
-                <label className="wide-field">
-                  Romaneio aberto
-                  <select name="romaneio_id" defaultValue="" required>
-                    <option value="" disabled>
-                      Selecione um romaneio
-                    </option>
-                    <LookupSelectOptions options={dashboard.lookups.romaneiosAbertos} />
-                  </select>
-                </label>
-                <label className="wide-field">
-                  Item pendente
-                  <select name="pedido_item_id" defaultValue="" required>
-                    <option value="" disabled>
-                      {dashboard.lookups.pendingItems.length > 0
-                        ? "Selecione um item do mesmo pedido"
-                        : "Nenhum item com saldo livre"}
-                    </option>
-                    <LookupSelectOptions options={dashboard.lookups.pendingItems} />
-                  </select>
-                </label>
-                <label>
-                  Quantidade
-                  <input name="quantidade_romaneada" inputMode="decimal" required />
-                </label>
-                <label className="wide-field">
-                  Observacao
-                  <input name="observacao" placeholder="Opcional" />
-                </label>
-              </div>
-              <div className="form-footer">
-                <span>Permite varios itens no mesmo romaneio, preservando o pedido vinculado.</span>
-                <button
-                  className="primary-button"
-                  type="submit"
-                  disabled={dashboard.lookups.pendingItems.length === 0 || dashboard.lookups.romaneiosAbertos.length === 0}
-                >
-                  Adicionar item
-                </button>
-              </div>
-            </form>
-          </section>
+            <span className="pill">gravação explícita</span>
+          </div>
+          {groupPendingByOrder(dashboard.pendingItems).map(([pedidoId, items]) => (
+            <details className="romaneio-order" key={pedidoId}>
+              <summary>
+                <strong>{items[0].codigoPedido}</strong>
+                <span>{items[0].clienteNome}</span>
+                <span>{items.length} produto(s) com saldo</span>
+              </summary>
+              <form action={createRomaneioAction}>
+                <input type="hidden" name="pedido_id" value={pedidoId} />
+                <div className="romaneio-order-items">
+                  {items.map((item) => (
+                    <label className="romaneio-order-item" key={item.pedidoItemId}>
+                      <input type="checkbox" name="pedido_item_id" value={item.pedidoItemId} />
+                      <span>
+                        <strong>{item.itemLabel}</strong>
+                        <small>Saldo livre: {numberOrDash(item.quantidadeDisponivelRomaneio)}</small>
+                      </span>
+                      <input name={`quantidade_${item.pedidoItemId}`} inputMode="decimal" min="0" max={item.quantidadeDisponivelRomaneio} step="any" placeholder="Quantidade" />
+                    </label>
+                  ))}
+                </div>
+                <div className="form-footer">
+                  <span>Nenhum estoque é alterado antes da reserva por lote.</span>
+                  <button className="primary-button" type="submit" disabled={dashboard.lookups.pendingItems.length === 0}>Gravar romaneio</button>
+                </div>
+              </form>
+            </details>
+          ))}
+          {dashboard.pendingItems.length === 0 ? <p className="muted">Nenhum item com saldo livre para novo romaneio.</p> : null}
         </section>
 
         <section className="two-column">
@@ -242,10 +186,6 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
                 <label>
                   Quantidade
                   <input name="quantidade_reservada" inputMode="decimal" placeholder="opcional" />
-                </label>
-                <label className="wide-field">
-                  Observacao
-                  <input name="observacao" placeholder="Opcional" />
                 </label>
               </div>
               <div className="form-footer">
@@ -391,7 +331,12 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
         <span className="tag">cliente: {romaneio.clienteNome}</span>
         <span className="tag">data: {romaneio.dataRomaneio}</span>
         <span className="tag">itens: {romaneio.items.length}</span>
+        <span className="tag">litros: {numberOrDash(romaneio.carga?.volumeLiquidoL ?? null)}</span>
+        <span className="tag">volumes: {numberOrDash(romaneio.carga?.volumesLogisticos ?? null)}</span>
+        <span className="tag">peso líquido: {numberOrDash(romaneio.carga?.pesoLiquidoKg ?? null)} kg</span>
+        <span className="tag">peso bruto: {numberOrDash(romaneio.carga?.pesoBrutoKg ?? null)} kg</span>
       </div>
+      {romaneio.carga?.pendencias.length ? <p className="muted">Cálculo pendente: {romaneio.carga.pendencias.join(", ")}.</p> : null}
 
       <section className="romaneio-subsection">
         <div className="romaneio-subsection-title">
@@ -509,12 +454,18 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
         {canConfirm ? (
           <form className="compact-action-form" action={confirmRomaneioAction}>
             <input type="hidden" name="romaneio_id" value={romaneio.id} />
-            <input name="observacao" placeholder="Observacao da confirmacao" />
+            <select name="nota_fiscal_id" defaultValue="" required>
+              <option value="" disabled>Selecione a NF emitida</option>
+              {romaneio.fiscalDocuments.filter((document) => document.status === "emitida").map((document) => (
+                <option key={document.id} value={document.id}>{document.numberLabel}</option>
+              ))}
+            </select>
             <button className="primary-button" type="submit">
-              Confirmar
+              Confirmar NF e baixar estoque
             </button>
           </form>
         ) : null}
+        {canConfirm ? <Link className="secondary-button" href={`/romaneios/${romaneio.id}/imprimir`}>Imprimir romaneio</Link> : null}
         {canCancel ? (
           <form className="compact-action-form" action={cancelRomaneioAction}>
             <input type="hidden" name="romaneio_id" value={romaneio.id} />
@@ -586,6 +537,14 @@ function numberOrDash(value: number | null): string {
     return "-";
   }
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(value);
+}
+
+function groupPendingByOrder(items: RomaneioPendingItem[]): Array<[number, RomaneioPendingItem[]]> {
+  const grouped = new Map<number, RomaneioPendingItem[]>();
+  for (const item of items.filter((entry) => entry.quantidadeDisponivelRomaneio > 0)) {
+    grouped.set(item.pedidoId, [...(grouped.get(item.pedidoId) ?? []), item]);
+  }
+  return [...grouped.entries()];
 }
 
 function currency(value: number): string {

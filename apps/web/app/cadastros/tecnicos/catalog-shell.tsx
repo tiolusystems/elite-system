@@ -112,6 +112,7 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   embalagem_version_activated: { kind: "ok", title: "Versão ativada", detail: "Esta composição passa a ser a referência atual." },
   embalagem_version_deactivated: { kind: "ok", title: "Versão desativada", detail: "A composição permanece no histórico." },
   item_vendavel_created: { kind: "ok", title: "Item vendável salvo", detail: "Produto e embalagem foram vinculados." },
+  apresentacao_logistics_updated: { kind: "ok", title: "Volumes configurados", detail: "A apresentação já pode calcular volumes logísticos no romaneio." },
   conversion_created: { kind: "ok", title: "Conversão salva", detail: "A regra de unidade foi registrada com vigência." },
   duplicated: { kind: "warning", title: "Registro duplicado", detail: "Já existe um cadastro com a mesma chave." },
   not_allowed: { kind: "warning", title: "Sem alçada", detail: "O usuário atual não possui a permissão exigida." },

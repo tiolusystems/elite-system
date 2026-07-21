@@ -976,6 +976,21 @@ export async function updateProdutoTechnicalAction(formData: FormData) {
   }, "produto_technical_updated", "#editar-produto", produtoId);
 }
 
+export async function updateApresentacaoLogisticsAction(formData: FormData) {
+  const produtoId = requiredCatalogId(formData, "produto_id", "#apresentacoes");
+  const apresentacaoId = requiredCatalogId(formData, "apresentacao_id", "#apresentacoes");
+  const unidades = optionalNumber(formData, "unidades_por_volume");
+  const motivo = field(formData, "motivo");
+  if (unidades === null || unidades <= 0 || !motivo || motivo.length < 5) {
+    redirectCadastroAction(formData, "invalid_product_maintenance", "#apresentacoes", produtoId);
+  }
+  await executeCatalogRpc(formData, "update_cad_apresentacao_logistica", {
+    p_apresentacao_id: apresentacaoId,
+    p_motivo: motivo,
+    p_unidades_por_volume: unidades
+  }, "apresentacao_logistics_updated", "#apresentacoes", produtoId);
+}
+
 export async function updateProdutoRegulatoryAction(formData: FormData) {
   const produtoId = requiredCatalogId(formData, "produto_id", "#editar-produto");
   const motivo = field(formData, "motivo");

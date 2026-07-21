@@ -3,7 +3,8 @@ import {
   setProdutoActiveStateAction,
   updateProdutoIdentityAction,
   updateProdutoRegulatoryAction,
-  updateProdutoTechnicalAction
+  updateProdutoTechnicalAction,
+  updateApresentacaoLogisticsAction
 } from "@/app/cadastros/actions";
 import { StatusChip } from "@/app/cadastros/tecnicos/catalog-shell";
 import type { TechnicalProduct, TechnicalProductGroup, TechnicalSaleItem } from "@/lib/technical-catalog";
@@ -90,8 +91,15 @@ export function ProductMaintenancePanel({ product, groups, variants }: Props) {
         <div className="panel-header"><h3>Apresentacoes comerciais</h3><span className="pill">{variants.length}</span></div>
         {variants.map((variant) => (
           <div className="catalog-linked-row" key={variant.id}>
-            <span><strong>{variant.code}</strong><small>{variant.packageLabel}</small></span>
+            <span><strong>{variant.code}</strong><small>{variant.packageLabel}</small><small>{variant.unitsPerLogisticVolume ? `${formatNumber(variant.unitsPerLogisticVolume)} un. por volume` : "Volumes pendentes"}</small></span>
             <StatusChip value={variant.status} />
+            <form action={updateApresentacaoLogisticsAction}>
+              <ProductContext productId={product.id} />
+              <input type="hidden" name="apresentacao_id" value={variant.id} />
+              <input name="unidades_por_volume" defaultValue={variant.unitsPerLogisticVolume ?? ""} inputMode="decimal" aria-label={`Unidades por volume de ${variant.code}`} placeholder="Unidades por volume" required />
+              <input name="motivo" aria-label={`Motivo da configuração logística de ${variant.code}`} placeholder="Motivo obrigatório" minLength={5} required />
+              <button className="secondary-button compact-button" type="submit">Salvar volumes</button>
+            </form>
             <form action={setApresentacaoActiveStateAction}>
               <ProductContext productId={product.id} />
               <input type="hidden" name="apresentacao_id" value={variant.id} />

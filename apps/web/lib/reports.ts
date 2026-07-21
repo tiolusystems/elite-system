@@ -36,6 +36,13 @@ export type ReprocessamentoRow = ValidityLotRow & {
   prioridadeReprocessamento: string;
 };
 
+export type PaStockPositionRow = {
+  lotePaId: number; produtoEmbalagemId: number; codigoLote: string;
+  saldoFisico: number; saldoEmpenhado: number; saldoDisponivel: number;
+  litrosFisicos: number; volumesFisicos: number | null;
+  litrosEmpenhados: number; volumesEmpenhados: number | null;
+};
+
 export type ReportsDashboard = {
   metrics: {
     catalogados: number | null;
@@ -49,11 +56,12 @@ export type ReportsDashboard = {
   catalog: ReportCatalogItem[];
   validityRows: ValidityLotRow[];
   reprocessamentoRows: ReprocessamentoRow[];
+  paStockPositionRows: PaStockPositionRow[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
 
-export async function getReportsDashboard(): Promise<ReportsDashboard> {
+export async function getReportsDashboard(dataCorte = new Date().toISOString().slice(0, 10)): Promise<ReportsDashboard> {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
     return emptyDashboard("not_configured", null);
@@ -61,7 +69,7 @@ export async function getReportsDashboard(): Promise<ReportsDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [catalog, validityRows, reprocessamentoRows] = await Promise.all([
+    const [catalog, validityRows, reprocessamentoRows, paStockPosition] = await Promise.all([
       supabase
         .from("relatorio_catalogo")
         .select("id,codigo,modulo,nome,descricao,fonte_principal,status,sort_order")
@@ -80,7 +88,8 @@ export async function getReportsDashboard(): Promise<ReportsDashboard> {
           "tipo_lote,lote_id,codigo_lote,codigo_cadastro,nome_cadastro,embalagem,status,saldo_fisico,quantidade_reservada,saldo_disponivel,data_fabricacao,data_validade,dias_para_vencer,status_vencimento,prioridade_reprocessamento,origem_ref,observacao"
         )
         .order("prioridade_reprocessamento", { ascending: true })
-        .limit(80)
+        .limit(80),
+      supabase.rpc("consultar_est_estoque_pa_posicao", { p_data_corte: dataCorte })
     ]);
 
     const mappedCatalog = catalog.error ? [] : ((catalog.data ?? []) as Array<Record<string, unknown>>).map(mapCatalog);
@@ -104,8 +113,9 @@ export async function getReportsDashboard(): Promise<ReportsDashboard> {
       catalog: mappedCatalog,
       validityRows: mappedValidityRows,
       reprocessamentoRows: mappedReprocessamentoRows,
+      paStockPositionRows: paStockPosition.error ? [] : ((paStockPosition.data ?? []) as Array<Record<string, unknown>>).map(mapPaStockPosition),
       source: "supabase",
-      error: catalog.error?.message ?? validityRows.error?.message ?? reprocessamentoRows.error?.message ?? null
+      error: catalog.error?.message ?? validityRows.error?.message ?? reprocessamentoRows.error?.message ?? paStockPosition.error?.message ?? null
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
@@ -154,6 +164,15 @@ function mapReprocessamento(row: Record<string, unknown>): ReprocessamentoRow {
   };
 }
 
+function mapPaStockPosition(row: Record<string, unknown>): PaStockPositionRow {
+  return {
+    lotePaId: Number(row.lote_pa_id), produtoEmbalagemId: Number(row.produto_embalagem_id), codigoLote: String(row.codigo_lote),
+    saldoFisico: Number(row.saldo_fisico ?? 0), saldoEmpenhado: Number(row.saldo_empenhado ?? 0), saldoDisponivel: Number(row.saldo_disponivel ?? 0),
+    litrosFisicos: Number(row.litros_fisicos ?? 0), volumesFisicos: nullableNumber(row.volumes_fisicos),
+    litrosEmpenhados: Number(row.litros_empenhados ?? 0), volumesEmpenhados: nullableNumber(row.volumes_empenhados)
+  };
+}
+
 function nullableString(value: unknown): string | null {
   return value === null || value === undefined ? null : String(value);
 }
@@ -176,6 +195,7 @@ function emptyDashboard(source: "not_configured" | "error", error: string | null
     catalog: [],
     validityRows: [],
     reprocessamentoRows: [],
+    paStockPositionRows: [],
     source,
     error
   };

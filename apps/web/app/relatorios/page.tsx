@@ -10,7 +10,7 @@ import { getRuntimeStatus } from "@/lib/runtime";
 export const dynamic = "force-dynamic";
 
 type ReportsPageProps = {
-  searchParams: Promise<{ familia?: string }>;
+  searchParams: Promise<{ familia?: string; data?: string }>;
 };
 
 const LOT_FAMILY_OPTIONS = ["TODOS", "PI", "PA", "MP"] as const;
@@ -18,8 +18,10 @@ type LotFamilyFilter = (typeof LOT_FAMILY_OPTIONS)[number];
 
 export default async function RelatoriosPage({ searchParams }: ReportsPageProps) {
   const runtime = getRuntimeStatus();
-  const dashboard = await getReportsDashboard();
-  const requestedFamily = (await searchParams).familia?.toUpperCase();
+  const params = await searchParams;
+  const dataCorte = /^\d{4}-\d{2}-\d{2}$/.test(params.data ?? "") ? params.data! : new Date().toISOString().slice(0, 10);
+  const dashboard = await getReportsDashboard(dataCorte);
+  const requestedFamily = params.familia?.toUpperCase();
   const family: LotFamilyFilter = LOT_FAMILY_OPTIONS.includes(requestedFamily as LotFamilyFilter)
     ? (requestedFamily as LotFamilyFilter)
     : "TODOS";
@@ -128,6 +130,16 @@ export default async function RelatoriosPage({ searchParams }: ReportsPageProps)
             <span>Configure Supabase para carregar catalogo, vencimentos e candidatos a reprocessamento.</span>
           </section>
         ) : null}
+
+        <section className="panel" aria-labelledby="posicao-pa-title">
+          <div className="panel-header">
+            <div><h2 id="posicao-pa-title">Posição de estoque PA</h2><p className="muted">Saldo físico, empenhado em romaneio e disponível no fim da data.</p></div>
+            <form method="get"><label>Data de corte <input type="date" name="data" defaultValue={dataCorte} /></label><button className="secondary-button" type="submit">Consultar</button></form>
+          </div>
+          {dashboard.paStockPositionRows.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Lote</th><th>Físico</th><th>Empenhado</th><th>Disponível</th><th>Litros físicos</th><th>Volumes físicos</th><th>Litros empenhados</th><th>Volumes empenhados</th></tr></thead><tbody>
+            {dashboard.paStockPositionRows.map((row) => <tr key={row.lotePaId}><td>{row.codigoLote}</td><td>{numberOrDash(row.saldoFisico)}</td><td>{numberOrDash(row.saldoEmpenhado)}</td><td>{numberOrDash(row.saldoDisponivel)}</td><td>{numberOrDash(row.litrosFisicos)}</td><td>{row.volumesFisicos === null ? "Pendente" : numberOrDash(row.volumesFisicos)}</td><td>{numberOrDash(row.litrosEmpenhados)}</td><td>{row.volumesEmpenhados === null ? "Pendente" : numberOrDash(row.volumesEmpenhados)}</td></tr>)}
+          </tbody></table></div> : <EmptyState title="Sem posição PA" detail="Lotes e empenhos aparecerão após a movimentação de teste." />}
+        </section>
 
         <section className="dashboard-grid">
           <section className="panel" id="catalogo" aria-labelledby="catalogo-title">

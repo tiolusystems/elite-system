@@ -8,40 +8,26 @@ import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const DECIMAL_SEPARATOR = /,/g;
-const ALLOWED_TIPO_SEPARACAO = new Set(["total", "parcial"]);
-
 export async function createRomaneioAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/romaneios?result=not_configured#novo-romaneio");
   }
 
-  const pedidoItemId = optionalInteger(formData, "pedido_item_id");
-  const quantidadeRomaneada = optionalNumber(formData, "quantidade_romaneada");
-  const tipoSeparacao = field(formData, "tipo_separacao") || "parcial";
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const itemIds = formData.getAll("pedido_item_id").map(Number).filter((value) => Number.isInteger(value) && value > 0);
+  const itens = itemIds.flatMap((pedidoItemId) => {
+    const quantidade = optionalNumber(formData, `quantidade_${pedidoItemId}`);
+    return quantidade !== null && quantidade > 0 ? [{ pedido_item_id: pedidoItemId, quantidade }] : [];
+  });
 
-  if (!pedidoItemId || pedidoItemId <= 0 || quantidadeRomaneada === null || quantidadeRomaneada <= 0) {
+  if (!pedidoId || pedidoId <= 0 || itens.length === 0) {
     redirect("/romaneios?result=missing_romaneio_required#novo-romaneio");
-  }
-  if (!ALLOWED_TIPO_SEPARACAO.has(tipoSeparacao)) {
-    redirect("/romaneios?result=invalid_separation_type#novo-romaneio");
   }
 
   const supabase = await createSupabaseServerClient();
-  const item = await supabase.from("com_pedido_itens").select("pedido_id").eq("id", pedidoItemId).single();
-  const pedidoId = item.data ? Number((item.data as Record<string, unknown>).pedido_id) : null;
-
-  if (item.error || !pedidoId) {
-    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(item.error?.message ?? "pedido item not found"))}#novo-romaneio`);
-  }
-
-  const { error } = await auditedRpc(supabase, "create_exp_romaneio", {
-    p_lote_pa_ref: null,
-    p_observacao: optionalField(formData, "observacao"),
+  const { error } = await auditedRpc(supabase, "gravar_exp_romaneio_pedido", {
+    p_itens: itens,
     p_pedido_id: pedidoId,
-    p_pedido_item_id: pedidoItemId,
-    p_quantidade_romaneada: quantidadeRomaneada,
-    p_status: "draft",
-    p_tipo_separacao: tipoSeparacao
   });
 
   if (error) {
@@ -50,35 +36,6 @@ export async function createRomaneioAction(formData: FormData) {
 
   revalidatePath("/romaneios");
   redirect("/romaneios?result=romaneio_created#romaneios");
-}
-
-export async function addRomaneioItemAction(formData: FormData) {
-  if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/romaneios?result=not_configured#adicionar-item");
-  }
-
-  const romaneioId = optionalInteger(formData, "romaneio_id");
-  const pedidoItemId = optionalInteger(formData, "pedido_item_id");
-  const quantidadeRomaneada = optionalNumber(formData, "quantidade_romaneada");
-
-  if (!romaneioId || romaneioId <= 0 || !pedidoItemId || pedidoItemId <= 0 || quantidadeRomaneada === null || quantidadeRomaneada <= 0) {
-    redirect("/romaneios?result=missing_add_item_required#adicionar-item");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "add_exp_romaneio_item", {
-    p_observacao: optionalField(formData, "observacao"),
-    p_pedido_item_id: pedidoItemId,
-    p_quantidade_romaneada: quantidadeRomaneada,
-    p_romaneio_id: romaneioId
-  });
-
-  if (error) {
-    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#adicionar-item`);
-  }
-
-  revalidatePath("/romaneios");
-  redirect("/romaneios?result=romaneio_item_added#romaneios");
 }
 
 export async function reserveRomaneioPaLotAction(formData: FormData) {
@@ -100,7 +57,7 @@ export async function reserveRomaneioPaLotAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "registrar_est_reserva_pa", {
     p_lote_pa_id: lotePaId,
-    p_observacao: optionalField(formData, "observacao"),
+    p_observacao: null,
     p_quantidade_reservada: quantidadeReservada,
     p_romaneio_item_id: romaneioItemId
   });
@@ -174,13 +131,14 @@ export async function confirmRomaneioAction(formData: FormData) {
   }
 
   const romaneioId = optionalInteger(formData, "romaneio_id");
-  if (!romaneioId || romaneioId <= 0) {
+  const notaFiscalId = optionalInteger(formData, "nota_fiscal_id");
+  if (!romaneioId || romaneioId <= 0 || !notaFiscalId || notaFiscalId <= 0) {
     redirect("/romaneios?result=missing_romaneio_id#romaneios");
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "confirmar_exp_romaneio", {
-    p_observacao: optionalField(formData, "observacao"),
+    p_nota_fiscal_id: notaFiscalId,
     p_romaneio_id: romaneioId
   });
 

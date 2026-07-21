@@ -6,8 +6,9 @@
 2. Pesquise o cliente pelo nome em **Minha carteira**.
 3. Selecione o cliente ou a propriedade correta.
 4. Confira o limite disponível e a situação do crédito.
-5. Escolha o produto e a apresentação, informe quantidade, valor e data.
-6. Clique em **Enviar para liberação**.
+5. Escolha o produto e a apresentação, informe quantidade e valor.
+6. Use **Adicionar item** para incluir outros produtos no mesmo pedido.
+7. Confira o total, informe a data e clique em **Enviar para liberação**.
 
 O pedido fica como **Aguardando liberação**. O vendedor não escolhe outro
 vendedor, não aumenta limite e não libera o próprio pedido.

@@ -10,8 +10,8 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em instalação limpa descartável: `0078_orders_seller_manager_credit_scope.sql`;
-- ultima migration no staging confirmada por ledger: `0077_pcp_mp_cost_layers_single_output.sql`;
+- ultima migration validada em instalação limpa descartável: `0080_orders_multi_item_seller_entry.sql`;
+- ultima migration no staging confirmada por ledger: `0079_orders_legacy_rpc_scope_guard.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -70,6 +70,11 @@ Pedidos por carteira e liberação gerencial:
 - manual operacional criado em `docs/manuais/pedidos/PEDIDOS_E_APROVACAO.md`.
 - compatibilidade do frontend anterior endurecida na migration 0079: as RPCs
   legadas também derivam carteira/vendedor da sessão e exigem escopo gerencial.
+- pedido do vendedor aceita de 1 a 100 itens em uma única transação, calcula o
+  total consolidado e cria somente uma fila de liberação gerencial;
+- apresentações inativas são recusadas e qualquer item inválido desfaz o pedido
+  inteiro; migration 0080 e smoke transacional aprovados apenas em
+  `elite-validation-*`.
 
 ## Entrega industrial anterior
 
@@ -88,8 +93,9 @@ DEC-013 - custo direto industrial por camadas:
 
 ## Próxima tarefa
 
-Evoluir o pedido para vários itens por cliente/propriedade e integrar a fila
-liberada ao romaneio, preservando o fluxo pedido -> saldo a entregar -> lote.
+Integrar os pedidos liberados ao romaneio consultivo, preservando o fluxo
+pedido -> itens com saldo a entregar -> escolha de lotes -> reserva -> NF ->
+baixa, sem exibir todo o estoque PA antecipadamente.
 
 ## Entrega anterior
 

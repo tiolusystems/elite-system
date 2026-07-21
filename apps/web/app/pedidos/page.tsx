@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ajustarLimiteCreditoAction, criarPedidoVendedorAction, decidirPedidoGerencialAction } from "@/app/pedidos/actions";
+import { OrderItemsEditor } from "@/app/pedidos/order-items-editor";
 import { getOrderWorkspace } from "@/lib/orders";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -51,10 +52,8 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
             <form action={criarPedidoVendedorAction}>
               <input type="hidden" name="cliente_vendedor_vinculo_id" value={selected.linkId} />
               <div className="orders-credit-strip"><div><span>Limite disponível</span><strong>{money(selected.availableLimit)}</strong></div><div><span>Situação</span><strong>{creditLabel(selected.creditStatus)}</strong></div><div><span>Propriedade</span><strong>{selected.propertyName ?? "Geral"}</strong></div></div>
+              <OrderItemsEditor items={workspace.items} />
               <div className="form-grid orders-form-grid">
-                <label className="wide-field">Produto e apresentação<select name="produto_embalagem_id" required defaultValue=""><option value="" disabled>Selecione o item</option>{workspace.items.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-                <label>Quantidade<input name="quantidade" inputMode="decimal" required /></label>
-                <label>Valor unitário<input name="valor_unitario" inputMode="decimal" required /></label>
                 <label>Data do pedido<input name="data_pedido" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required /></label>
                 <label className="wide-field">Observação comercial<textarea name="observacao" rows={3} placeholder="Condição ou informação relevante" /></label>
               </div>

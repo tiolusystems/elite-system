@@ -6210,6 +6210,15 @@ h1 {
 .orders-credit-strip span { color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
 .orders-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 18px; }
 .orders-form-grid textarea { resize: vertical; }
+.order-items-editor { display: grid; gap: 10px; margin: 18px; padding: 0; border: 0; }
+.order-items-editor legend { margin-bottom: 10px; font-weight: 800; }
+.order-item-head, .order-item-row { display: grid; grid-template-columns: minmax(260px, 1.5fr) minmax(110px, .5fr) minmax(130px, .6fr) 40px; gap: 10px; align-items: end; }
+.order-item-head { color: var(--brand-text-muted); font-size: 11px; font-weight: 800; }
+.order-item-row label { display: grid; gap: 5px; }
+.order-item-row label > span { display: none; color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
+.order-items-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 8px; }
+.order-items-footer > div { display: grid; gap: 3px; text-align: right; }
+.order-items-footer span { color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
 .approval-list { display: grid; }
 .approval-list > article { display: grid; gap: 14px; padding: 16px; border-top: 1px solid var(--brand-border); }
 .approval-list > article:first-child { border-top: 0; }
@@ -6234,6 +6243,10 @@ h1 {
   .orders-client-list { max-height: 300px; }
   .orders-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .approval-decision, .approval-limit { grid-template-columns: 1fr; }
+  .order-item-head { display: none; }
+  .order-item-row { grid-template-columns: 1fr 1fr 40px; padding-top: 10px; border-top: 1px solid var(--brand-border); }
+  .order-item-row label:first-child { grid-column: 1 / -1; }
+  .order-item-row label > span { display: block; }
 }
 
 @media (max-width: 560px) {
@@ -6250,6 +6263,11 @@ h1 {
   .orders-form-grid .wide-field { grid-column: auto; }
   .approval-summary { display: grid; }
   .approval-summary > div:last-child { text-align: left; }
+  .order-item-row { grid-template-columns: 1fr 40px; }
+  .order-item-row label { grid-column: 1 / -1; }
+  .order-item-row .icon-button { grid-column: 2; grid-row: 2; }
+  .order-items-footer { align-items: stretch; flex-direction: column; }
+  .order-items-footer > div { text-align: left; }
 }
 .packaging-print-footer > div { margin-bottom: 4px; }
 

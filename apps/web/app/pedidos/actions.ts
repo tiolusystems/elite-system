@@ -15,22 +15,25 @@ const DECIMAL_SEPARATOR = /,/g;
 
 export async function criarPedidoVendedorAction(formData: FormData) {
   const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
-  const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
-  const quantidade = optionalNumber(formData, "quantidade");
-  const valorUnitario = optionalNumber(formData, "valor_unitario");
+  const itensJson = field(formData, "itens_json");
   const dataPedido = field(formData, "data_pedido");
-  if (!vinculoId || !produtoEmbalagemId || !quantidade || valorUnitario === null || !dataPedido) {
+  let items: Array<{ produto_embalagem_id: number; quantidade: number; valor_unitario: number }> = [];
+  try {
+    const parsed: unknown = JSON.parse(itensJson);
+    items = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    items = [];
+  }
+  if (!vinculoId || !dataPedido || !items.length || items.some((item) => !item.produto_embalagem_id || item.quantidade <= 0 || item.valor_unitario < 0)) {
     redirect("/pedidos?result=missing_order_required#novo-pedido");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor", {
+  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_itens", {
     p_cliente_vendedor_vinculo_id: vinculoId,
     p_data_pedido: dataPedido,
+    p_itens_jsonb: items,
     p_observacao: optionalField(formData, "observacao"),
-    p_produto_embalagem_id: produtoEmbalagemId,
-    p_quantidade: quantidade,
-    p_valor_unitario: valorUnitario
   }, {
     metadata: {
       action_key: "pedidos.create.own",

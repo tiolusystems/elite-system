@@ -32,6 +32,10 @@ class ProductionPtBrLabelsContractTest(unittest.TestCase):
         editor = (ROOT / paths[0]).read_text(encoding="utf-8")
         self.assertNotIn('<option value="">ignorar</option>', editor)
 
+        guarantees = (ROOT / paths[2]).read_text(encoding="utf-8")
+        self.assertEqual(guarantees.count("{option.label} - {option.detail}"), 1)
+        self.assertGreaterEqual(guarantees.count("unitOptionLabel(option)"), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

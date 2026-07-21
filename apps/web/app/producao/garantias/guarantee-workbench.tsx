@@ -119,7 +119,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
               <select name="unidade" defaultValue="" required>
                 <option value="">Selecione</option>
                 {dashboard.lookups.unidades.map((option) => (
-                  <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+                  <option key={option.id} value={option.label}>{unitOptionLabel(option)}</option>
                 ))}
               </select>
             </label>

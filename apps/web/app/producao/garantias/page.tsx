@@ -15,13 +15,13 @@ export default async function ProductionGuaranteesPage({ searchParams }: { searc
     <ProductionShell
       active="garantias"
       title="Garantias e conformidade"
-      description="Valores declarados do produto e resultados de laboratorio preservados por vigencia e lote."
+      description="Valores declarados do produto e resultados de laboratório preservados por vigência e lote."
       source={dashboard.source}
       error={dashboard.error}
       actions={(
         <>
-          <Link className="secondary-button" href="/cadastros/unidades">Unidades e nutrientes</Link>
-          <Link className="primary-button" href="/producao/formulas">Ver formulas</Link>
+          <Link className="secondary-button" href="/cadastros/tecnicos">Unidades e nutrientes</Link>
+          <Link className="primary-button" href="/producao/formulas">Ver fórmulas</Link>
         </>
       )}
     >

@@ -5,12 +5,12 @@ Atualizado em: 2026-07-20
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- ultima entrega publicada: UX-01B - shell global autenticado no commit
-  `52f3dca`;
-- entrega atual: gate critico de RLS e escrita direta; UX-01C e a promocao do
-  Preview permanecem pausados;
+- ultima entrega publicada: continuidade de leitura RLS restaurada no commit
+  `eb5a218`, sobre Pessoas e vinculos `8ae5904`;
+- entrega atual: UX-01C - Produtos, apresentacoes, embalagens e composicao
+  versionada em `UN/L`, migration proposta `0068`;
 - ultima migration validada localmente: `0067_restore_rls_read_helper_access.sql`;
-- ultima migration no staging confirmada por ledger: `0066_close_direct_write_and_rpc_exposure.sql`;
+- ultima migration no staging confirmada por ledger: `0067_restore_rls_read_helper_access.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -20,6 +20,16 @@ Atualizado em: 2026-07-20
 - GitHub: codigo e documentacao somente; push depende de autorizacao.
 
 ## Tarefa concluida mais recente
+
+Continuidade de leitura RLS `0067`:
+
+- `authenticated` recuperou somente `EXECUTE` no helper de leitura
+  `current_actor_id()`;
+- `anon` e `PUBLIC` permanecem negados;
+- escrita direta continua revogada;
+- a migration foi aplicada e validada no staging antes da retomada do UX-01C.
+
+Entrega funcional anterior:
 
 UX-01C.3 - Pessoas e vinculos comerciais:
 
@@ -74,7 +84,58 @@ UX-01C.1 - Central de Cadastros:
 - nenhuma migration, RPC, RLS, tabela ou regra de negocio foi alterada;
 - nenhum dado operacional, workbook ou captura foi adicionado ao Git.
 
-## Validacao desta tarefa
+## Validacao da tarefa atual
+
+Fluxo PI -> OP MAPA -> Envase -> PA em validação local:
+
+- migrations propostas `0069` e `0070` separam OP MAPA documental da Ordem de
+  Envase operacional;
+- OP MAPA não pode mais ser criada isoladamente pelo fluxo genérico de OP;
+- emissão conjunta exige fórmula MAPA ativa, lote PI liberado, apresentação do
+  mesmo produto e composição de embalagens aprovada;
+- emissão reserva PI sem baixar estoque; embalagens são reservadas por lote;
+- início exige reservas integrais; finalização baixa PI e embalagens e gera um
+  ou mais lotes PA na mesma transação;
+- documento imprimível registra OP MAPA, PI origem, PA destino, embalagens,
+  campos de horários e assinaturas físicas, usuário, data, hora e terminal;
+- login, IP, terminal ampliado e geolocalização permanecem responsabilidade
+  global de Segurança/Sessões, sem múltiplos logins no Envase;
+- relatórios de estoque permitem filtrar MP, PI e PA;
+- instalação limpa `0001 -> 0070`, upgrade `0068 -> 0070` e smoke transacional
+  foram aprovados somente em containers `elite-validation-*`;
+- runtime local ativo, staging e produção não receberam as migrations;
+- interface, TypeScript, ESLint, build e testes dirigidos foram aprovados; falta
+  homologação visual e funcional antes de commit ou publicação.
+
+Pacote `0068` em execucao, ainda nao homologado:
+
+- contrato de produto, apresentacao e embalagem limitado ao dominio Cadastros;
+- embalagens novas exigem unidade `UN` e capacidade positiva em litros;
+- necessidade da embalagem e derivada numericamente em `UN/L`;
+- versoes, revisoes, remocoes e ativacoes preservam historico append-only;
+- formula, OP, FIFO, custos e garantias por lote permanecem fora da `0068`;
+- instalacao limpa `0001 -> 0068` aprovada em `elite-validation-0068`;
+- upgrade isolado `0067 -> 0068` aprovado em
+  `elite-validation-0068-upgrade`;
+- smoke transacional aprovado nos dois ambientes com
+  `PG_VALIDATE_0068_WITH_SMOKE_OK` e `ROLLBACK`;
+- runtime ativo, staging e producao nao foram migrados, resetados ou usados
+  nos testes destrutivos;
+- 16 testes de contrato/UX, ESLint, TypeScript e build Next.js passaram;
+- estados de carregamento, vazio, erro, sucesso e sem permissao possuem contrato
+  visual/operacional no fluxo;
+- o manual operacional do fluxo foi criado;
+- cenario funcional local concluido com produto, embalagem, apresentacao e
+  composicao sinteticos;
+- versao de composicao criada, aprovada e ativada, com `0,2 UN/L` comprovado
+  para embalagem de 5 litros;
+- capturas aprovadas tecnicamente em `1920 x 1080`, `1366 x 768`,
+  `768 x 1024`, `390 x 844` e `360 x 800`, sem rolagem horizontal;
+- defeito de compressao dos campos de composicao foi corrigido antes do gate;
+- manuais de Produtos/Apresentacoes/Embalagens e Unidades/Conversoes integram
+  o mesmo pacote documental.
+
+Validacao concluida anterior:
 
 - smoke visual de Pessoas revelou regressao de leitura apos a `0066`;
 - causa confirmada: `authenticated` perdeu `EXECUTE` sobre
@@ -143,15 +204,15 @@ O estado executavel de maturidade permanece no PostgreSQL e na tela
 
 ## Proxima tarefa
 
-Fechar e publicar o pacote tecnico da `0067`. Depois, aplicar somente a `0067`
-no staging, repetir leitura autenticada e promover novamente o frontend
-`f70bfbe` se o smoke de Pessoas estiver saudavel.
+Fechar tecnicamente e publicar de forma controlada a `0068` depois de
+autorizacao explicita. Em seguida, implementar Veiculos e Logistica com escrita
+governada; a tabela existe, mas faltam RPCs auditadas de manutencao.
 
 ## Tarefa seguinte
 
-Retomar o UX-01C com Produtos, apresentacoes, embalagens e conversoes. Depois,
-concluir Veiculos, logistica, cadastros tecnicos e validacao consolidada.
-UX-01D permanece proibido ate a homologacao final de Cadastros.
+Concluir Veiculos, logistica, cadastros tecnicos e validacao consolidada do
+UX-01C. UX-01D
+permanece proibido ate a homologacao final de Cadastros.
 
 ## Sequencia vigente
 

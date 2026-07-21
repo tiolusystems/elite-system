@@ -10,6 +10,7 @@ OVERVIEW = PRODUCTION / "page.tsx"
 SHELL = PRODUCTION / "production-shell.tsx"
 FORMULAS_PAGE = PRODUCTION / "formulas" / "page.tsx"
 FORMULAS_COMPONENT = PRODUCTION / "formulas" / "formula-workbench.tsx"
+FORMULAS_EDITOR = PRODUCTION / "formulas" / "formula-creation-form.tsx"
 GUARANTEES_PAGE = PRODUCTION / "garantias" / "page.tsx"
 GUARANTEES_COMPONENT = PRODUCTION / "garantias" / "guarantee-workbench.tsx"
 ORDERS_PAGE = PRODUCTION / "ordens" / "page.tsx"
@@ -36,6 +37,7 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
             "/producao/garantias",
             "/producao/ordens",
             "/producao/qualidade",
+            "/producao/envase",
             "/producao/estoque",
             "/producao/transformacoes",
         ):
@@ -45,9 +47,10 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn("Sequencia da producao", overview)
         self.assertIn('href="/producao/ordens"', overview)
         self.assertIn('href="/producao/qualidade"', overview)
+        self.assertIn('href="/producao/envase"', overview)
         self.assertIn('href="/producao/estoque"', overview)
         self.assertIn('href="/producao/transformacoes"', overview)
-        self.assertIn("7 etapas", overview)
+        self.assertIn("8 etapas", overview)
 
     def test_formula_and_guarantee_pages_reuse_shared_business_components(self) -> None:
         formulas_page = FORMULAS_PAGE.read_text(encoding="utf-8")
@@ -123,7 +126,7 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertNotIn(".rpc(", page + component)
 
     def test_writes_stay_in_existing_audited_server_actions(self) -> None:
-        formulas = FORMULAS_COMPONENT.read_text(encoding="utf-8")
+        formulas = FORMULAS_COMPONENT.read_text(encoding="utf-8") + FORMULAS_EDITOR.read_text(encoding="utf-8")
         guarantees = GUARANTEES_COMPONENT.read_text(encoding="utf-8")
         actions = PCP_ACTIONS.read_text(encoding="utf-8")
 

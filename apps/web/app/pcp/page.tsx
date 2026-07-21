@@ -170,7 +170,6 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
                     <option value="experimental">experimental</option>
                     <option value="desenvolvimento">desenvolvimento</option>
                     <option value="reprocessamento">reprocessamento</option>
-                    <option value="mapa_documental">mapa documental</option>
                   </select>
                 </label>
                 <label>

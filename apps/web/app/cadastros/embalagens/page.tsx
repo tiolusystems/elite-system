@@ -1,6 +1,10 @@
+import Link from "next/link";
+
 import { createEmbalagemAction } from "@/app/cadastros/actions";
+import { PackageMaintenancePanel } from "@/app/cadastros/embalagens/package-maintenance-panel";
 import { CatalogFeedback, CatalogShell, StatusChip, singleParam } from "@/app/cadastros/tecnicos/catalog-shell";
 import { getTechnicalCatalog } from "@/lib/technical-catalog";
+import { dataOriginLabel } from "@/lib/master-data-governance";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -8,10 +12,17 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
   const params = searchParams ? await searchParams : {};
   const catalog = await getTechnicalCatalog();
   const query = (singleParam(params.q) ?? "").trim().toLocaleLowerCase("pt-BR");
+  const selectedId = Number(singleParam(params.selected) ?? "");
   const filtered = catalog.packages.filter((item) =>
     !query || `${item.description} ${item.legacyCode ?? ""} ${item.materialLabel ?? ""}`.toLocaleLowerCase("pt-BR").includes(query)
   );
   const activeUnits = catalog.units.filter((unit) => unit.status === "active");
+  const selectedPackage = catalog.packages.find((item) => item.id === selectedId) ?? null;
+  const selectedVersions = selectedPackage
+    ? catalog.packageVersions.filter((item) => item.packageId === selectedPackage.id)
+    : [];
+  const selectedVersionIds = new Set(selectedVersions.map((item) => item.id));
+  const selectedComponents = catalog.packageComponents.filter((item) => selectedVersionIds.has(item.packageVersionId));
 
   return (
     <CatalogShell
@@ -36,19 +47,28 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
         </div>
         <div className="responsive-record-grid package-grid">
           {filtered.map((item) => (
-            <article key={item.id}>
+            <article key={item.id} className={selectedPackage?.id === item.id ? "selected-record" : undefined}>
               <div><strong>{item.description}</strong><StatusChip value={item.status} /></div>
               <dl>
                 <div><dt>Capacidade</dt><dd>{item.volumeLiters === null ? item.unit : `${formatNumber(item.volumeLiters)} L`}</dd></div>
                 <div><dt>Estoque</dt><dd>{item.controlsStock ? "Controlado" : "Nao controlado"}</dd></div>
                 <div><dt>MP vinculada</dt><dd>{item.materialLabel ?? "-"}</dd></div>
-                <div><dt>Origem</dt><dd>{item.source}</dd></div>
+                <div><dt>Origem</dt><dd>{dataOriginLabel(item.source)}</dd></div>
               </dl>
+              <Link className="record-open-link" href={`/cadastros/embalagens?selected=${item.id}#editar-embalagem`}>Abrir embalagem</Link>
             </article>
           ))}
           {filtered.length === 0 ? <p className="empty-state">Nenhuma embalagem encontrada.</p> : null}
         </div>
       </section>
+
+      <PackageMaintenancePanel
+        packageRecord={selectedPackage}
+        versions={selectedVersions}
+        components={selectedComponents}
+        materials={catalog.materials}
+        units={catalog.units}
+      />
 
       <section className="panel form-panel" id="nova-embalagem" aria-labelledby="new-package-title">
         <div className="panel-header"><div><span className="eyebrow">Novo registro</span><h2 id="new-package-title">Cadastrar embalagem</h2></div></div>
@@ -59,10 +79,10 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
             <label>
               Unidade
               <select name="unidade" defaultValue="UN" required>
-                {activeUnits.map((unit) => <option key={unit.id} value={unit.code}>{unit.code} · {unit.name}</option>)}
+                {activeUnits.filter((unit) => unit.code.toUpperCase() === "UN").map((unit) => <option key={unit.id} value="UN">UN · {unit.name}</option>)}
               </select>
             </label>
-            <label>Volume em litros<input name="volume_litros" inputMode="decimal" /></label>
+            <label>Volume em litros<input name="volume_litros" inputMode="decimal" required /></label>
             <label>Codigo legado<input name="codigo_legado" /></label>
             <label>
               MP de estoque

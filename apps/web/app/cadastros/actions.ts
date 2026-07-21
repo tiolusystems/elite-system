@@ -865,7 +865,7 @@ export async function createEmbalagemAction(formData: FormData) {
   const controlaEstoque = formData.get("controla_estoque") === "1";
   const materiaPrimaId = optionalInteger(formData, "materia_prima_id");
 
-  if (!descricao || !unidade) {
+  if (!descricao || unidade.toUpperCase() !== "UN" || volumeLitros === null) {
     redirectCadastroAction(formData, "missing_package_required", "#nova-embalagem");
   }
   if (!ALLOWED_STATUS.has(status)) {
@@ -942,6 +942,194 @@ export async function createProdutoEmbalagemAction(formData: FormData) {
   redirectCadastroAction(formData, "item_vendavel_created", "#novo-item-vendavel");
 }
 
+export async function updateProdutoIdentityAction(formData: FormData) {
+  const produtoId = requiredCatalogId(formData, "produto_id", "#editar-produto");
+  const codigo = field(formData, "codigo_produto");
+  const nome = field(formData, "nome");
+  const motivo = field(formData, "motivo");
+  const grupoId = optionalInteger(formData, "grupo_id");
+  if (!/^\d{4}$/.test(codigo) || !nome || !motivo) {
+    redirectCadastroAction(formData, "missing_product_maintenance", "#editar-produto", produtoId);
+  }
+  await executeCatalogRpc(formData, "update_cad_produto_identity", {
+    p_codigo_produto: codigo,
+    p_grupo_id: grupoId,
+    p_motivo: motivo,
+    p_nome: nome,
+    p_produto_id: produtoId
+  }, "produto_identity_updated", "#editar-produto", produtoId);
+}
+
+export async function updateProdutoTechnicalAction(formData: FormData) {
+  const produtoId = requiredCatalogId(formData, "produto_id", "#editar-produto");
+  const densidade = optionalNumber(formData, "densidade_kg_l");
+  const validade = optionalInteger(formData, "prazo_validade_meses");
+  const motivo = field(formData, "motivo");
+  if (!motivo || (densidade !== null && densidade <= 0) || (validade !== null && (validade < 1 || validade > 240))) {
+    redirectCadastroAction(formData, "invalid_product_maintenance", "#editar-produto", produtoId);
+  }
+  await executeCatalogRpc(formData, "update_cad_produto_technical", {
+    p_densidade_kg_l: densidade,
+    p_motivo: motivo,
+    p_prazo_validade_meses: validade,
+    p_produto_id: produtoId
+  }, "produto_technical_updated", "#editar-produto", produtoId);
+}
+
+export async function updateProdutoRegulatoryAction(formData: FormData) {
+  const produtoId = requiredCatalogId(formData, "produto_id", "#editar-produto");
+  const motivo = field(formData, "motivo");
+  if (!motivo) redirectCadastroAction(formData, "missing_reason", "#editar-produto", produtoId);
+  await executeCatalogRpc(formData, "update_cad_produto_regulatory", {
+    p_ads: optionalField(formData, "ads"),
+    p_ibama: optionalField(formData, "ibama"),
+    p_motivo: motivo,
+    p_ncm: optionalField(formData, "ncm"),
+    p_produto_id: produtoId,
+    p_reg_mapa: optionalField(formData, "reg_mapa")
+  }, "produto_regulatory_updated", "#editar-produto", produtoId);
+}
+
+export async function setProdutoActiveStateAction(formData: FormData) {
+  const produtoId = requiredCatalogId(formData, "produto_id", "#situacao-produto");
+  const motivo = field(formData, "motivo");
+  const active = field(formData, "active") === "1";
+  if (!motivo) redirectCadastroAction(formData, "missing_reason", "#situacao-produto", produtoId);
+  await executeCatalogRpc(formData, "set_cad_produto_active_state", {
+    p_active: active,
+    p_motivo: motivo,
+    p_produto_id: produtoId
+  }, active ? "produto_reactivated" : "produto_deactivated", "#situacao-produto", produtoId);
+}
+
+export async function updateEmbalagemIdentityAction(formData: FormData) {
+  const embalagemId = requiredCatalogId(formData, "embalagem_id", "#editar-embalagem");
+  const descricao = field(formData, "descricao");
+  const motivo = field(formData, "motivo");
+  if (!descricao || !motivo) redirectCadastroAction(formData, "missing_package_maintenance", "#editar-embalagem", embalagemId);
+  await executeCatalogRpc(formData, "update_cad_embalagem_identity", {
+    p_codigo_legado: optionalField(formData, "codigo_legado"),
+    p_descricao: descricao,
+    p_embalagem_id: embalagemId,
+    p_motivo: motivo
+  }, "embalagem_identity_updated", "#editar-embalagem", embalagemId);
+}
+
+export async function updateEmbalagemPhysicalAction(formData: FormData) {
+  const embalagemId = requiredCatalogId(formData, "embalagem_id", "#editar-embalagem");
+  const unidadeId = requiredCatalogId(formData, "unidade_id", "#editar-embalagem");
+  const volume = optionalNumber(formData, "volume_litros");
+  const materialId = optionalInteger(formData, "materia_prima_id");
+  const controlaEstoque = formData.get("controla_estoque") === "1";
+  const motivo = field(formData, "motivo");
+  if (volume === null || volume <= 0 || !motivo || (controlaEstoque && !materialId)) {
+    redirectCadastroAction(formData, "invalid_package_maintenance", "#editar-embalagem", embalagemId);
+  }
+  await executeCatalogRpc(formData, "update_cad_embalagem_physical", {
+    p_controla_estoque: controlaEstoque,
+    p_embalagem_id: embalagemId,
+    p_materia_prima_id: materialId,
+    p_motivo: motivo,
+    p_unidade_id: unidadeId,
+    p_volume_litros: volume
+  }, "embalagem_physical_updated", "#editar-embalagem", embalagemId);
+}
+
+export async function setEmbalagemActiveStateAction(formData: FormData) {
+  const embalagemId = requiredCatalogId(formData, "embalagem_id", "#situacao-embalagem");
+  const motivo = field(formData, "motivo");
+  const active = field(formData, "active") === "1";
+  if (!motivo) redirectCadastroAction(formData, "missing_reason", "#situacao-embalagem", embalagemId);
+  await executeCatalogRpc(formData, "set_cad_embalagem_active_state", {
+    p_active: active,
+    p_embalagem_id: embalagemId,
+    p_motivo: motivo
+  }, active ? "embalagem_reactivated" : "embalagem_deactivated", "#situacao-embalagem", embalagemId);
+}
+
+export async function setApresentacaoActiveStateAction(formData: FormData) {
+  const apresentacaoId = requiredCatalogId(formData, "apresentacao_id", "#apresentacoes");
+  const produtoId = optionalInteger(formData, "produto_id");
+  const motivo = field(formData, "motivo");
+  const active = field(formData, "active") === "1";
+  if (!motivo) redirectCadastroAction(formData, "missing_reason", "#apresentacoes", produtoId);
+  await executeCatalogRpc(formData, "set_cad_apresentacao_active_state", {
+    p_active: active,
+    p_apresentacao_id: apresentacaoId,
+    p_motivo: motivo
+  }, active ? "apresentacao_reactivated" : "apresentacao_deactivated", "#apresentacoes", produtoId);
+}
+
+export async function createEmbalagemVersaoAction(formData: FormData) {
+  const embalagemId = requiredCatalogId(formData, "embalagem_id", "#composicao");
+  const justificativa = field(formData, "justificativa");
+  if (!justificativa) redirectCadastroAction(formData, "missing_reason", "#composicao", embalagemId);
+  await executeCatalogRpc(formData, "create_cad_embalagem_versao_un_l", {
+    p_cubagem_m3: optionalNumber(formData, "cubagem_m3"),
+    p_embalagem_id: embalagemId,
+    p_justificativa: justificativa,
+    p_peso_tara_kg: optionalNumber(formData, "peso_tara_kg"),
+    p_vigencia_fim: optionalField(formData, "vigencia_fim"),
+    p_vigencia_inicio: optionalField(formData, "vigencia_inicio")
+  }, "embalagem_version_created", "#composicao", embalagemId);
+}
+
+export async function addEmbalagemComponenteAction(formData: FormData) {
+  const versaoId = requiredCatalogId(formData, "embalagem_versao_id", "#composicao");
+  const embalagemId = optionalInteger(formData, "embalagem_id");
+  const materialId = requiredCatalogId(formData, "materia_prima_id", "#composicao");
+  const quantidade = optionalNumber(formData, "quantidade_un_l");
+  const motivo = field(formData, "motivo");
+  if (quantidade === null || quantidade <= 0 || !motivo) {
+    redirectCadastroAction(formData, "invalid_component_un_l", "#composicao", embalagemId);
+  }
+  await executeCatalogRpc(formData, "add_cad_embalagem_componente_un_l", {
+    p_embalagem_versao_id: versaoId,
+    p_materia_prima_id: materialId,
+    p_motivo: motivo,
+    p_quantidade_un_l: quantidade
+  }, "embalagem_component_added", "#composicao", embalagemId);
+}
+
+export async function removeEmbalagemComponenteAction(formData: FormData) {
+  const componenteId = requiredCatalogId(formData, "componente_id", "#composicao");
+  const embalagemId = optionalInteger(formData, "embalagem_id");
+  const motivo = field(formData, "motivo");
+  if (!motivo) redirectCadastroAction(formData, "missing_reason", "#composicao", embalagemId);
+  await executeCatalogRpc(formData, "remove_cad_embalagem_componente", {
+    p_componente_id: componenteId,
+    p_motivo: motivo
+  }, "embalagem_component_removed", "#composicao", embalagemId);
+}
+
+export async function reviewEmbalagemVersaoAction(formData: FormData) {
+  const versaoId = requiredCatalogId(formData, "embalagem_versao_id", "#composicao");
+  const embalagemId = optionalInteger(formData, "embalagem_id");
+  const decisao = field(formData, "decisao");
+  const motivo = field(formData, "motivo");
+  if (!new Set(["approved", "rejected"]).has(decisao) || !motivo) {
+    redirectCadastroAction(formData, "invalid_review", "#composicao", embalagemId);
+  }
+  await executeCatalogRpc(formData, "review_cad_embalagem_versao", {
+    p_decisao: decisao,
+    p_embalagem_versao_id: versaoId,
+    p_motivo: motivo
+  }, decisao === "approved" ? "embalagem_version_approved" : "embalagem_version_rejected", "#composicao", embalagemId);
+}
+
+export async function activateEmbalagemVersaoAction(formData: FormData) {
+  const versaoId = requiredCatalogId(formData, "embalagem_versao_id", "#composicao");
+  const embalagemId = optionalInteger(formData, "embalagem_id");
+  const ativar = field(formData, "ativar") === "1";
+  const motivo = field(formData, "motivo");
+  if (!motivo) redirectCadastroAction(formData, "missing_reason", "#composicao", embalagemId);
+  await executeCatalogRpc(formData, "activate_cad_embalagem_versao", {
+    p_ativar: ativar,
+    p_embalagem_versao_id: versaoId,
+    p_motivo: motivo
+  }, ativar ? "embalagem_version_activated" : "embalagem_version_deactivated", "#composicao", embalagemId);
+}
+
 export async function createConversaoUnidadeMpAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
@@ -1003,7 +1191,33 @@ function redirectCadastroAction(
   if (targetPath === "/cadastros/materias-primas" && selectedId && selectedId > 0) {
     params.set("selected", String(selectedId));
   }
+  if ((targetPath === "/cadastros/produtos" || targetPath === "/cadastros/embalagens") && selectedId && selectedId > 0) {
+    params.set("selected", String(selectedId));
+  }
   redirect(`${targetPath}?${params.toString()}${hash}`);
+}
+
+function requiredCatalogId(formData: FormData, name: string, hash: string): number {
+  const id = optionalInteger(formData, name);
+  if (!id || id <= 0) redirectCadastroAction(formData, "invalid_positive_number", hash);
+  return id;
+}
+
+async function executeCatalogRpc(
+  formData: FormData,
+  rpcName: string,
+  args: Record<string, unknown>,
+  successResult: string,
+  hash: string,
+  selectedId: number | null
+): Promise<never> {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) redirectCadastroAction(formData, "not_configured", hash, selectedId);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, rpcName, args);
+  if (error) redirectCadastroAction(formData, mapSupabaseError(error.message), hash, selectedId);
+  revalidateTechnicalCatalogs();
+  redirectCadastroAction(formData, successResult, hash, selectedId);
 }
 
 function revalidateTechnicalCatalogs() {

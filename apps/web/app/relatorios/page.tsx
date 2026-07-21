@@ -9,9 +9,25 @@ import { getRuntimeStatus } from "@/lib/runtime";
 
 export const dynamic = "force-dynamic";
 
-export default async function RelatoriosPage() {
+type ReportsPageProps = {
+  searchParams: Promise<{ familia?: string }>;
+};
+
+const LOT_FAMILY_OPTIONS = ["TODOS", "PI", "PA", "MP"] as const;
+type LotFamilyFilter = (typeof LOT_FAMILY_OPTIONS)[number];
+
+export default async function RelatoriosPage({ searchParams }: ReportsPageProps) {
   const runtime = getRuntimeStatus();
   const dashboard = await getReportsDashboard();
+  const requestedFamily = (await searchParams).familia?.toUpperCase();
+  const family: LotFamilyFilter = LOT_FAMILY_OPTIONS.includes(requestedFamily as LotFamilyFilter)
+    ? (requestedFamily as LotFamilyFilter)
+    : "TODOS";
+  const validityRows = filterByFamily(dashboard.validityRows, family);
+  const reprocessamentoRows = filterByFamily(dashboard.reprocessamentoRows, family);
+  const vencidosComSaldo = validityRows.filter((row) => row.statusVencimento === "vencido_com_saldo").length;
+  const vencendo30Dias = validityRows.filter((row) => row.statusVencimento === "vence_30_dias").length;
+  const candidatosAlta = reprocessamentoRows.filter((row) => row.prioridadeReprocessamento === "alta").length;
 
   return (
     <main className="app-shell">
@@ -72,20 +88,32 @@ export default async function RelatoriosPage() {
           </article>
           <article className="kpi-card accent-red">
             <span>Vencidos com saldo</span>
-            <strong>{valueOrDash(dashboard.metrics.vencidosComSaldo)}</strong>
+            <strong>{dashboard.source === "supabase" ? vencidosComSaldo : "sem conexao"}</strong>
             <p>Lotes que devem ser tratados antes de nova expedicao ou producao.</p>
           </article>
           <article className="kpi-card accent-amber">
             <span>Vencem em 30 dias</span>
-            <strong>{valueOrDash(dashboard.metrics.vencendo30Dias)}</strong>
+            <strong>{dashboard.source === "supabase" ? vencendo30Dias : "sem conexao"}</strong>
             <p>Saldo disponivel que pode exigir decisao comercial, CQ ou producao.</p>
           </article>
           <article className="kpi-card accent-green">
             <span>Candidatos a reprocessar</span>
-            <strong>{valueOrDash(dashboard.metrics.candidatosReprocessamento)}</strong>
-            <p>{valueOrDash(dashboard.metrics.candidatosAlta)} com prioridade alta.</p>
+            <strong>{dashboard.source === "supabase" ? reprocessamentoRows.length : "sem conexao"}</strong>
+            <p>{dashboard.source === "supabase" ? candidatosAlta : "sem conexao"} com prioridade alta.</p>
           </article>
         </section>
+
+        <nav className="segmented-control" aria-label="Filtrar relatórios por família de estoque">
+          {LOT_FAMILY_OPTIONS.map((option) => (
+            <Link
+              key={option}
+              href={option === "TODOS" ? "/relatorios" : `/relatorios?familia=${option}`}
+              aria-current={family === option ? "page" : undefined}
+            >
+              {option === "TODOS" ? "Todos" : option}
+            </Link>
+          ))}
+        </nav>
 
         {dashboard.error ? (
           <section className="notice-panel warning" role="status">
@@ -132,11 +160,11 @@ export default async function RelatoriosPage() {
           <section className="panel" id="reprocessamento" aria-labelledby="reprocessamento-title">
             <div className="panel-header">
               <h2 id="reprocessamento-title">Fila de reprocessamento</h2>
-              <span className="pill">{dashboard.reprocessamentoRows.length} lote(s)</span>
+              <span className="pill">{reprocessamentoRows.length} lote(s) de {familyLabel(family)}</span>
             </div>
-            {dashboard.reprocessamentoRows.length > 0 ? (
+            {reprocessamentoRows.length > 0 ? (
               <div className="queue-list">
-                {dashboard.reprocessamentoRows.slice(0, 10).map((row) => (
+                {reprocessamentoRows.slice(0, 10).map((row) => (
                   <ReprocessamentoItem key={`${row.tipoLote}-${row.loteId}`} row={row} />
                 ))}
               </div>
@@ -152,9 +180,9 @@ export default async function RelatoriosPage() {
         <section className="panel" aria-labelledby="vencimentos-title">
           <div className="panel-header">
             <h2 id="vencimentos-title">Lotes por vencimento</h2>
-            <span className="pill">{dashboard.validityRows.length} linha(s)</span>
+            <span className="pill">{validityRows.length} linha(s) de {familyLabel(family)}</span>
           </div>
-          {dashboard.validityRows.length > 0 ? (
+          {validityRows.length > 0 ? (
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
@@ -171,7 +199,7 @@ export default async function RelatoriosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboard.validityRows.slice(0, 80).map((row) => (
+                  {validityRows.slice(0, 80).map((row) => (
                     <ValidityRow key={`${row.tipoLote}-${row.loteId}`} row={row} />
                   ))}
                 </tbody>
@@ -187,6 +215,14 @@ export default async function RelatoriosPage() {
       </section>
     </main>
   );
+}
+
+function filterByFamily<T extends ValidityLotRow>(rows: T[], family: LotFamilyFilter): T[] {
+  return family === "TODOS" ? rows : rows.filter((row) => row.tipoLote.toUpperCase() === family);
+}
+
+function familyLabel(family: LotFamilyFilter): string {
+  return family === "TODOS" ? "todas as famílias" : family;
 }
 
 function ReprocessamentoItem({ row }: { row: ReprocessamentoRow }) {

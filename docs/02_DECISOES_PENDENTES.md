@@ -23,7 +23,7 @@ Estados permitidos: `pendente`, `autorizada`, `implementada`, `cancelada`.
 | `DEC-010` | Campanhas, pontos e premiacao | criar campanhas e regras versionadas, ledger append-only de pontos/premios e vouchers; nao misturar premiacao com comissao | comercial, metas, financeiro e auditoria | implementada |
 | `DEC-011` | Papeis do vinculo cliente-vendedor | distinguir no relacionamento quem cadastrou, quem atende e demais papeis, com vigencia e auditoria | cadastros, visibilidade comercial e pedidos | implementada |
 | `DEC-012` | Corte e inventario fisico de abertura | definir data de corte, data e responsaveis da contagem, depositos, criterio de aprovacao e tratamento dos movimentos durante o inventario; o Excel sera apenas comparador | ativacao dos saldos operacionais de MP, PI, PA, embalagens e outros insumos | pendente |
-| `DEC-013` | Escala operacional da formula na OP | definir se a formula representa lote padrao absoluto ou base proporcional; se proporcional, definir rendimento-base, unidade da OP, perdas e arredondamentos antes de alterar quantidades dos componentes | formulas, OP, reservas, consumo, CQ, custos e lotes gerados | pendente |
+| `DEC-013` | Escala operacional da formula na OP | base unica para produzir 1 L; componentes em kg/L, L/L ou UN/L; formula sem lote; OP congela versao, lotes, custos e garantias; embalagem sem arredondamento silencioso | formulas, OP, reservas, consumo, CQ, custos e lotes gerados | autorizada |
 
 ## Decisoes autorizadas aguardando implementacao
 
@@ -83,14 +83,21 @@ Documentos: `docs/seguranca/00_MATRIZ_INICIAL_PERFIS_PERMISSOES.md` e
 - alteracao da arvore exige autorizacao previa;
 - GitHub recebe somente codigo e documentacao, nunca dados operacionais.
 
-## Limite funcional vigente da DEC-013
+## DEC-013 - Base unica por litro, custos e garantias por lote
 
-Enquanto a decisao estiver pendente, a OP copia as quantidades absolutas da
-formula versionada. O campo `quantidade_planejada` e apenas referencia da OP e
-nao escala componentes, reservas, consumos ou saidas. A interface de
-transformacoes nao solicita quantidade de escala para evitar uma promessa que
-o contrato atual do banco nao cumpre. Isso nao bloqueia a execucao do lote
-padrao definido pela formula.
+Estado: `autorizada`
+
+Todas as formulas serao padronizadas para produzir `1 L` de produto final. As
+unidades operacionais serao exclusivamente `kg/L produzido`, `L/L produzido`
+e `UN/L produzido`. Formula nao referencia lote. A OP congela a versao e
+preserva lotes, quantidades, custos e garantias previstos e realizados.
+
+A migration 0068 aplica somente `UN/L` a apresentacoes e composicao versionada
+de embalagens. Formula, FIFO, custos e garantias por lote serao implementados
+em pacote estrutural proprio posterior, sem reinterpretar silenciosamente o
+contrato atual.
+
+Documento: `docs/decisoes-arquiteturais/ADR-013-base-unica-por-litro-custos-garantias-lote.md`.
 
 ## Manutencao
 

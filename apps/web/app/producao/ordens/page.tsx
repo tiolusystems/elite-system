@@ -62,7 +62,6 @@ export default async function ProductionOrdersPage({ searchParams }: { searchPar
             <option value="experimental">Experimental</option>
             <option value="desenvolvimento">Desenvolvimento</option>
             <option value="reprocessamento">Reprocessamento</option>
-            <option value="mapa_documental">MAPA documental</option>
           </select>
         </label>
         <button className="secondary-button" type="submit">Filtrar</button>

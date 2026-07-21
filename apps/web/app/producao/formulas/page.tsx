@@ -13,14 +13,14 @@ export default async function ProductionFormulasPage({ searchParams }: { searchP
   return (
     <ProductionShell
       active="formulas"
-      title="Formulas"
-      description="Receitas imutaveis por versao, com componentes operacionais separados da documentacao MAPA."
+      title="Fórmulas"
+      description="Receitas imutáveis por versão, com produção operacional separada da documentação MAPA."
       source={dashboard.source}
       error={dashboard.error}
       actions={(
         <>
           <Link className="secondary-button" href="/cadastros/produtos">Produtos PA/PI</Link>
-          <a className="primary-button" href="#nova-formula">Nova versao</a>
+          <a className="primary-button" href="#nova-formula">Nova versão</a>
         </>
       )}
     >

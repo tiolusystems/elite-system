@@ -214,3 +214,10 @@ inventado pela interface.
   usado em integridade, calculo, rastreabilidade ou conformidade.
 - Nao sera criado construtor generico de campos nesta fase.
 - Toda extensao segue `migration -> RPC -> interface -> testes -> staging`.
+
+## Governanca documental por fluxo
+
+Cada tela ou fluxo homologavel deve atualizar seu manual operacional no mesmo
+pacote. O manual combina processo, referencia da tela, permissoes, excecoes,
+estados e limitacoes. Nao se documenta funcionalidade planejada como se estivesse
+disponivel. O indice e o gate documental ficam em `docs/manuais/README.md`.

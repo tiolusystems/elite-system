@@ -115,6 +115,30 @@ export type TechnicalSaleItem = {
   status: string;
 };
 
+export type TechnicalPackageVersion = {
+  id: number;
+  packageId: number;
+  version: number;
+  validFrom: string | null;
+  validTo: string | null;
+  tareKg: number | null;
+  cubicMeters: number | null;
+  unitsPerLiter: number | null;
+  justification: string | null;
+  reviewStatus: string;
+  active: boolean;
+};
+
+export type TechnicalPackageComponent = {
+  id: number;
+  packageVersionId: number;
+  materialId: number;
+  materialLabel: string;
+  quantityUnL: number | null;
+  reviewStatus: string;
+  status: string;
+};
+
 export type TechnicalCatalog = {
   units: TechnicalUnit[];
   nutrients: TechnicalNutrient[];
@@ -126,6 +150,8 @@ export type TechnicalCatalog = {
   productGroups: TechnicalProductGroup[];
   packages: TechnicalPackage[];
   saleItems: TechnicalSaleItem[];
+  packageVersions: TechnicalPackageVersion[];
+  packageComponents: TechnicalPackageComponent[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -147,7 +173,9 @@ const EMPTY_CATALOG: Omit<TechnicalCatalog, "source" | "error"> = {
   products: [],
   productGroups: [],
   packages: [],
-  saleItems: []
+  saleItems: [],
+  packageVersions: [],
+  packageComponents: []
 };
 
 export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
@@ -158,7 +186,7 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [units, nutrients, materials, inputTypes, inputTypeSummary, conversions, products, productGroups, packages, saleItems] = await Promise.all([
+    const [units, nutrients, materials, inputTypes, inputTypeSummary, conversions, products, productGroups, packages, saleItems, packageVersions, packageComponents, packageActivations, packageReviews, packageComponentEvents] = await Promise.all([
       supabase
         .from("cad_unidades_medida")
         .select("id,codigo,nome,simbolo,dimensao,status,origem_dados")
@@ -216,10 +244,39 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         .from("cad_produto_embalagens")
         .select("id,codigo_item,produto_id,embalagem_id,status")
         .order("codigo_item", { ascending: true })
+        .limit(1000),
+      supabase
+        .from("cad_embalagem_versoes")
+        .select("id,embalagem_id,versao,vigencia_inicio,vigencia_fim,peso_tara_kg,cubagem_m3,unidades_embalagem_por_litro,justificativa,review_status")
+        .order("embalagem_id", { ascending: true })
+        .order("versao", { ascending: false })
+        .limit(1000),
+      supabase
+        .from("cad_embalagem_componentes")
+        .select("id,embalagem_versao_id,materia_prima_id,quantidade_un_l,review_status,status")
+        .order("embalagem_versao_id", { ascending: true })
+        .limit(2000),
+      supabase
+        .from("cad_embalagem_versao_ativacoes")
+        .select("id,embalagem_versao_id,tipo_evento,created_at")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(1000),
+      supabase
+        .from("cad_embalagem_versao_revisoes")
+        .select("id,embalagem_versao_id,decisao,created_at")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(1000),
+      supabase
+        .from("cad_embalagem_componente_eventos")
+        .select("id,embalagem_componente_id,tipo_evento,created_at")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
         .limit(1000)
     ]);
 
-    const firstError = [units, nutrients, materials, inputTypes, inputTypeSummary, conversions, products, productGroups, packages, saleItems].find(
+    const firstError = [units, nutrients, materials, inputTypes, inputTypeSummary, conversions, products, productGroups, packages, saleItems, packageVersions, packageComponents, packageActivations, packageReviews, packageComponentEvents].find(
       (result) => result.error
     )?.error;
     if (firstError) {
@@ -236,6 +293,30 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
       productRows.map((item) => [Number(item.id), `${item.codigo_produto} - ${item.nome}`])
     );
     const packageLabels = new Map(packageRows.map((item) => [Number(item.id), String(item.descricao)]));
+    const versionPackageIds = new Map(
+      (packageVersions.data ?? []).map((item) => [Number(item.id), Number(item.embalagem_id)])
+    );
+    const latestActivationByPackage = new Map<number, { versionId: number; type: string }>();
+    const reviewByVersion = new Map<number, string>();
+    const removedComponentIds = new Set<number>();
+    for (const activation of packageActivations.data ?? []) {
+      const packageId = versionPackageIds.get(Number(activation.embalagem_versao_id));
+      if (packageId !== undefined && !latestActivationByPackage.has(packageId)) {
+        latestActivationByPackage.set(packageId, {
+          versionId: Number(activation.embalagem_versao_id),
+          type: String(activation.tipo_evento)
+        });
+      }
+    }
+    for (const review of packageReviews.data ?? []) {
+      const versionId = Number(review.embalagem_versao_id);
+      if (!reviewByVersion.has(versionId)) reviewByVersion.set(versionId, String(review.decisao));
+    }
+    for (const event of packageComponentEvents.data ?? []) {
+      if (String(event.tipo_evento) === "remocao") {
+        removedComponentIds.add(Number(event.embalagem_componente_id));
+      }
+    }
 
     return {
       units: (units.data ?? []).map((item) => ({
@@ -344,6 +425,32 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         packageId: Number(item.embalagem_id),
         packageLabel: packageLabels.get(Number(item.embalagem_id)) ?? `Embalagem #${item.embalagem_id}`,
         status: String(item.status)
+      })),
+      packageVersions: (packageVersions.data ?? []).map((item) => {
+        const current = latestActivationByPackage.get(Number(item.embalagem_id));
+        return {
+          id: Number(item.id),
+          packageId: Number(item.embalagem_id),
+          version: Number(item.versao),
+          validFrom: item.vigencia_inicio ? String(item.vigencia_inicio) : null,
+          validTo: item.vigencia_fim ? String(item.vigencia_fim) : null,
+          tareKg: toNullableNumber(item.peso_tara_kg),
+          cubicMeters: toNullableNumber(item.cubagem_m3),
+          unitsPerLiter: toNullableNumber(item.unidades_embalagem_por_litro),
+          justification: item.justificativa ? String(item.justificativa) : null,
+          reviewStatus: reviewByVersion.get(Number(item.id)) ?? String(item.review_status),
+          active: current?.type === "ativacao" && current.versionId === Number(item.id)
+        };
+      }),
+      packageComponents: (packageComponents.data ?? []).map((item) => ({
+        id: Number(item.id),
+        packageVersionId: Number(item.embalagem_versao_id),
+        materialId: Number(item.materia_prima_id),
+        materialLabel: materialLabels.get(Number(item.materia_prima_id)) ?? `MP #${item.materia_prima_id}`,
+        quantityUnL: toNullableNumber(item.quantidade_un_l),
+        reviewStatus:
+          reviewByVersion.get(Number(item.embalagem_versao_id)) ?? String(item.review_status),
+        status: removedComponentIds.has(Number(item.id)) ? "removed" : "active"
       })),
       source: "supabase",
       error: null

@@ -49,7 +49,7 @@ export default async function ProductionOverviewPage() {
             <span className="eyebrow">Fluxo operacional</span>
             <h2 id="production-flow-title">Sequencia da producao</h2>
           </div>
-          <span className="pill">7 etapas</span>
+          <span className="pill">8 etapas</span>
         </div>
         <div className="operation-card-grid production-stage-grid">
           <StageCard number="01" title="Base tecnica" detail="MP, unidades, embalagens e produtos." href="/cadastros/tecnicos" status="Operacional" />
@@ -57,8 +57,9 @@ export default async function ProductionOverviewPage() {
           <StageCard number="03" title="Garantias" detail="Declaracoes de produto e analises por lote de MP." href="/producao/garantias" status="Operacional" />
           <StageCard number="04" title="Ordens e reservas" detail="Abertura de OP e reserva de MP, PA ou PI." href="/producao/ordens" status="Operacional" />
           <StageCard number="05" title="CQ e finalizacao" detail="Dados de processo, aprovacao e produto gerado." href="/producao/qualidade" status="Operacional" />
-          <StageCard number="06" title="Lotes e estoque" detail="Saldos fisico, reservado e disponivel por lote." href="/producao/estoque" status="Operacional" />
-          <StageCard number="07" title="Transformacoes" detail="PA para PI, PI para PA, reenvasamento e reprocessamento." href="/producao/transformacoes" status="Operacional" />
+          <StageCard number="06" title="OP MAPA e envase" detail="Documento MAPA, baixa de PI e embalagens e geração de PA." href="/producao/envase" status="Em validação" />
+          <StageCard number="07" title="Lotes e estoque" detail="Saldos fisico, reservado e disponivel por lote." href="/producao/estoque" status="Operacional" />
+          <StageCard number="08" title="Transformacoes" detail="PA para PI, PI para PA, reenvasamento e reprocessamento." href="/producao/transformacoes" status="Operacional" />
         </div>
       </section>
 
@@ -75,7 +76,7 @@ export default async function ProductionOverviewPage() {
 }
 
 function StageCard({ number, title, detail, href, status }: { number: string; title: string; detail: string; href: string; status: string }) {
-  const operational = status === "Operacional";
+  const operational = status === "Operacional" || status === "Em validação";
   return (
     <article className={`operation-stage-card ${operational ? "is-operational" : ""}`}>
       <div className="operation-stage-heading">

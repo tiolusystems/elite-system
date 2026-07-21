@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createProdutoBaseAction, createProdutoEmbalagemAction } from "@/app/cadastros/actions";
+import { ProductMaintenancePanel } from "@/app/cadastros/produtos/product-maintenance-panel";
 import { CatalogFeedback, CatalogShell, StatusChip, singleParam } from "@/app/cadastros/tecnicos/catalog-shell";
 import { getTechnicalCatalog } from "@/lib/technical-catalog";
 
@@ -10,6 +11,7 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
   const params = searchParams ? await searchParams : {};
   const catalog = await getTechnicalCatalog();
   const query = (singleParam(params.q) ?? "").trim().toLocaleLowerCase("pt-BR");
+  const selectedId = Number(singleParam(params.selected) ?? "");
   const filteredProducts = catalog.products.filter((item) =>
     !query || `${item.code} ${item.name} ${item.group ?? ""}`.toLocaleLowerCase("pt-BR").includes(query)
   );
@@ -19,6 +21,7 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
     current.push(item);
     variantsByProduct.set(item.productId, current);
   }
+  const selectedProduct = catalog.products.find((item) => item.id === selectedId) ?? null;
 
   return (
     <CatalogShell
@@ -50,7 +53,7 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
           {filteredProducts.map((product) => {
             const variants = variantsByProduct.get(product.id) ?? [];
             return (
-              <article key={product.id}>
+              <article key={product.id} className={selectedProduct?.id === product.id ? "selected-record" : undefined}>
                 <div><span><small>{product.code}</small><strong>{product.name}</strong></span><StatusChip value={product.status} /></div>
                 <dl>
                   <div><dt>Grupo</dt><dd>{product.group ?? "-"}</dd></div>
@@ -64,12 +67,19 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
                   ))}
                   {variants.length === 0 ? <span className="pending-variant">Sem item vendavel</span> : null}
                 </div>
+                <Link className="record-open-link" href={`/cadastros/produtos?selected=${product.id}#editar-produto`}>Abrir produto</Link>
               </article>
             );
           })}
           {filteredProducts.length === 0 ? <p className="empty-state">Nenhum produto encontrado.</p> : null}
         </div>
       </section>
+
+      <ProductMaintenancePanel
+        product={selectedProduct}
+        groups={catalog.productGroups}
+        variants={selectedProduct ? variantsByProduct.get(selectedProduct.id) ?? [] : []}
+      />
 
       <section className="two-column catalog-form-columns">
         <article className="panel form-panel" id="novo-produto">

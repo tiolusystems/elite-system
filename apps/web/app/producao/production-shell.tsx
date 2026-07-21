@@ -9,6 +9,7 @@ export type ProductionRoute =
   | "garantias"
   | "ordens"
   | "qualidade"
+  | "envase"
   | "estoque"
   | "transformacoes";
 
@@ -18,6 +19,7 @@ const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: strin
   { key: "garantias", href: "/producao/garantias", label: "Garantias" },
   { key: "ordens", href: "/producao/ordens", label: "Ordens" },
   { key: "qualidade", href: "/producao/qualidade", label: "CQ e finalizacao" },
+  { key: "envase", href: "/producao/envase", label: "OP MAPA e envase" },
   { key: "estoque", href: "/producao/estoque", label: "Lotes e estoque" },
   { key: "transformacoes", href: "/producao/transformacoes", label: "Transformacoes" }
 ];
@@ -115,6 +117,14 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   op_started: { kind: "ok", title: "OP iniciada", detail: "A ordem passou para execucao industrial." },
   op_cancelled: { kind: "ok", title: "OP cancelada", detail: "As reservas relacionadas foram tratadas pelo fluxo auditado." },
   op_finished: { kind: "ok", title: "OP finalizada", detail: "Consumos, CQ e lotes gerados foram gravados na mesma transacao." },
+  packaging_order_issued: { kind: "ok", title: "Ordem emitida", detail: "A OP MAPA e a Ordem de Envase foram emitidas juntas." },
+  packaging_reserved: { kind: "ok", title: "Embalagem reservada", detail: "O lote foi reservado para esta Ordem de Envase." },
+  packaging_started: { kind: "ok", title: "Envase iniciado", detail: "A ordem passou para execucao operacional." },
+  packaging_finished: { kind: "ok", title: "Envase finalizado", detail: "PI e embalagens foram baixados e os lotes PA foram criados." },
+  missing_packaging_issue: { kind: "warning", title: "Emissao incompleta", detail: "Informe formula MAPA, lote PI, apresentacao e volume." },
+  missing_packaging_reservation: { kind: "warning", title: "Reserva incompleta", detail: "Informe ordem, componente, lote e quantidade." },
+  missing_packaging_outputs: { kind: "warning", title: "Lotes PA obrigatorios", detail: "Informe ao menos um lote PA e distribua toda a quantidade planejada." },
+  operation_failed: { kind: "warning", title: "Operação não concluída", detail: "Revise os dados e a situação atual da ordem. Nenhum movimento parcial foi mantido." },
   guarantees_calculated: { kind: "ok", title: "Garantias calculadas", detail: "O resultado foi versionado a partir dos lotes efetivamente consumidos." },
   blocked_lot_released: { kind: "ok", title: "Lote liberado", detail: "A decisao foi registrada com autor, motivo e estado anterior e posterior." },
   not_allowed: { kind: "warning", title: "Sem alcada", detail: "O usuario atual nao possui a permissao exigida." },

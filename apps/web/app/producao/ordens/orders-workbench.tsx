@@ -35,7 +35,6 @@ export function OrdersWorkbench({ dashboard, orders }: { dashboard: PcpDashboard
                   <option value="experimental">Experimental</option>
                   <option value="desenvolvimento">Desenvolvimento</option>
                   <option value="reprocessamento">Reprocessamento</option>
-                  <option value="mapa_documental">MAPA documental</option>
                 </select>
               </label>
               <label>

@@ -8,6 +8,7 @@ type FormulaTargets = {
   materiasPrimas: PcpLookupOption[];
   produtos: PcpLookupOption[];
   produtoEmbalagens: PcpLookupOption[];
+  unidades: PcpLookupOption[];
 };
 
 export function FormulaComponentRows({ targets }: { targets: FormulaTargets }) {
@@ -54,7 +55,12 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
       </label>
       <label>
         Unidade
-        <input name={`component_${index}_unidade`} placeholder="KG, L, UN" />
+        <select name={`component_${index}_unidade`} defaultValue="" disabled={!type}>
+          <option value="">Selecione</option>
+          {targets.unidades.map((option) => (
+            <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+          ))}
+        </select>
       </label>
       <label className="wide-field">
         Observacao

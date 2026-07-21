@@ -22,13 +22,18 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
             </label>
             <label>
               Nutriente
-              <input name="nutriente" placeholder="N, P2O5, K2O" required />
+              <select name="nutriente" defaultValue="" required>
+                <option value="">Selecione</option>
+                {dashboard.lookups.nutrientes.map((option) => (
+                  <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+                ))}
+              </select>
             </label>
             <label>
               Limite
               <select name="tipo_limite" defaultValue="minimo">
-                <option value="minimo">Minimo</option>
-                <option value="maximo">Maximo</option>
+                <option value="minimo">Mínimo</option>
+                <option value="maximo">Máximo</option>
                 <option value="faixa">Faixa</option>
                 <option value="declarado">Declarado</option>
               </select>
@@ -38,29 +43,34 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
               <input name="valor" inputMode="decimal" required />
             </label>
             <label>
-              Maximo da faixa
+              Máximo da faixa
               <input name="valor_maximo" inputMode="decimal" />
             </label>
             <label>
               Unidade
-              <input name="unidade" placeholder="%, g/L" required />
+              <select name="unidade" defaultValue="" required>
+                <option value="">Selecione</option>
+                {dashboard.lookups.unidades.map((option) => (
+                  <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+                ))}
+              </select>
             </label>
             <label>
               Fonte
               <select name="fonte" defaultValue="mapa">
                 <option value="mapa">MAPA</option>
-                <option value="laboratorio">Laboratorio</option>
+                <option value="laboratorio">Laboratório</option>
                 <option value="manual">Manual</option>
                 <option value="fornecedor">Fornecedor</option>
                 <option value="calculado">Calculado</option>
               </select>
             </label>
             <label>
-              Vigencia inicial
+              Vigência inicial
               <input name="vigencia_inicio" type="date" defaultValue={today} />
             </label>
             <label>
-              Vigencia final
+              Vigência final
               <input name="vigencia_fim" type="date" />
             </label>
             <label className="wide-field">
@@ -72,7 +82,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
               <input name="justificativa" placeholder="Motivo desta versao" required />
             </label>
           </div>
-          <button className="primary-button" type="submit">Registrar versao</button>
+          <button className="primary-button" type="submit">Registrar versão</button>
         </form>
 
         <form className="panel production-form" action={registerMpLotGuaranteeAction}>
@@ -92,7 +102,12 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
             </label>
             <label>
               Nutriente
-              <input name="nutriente" placeholder="N, P2O5, K2O" required />
+              <select name="nutriente" defaultValue="" required>
+                <option value="">Selecione</option>
+                {dashboard.lookups.nutrientes.map((option) => (
+                  <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+                ))}
+              </select>
             </label>
             <label>
               Valor
@@ -100,12 +115,17 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
             </label>
             <label>
               Unidade
-              <input name="unidade" placeholder="%, g/L" required />
+              <select name="unidade" defaultValue="" required>
+                <option value="">Selecione</option>
+                {dashboard.lookups.unidades.map((option) => (
+                  <option key={option.id} value={option.label}>{option.label} - {option.detail}</option>
+                ))}
+              </select>
             </label>
             <label>
               Fonte
               <select name="fonte" defaultValue="laboratorio">
-                <option value="laboratorio">Laboratorio</option>
+                <option value="laboratorio">Laboratório</option>
                 <option value="fornecedor">Fornecedor</option>
                 <option value="manual">Manual</option>
                 <option value="mapa">MAPA</option>
@@ -113,7 +133,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
               </select>
             </label>
             <label>
-              Data de referencia
+              Data de referência
               <input name="data_referencia" type="date" defaultValue={today} required />
             </label>
             <label className="wide-field">
@@ -122,7 +142,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
             </label>
             <label className="full-field">
               Justificativa
-              <input name="justificativa" placeholder="Origem e motivo desta versao" required />
+              <input name="justificativa" placeholder="Origem e motivo desta versão" required />
             </label>
           </div>
           <button className="primary-button" type="submit">Registrar analise</button>
@@ -146,7 +166,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
                   <td>{guarantee.produtoLabel}</td>
                   <td>{guarantee.nutriente}</td>
                   <td>{formatNumber(guarantee.valor)}{guarantee.valorMaximo === null ? "" : ` a ${formatNumber(guarantee.valorMaximo)}`} {guarantee.unidade}</td>
-                  <td>{guarantee.tipoLimite} / {guarantee.fonte}</td>
+                  <td>{limitLabel(guarantee.tipoLimite)} / {sourceLabel(guarantee.fonte)}</td>
                   <td>{guarantee.documentoReferencia ?? "-"}</td>
                 </tr>
               ))}
@@ -156,7 +176,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
                   <td>{guarantee.loteLabel}</td>
                   <td>{guarantee.nutriente}</td>
                   <td>{formatNumber(guarantee.valor)} {guarantee.unidade}</td>
-                  <td>{guarantee.fonte}</td>
+                  <td>{sourceLabel(guarantee.fonte)}</td>
                   <td>{guarantee.documentoReferencia ?? guarantee.dataReferencia ?? "-"}</td>
                 </tr>
               ))}
@@ -173,4 +193,20 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 6 }).format(value);
+}
+
+function limitLabel(value: string): string {
+  const labels: Record<string, string> = { minimo: "Mínimo", maximo: "Máximo", faixa: "Faixa", declarado: "Declarado" };
+  return labels[value] ?? "Regra não reconhecida";
+}
+
+function sourceLabel(value: string): string {
+  const labels: Record<string, string> = {
+    mapa: "MAPA",
+    manual: "Manual",
+    laboratorio: "Laboratório",
+    fornecedor: "Fornecedor",
+    calculado: "Calculado"
+  };
+  return labels[value] ?? "Fonte não reconhecida";
 }

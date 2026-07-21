@@ -10,7 +10,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const DECIMAL_SEPARATOR = /,/g;
 const ALLOWED_FORMULA_TYPES = new Set(["producao", "mapa"]);
 const ALLOWED_COMPONENT_TYPES = new Set(["MP", "PA", "PI"]);
-const ALLOWED_OP_TYPES = new Set(["estoque", "experimental", "desenvolvimento", "reprocessamento", "mapa_documental"]);
+const ALLOWED_OP_TYPES = new Set(["estoque", "experimental", "desenvolvimento", "reprocessamento"]);
 const ALLOWED_CQ_STATUS = new Set(["aprovado", "bloqueado", "reprovado"]);
 const ALLOWED_OUTPUT_TYPES = new Set(["PA", "PI"]);
 const ALLOWED_GUARANTEE_LIMITS = new Set(["minimo", "maximo", "faixa", "declarado"]);

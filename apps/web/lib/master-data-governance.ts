@@ -65,6 +65,10 @@ const DUPLICATE_REASON_LABELS: Record<string, string> = {
   input_alias_matches_existing_name: "Apelido corresponde ao nome existente",
   same_historical_spelling: "Mesma grafia histórica"
 };
+const DATA_ORIGIN_LABELS: Record<string, string> = {
+  sistema: "Sistema",
+  excel_legado: "Excel legado"
+};
 
 export function cadastroStatusLabel(value: string | null | undefined) {
   return value ? STATUS_LABELS[value] ?? "Situação não reconhecida" : "Não informado";
@@ -84,6 +88,10 @@ export function papelAreaLabel(value: string | null | undefined) {
 
 export function duplicateReasonLabel(value: string) {
   return DUPLICATE_REASON_LABELS[value] ?? "Semelhança cadastral";
+}
+
+export function dataOriginLabel(value: string | null | undefined) {
+  return value ? DATA_ORIGIN_LABELS[value] ?? "Origem não reconhecida" : "Origem não informada";
 }
 
 export function formatLegacyCode(value: string | null | undefined) {

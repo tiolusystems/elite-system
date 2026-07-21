@@ -87,16 +87,20 @@ Classificacao primaria: `Texto livre`, `Valor controlado`, `Relacionamento` ou
 | Situacao do produto | Uso operacional | `status` | Valor controlado | Constraint | Valores atuais / Ativo, Em revisao, Inativo | Obrigatorio | Existe |
 | Embalagem | Apresentacao fisica | `cad_embalagens` | Relacionamento | Catalogo de embalagens | ID / Embalagem | Obrigatoria no item vendavel | Existe |
 | Descricao da embalagem | Identidade | Texto | Texto livre | Operador | Texto / Descricao | Obrigatorio | Existe |
-| Unidade da embalagem | Medida | Texto + FK | Relacionamento | `cad_unidades_medida` | ID/codigo / Unidade | Obrigatorio | Existe |
-| Volume | Capacidade | Numerico | Valor controlado estruturado | Especificacao | Decimal / Volume em litros | Opcional | Existe |
+| Unidade da embalagem | Medida | Texto + FK | Relacionamento | `cad_unidades_medida` | ID `un` / Unidade | Obrigatorio e fixo em UN para operacao nova | Governado na 0068 |
+| Volume | Capacidade | Numerico | Valor controlado estruturado | Especificacao | Decimal / Capacidade em litros | Obrigatorio e positivo na operacao nova | Governado na 0068 |
 | Controla estoque | Embalagem como insumo | Booleano | Valor controlado | Regra operacional | Booleano / Controlar como insumo | MP obrigatoria quando verdadeiro | Existe |
 | MP vinculada | Insumo de embalagem | FK | Relacionamento | Materias-primas ativas | ID / MP de estoque | Condicional | Existe |
 | Codigo do item | Identidade produto+embalagem | `codigo_item` | Valor controlado | Regra do item vendavel | Codigo / Codigo da apresentacao | Obrigatorio e unico | Existe |
 | Conversao de MP | Unidade da NF para estoque | Relacao com unidades | Relacionamento temporal | MP + unidades canonicas | IDs/fator / Conversao | Obrigatoria por regra cadastrada | Existe |
 | Fator | Conversao quantitativa | Numerico | Valor controlado estruturado | Regra tecnica | Decimal / Fator | Positivo | Existe |
 | Vigencia | Periodo da conversao | Datas | Valor controlado | Regra temporal | Datas / Vigencia | Intervalo valido | Existe |
-| Edicao/desativacao | Manter produto, embalagem e item | Ausente | Acao auditada | Dominio Cadastros | Motivo / Acao | Alcada obrigatoria | Faltam RPCs por eixo |
-| Composicao da embalagem | Componentes versionados | Tabelas DEC-008 | Relacionamento versionado | Embalagem e MP | IDs / Componentes | Versao e ativacao | Existe no banco; sem UI/RPC operacional completa |
+| Necessidade da embalagem | Normalizar consumo | Ausente | Derivado | `1 / capacidade_litros` | Decimal / Unidades por litro (UN/L) | Calculado, positivo, sem texto fracionario | Implementado na 0068 sem backfill inventado |
+| Quantidade do componente | Composicao por litro | `quantidade` legado | Valor controlado estruturado | Versao da embalagem | Decimal / Quantidade (UN/L) | Positiva; `quantidade_un_l` e autoritativa | Implementado na 0068 |
+| Revisao da composicao | Aprovar/rejeitar versao | `review_status` legado | Evento append-only | `cad_embalagem_versao_revisoes` | `approved/rejected` / Aprovada/Rejeitada | Motivo e alcada obrigatorios | Implementado na 0068 |
+| Remocao de componente | Corrigir rascunho sem sobrescrever | Status legado | Evento append-only | `cad_embalagem_componente_eventos` | `remocao` / Removido | Somente antes da revisao | Implementado na 0068 |
+| Edicao/desativacao | Manter produto, embalagem e item | RPC por eixo | Acao auditada | Dominio Cadastros | Motivo / Acao | Alcada obrigatoria | Implementado na 0068 |
+| Composicao da embalagem | Componentes versionados | Tabelas DEC-008 + eventos 0068 | Relacionamento versionado | Embalagem e MP | IDs / Componentes | Versao, revisao e ativacao | Implementado na 0068; em homologacao |
 
 ## UX-01C.6 - Veiculos, logistica, tecnicos e validacao
 

@@ -1,5 +1,5 @@
-import { activatePcpFormulaAction, createPcpFormulaAction } from "@/app/pcp/actions";
-import { FormulaComponentRows } from "@/app/pcp/production-editors";
+import { activatePcpFormulaAction } from "@/app/pcp/actions";
+import { FormulaCreationForm } from "@/app/producao/formulas/formula-creation-form";
 import type { PcpDashboard, PcpFormulaVersion } from "@/lib/pcp";
 
 export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboard: PcpDashboard; includeActive?: boolean }) {
@@ -8,54 +8,16 @@ export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboar
       <section className="two-column production-primary-grid">
         <section className="panel form-panel" id="nova-formula" aria-labelledby="nova-formula-title">
           <div className="panel-header">
-            <h2 id="nova-formula-title">Nova versao de formula</h2>
-            <span className="pill">append-only</span>
+            <h2 id="nova-formula-title">Nova versão de fórmula</h2>
+            <span className="pill">Histórico preservado</span>
           </div>
-          <form action={createPcpFormulaAction}>
-            <div className="form-grid">
-              <label className="wide-field">
-                Produto PA/PI
-                <select name="produto_id" defaultValue="" required>
-                  <option value="">Selecione o produto</option>
-                  {dashboard.lookups.produtos.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Tipo de receita
-                <select name="tipo_receita" defaultValue="producao">
-                  <option value="producao">Producao operacional</option>
-                  <option value="mapa">MAPA documental</option>
-                </select>
-              </label>
-              <label className="wide-field">
-                Justificativa
-                <input name="justificativa" placeholder="Motivo da criacao ou alteracao" required />
-              </label>
-              <label className="full-field">
-                Observacao
-                <input name="observacao" placeholder="Informacao complementar opcional" />
-              </label>
-            </div>
-            <FormulaComponentRows
-              targets={{
-                materiasPrimas: dashboard.lookups.materiasPrimas,
-                produtos: dashboard.lookups.produtos,
-                produtoEmbalagens: dashboard.lookups.produtoEmbalagens
-              }}
-            />
-            <div className="form-footer">
-              <span>Formula operacional exige componente. A receita MAPA pode ser apenas documental.</span>
-              <button className="primary-button" type="submit">Criar versao</button>
-            </div>
-          </form>
+          <FormulaCreationForm lookups={dashboard.lookups} />
         </section>
 
         <section className="panel" id="formulas" aria-labelledby="formulas-title">
           <div className="panel-header">
-            <h2 id="formulas-title">Historico de versoes</h2>
-            <span className="pill">{dashboard.formulaVersions.length} versao(oes)</span>
+            <h2 id="formulas-title">Histórico de versões</h2>
+            <span className="pill">{dashboard.formulaVersions.length} versão(ões)</span>
           </div>
           {dashboard.formulaVersions.length > 0 ? (
             <div className="module-list">
@@ -65,8 +27,8 @@ export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboar
             </div>
           ) : (
             <div className="empty-state">
-              <strong>Nenhuma formula cadastrada</strong>
-              <span>Cadastre a primeira versao para iniciar o fluxo de producao.</span>
+              <strong>Nenhuma fórmula cadastrada</strong>
+              <span>Cadastre a primeira versão para iniciar o fluxo de produção.</span>
             </div>
           )}
         </section>
@@ -84,10 +46,10 @@ export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboar
                 <article className="module-card" key={`${formula.produtoId}-${formula.tipoReceita}`}>
                   <div className="module-card-main">
                     <h3>{formula.produtoLabel}</h3>
-                    <span>{formula.tipoReceita} v{formula.versao} / {shortDate(formula.ativadaAt)}</span>
+                    <span>{recipeTypeLabel(formula.tipoReceita)} v{formula.versao} / {shortDate(formula.ativadaAt)}</span>
                   </div>
                   <div className="module-card-meta">
-                    <span>formula</span>
+                    <span>fórmula</span>
                     <strong>{formula.formulaVersionId}</strong>
                   </div>
                   <p>{formula.motivoAtivacao}</p>
@@ -96,8 +58,8 @@ export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboar
             </div>
           ) : (
             <div className="empty-state">
-              <strong>Nenhuma formula ativa</strong>
-              <span>Ative uma versao aprovada antes de abrir uma OP operacional.</span>
+              <strong>Nenhuma fórmula ativa</strong>
+              <span>Ative uma versão aprovada antes de abrir uma OP operacional.</span>
             </div>
           )}
         </section>
@@ -111,10 +73,10 @@ function FormulaCard({ formula }: { formula: PcpFormulaVersion }) {
     <article className="module-card">
       <div className="module-card-main">
         <h3>{formula.produtoLabel}</h3>
-        <span>{formula.tipoReceita} v{formula.versao} / {shortDate(formula.createdAt)}</span>
+        <span>{recipeTypeLabel(formula.tipoReceita)} v{formula.versao} / {shortDate(formula.createdAt)}</span>
       </div>
       <div className="module-card-meta">
-        <span>{formula.isActive ? "ativa" : "versao"}</span>
+        <span>{formula.isActive ? "ativa" : "versão"}</span>
         <strong>{formula.id}</strong>
       </div>
       <p>{formula.justificativa}</p>
@@ -126,13 +88,13 @@ function FormulaCard({ formula }: { formula: PcpFormulaVersion }) {
             </span>
           ))
         ) : (
-          <span className="tag">sem componentes operacionais</span>
+          <span className="tag">Sem componentes operacionais</span>
         )}
       </div>
       {!formula.isActive ? (
         <form className="compact-action-form" action={activatePcpFormulaAction}>
           <input type="hidden" name="formula_versao_id" value={formula.id} />
-          <input name="motivo" placeholder="Motivo para ativar esta versao" required />
+          <input name="motivo" placeholder="Motivo para ativar esta versão" required />
           <button className="secondary-button" type="submit">Ativar</button>
         </form>
       ) : null}
@@ -147,4 +109,8 @@ function formatNumber(value: number): string {
 function shortDate(value: string | null): string {
   if (!value) return "-";
   return new Intl.DateTimeFormat("pt-BR").format(new Date(value));
+}
+
+function recipeTypeLabel(value: string): string {
+  return value === "mapa" ? "Documentação MAPA" : "Produção operacional";
 }

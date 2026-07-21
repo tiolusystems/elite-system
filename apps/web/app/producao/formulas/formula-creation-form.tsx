@@ -1,0 +1,66 @@
+"use client";
+
+import { useState } from "react";
+
+import { createPcpFormulaAction } from "@/app/pcp/actions";
+import { FormulaComponentRows } from "@/app/pcp/production-editors";
+import type { PcpLookups } from "@/lib/pcp";
+
+export function FormulaCreationForm({ lookups }: { lookups: PcpLookups }) {
+  const [recipeType, setRecipeType] = useState<"producao" | "mapa">("producao");
+
+  return (
+    <form action={createPcpFormulaAction}>
+      <div className="form-grid">
+        <label className="wide-field">
+          Produto PA ou PI
+          <select name="produto_id" defaultValue="" required>
+            <option value="">Selecione o produto</option>
+            {lookups.produtos.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
+        </label>
+        <label>
+          Finalidade da receita
+          <select
+            name="tipo_receita"
+            value={recipeType}
+            onChange={(event) => setRecipeType(event.target.value as "producao" | "mapa")}
+          >
+            <option value="producao">Produção operacional</option>
+            <option value="mapa">Documentação MAPA</option>
+          </select>
+        </label>
+        <label className="wide-field">
+          Justificativa da versão
+          <input name="justificativa" placeholder="Explique a criação ou alteração" required />
+        </label>
+        <label className="full-field">
+          Observação
+          <input name="observacao" placeholder="Informação complementar opcional" />
+        </label>
+      </div>
+
+      <div className={`workflow-callout ${recipeType === "mapa" ? "neutral" : ""}`}>
+        <strong>{recipeType === "producao" ? "Receita que será usada pela fábrica" : "Composição documental para o MAPA"}</strong>
+        <span>
+          {recipeType === "producao"
+            ? "Os componentes orientarão reserva e consumo na OP de produção."
+            : "Os componentes são declarações documentais opcionais e nunca movimentam estoque."}
+        </span>
+      </div>
+      <FormulaComponentRows
+        targets={{
+          materiasPrimas: lookups.materiasPrimas,
+          produtos: lookups.produtos,
+          produtoEmbalagens: lookups.produtoEmbalagens,
+          unidades: lookups.unidades
+        }}
+      />
+
+      <div className="form-footer">
+        <span>Salvar cria nova versão. Nenhuma versão anterior é alterada.</span>
+        <button className="primary-button" type="submit">Criar versão</button>
+      </div>
+    </form>
+  );
+}

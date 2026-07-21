@@ -15,6 +15,8 @@ export type PcpLookups = {
   produtoEmbalagens: PcpLookupOption[];
   pessoas: PcpLookupOption[];
   formulas: PcpLookupOption[];
+  nutrientes: PcpLookupOption[];
+  unidades: PcpLookupOption[];
 };
 
 export type PcpProductGuarantee = {
@@ -202,7 +204,9 @@ const EMPTY_LOOKUPS: PcpLookups = {
   materiasPrimas: [],
   produtoEmbalagens: [],
   pessoas: [],
-  formulas: []
+  formulas: [],
+  nutrientes: [],
+  unidades: []
 };
 
 export async function getPcpDashboard(): Promise<PcpDashboard> {
@@ -228,6 +232,8 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       lotesPa,
       lotesPi,
       pessoas,
+      nutrientes,
+      unidades,
       productGuarantees,
       mpLotGuarantees,
       opGuaranteeResults
@@ -322,6 +328,18 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         .order("nome", { ascending: true })
         .limit(300),
       supabase
+        .from("cad_nutrientes")
+        .select("id,nome,simbolo,status")
+        .eq("status", "active")
+        .order("nome", { ascending: true })
+        .limit(300),
+      supabase
+        .from("cad_unidades_medida")
+        .select("id,codigo,nome,simbolo,status")
+        .eq("status", "active")
+        .order("codigo", { ascending: true })
+        .limit(300),
+      supabase
         .from("cad_garantias_produto_mapa_atuais")
         .select(
           "id,produto_id,nutriente,tipo_limite,valor,valor_maximo,unidade,fonte,vigencia_inicio,vigencia_fim,documento_referencia,justificativa,created_at"
@@ -356,6 +374,8 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     const opReservationRows = rows(opReservations);
     const opOutputRows = rows(opOutputs);
     const personRows = rows(pessoas);
+    const nutrientRows = rows(nutrientes);
+    const unitRows = rows(unidades);
     const productGuaranteeRows = rows(productGuarantees);
     const mpLotGuaranteeRows = rows(mpLotGuarantees);
     const opGuaranteeResultRows = rows(opGuaranteeResults);
@@ -496,6 +516,16 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         id: formula.id,
         label: `${formula.produtoLabel} / ${formula.tipoReceita} v${formula.versao}`,
         detail: `${formula.isActive ? "ativa" : "versao"} / ${formula.components.length} componente(s)`
+      })),
+      nutrientes: nutrientRows.map((row) => ({
+        id: Number(row.id),
+        label: String(row.simbolo ?? row.nome),
+        detail: String(row.nome)
+      })),
+      unidades: unitRows.map((row) => ({
+        id: Number(row.id),
+        label: String(row.codigo),
+        detail: String(row.nome)
       }))
     };
 
@@ -515,6 +545,8 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       lotesPa,
       lotesPi,
       pessoas,
+      nutrientes,
+      unidades,
       productGuarantees,
       mpLotGuarantees,
       opGuaranteeResults

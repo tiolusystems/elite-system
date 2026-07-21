@@ -9,6 +9,7 @@ import {
   reserveRomaneioPaLotAction,
   reverseRomaneioAction
 } from "@/app/romaneios/actions";
+import { RomaneioPreparation } from "@/app/romaneios/romaneio-preparation";
 import {
   getRomaneioDashboard,
   type RomaneioItem,
@@ -69,6 +70,9 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de romaneio">
+            <Link className="secondary-button" href="/romaneios/manual">
+              Como fazer um romaneio
+            </Link>
             <a className="secondary-button" href="#novo-romaneio">
               Novo romaneio
             </a>
@@ -118,7 +122,9 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
           </section>
         ) : null}
 
-        <section className="panel form-panel" id="novo-romaneio" aria-labelledby="novo-romaneio-title">
+        <RomaneioPreparation pendingItems={dashboard.pendingItems} romaneios={dashboard.romaneios} />
+
+        <section className="panel form-panel legacy-romaneio-ui" aria-hidden="true" aria-labelledby="novo-romaneio-title">
           <div className="panel-header">
             <div>
               <h2 id="novo-romaneio-title">Pedidos com saldo a entregar</h2>
@@ -157,7 +163,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
           {dashboard.pendingItems.length === 0 ? <p className="muted">Nenhum item com saldo livre para novo romaneio.</p> : null}
         </section>
 
-        <section className="two-column">
+        <section className="two-column legacy-romaneio-ui" aria-hidden="true">
           <section className="panel form-panel" id="reservar-lote" aria-labelledby="reservar-lote-title">
             <div className="panel-header">
               <h2 id="reservar-lote-title">Reservar lote PA</h2>
@@ -223,11 +229,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
             <span className="pill">{dashboard.romaneios.length} registro(s)</span>
           </div>
           {dashboard.romaneios.length > 0 ? (
-            <div className="romaneio-list">
-              {dashboard.romaneios.slice(0, 18).map((romaneio) => (
-                <RomaneioCard key={romaneio.id} romaneio={romaneio} lookups={dashboard.lookups} />
-              ))}
-            </div>
+            <RomaneioStatusGroups romaneios={dashboard.romaneios} lookups={dashboard.lookups} />
           ) : (
             <div className="empty-state">
               <strong>Sem romaneios</strong>
@@ -236,7 +238,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
           )}
         </section>
 
-        <section className="panel" aria-labelledby="lotes-pa-title">
+        <section className="panel legacy-romaneio-ui" aria-hidden="true" aria-labelledby="lotes-pa-title">
           <div className="panel-header">
             <h2 id="lotes-pa-title">Lotes PA disponiveis</h2>
             <span className="pill">{dashboard.availableLots.length} lote(s)</span>
@@ -284,6 +286,27 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
         </section>
       </section>
     </main>
+  );
+}
+
+function RomaneioStatusGroups({ romaneios, lookups }: { romaneios: RomaneioRecord[]; lookups: RomaneioLookups }) {
+  const groups = [
+    { id: "romaneios-rascunho", label: "Rascunhos", statuses: ["draft"] },
+    { id: "romaneios-separacao", label: "Em separação", statuses: ["separacao"] },
+    { id: "romaneios-finalizados", label: "Finalizados, cancelados e estornados", statuses: ["confirmado", "cancelado", "estornado"] }
+  ];
+  return (
+    <div className="romaneio-status-groups">
+      {groups.map((group) => {
+        const records = romaneios.filter((romaneio) => group.statuses.includes(romaneio.status));
+        return (
+          <details className="romaneio-status-group" id={group.id} key={group.id}>
+            <summary><strong>{group.label}</strong><span>{records.length} registro(s)</span></summary>
+            {records.length ? <div className="romaneio-list">{records.map((romaneio) => <RomaneioCard key={romaneio.id} romaneio={romaneio} lookups={lookups} />)}</div> : <div className="empty-state compact-empty"><strong>Nenhum registro</strong><span>Não há romaneios nesta situação.</span></div>}
+          </details>
+        );
+      })}
+    </div>
   );
 }
 

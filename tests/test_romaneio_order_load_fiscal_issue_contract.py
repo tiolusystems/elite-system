@@ -6,6 +6,9 @@ ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase/migrations/0071_romaneio_order_load_fiscal_issue_contract.sql"
 PAGE = ROOT / "apps/web/app/romaneios/page.tsx"
 ACTIONS = ROOT / "apps/web/app/romaneios/actions.ts"
+PREPARATION = ROOT / "apps/web/app/romaneios/romaneio-preparation.tsx"
+PRINT_PAGE = ROOT / "apps/web/app/romaneios/[id]/imprimir/page.tsx"
+MANUAL_PAGE = ROOT / "apps/web/app/romaneios/manual/page.tsx"
 
 
 class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
@@ -55,6 +58,25 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
         self.assertIn("Antes da baixa de estoque", page)
         self.assertNotIn('placeholder="Observacao da atribuicao"', page)
         self.assertIn("p_motivo: null", actions)
+
+    def test_guided_ui_queries_stock_only_after_product_selection(self):
+        page = PAGE.read_text(encoding="utf-8")
+        preparation = PREPARATION.read_text(encoding="utf-8")
+        self.assertIn("Escolha o pedido", preparation)
+        self.assertIn("Escolha o produto e consulte os lotes", preparation)
+        self.assertIn("/api/romaneios/lotes?produto_embalagem_id=", preparation)
+        self.assertIn("Estoque ainda não consultado", preparation)
+        self.assertIn("Saldo insuficiente para completar a reserva", preparation)
+        self.assertIn("legacy-romaneio-ui", page)
+
+    def test_status_navigation_manual_and_print_traceability_are_present(self):
+        page = PAGE.read_text(encoding="utf-8")
+        print_page = PRINT_PAGE.read_text(encoding="utf-8")
+        manual = MANUAL_PAGE.read_text(encoding="utf-8")
+        self.assertIn("RomaneioStatusGroups", page)
+        self.assertIn("Como fazer um romaneio", manual)
+        self.assertIn("romaneio.emissorNome", print_page)
+        self.assertIn("print-document-footer", print_page)
 
 
 if __name__ == "__main__":

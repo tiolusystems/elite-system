@@ -36,3 +36,17 @@
 - Reserva reduz o saldo disponível e mantém o saldo físico.
 - NF emitida, entregador e veículo são obrigatórios para a baixa.
 - A confirmação gera movimento append-only, baixa a reserva e reduz o saldo físico.
+
+## Organização da tela
+
+- A tela começa pelo pedido com saldo a entregar; não exibe todo o estoque.
+- Os produtos aparecem somente depois que o pedido é escolhido.
+- Os lotes aparecem somente depois que o produto do romaneio é escolhido.
+- Romaneios existentes ficam recolhidos por situação: rascunho, em separação e finalizados.
+- Quando o saldo compatível é insuficiente, o sistema informa o necessário e o disponível.
+
+## Impressão e responsabilidade
+
+- O documento identifica o usuário que emitiu o romaneio no sistema.
+- A impressão registra data e hora do registro original e da impressão.
+- O rodapé permanece no fim da página A4.

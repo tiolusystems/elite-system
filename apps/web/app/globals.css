@@ -3601,6 +3601,21 @@ h1 {
   gap: 0.25rem;
 }
 
+.legacy-romaneio-ui { display: none !important; }
+.romaneio-preparation { display: grid; gap: 1rem; }
+.romaneio-order-item.is-unavailable { background: #f5f7f8; color: #66737d; }
+.field-warning { color: #9a5b00; }
+.romaneio-status-groups { display: grid; gap: 0.75rem; }
+.romaneio-status-group { border: 1px solid var(--line-color, #d7e0e6); border-radius: 6px; overflow: clip; }
+.romaneio-status-group > summary { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem; cursor: pointer; background: #f7fafc; }
+.romaneio-status-group > .romaneio-list,
+.romaneio-status-group > .empty-state { margin: 1rem; }
+.manual-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.manual-step { display: flex; gap: 1rem; align-items: flex-start; }
+.manual-step > span { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: #147cb3; color: white; font-weight: 800; flex: 0 0 auto; }
+.manual-step h2 { margin: 0 0 0.35rem; font-size: 1rem; }
+.manual-step p { margin: 0; color: #52616d; }
+
 @media (max-width: 640px) {
   .romaneio-order > summary,
   .romaneio-order-item {
@@ -3622,6 +3637,9 @@ h1 {
   width: min(100% - 2rem, 1100px);
   margin: 2rem auto;
   color: #17212b;
+  min-height: calc(297mm - 24mm);
+  display: flex;
+  flex-direction: column;
 }
 
 .print-document > header,
@@ -3635,10 +3653,18 @@ h1 {
 
 .print-document table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
 .print-document th, .print-document td { border: 1px solid #aab7c2; padding: 0.65rem; text-align: left; }
+.print-document-footer { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid #aab7c2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem 1rem; font-size: 0.78rem; color: #4d5b65; }
+.print-document-footer p { margin: 0; }
+
+@media (max-width: 640px) {
+  .manual-steps { grid-template-columns: 1fr; }
+  .romaneio-status-group > summary { align-items: center; }
+}
 
 @media print {
   .print-hidden { display: none !important; }
-  .print-document { width: 100%; margin: 0; }
+  @page { size: A4; margin: 12mm; }
+  .print-document { width: 100%; min-height: 273mm; margin: 0; }
 }
 
 .catalog-tabs-mobile {

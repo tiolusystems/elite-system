@@ -33,10 +33,20 @@ export default async function ImprimirRomaneioPage({ params }: { params: Promise
       </section>
       {romaneio.carga?.pendencias.length ? <p><strong>Cálculo pendente:</strong> {romaneio.carga.pendencias.join(", ")}.</p> : null}
       <p className="print-hidden">Use a opção Imprimir do navegador. O documento pode ser emitido antes ou depois da NF.</p>
+      <footer className="print-document-footer">
+        <p><strong>Emitido no sistema por:</strong> {romaneio.emissorNome}</p>
+        <p><strong>Registro original:</strong> {formatDateTime(romaneio.createdAt)}</p>
+        <p><strong>Impresso em:</strong> {formatDateTime(new Date().toISOString())}</p>
+        <p>Elite System · documento gerado eletronicamente</p>
+      </footer>
     </main>
   );
 }
 
 function format(value: number | null | undefined) {
   return value === null || value === undefined ? "Pendente" : new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value);
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }

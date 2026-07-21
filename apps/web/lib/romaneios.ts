@@ -88,6 +88,7 @@ export type RomaneioRecord = {
   canceladoAt: string | null;
   estornadoAt: string | null;
   createdAt: string;
+  emissorNome: string;
   items: RomaneioItem[];
   movements: RomaneioMovement[];
   logistics: RomaneioLogistics | null;
@@ -173,7 +174,8 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       papeisAtivos,
       veiculos,
       notasFiscais,
-      cargas
+      cargas,
+      usuarios
     ] = await Promise.all([
       supabase
         .from("exp_pedido_item_romaneio_saldos")
@@ -198,7 +200,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       supabase
         .from("exp_romaneios")
         .select(
-          "id,codigo_romaneio,pedido_id,tipo_separacao,status,data_romaneio,observacao,confirmado_at,cancelado_at,estornado_at,created_at"
+          "id,codigo_romaneio,pedido_id,tipo_separacao,status,data_romaneio,observacao,confirmado_at,cancelado_at,estornado_at,created_by,created_at"
         )
         .order("created_at", { ascending: false })
         .limit(80),
@@ -256,7 +258,8 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       supabase
         .from("exp_romaneio_carga_resumo")
         .select("romaneio_id,volume_liquido_l,volumes_logisticos,peso_liquido_kg,peso_bruto_kg,itens_sem_volume_configurado,itens_sem_densidade,itens_sem_tara")
-        .limit(200)
+        .limit(200),
+      supabase.from("user_profiles").select("id,display_name").limit(500)
     ]);
 
     const orderRows = rows(orders);
@@ -294,6 +297,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       (document) => document.romaneioId
     );
     const cargaByRomaneio = new Map(rows(cargas).map((row) => [Number(row.romaneio_id), mapCarga(row)]));
+    const userNameById = new Map(rows(usuarios).map((row) => [String(row.id), String(row.display_name)]));
 
     const pendingItems = rows(pendingBalances)
       .map((row) => mapPendingItem(row, orderMap, productPackageMap))
@@ -330,6 +334,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         canceladoAt: nullableString(row.cancelado_at),
         estornadoAt: nullableString(row.estornado_at),
         createdAt: String(row.created_at),
+        emissorNome: userNameById.get(String(row.created_by)) ?? "Usuario nao identificado",
         items: itemsByRomaneio.get(id) ?? [],
         movements: movementsByRomaneio.get(id) ?? [],
         logistics: logisticsByRomaneio.get(id) ?? null,
@@ -362,7 +367,8 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       papeisAtivos,
       veiculos,
       notasFiscais,
-      cargas
+      cargas,
+      usuarios
     ]);
 
     return {

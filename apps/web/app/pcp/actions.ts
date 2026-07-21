@@ -177,6 +177,21 @@ export async function reservePcpComponentAction(formData: FormData) {
   redirectWithResult(returnTarget.path, "component_reserved", returnTarget.queueAnchor);
 }
 
+export async function reservePcpComponentFifoAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
+  const opComponentId = optionalInteger(formData, "op_componente_id");
+  if (!getRuntimeStatus().supabaseConfigured || !opComponentId) {
+    redirectWithResult(returnTarget.path, "missing_reservation_required", returnTarget.queueAnchor);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "reservar_pcp_op_componente_fifo", {
+    p_op_componente_id: opComponentId
+  });
+  if (error) redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.queueAnchor);
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "component_reserved_fifo", returnTarget.queueAnchor);
+}
+
 export async function startPcpOpAction(formData: FormData) {
   const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
@@ -687,6 +702,9 @@ function mapPcpError(message: string): string {
   }
   if (normalized.includes("insufficient stock")) {
     return "insufficient_stock";
+  }
+  if (normalized.includes("fifo override requires")) {
+    return "fifo_override_requires_justification";
   }
   if (normalized.includes("without full active reservation")) {
     return "missing_full_reservation";

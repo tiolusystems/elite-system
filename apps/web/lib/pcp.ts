@@ -204,6 +204,7 @@ export type PcpAvailableLot = {
   dataValidade: string | null;
   origemRef: string | null;
   updatedAt: string;
+  entryAt: string;
 };
 
 export type PcpDashboard = {
@@ -336,21 +337,21 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       supabase
         .from("est_lotes_mp_saldos")
         .select(
-          "lote_mp_id,materia_prima_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,updated_at"
+          "lote_mp_id,materia_prima_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
         )
         .order("updated_at", { ascending: false })
         .limit(300),
       supabase
         .from("est_lotes_pa_saldos")
         .select(
-          "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,updated_at"
+          "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
         )
         .order("updated_at", { ascending: false })
         .limit(300),
       supabase
         .from("est_lotes_pi_saldos")
         .select(
-          "lote_pi_id,produto_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,updated_at"
+          "lote_pi_id,produto_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
         )
         .order("updated_at", { ascending: false })
         .limit(300),
@@ -831,7 +832,8 @@ function mapLot(
     saldoDisponivel: Number(row.saldo_disponivel ?? 0),
     dataValidade: nullableString(row.data_validade),
     origemRef: nullableString(row.origem_ref),
-    updatedAt: String(row.updated_at ?? "")
+    updatedAt: String(row.updated_at ?? ""),
+    entryAt: String(row.created_at ?? "")
   };
 }
 

@@ -1851,6 +1851,44 @@ h1 {
   padding-top: 10px;
 }
 
+.pcp-reservation-actions,
+.pcp-fifo-action {
+  display: grid;
+  gap: 8px;
+}
+
+.pcp-fifo-action {
+  grid-template-columns: minmax(220px, max-content) minmax(0, 1fr);
+  align-items: center;
+}
+
+.pcp-fifo-action span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pcp-manual-reservation {
+  border-top: 1px solid #edf1f5;
+  padding-top: 10px;
+}
+
+.pcp-manual-reservation summary {
+  color: var(--link);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .pcp-fifo-action {
+    grid-template-columns: 1fr;
+  }
+
+  .pcp-fifo-action .primary-button {
+    width: 100%;
+  }
+}
+
 .pcp-op-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

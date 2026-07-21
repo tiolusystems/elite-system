@@ -75,6 +75,18 @@ planeja `250 kg` daquele componente. A OP congela a versão da fórmula, a
 quantidade por litro, o volume e o total calculado. Alterações futuras da
 fórmula não mudam a OP já aberta.
 
+## Reserva FIFO
+
+1. Na OP aberta, acione **Reservar automaticamente por FIFO** em cada componente.
+2. O sistema usa primeiro o lote disponível com entrada mais antiga.
+3. Se um lote não cobrir toda a necessidade, o restante segue para o próximo.
+4. Confira os lotes e quantidades reservados antes de iniciar a produção.
+
+Na seleção manual, o primeiro lote aparece como **FIFO recomendado**. Ignorar
+um lote mais antigo exige alçada específica e justificativa. O desvio fica
+registrado na reserva e na auditoria. Lotes bloqueados, cancelados, esgotados ou
+sem saldo não participam da sugestão.
+
 ## Criar fórmula e OP documental MAPA
 
 1. Selecione **Documentação MAPA** na finalidade.

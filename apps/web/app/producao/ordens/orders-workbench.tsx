@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   cancelPcpOpAction,
   createPcpOpAction,
+  reservePcpComponentFifoAction,
   reservePcpComponentAction,
   startPcpOpAction
 } from "@/app/pcp/actions";
@@ -226,7 +227,7 @@ function PlanningComponentRow({
       && lot.targetId === component.targetId
       && lot.status === "disponivel"
       && lot.saldoDisponivel > 0
-  );
+  ).sort((left, right) => left.entryAt.localeCompare(right.entryAt) || left.id - right.id);
 
   return (
     <div className="pcp-op-component">
@@ -247,30 +248,41 @@ function PlanningComponentRow({
         </div>
       ) : null}
       {canReserve && remaining > 0 ? (
-        <form className="inline-form-grid pcp-reserve-form" action={reservePcpComponentAction}>
-          <input type="hidden" name="op_componente_id" value={component.id} />
-          <input type="hidden" name="tipo_componente" value={component.tipoComponente} />
-          <input type="hidden" name="return_to" value={returnTo} />
-          <label className="wide-field">
-            Lote de {componentTypeLabel(component.tipoComponente).toLowerCase()}
-            <select name="lote_id" defaultValue="" required>
-              <option value="">Selecione</option>
-              {compatibleLots.map((lot) => (
-                <option key={lot.id} value={lot.id}>{lot.codigoLote} - disponivel {formatNumber(lot.saldoDisponivel)}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Quantidade
-            <input name="quantidade_reservada" inputMode="decimal" defaultValue={inputNumber(remaining)} required />
-          </label>
-          <label className="wide-field">
-            Observacao
-            <input name="observacao" placeholder="Opcional" />
-          </label>
-          <button className="secondary-button" type="submit" disabled={compatibleLots.length === 0}>Reservar</button>
-          {compatibleLots.length === 0 ? <span className="field-note warning-text">Nenhum lote compativel disponivel.</span> : null}
-        </form>
+        <div className="pcp-reservation-actions">
+          <form action={reservePcpComponentFifoAction} className="pcp-fifo-action">
+            <input type="hidden" name="op_componente_id" value={component.id} />
+            <input type="hidden" name="return_to" value={returnTo} />
+            <button className="primary-button" type="submit" disabled={compatibleLots.length === 0}>Reservar automaticamente por FIFO</button>
+            <span>Usa primeiro os lotes mais antigos e distribui a necessidade quando preciso.</span>
+          </form>
+          <details className="pcp-manual-reservation">
+            <summary>Selecionar lote manualmente</summary>
+            <form className="inline-form-grid pcp-reserve-form" action={reservePcpComponentAction}>
+              <input type="hidden" name="op_componente_id" value={component.id} />
+              <input type="hidden" name="tipo_componente" value={component.tipoComponente} />
+              <input type="hidden" name="return_to" value={returnTo} />
+              <label className="wide-field">
+                Lote de {componentTypeLabel(component.tipoComponente).toLowerCase()}
+                <select name="lote_id" defaultValue="" required>
+                  <option value="">Selecione</option>
+                  {compatibleLots.map((lot, index) => (
+                    <option key={lot.id} value={lot.id}>{index === 0 ? "FIFO recomendado - " : ""}{lot.codigoLote} - disponível {formatNumber(lot.saldoDisponivel)}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Quantidade
+                <input name="quantidade_reservada" inputMode="decimal" defaultValue={inputNumber(remaining)} required />
+              </label>
+              <label className="wide-field">
+                Justificativa do desvio
+                <input name="observacao" placeholder="Obrigatória ao ignorar o FIFO" />
+              </label>
+              <button className="secondary-button" type="submit" disabled={compatibleLots.length === 0}>Reservar lote selecionado</button>
+              {compatibleLots.length === 0 ? <span className="field-note warning-text">Nenhum lote compatível disponível.</span> : null}
+            </form>
+          </details>
+        </div>
       ) : null}
     </div>
   );

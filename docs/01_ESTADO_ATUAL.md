@@ -10,8 +10,8 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em upgrade descartável: `0074_pcp_historical_guarantee_reconciliation.sql`;
-- ultima migration no staging confirmada por ledger: `0074_pcp_historical_guarantee_reconciliation.sql`;
+- ultima migration validada em instalação limpa descartável: `0076_pcp_fifo_component_reservation.sql`;
+- ultima migration no staging confirmada por ledger: `0075_pcp_formula_per_liter_op_scaling.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -34,7 +34,31 @@ Conciliação de garantias históricas:
   descartáveis `elite-validation-*`; a 0074 foi publicada e aplicada
   isoladamente no staging, com health-check saudável.
 
-## Tarefa em execução
+## Tarefa concluída em validação local
+
+DEC-013 - reserva FIFO governada:
+
+- a OP pode reservar automaticamente um componente nos lotes mais antigos;
+- falta de saldo em um lote distribui a necessidade pelos lotes seguintes;
+- escolha manual fora do FIFO exige alçada específica e justificativa;
+- a decisão e a ordem FIFO ficam persistidas e auditadas;
+- uma trava transacional por componente impede duas reservas concorrentes de
+  decidirem sobre a mesma disponibilidade simultaneamente;
+- instalação limpa 0001 -> 0076 e smoke transacional foram aprovados somente no
+  container e volume descartáveis `elite-validation-0076-clean`.
+
+## Próxima tarefa
+
+Mapear e governar o custo industrial por lote:
+
+- preservar o custo de aquisição de MP, incluindo diferencial de alíquota de
+  ICMS quando aplicável;
+- definir propagação de custo de MP consumida para PI e de PI/embalagens para
+  PA sem editar saldos ou fatos históricos;
+- não implementar rateio contábil, perdas, mão de obra ou custos indiretos sem
+  contrato empresarial aprovado.
+
+## Entrega anterior
 
 DEC-013 - escala operacional da fórmula:
 

@@ -116,6 +116,8 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   mp_lot_guarantee_registered: { kind: "ok", title: "Analise registrada", detail: "A garantia do lote de materia-prima foi salva." },
   mp_lot_parameters_registered: { kind: "ok", title: "Base física registrada", detail: "A densidade vigente do lote foi versionada e auditada." },
   op_created: { kind: "ok", title: "OP aberta", detail: "Componentes planejados foram copiados da formula vigente." },
+  component_reserved_fifo: { kind: "ok", title: "Reserva FIFO concluida", detail: "A necessidade foi distribuida pelos lotes mais antigos disponiveis." },
+  fifo_override_requires_justification: { kind: "warning", title: "Justificativa obrigatoria", detail: "Para ignorar um lote mais antigo, informe o motivo e tenha a alcada especifica." },
   legacy_formula_requires_review: { kind: "warning", title: "Formula antiga nao revisada", detail: "Crie e ative uma nova versao operacional na base de 1 litro antes de abrir a OP." },
   invalid_formula_unit: { kind: "warning", title: "Unidade invalida", detail: "Use kg/L produzido, L/L produzido ou UN/L produzido na formula operacional." },
   component_reserved: { kind: "ok", title: "Lote reservado", detail: "A reserva reduziu o saldo disponivel sem baixar o saldo fisico." },

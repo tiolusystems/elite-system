@@ -27,10 +27,10 @@ Validacao com recorte real do Tio Lu System:
 - workbook real analisado e mantido fora do Git;
 - banco PostgreSQL isolado `elite-validation-real-production` reconstruido da
   migration 0001 ate a 0072, sem tocar runtime ativo, staging ou producao;
-- recorte SILIKON rastreado ate workbook, aba e linha, com MP `MP090`, duas
-  entradas de lote, dez consumos e uma OP historica;
-- reconciliacao aprovada: 1.000 L de entrada, 819 L de consumo e 181 L de
-  saldo, sendo um lote esgotado e outro disponivel;
+- recorte industrial real rastreado ate workbook, aba e linha, com uma MP,
+  duas entradas de lote, dez consumos e uma OP historica;
+- reconciliacao de entradas, consumos e saldo aprovada, com um lote esgotado e
+  outro disponivel; valores reais permanecem somente no ambiente descartavel;
 - natureza PA/PI, grupo relacional e codigo operacional do produto permanecem
   pendentes de revisao; nenhum valor ausente foi promovido como fato;
 - a carga real revelou e a migration 0072 corrige a validacao de linhagem entre

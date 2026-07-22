@@ -21,6 +21,7 @@ begin
   on conflict (id) do update set status='active';
   insert into public.user_permission_overrides(user_id,action_key,allowed,updated_by) values
     (v_actor,'pedidos.commissions.assign',true,v_actor),
+    (v_actor,'system.admin',true,v_actor),
     (v_denied,'pedidos.commissions.assign',false,v_actor)
   on conflict (user_id,action_key) do update set allowed=excluded.allowed,updated_by=excluded.updated_by;
   perform set_config('request.jwt.claim.sub',v_actor::text,true);

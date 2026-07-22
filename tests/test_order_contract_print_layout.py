@@ -23,6 +23,25 @@ class OrderContractPrintLayoutTest(unittest.TestCase):
         self.assertIn("width: 100%;\n    max-width: none;", self.css)
         self.assertNotIn(".order-contract-page { width: 283mm;", self.css)
 
+    def test_printed_contract_excludes_authenticated_application_chrome(self):
+        for selector in (
+            ".authenticated-header",
+            ".authenticated-navigation",
+            ".navigation-overlay",
+            ".authenticated-footer",
+        ):
+            self.assertIn(selector, self.css)
+        self.assertIn(".manual-dialog-backdrop { display: none !important; }", self.css)
+        self.assertNotIn(".app-shell, .app-shell-main, .authenticated-main", self.css)
+
+    def test_each_contract_sheet_is_an_independent_print_page(self):
+        self.assertIn("break-inside: avoid-page;", self.css)
+        self.assertIn("page-break-inside: avoid;", self.css)
+        self.assertIn(
+            ".order-contract-page + .order-contract-page { break-before: page; page-break-before: always; }",
+            self.css,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

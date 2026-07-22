@@ -6344,11 +6344,33 @@ h1 {
 
 @media print {
   @page order-contract { size: A4 landscape; margin: 7mm; }
-  body { background: #fff !important; }
-  .app-shell, .app-shell-main, .authenticated-main { display: contents !important; }
-  .order-contract-document { min-height: 0; padding: 0; background: #fff; }
+  html, body { width: 100%; min-width: 0; margin: 0; background: #fff !important; }
+  .authenticated-header,
+  .authenticated-navigation,
+  .navigation-overlay,
+  .authenticated-footer,
+  .manual-dialog-backdrop { display: none !important; }
+  .authenticated-shell,
+  .authenticated-shell-content {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .order-contract-document {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0;
+    overflow: visible !important;
+    padding: 0;
+    background: #fff;
+  }
   .order-contract-page {
     page: order-contract;
+    box-sizing: border-box;
     width: 100%;
     max-width: none;
     min-height: 196mm;
@@ -6357,7 +6379,10 @@ h1 {
     padding: 5mm 7mm 4mm;
     box-shadow: none;
     break-after: page;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
   }
+  .order-contract-page + .order-contract-page { break-before: page; page-break-before: always; }
   .order-contract-page:last-child { break-after: auto; }
 }
 .manual-content { display: grid; gap: 18px; max-width: 920px; }

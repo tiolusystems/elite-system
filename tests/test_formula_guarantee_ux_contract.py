@@ -62,7 +62,7 @@ class FormulaGuaranteeUxContractTests(unittest.TestCase):
         self.assertIn("proporcionalmente", text)
         self.assertIn("A fórmula MAPA não é cópia", text)
         self.assertIn("emissão da OP MAPA gera simultaneamente uma Ordem de Envase", text)
-        self.assertIn("Ordem de Envase gera os lotes PA", text)
+        self.assertIn("Ordem de Envase gera um único lote PA", text)
         self.assertIn("assinaturas físicas dos operadores", text)
         self.assertIn("filtro gerencial por família", text)
         self.assertIn("controle global de sessões", text)

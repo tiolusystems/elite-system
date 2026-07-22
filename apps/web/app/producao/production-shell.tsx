@@ -101,7 +101,7 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   packaging_order_issued: { kind: "ok", title: "Ordem emitida", detail: "A OP MAPA e a Ordem de Envase foram emitidas juntas." },
   packaging_reserved: { kind: "ok", title: "Embalagem reservada", detail: "O lote foi reservado para esta Ordem de Envase." },
   packaging_started: { kind: "ok", title: "Envase iniciado", detail: "A ordem passou para execucao operacional." },
-  packaging_finished: { kind: "ok", title: "Envase finalizado", detail: "PI e embalagens foram baixados e os lotes PA foram criados." },
+  packaging_finished: { kind: "ok", title: "Envase finalizado", detail: "PI e embalagens foram baixados e o lote PA foi criado." },
   missing_packaging_issue: { kind: "warning", title: "Emissao incompleta", detail: "Informe formula MAPA, lote PI, apresentacao e volume." },
   missing_packaging_reservation: { kind: "warning", title: "Reserva incompleta", detail: "Informe ordem, componente, lote e quantidade." },
   missing_packaging_outputs: { kind: "warning", title: "Lotes PA obrigatorios", detail: "Informe ao menos um lote PA e distribua toda a quantidade planejada." },

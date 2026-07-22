@@ -56,11 +56,12 @@ export async function startPackagingAction(formData: FormData) {
 
 export async function finishPackagingAction(formData: FormData) {
   const orderId = integer(formData, "ordem_envase_id");
-  const outputs = [1, 2, 3].map((index) => ({
-    quantidade: decimal(formData, `lote_${index}_quantidade`),
-    observacao: optionalText(formData, `lote_${index}_observacao`)
-  })).filter((output) => output.quantidade !== null && output.quantidade > 0);
-  if (!orderId || outputs.length === 0) redirect("/producao/envase?result=missing_packaging_outputs#ordens-envase");
+  const quantity = decimal(formData, "lote_pa_quantidade");
+  if (!orderId || !quantity || quantity <= 0) redirect("/producao/envase?result=missing_packaging_outputs#ordens-envase");
+  const outputs = [{
+    quantidade: quantity,
+    observacao: optionalText(formData, "lote_pa_observacao")
+  }];
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "finalizar_pcp_ordem_envase", {
     p_lotes_pa_jsonb: outputs, p_observacao: optionalText(formData, "observacao"), p_ordem_envase_id: orderId

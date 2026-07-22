@@ -141,7 +141,7 @@ begin
   perform public.iniciar_pcp_ordem_envase(v_packaging_order_id);
   perform public.finalizar_pcp_ordem_envase(
     v_packaging_order_id,
-    '[{"quantidade": 2, "observacao": "Lote PA sintetico A"}, {"quantidade": 2, "observacao": "Lote PA sintetico B"}]'::jsonb,
+    '[{"quantidade": 4, "observacao": "Lote PA sintetico unico"}]'::jsonb,
     'Finalizacao sintetica controlada'
   );
 
@@ -157,8 +157,8 @@ begin
   if (select coalesce(sum(quantidade), 0) from public.pcp_ordem_envase_lotes_pa where ordem_envase_id = v_packaging_order_id) <> 4 then
     raise exception 'PA outputs do not match planned finished packages';
   end if;
-  if (select count(*) from public.pcp_ordem_envase_lotes_pa where ordem_envase_id = v_packaging_order_id) <> 2 then
-    raise exception 'multiple destination PA lots were not preserved';
+  if (select count(*) from public.pcp_ordem_envase_lotes_pa where ordem_envase_id = v_packaging_order_id) <> 1 then
+    raise exception 'packaging order did not preserve exactly one destination PA lot';
   end if;
   if exists (
     select 1 from public.pcp_ordem_envase_reservas

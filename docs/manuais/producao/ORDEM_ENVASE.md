@@ -4,7 +4,7 @@
 
 Use este fluxo depois que a produção operacional gerou um lote PI e o Controle
 de Qualidade liberou esse lote. A OP MAPA é documental. A Ordem de Envase é a
-operação física que consome PI e embalagens e gera um ou mais lotes PA.
+operação física que consome PI e embalagens e gera um único lote PA.
 
 ## Emitir
 
@@ -40,7 +40,7 @@ logins na Ordem de Envase.
 4. Acione **Finalizar e gerar PA**.
 
 Na mesma transação, o sistema baixa o PI, baixa as embalagens, encerra as
-reservas e cria os lotes PA. Esses lotes passam a alimentar Romaneio.
+reservas e cria o lote PA. Esse lote passa a alimentar Romaneio.
 
 ## Rastreabilidade
 

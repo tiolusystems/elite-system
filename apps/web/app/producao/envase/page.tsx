@@ -11,7 +11,7 @@ export default async function PackagingOrdersPage({ searchParams }: { searchPara
     <ProductionShell
       active="envase"
       title="OP MAPA e Ordem de Envase"
-      description="Emita o documento MAPA e a ordem física; reserve embalagens, consuma PI e gere lotes PA rastreáveis."
+      description="Emita o documento MAPA e a ordem física; reserve embalagens, consuma PI e gere um lote PA rastreável."
       source={data.source}
       error={data.error}
       actions={<a className="primary-button" href="#emitir">Emitir ordem</a>}

@@ -108,7 +108,7 @@ sem saldo não participam da sugestão.
 A fórmula MAPA não é cópia da fórmula de produção. Seus componentes declarados
 não geram reserva ou consumo das MP usadas na produção. Depois da liberação do
 PI pelo CQ, a emissão da OP MAPA gera simultaneamente uma Ordem de Envase. É a
-Ordem de Envase que baixa o PI e as embalagens e gera os lotes de PA disponíveis
+Ordem de Envase que baixa o PI e as embalagens e gera o lote de PA disponível
 para romaneios.
 
 ## Sequência física obrigatória
@@ -123,7 +123,7 @@ para romaneios.
 8. O documento impresso traz campos para assinaturas físicas dos operadores.
 9. A Ordem é emitida pelo usuário autenticado e registra a identificação da sessão.
 10. A finalização baixa PI e embalagens sem consumir novamente as MP produtivas.
-11. A Ordem de Envase gera os lotes PA vinculados à OP MAPA e disponíveis para romaneio.
+11. A Ordem de Envase gera um único lote PA vinculado à OP MAPA e disponível para romaneio.
 
 Na finalização da OP, o produto gerado é obrigatoriamente o produto da fórmula.
 O **Volume L** efetivamente informado no CQ define a quantidade do único lote PI;
@@ -133,7 +133,7 @@ não existe uma segunda quantidade de saída para o operador preencher.
 
 - OP MAPA de origem;
 - lote PI de origem;
-- lote ou lotes PA de destino;
+- lote PA de destino;
 - apresentação e relação de embalagens;
 - campos para assinaturas físicas dos operadores;
 - início e fim da operação;
@@ -199,7 +199,7 @@ O caminho auditável é:
 - esta entrega governa a criação e consulta; a simulação prévia de formulação e
   custo será uma ferramenta separada, sem alterar a fórmula publicada;
 - o fluxo estrutural de OP MAPA e Envase já exige PI liberado, composição de
-  embalagens aprovada e geração governada dos lotes PA; cancelamento e estorno
+  embalagens aprovada e geração governada de um único lote PA; cancelamento e estorno
   específicos da Ordem de Envase serão tratados em evolução própria;
 - o primeiro filtro gerencial por família foi incorporado aos relatórios de
   vencimento e reprocessamento; movimentos e produção ainda serão ampliados;

@@ -18,7 +18,7 @@ industrial com documentação regulatória.
    lotes efetivamente usados.
 7. A OP MAPA não consome novamente as MP da fórmula produtiva.
 8. A Ordem de Envase vinculada à OP MAPA baixa o PI liberado e as embalagens.
-9. A Ordem de Envase gera os lotes PA, sempre rastreados até a OP MAPA que a
+9. A Ordem de Envase gera um único lote PA, sempre rastreado até a OP MAPA que a
    originou, e esses lotes alimentam o estoque disponível para romaneio.
 10. Relatórios gerenciais devem permitir filtro explícito por PI e PA.
 

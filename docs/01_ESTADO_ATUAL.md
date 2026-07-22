@@ -65,6 +65,21 @@ DEC-013 - reserva FIFO governada:
 
 ## Tarefa atual
 
+Cadeia industrial integrada e lote PA único:
+
+- Fórmula, OP, reserva, CQ, PI, OP MAPA, Envase, PA, custos e relatórios passam
+  a ter um único smoke transacional com rollback;
+- a interface e a migration 0087 fecham a Ordem de Envase em exatamente um
+  lote PA para a apresentação selecionada;
+- 522 testes, ESLint, TypeScript e build foram aprovados localmente;
+- execução PostgreSQL da 0087 permanece condicionada ao job descartável do CI;
+- nenhuma aplicação da 0087 foi feita no staging nesta etapa.
+
+Próxima ação: publicar o pacote, confirmar o CI descartável, aplicar somente a
+0087 no staging e executar smoke online de Envase, estoque e relatórios.
+
+## Histórico operacional vigente
+
 Pedidos comerciais e aprovação gerencial:
 
 - Venda, Bonificação, Mostruário e Troca pertencem ao mesmo formulário;
@@ -245,8 +260,8 @@ Fluxo PI -> OP MAPA -> Envase -> PA em validação local:
 - emissão conjunta exige fórmula MAPA ativa, lote PI liberado, apresentação do
   mesmo produto e composição de embalagens aprovada;
 - emissão reserva PI sem baixar estoque; embalagens são reservadas por lote;
-- início exige reservas integrais; finalização baixa PI e embalagens e gera um
-  ou mais lotes PA na mesma transação;
+- início exige reservas integrais; finalização baixa PI e embalagens e gera
+  exatamente um lote PA na mesma transação;
 - documento imprimível registra OP MAPA, PI origem, PA destino, embalagens,
   campos de horários e assinaturas físicas, usuário, data, hora e terminal;
 - login, IP, terminal ampliado e geolocalização permanecem responsabilidade

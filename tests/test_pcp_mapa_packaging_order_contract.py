@@ -112,13 +112,22 @@ class PcpMapaPackagingOrderContractTests(unittest.TestCase):
         self.assertNotIn('.rpc(', actions)
         self.assertNotIn('"mapa_documental"', pcp_actions.split("const ALLOWED_OP_TYPES", 1)[1].split(";", 1)[0])
         self.assertIn("Lote PI liberado", workbench)
-        self.assertIn("Lotes PA gerados", workbench)
+        self.assertIn("Lote PA gerado", workbench)
+        self.assertIn("lote_pa_quantidade", actions)
+        self.assertNotIn("[1, 2, 3]", actions)
         self.assertIn("const reservationsComplete", workbench)
         self.assertIn("component.reservedQuantity >= component.plannedQuantity", workbench)
         self.assertIn("Conclua a separação das embalagens", workbench)
         self.assertIn("canPrepare && reservationsComplete", workbench)
         self.assertIn("assinaturas dos operadores são físicas", printable)
         self.assertIn("Terminal:", printable)
+
+    def test_packaging_order_generates_exactly_one_pa_lot(self) -> None:
+        migration = (ROOT / "supabase" / "migrations" / "0087_packaging_single_pa_lot.sql").read_text(encoding="utf-8")
+        self.assertIn("jsonb_array_length(p_lotes_pa_jsonb) <> 1", migration)
+        self.assertIn("packaging order must generate exactly one PA lot", migration)
+        self.assertIn("finalizar_pcp_ordem_envase_impl_0077", migration)
+        self.assertIn("materialize_pcp_envase_pa_cost", migration)
 
 
 if __name__ == "__main__":

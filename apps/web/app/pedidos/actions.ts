@@ -13,6 +13,55 @@ const ALLOWED_DECISAO_CREDITO = new Set(["liberado", "bloqueado", "pendente_apro
 const ALLOWED_MOTIVO_TROCA = new Set(["qualidade", "avaria_transporte", "erro_separacao", "erro_comercial", "acordo_comercial", "outro"]);
 const DECIMAL_SEPARATOR = /,/g;
 
+export async function criarPedidoComercialAction(formData: FormData) {
+  const tipoPedido = field(formData, "tipo_pedido") || "venda";
+  if (tipoPedido === "troca") {
+    return criarTrocaPedidoAction(formData);
+  }
+  if (["mostruario", "bonificacao"].includes(tipoPedido)) {
+    return criarPedidoEspecialVendedorAction(formData);
+  }
+  if (tipoPedido !== "venda") {
+    redirect("/pedidos?result=invalid_order_type#novo-pedido");
+  }
+  return criarPedidoVendedorAction(formData);
+}
+
+export async function criarPedidoEspecialVendedorAction(formData: FormData) {
+  const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
+  const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
+  const quantidade = optionalNumber(formData, "quantidade");
+  const tipoPedido = field(formData, "tipo_pedido");
+  const dataPedido = field(formData, "data_pedido");
+  const justificativa = field(formData, "observacao");
+  if (!vinculoId || !produtoEmbalagemId || quantidade === null || quantidade <= 0 || !dataPedido || !["bonificacao", "mostruario"].includes(tipoPedido)) {
+    redirect("/pedidos?result=missing_order_required#novo-pedido");
+  }
+  if (tipoPedido === "bonificacao" && justificativa.length < 10) {
+    redirect("/pedidos?result=missing_bonus_reason#novo-pedido");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_especial", {
+    p_cliente_vendedor_vinculo_id: vinculoId,
+    p_data_pedido: dataPedido,
+    p_justificativa: justificativa || null,
+    p_produto_embalagem_id: produtoEmbalagemId,
+    p_quantidade: quantidade,
+    p_tipo_pedido: tipoPedido
+  }, {
+    metadata: {
+      action_key: "pedidos.create.own",
+      axis: "own_any",
+      domain: "pedidos",
+      entity: "com_pedidos",
+      failure_action: "pedidos.special_create_failed"
+    }
+  });
+  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-pedido`);
+  revalidatePath("/pedidos");
+  redirect("/pedidos?result=pedido_pending_approval#historico");
+}
+
 export async function criarPedidoVendedorAction(formData: FormData) {
   const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
   const itensJson = field(formData, "itens_json");

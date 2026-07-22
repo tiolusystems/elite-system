@@ -108,7 +108,7 @@ class RomaneioLogisticsOperationalContractTests(unittest.TestCase):
             "Atualizar entrega",
             "Remover atribuicao",
             "Faturamento",
-            "A separacao esta confirmada e pronta para o fluxo fiscal.",
+            "Emita e vincule a NF no faturamento. A baixa fisica ocorrera somente ao confirmar esta NF.",
         ):
             self.assertIn(text, self.page)
         self.assertIn(".compact-action-form select", STYLES.read_text(encoding="utf-8"))

@@ -9,6 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MIGRATION_0030 = REPO_ROOT / "supabase" / "migrations" / "0030_pedidos_troca_mostruario_contract.sql"
 PEDIDOS_ACTIONS = REPO_ROOT / "apps" / "web" / "app" / "pedidos" / "actions.ts"
 PEDIDOS_PAGE = REPO_ROOT / "apps" / "web" / "app" / "pedidos" / "page.tsx"
+ORDER_ENTRY_EDITOR = REPO_ROOT / "apps" / "web" / "app" / "pedidos" / "order-entry-editor.tsx"
 ORDERS_LIB = REPO_ROOT / "apps" / "web" / "lib" / "orders.ts"
 COMMISSIONS_DOC = REPO_ROOT / "docs" / "escopo_comissoes_recebimentos_credito.md"
 VALIDATION_DOC = REPO_ROOT / "docs" / "validacao_pedidos_lifecycle_audit_contract.md"
@@ -54,6 +55,7 @@ class PedidosTrocaMostruarioContractTests(unittest.TestCase):
     def test_web_layer_exposes_mostruario_and_exchange_action(self) -> None:
         actions = PEDIDOS_ACTIONS.read_text(encoding="utf-8")
         page = PEDIDOS_PAGE.read_text(encoding="utf-8")
+        order_entry = ORDER_ENTRY_EDITOR.read_text(encoding="utf-8")
         orders = ORDERS_LIB.read_text(encoding="utf-8")
 
         self.assertIn('"mostruario"', actions)
@@ -61,8 +63,13 @@ class PedidosTrocaMostruarioContractTests(unittest.TestCase):
         self.assertIn('action_key: "pedidos.exchange.create"', actions)
         self.assertIn('axis: "change_type"', actions)
         self.assertIn('failure_action: "pedidos.exchange_create_failed"', actions)
-        self.assertIn('<option value="mostruario">mostruario</option>', page)
-        self.assertIn('id="troca-pedido"', page)
+        self.assertIn("OrderEntryEditor", page)
+        self.assertIn('<option value="mostruario">Mostruário</option>', order_entry)
+        self.assertIn('<option value="bonificacao">Bonificação</option>', order_entry)
+        self.assertIn("Bonificação não gera comissão e exige liberação de superior.", order_entry)
+        self.assertIn('<option value="troca">Troca</option>', order_entry)
+        self.assertIn('id="troca-pedido"', order_entry)
+        self.assertIn('name="pedido_item_origem_id"', order_entry)
         self.assertIn("pedidoItens", orders)
         self.assertIn("com_pedido_itens", orders)
 

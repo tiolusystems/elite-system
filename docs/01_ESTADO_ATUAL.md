@@ -10,8 +10,8 @@ Atualizado em: 2026-07-22
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em PostgreSQL descartável: `0084_complete_customer_master_data.sql`;
-- ultima migration no staging confirmada por ledger: `0082_stock_product_packaging_drilldown.sql`;
+- ultima migration validada em PostgreSQL descartável: `0085_orders_special_types_portfolio_scope.sql`;
+- ultima migration no staging confirmada por ledger: `0084_complete_customer_master_data.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -53,21 +53,18 @@ DEC-013 - reserva FIFO governada:
 
 ## Tarefa atual
 
-Recuperação transversal de UX e ficha completa de Clientes:
+Pedidos comerciais e aprovação gerencial:
 
-- o shell autenticado passa a ser a única fonte de cabeçalho, marca, menu,
-  ambiente, usuário e rodapé;
-- todas as rotas operacionais publicadas possuem manual contextual centralizado;
-- Clientes passa a ter consulta por seções para identificação, documentos,
-  estabelecimentos, propriedades, endereços, contatos, comercial, crédito e
-  histórico, sem transformar o cadastro em um formulário único;
-- crédito permanece pertencendo ao Financeiro e somente é consultado em
-  Cadastros;
-- a migration 0084 é integralmente aditiva, mantém escrita somente por RPC e
-  foi aprovada em instalação limpa 0001 -> 0084 e upgrade 0083 -> 0084 somente
-  em containers e volumes `elite-validation-*`;
-- staging somente será atualizado depois de gates técnicos, ledger controlado
-  e smoke autenticado.
+- Venda, Bonificação, Mostruário e Troca pertencem ao mesmo formulário;
+- todos os pedidos nascem bloqueados e exigem liberação superior;
+- Bonificação exige justificativa e, assim como Mostruário, não gera comissão;
+- Troca referencia pedido e item de origem dentro do escopo comercial;
+- impressão e PDF ficam disponíveis apenas depois da liberação;
+- migration 0085 aprovada em instalação limpa e upgrade somente em ambientes
+  descartáveis `elite-validation-*`.
+
+Próxima ação: publicar o pacote, aplicar somente a 0085 no staging e executar
+simulação sintética de criação, bloqueio, liberação e emissão do documento.
 - ficha completa de Clientes homologada automaticamente no staging com cenário
   sintético identificado, incluindo documento, contato, propriedade,
   estabelecimento, endereço, bloqueio de duplicidade e fronteira de Crédito;

@@ -12,6 +12,7 @@ SHELL = ROOT / "apps" / "web" / "app" / "login" / "auth-public-shell.tsx"
 PASSWORD = ROOT / "apps" / "web" / "app" / "login" / "password-input.tsx"
 AUTH = ROOT / "apps" / "web" / "lib" / "auth.ts"
 CSS = ROOT / "apps" / "web" / "app" / "globals.css"
+SIGNATURE = ROOT / "apps" / "web" / "app" / "developer-signature.tsx"
 
 
 class Ux01aPublicAuthContractTests(unittest.TestCase):
@@ -37,7 +38,8 @@ class Ux01aPublicAuthContractTests(unittest.TestCase):
     def test_identity_release_and_environment_are_centralized(self) -> None:
         text = SHELL.read_text(encoding="utf-8")
         self.assertIn("Elite Agrociências", text)
-        self.assertIn("Desenvolvido por TioLu Systems", text)
+        self.assertIn("DeveloperSignature", text)
+        self.assertIn("by ☧ SYSTEMS", SIGNATURE.read_text(encoding="utf-8"))
         self.assertIn("getBuildInfo", text)
         self.assertIn("new Date().getFullYear()", text)
         self.assertIn("environmentName", text)

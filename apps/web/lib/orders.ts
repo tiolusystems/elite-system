@@ -121,6 +121,16 @@ export type ApprovalOrder = {
 
 export type SalesItem = { id: number; label: string };
 
+export type ExchangeSourceItem = {
+  id: number;
+  orderId: number;
+  orderCode: string;
+  clientId: number;
+  productPackagingId: number;
+  label: string;
+  quantity: number;
+};
+
 export type OrderContractItem = {
   id: number;
   product: string;
@@ -159,7 +169,7 @@ export type OrderContract = {
 export async function getOrderWorkspace(search: string | null) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], error: "Banco de homologação indisponível." };
+    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], error: "Banco de homologação indisponível." };
   }
   try {
     const supabase = await createSupabaseServerClient();
@@ -174,14 +184,26 @@ export async function getOrderWorkspace(search: string | null) {
         .select("id,codigo_item,status,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros)")
         .eq("status", "active").order("codigo_item").limit(250)
     ]);
-    const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? items.error?.message ?? null;
+    const scopedOrders = (orders.data ?? []) as Array<Record<string, unknown>>;
+    const orderIds = scopedOrders.map((row) => Number(row.pedido_id)).filter((id) => Number.isInteger(id) && id > 0);
+    const exchangeSource = orderIds.length
+      ? await supabase
+          .from("com_pedido_itens")
+          .select("id,pedido_id,produto_embalagem_id,quantidade,status,cad_produto_embalagens(codigo_item,cad_produtos_base(nome),cad_embalagens(descricao))")
+          .in("pedido_id", orderIds)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(300)
+      : { data: [], error: null };
+    const orderById = new Map(scopedOrders.map((row) => [Number(row.pedido_id), row]));
+    const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? items.error?.message ?? exchangeSource.error?.message ?? null;
     return {
       clients: ((clients.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
         linkId: Number(row.vinculo_id), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
         propertyId: nullableNumber(row.propriedade_id), propertyName: row.propriedade_nome ? String(row.propriedade_nome) : null,
         sellerName: String(row.vendedor_nome), availableLimit: nullableNumber(row.limite_disponivel), creditStatus: String(row.status_credito)
       })),
-      orders: ((orders.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      orders: scopedOrders.map((row) => ({
         id: Number(row.pedido_id), code: String(row.codigo_pedido), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
         propertyName: row.propriedade_nome ? String(row.propriedade_nome) : null, sellerId: nullableNumber(row.vendedor_id),
         sellerName: row.vendedor_nome ? String(row.vendedor_nome) : null, status: String(row.status), type: String(row.tipo_pedido),
@@ -196,10 +218,25 @@ export async function getOrderWorkspace(search: string | null) {
         const product = firstNested(row.cad_produtos_base); const pack = firstNested(row.cad_embalagens);
         return { id: Number(row.id), label: `${row.codigo_item} - ${product?.nome ?? "Produto"} - ${pack?.descricao ?? "Embalagem"}` };
       }),
+      exchangeItems: ((exchangeSource.data ?? []) as Array<Record<string, unknown>>).map((row) => {
+        const order = orderById.get(Number(row.pedido_id));
+        const presentation = firstNested(row.cad_produto_embalagens);
+        const product = firstNested(presentation?.cad_produtos_base);
+        const pack = firstNested(presentation?.cad_embalagens);
+        return {
+          id: Number(row.id),
+          orderId: Number(row.pedido_id),
+          orderCode: String(order?.codigo_pedido ?? `Pedido ${row.pedido_id}`),
+          clientId: Number(order?.cliente_id ?? 0),
+          productPackagingId: Number(row.produto_embalagem_id),
+          label: `${presentation?.codigo_item ?? "Item"} - ${product?.nome ?? "Produto"} - ${pack?.descricao ?? "Apresentação"}`,
+          quantity: Number(row.quantidade ?? 0)
+        };
+      }),
       error
     };
   } catch {
-    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], error: "Não foi possível carregar Pedidos agora." };
+    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], error: "Não foi possível carregar Pedidos agora." };
   }
 }
 

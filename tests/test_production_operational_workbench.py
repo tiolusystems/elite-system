@@ -99,9 +99,10 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
 
         self.assertIn('active="estoque"', page)
         self.assertIn('name="familia"', page)
-        self.assertIn('name="status"', page)
-        self.assertIn('name="validade"', page)
-        self.assertIn("dashboard.availableLots.filter", page)
+        self.assertIn('name="q"', page)
+        self.assertIn("getStockProducts", page)
+        self.assertIn("getTargetStockLots", page)
+        self.assertIn("Os lotes serao exibidos somente depois", page)
         for balance in ("saldoFisico", "quantidadeReservada", "saldoDisponivel"):
             self.assertIn(balance, component)
         self.assertIn("releaseBlockedLotAction", component)

@@ -7,13 +7,22 @@
    duas letras. A tela não carrega a carteira inteira antecipadamente.
 3. Selecione o cliente ou a propriedade correta.
 4. Confira o limite disponível e a situação do crédito.
-5. Escolha o produto e a apresentação, informe quantidade e valor.
-6. Use **Adicionar item** para incluir outros produtos no mesmo pedido.
-7. Confira o total, informe a data e clique em **Enviar para liberação**.
-8. Consulte, na mesma tela, o histórico do cliente selecionado.
+5. Escolha o tipo do pedido: **Venda**, **Bonificação**, **Mostruário** ou
+   **Troca**. Troca exige o item do pedido original. Bonificação exige
+   justificativa do vendedor.
+6. Escolha o produto e a apresentação, informe quantidade e valor quando o
+   tipo exigir.
+7. Em venda, use **Adicionar item** para incluir outros produtos no mesmo pedido.
+8. Confira o total, informe a data e clique em **Enviar para liberação**.
+9. Consulte, na mesma tela, o histórico do cliente selecionado.
 
-O pedido fica como **Aguardando liberação**. O vendedor não escolhe outro
-vendedor, não aumenta limite e não libera o próprio pedido.
+Todo pedido fica como **Aguardando liberação**. Bonificação e mostruário não
+geram comissão. O vendedor não escolhe outro vendedor, não aumenta limite e
+não libera o próprio pedido.
+
+O documento para impressão ou PDF somente fica disponível depois da liberação
+gerencial. Vendedor e gerente podem emiti-lo quando o pedido estiver aberto ou
+atendido.
 
 ## Gerente
 

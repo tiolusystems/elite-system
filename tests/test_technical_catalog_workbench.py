@@ -13,6 +13,8 @@ GROUP_FIX_MIGRATION = ROOT / "supabase" / "migrations" / "0057_product_group_rel
 SMOKE = ROOT / "tests" / "sql" / "technical_catalog_operational_workbench.sql"
 OVERVIEW = WEB / "app" / "cadastros" / "tecnicos" / "page.tsx"
 MATERIALS = WEB / "app" / "cadastros" / "materias-primas" / "page.tsx"
+MATERIAL_CREATE = WEB / "app" / "cadastros" / "materias-primas" / "governed-material-create-form.tsx"
+INPUT_TYPE_ACTIONS = WEB / "app" / "cadastros" / "tipos-insumo" / "actions.ts"
 UNITS = WEB / "app" / "cadastros" / "unidades" / "page.tsx"
 PACKAGES = WEB / "app" / "cadastros" / "embalagens" / "page.tsx"
 PRODUCTS = WEB / "app" / "cadastros" / "produtos" / "page.tsx"
@@ -56,7 +58,6 @@ class TechnicalCatalogWorkbenchTests(unittest.TestCase):
     def test_material_editor_exposes_every_existing_audited_axis(self) -> None:
         text = MATERIALS.read_text(encoding="utf-8")
         for action in (
-            "createMateriaPrimaAction",
             "updateMateriaPrimaIdentityAction",
             "updateMateriaPrimaSkuAction",
             "updateMateriaPrimaTechnicalAction",
@@ -65,6 +66,10 @@ class TechnicalCatalogWorkbenchTests(unittest.TestCase):
             "deactivateMateriaPrimaAction",
         ):
             self.assertIn(action, text)
+
+        self.assertIn("GovernedMaterialCreateForm", text)
+        self.assertIn("reviewAndCreateGovernedMaterialAction", MATERIAL_CREATE.read_text(encoding="utf-8"))
+        self.assertIn('"create_cad_materia_prima_governada"', INPUT_TYPE_ACTIONS.read_text(encoding="utf-8"))
 
         self.assertIn('name="return_to" value="/cadastros/materias-primas"', text)
         self.assertNotIn("<datalist", text)

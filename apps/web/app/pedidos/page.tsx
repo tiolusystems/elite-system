@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { ajustarLimiteCreditoAction, criarPedidoVendedorAction, decidirPedidoGerencialAction } from "@/app/pedidos/actions";
-import { OrderItemsEditor } from "@/app/pedidos/order-items-editor";
+import { ajustarLimiteCreditoAction, criarPedidoComercialAction, decidirPedidoGerencialAction } from "@/app/pedidos/actions";
+import { OrderEntryEditor } from "@/app/pedidos/order-entry-editor";
 import { getOrderWorkspace } from "@/lib/orders";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -22,7 +22,6 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
     <main className="orders-workspace">
       <header className="orders-heading">
         <div><span className="eyebrow">Comercial</span><h1>Pedidos</h1><p>Venda pela carteira, com crédito visível e liberação gerencial auditada.</p></div>
-        <Link className="secondary-button" href="/manuais/pedidos">Como usar</Link>
       </header>
 
       {message ? <div className={`notice-panel ${message.kind}`} role="status"><strong>{message.title}</strong><span>{message.detail}</span></div> : null}
@@ -52,15 +51,12 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
         <section className="panel orders-entry" id="novo-pedido">
           <div className="panel-header"><div><h2>Novo pedido</h2><p>{selected ? selected.clientName : "Selecione um cliente da carteira para começar."}</p></div><span className="status-chip status-pending_review">Aguardará liberação</span></div>
           {selected ? (
-            <form action={criarPedidoVendedorAction}>
+            <form action={criarPedidoComercialAction}>
               <input type="hidden" name="cliente_vendedor_vinculo_id" value={selected.linkId} />
+              <input type="hidden" name="cliente_id" value={selected.clientId} />
+              {selected.propertyId ? <input type="hidden" name="propriedade_id" value={selected.propertyId} /> : null}
               <div className="orders-credit-strip"><div><span>Limite disponível</span><strong>{money(selected.availableLimit)}</strong></div><div><span>Situação</span><strong>{creditLabel(selected.creditStatus)}</strong></div><div><span>Propriedade</span><strong>{selected.propertyName ?? "Geral"}</strong></div></div>
-              <OrderItemsEditor items={workspace.items} />
-              <div className="form-grid orders-form-grid">
-                <label>Data do pedido<input name="data_pedido" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required /></label>
-                <label className="wide-field">Observação comercial<textarea name="observacao" rows={3} placeholder="Condição ou informação relevante" /></label>
-              </div>
-              <div className="form-footer"><span>O vendedor não altera limite nem libera o próprio pedido.</span><button className="primary-button" type="submit">Enviar para liberação</button></div>
+              <OrderEntryEditor clientName={selected.clientName} items={workspace.items} exchangeItems={workspace.exchangeItems.filter((item) => item.clientId === selected.clientId)} />
             </form>
           ) : <div className="empty-state"><strong>Cliente ainda não selecionado</strong><span>Use a pesquisa ao lado; o limite aparecerá antes do preenchimento.</span></div>}
         </section>
@@ -99,6 +95,7 @@ function resultMessage(result?: string) {
     credit_limit_adjusted: { kind: "ok", title: "Limite atualizado", detail: "A alteração e a justificativa foram auditadas." },
     invalid_manager_decision: { kind: "warning", title: "Decisão incompleta", detail: "Informe uma justificativa com pelo menos 10 caracteres." },
     invalid_credit_limit: { kind: "warning", title: "Limite inválido", detail: "Informe valor não negativo e justificativa completa." },
+    missing_bonus_reason: { kind: "warning", title: "Justificativa obrigatória", detail: "Explique a bonificação com pelo menos 10 caracteres." },
     permission_denied: { kind: "warning", title: "Operação não autorizada", detail: "Este cliente ou pedido não pertence ao seu escopo comercial." },
     save_failed: { kind: "warning", title: "Não foi possível gravar", detail: "Revise os dados e tente novamente." }
   };

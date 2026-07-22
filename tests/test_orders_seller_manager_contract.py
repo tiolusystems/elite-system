@@ -18,12 +18,15 @@ class OrdersSellerManagerContractTest(unittest.TestCase):
 
     def test_seller_ui_does_not_accept_spoofed_seller_or_status(self):
         page = (ROOT / "apps/web/app/pedidos/page.tsx").read_text(encoding="utf-8")
+        entry = (ROOT / "apps/web/app/pedidos/order-entry-editor.tsx").read_text(encoding="utf-8")
         self.assertNotIn('name="vendedor_id"', page)
         self.assertNotIn('name="status"', page)
-        self.assertIn("Enviar para liberação", page)
+        self.assertIn("Enviar para liberação", entry)
         self.assertIn("Liberações gerenciais", page)
         self.assertIn("Ajustar limite do cliente", page)
         self.assertNotIn("pendente_aprovacao</option>", page)
+        self.assertIn('["open", "fulfilled"].includes(order.status)', page)
+        self.assertIn("Disponível após aprovação", page)
 
     def test_manual_exists(self):
         manual = ROOT / "docs/manuais/pedidos/PEDIDOS_E_APROVACAO.md"

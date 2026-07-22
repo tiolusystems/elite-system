@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { adjustCommissionAction, assignOrderCommissionAction, payCommissionAction, registerReceiptAction } from "@/app/pedidos/financeiro/actions";
 import { getFinanceDashboard } from "@/lib/finance";
 
@@ -9,6 +11,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
   const result = single(params.result);
   const message = messageFor(result);
   const today = new Date().toISOString().slice(0, 10);
+  const receiptRequestKey = randomUUID();
 
   return <main className="app-shell"><section className="workspace dashboard-workspace finance-workspace">
     <div className="dashboard-header"><div><span className="eyebrow">Financeiro auditado</span><h1>Recebimentos e comissoes</h1><p className="muted">O recebimento libera a comissao proporcional; pagamentos e ajustes entram na conta corrente sem apagar historico.</p></div></div>
@@ -32,7 +35,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
 
     <section className="finance-columns">
       <section className="panel form-panel" id="recebimentos"><div className="panel-header"><div><h2>Registrar recebimento</h2><p>Escolha um pedido com saldo financeiro aberto.</p></div><span className="pill">liberacao proporcional</span></div>
-        <form action={registerReceiptAction}><div className="form-grid finance-form-grid">
+        <form action={registerReceiptAction}><input type="hidden" name="idempotency_key" value={receiptRequestKey} /><div className="form-grid finance-form-grid">
           <label className="wide-field">Pedido<select name="pedido_id" defaultValue="" required><option value="" disabled>Selecione o pedido</option>{dashboard.orders.map((order) => <option key={order.id} value={order.id}>{order.code} - {order.clientName} - saldo {money(order.open)}</option>)}</select></label>
           <label>Valor recebido<input name="valor_recebido" inputMode="decimal" min="0.01" step="0.01" required /></label>
           <label>Data<input name="data_recebimento" type="date" defaultValue={today} required /></label>

@@ -280,52 +280,6 @@ export async function registrarCreditoPedidoAction(formData: FormData) {
   redirect("/pedidos?result=credit_decision_registered#credito-pedido");
 }
 
-export async function registrarRecebimentoPedidoAction(formData: FormData) {
-  const runtime = getRuntimeStatus();
-  if (!runtime.supabaseConfigured) {
-    redirect("/pedidos?result=not_configured#recebimento-pedido");
-  }
-
-  const pedidoId = optionalInteger(formData, "pedido_id");
-  const valorRecebido = optionalNumber(formData, "valor_recebido");
-  const dataRecebimento = field(formData, "data_recebimento");
-
-  if (!pedidoId || valorRecebido === null || !dataRecebimento) {
-    redirect("/pedidos?result=missing_receipt_required#recebimento-pedido");
-  }
-  if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#recebimento-pedido");
-  }
-  if (!Number.isFinite(valorRecebido) || valorRecebido <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#recebimento-pedido");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "registrar_com_recebimento", {
-    p_data_recebimento: dataRecebimento,
-    p_forma_recebimento: optionalField(formData, "forma_recebimento"),
-    p_observacao: optionalField(formData, "observacao_recebimento"),
-    p_pedido_id: pedidoId,
-    p_valor_recebido: valorRecebido
-  }, {
-    metadata: {
-      action_key: "financeiro.receipts.register",
-      axis: "financial_event",
-      domain: "financeiro",
-      entity: "com_recebimentos",
-      entity_id: String(pedidoId),
-      failure_action: "financeiro.recebimento_failed"
-    }
-  });
-
-  if (error) {
-    redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#recebimento-pedido`);
-  }
-
-  revalidatePath("/pedidos");
-  redirect("/pedidos?result=receipt_registered#recebimento-pedido");
-}
-
 export async function criarTrocaPedidoAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {

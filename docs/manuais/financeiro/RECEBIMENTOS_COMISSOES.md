@@ -34,6 +34,10 @@ duplicada. Bonificacao, Mostruario, Troca e Devolucao nao aceitam essa previsao.
 O valor nao pode superar o saldo. Cada recebimento libera a fracao da comissao
 correspondente ao valor alocado naquele evento.
 
+Duplo clique ou repeticao da mesma requisicao retorna o recebimento original e
+nao cria outro evento financeiro. Recebimentos parciais diferentes continuam
+permitidos e recebem chaves de requisicao diferentes.
+
 ## Pagar comissao
 
 1. Consulte a conta corrente da pessoa.

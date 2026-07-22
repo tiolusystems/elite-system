@@ -9,6 +9,7 @@ declare
   v_order bigint;
   v_assignment bigint;
   v_receipt bigint;
+  v_receipt_retry bigint;
   v_payment bigint;
 begin
   insert into auth.users(id, email)
@@ -63,15 +64,58 @@ begin
     raise exception 'expected commission was not calculated';
   end if;
 
-  v_receipt := public.registrar_com_recebimento(
+  v_receipt := public.registrar_com_recebimento_idempotente(
+    '89000000-0000-4000-8000-000000000001',
     v_order, 400, current_date, 'pix', 'Recebimento parcial do smoke integrado'
   );
+  v_receipt_retry := public.registrar_com_recebimento_idempotente(
+    '89000000-0000-4000-8000-000000000001',
+    v_order, 400, current_date, 'pix', 'Recebimento parcial do smoke integrado'
+  );
+  if v_receipt_retry is distinct from v_receipt then
+    raise exception 'receipt retry did not return the original event';
+  end if;
+  if (select count(*) from public.fin_recebimento_requisicoes
+       where idempotency_key = '89000000-0000-4000-8000-000000000001') <> 1 then
+    raise exception 'receipt request key was not recorded exactly once';
+  end if;
+  begin
+    perform public.registrar_com_recebimento_idempotente(
+      '89000000-0000-4000-8000-000000000001',
+      v_order, 401, current_date, 'pix', 'Recebimento parcial do smoke integrado'
+    );
+    raise exception 'changed receipt reused the same idempotency key';
+  exception when others then
+    if sqlerrm = 'changed receipt reused the same idempotency key'
+       or sqlerrm not like 'idempotency key reused with different receipt request%' then
+      raise;
+    end if;
+  end;
   if (select coalesce(sum(valor_liberado), 0) from public.com_comissao_liberacoes
        where recebimento_id = v_receipt and comissionado_id = v_assignment) <> 10 then
     raise exception 'partial receipt did not release proportional commission';
   end if;
   if (select saldo_aberto from public.fin_recebimento_saldos_pedido where pedido_id = v_order) <> 600 then
     raise exception 'order receivable balance is inconsistent';
+  end if;
+
+  if has_function_privilege(
+    'authenticated',
+    'public.registrar_com_recebimento(bigint,numeric,date,text,text)',
+    'EXECUTE'
+  ) then
+    raise exception 'unkeyed receipt entrypoint remains executable';
+  end if;
+  if not has_function_privilege(
+    'authenticated',
+    'public.registrar_com_recebimento_idempotente(uuid,bigint,numeric,date,text,text)',
+    'EXECUTE'
+  ) or has_function_privilege(
+    'anon',
+    'public.registrar_com_recebimento_idempotente(uuid,bigint,numeric,date,text,text)',
+    'EXECUTE'
+  ) then
+    raise exception 'idempotent receipt privileges are incorrect';
   end if;
 
   v_payment := public.registrar_fin_comissao_pagamento(

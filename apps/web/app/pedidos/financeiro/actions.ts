@@ -29,12 +29,14 @@ export async function assignOrderCommissionAction(formData: FormData) {
 
 export async function registerReceiptAction(formData: FormData) {
   requireConfigured();
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const orderId = positiveInteger(formData, "pedido_id");
   const value = positiveNumber(formData, "valor_recebido");
   const date = field(formData, "data_recebimento");
-  if (!orderId || !value || !date) redirect("/pedidos/financeiro?result=invalid_receipt#recebimentos");
+  if (!idempotencyKey || !orderId || !value || !date) redirect("/pedidos/financeiro?result=invalid_receipt#recebimentos");
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "registrar_com_recebimento", {
+  const { error } = await auditedRpc(supabase, "registrar_com_recebimento_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_pedido_id: orderId,
     p_valor_recebido: value,
     p_data_recebimento: date,
@@ -91,6 +93,7 @@ function optionalField(data: FormData, name: string) { return field(data, name) 
 function positiveInteger(data: FormData, name: string) { const value = Number(field(data, name)); return Number.isInteger(value) && value > 0 ? value : null; }
 function positiveNumber(data: FormData, name: string) { const value = signedNumber(data, name); return value !== null && value > 0 ? value : null; }
 function signedNumber(data: FormData, name: string) { const value = Number(field(data, name).replace(",", ".")); return Number.isFinite(value) && value !== 0 ? value : null; }
+function uuid(data: FormData, name: string) { const value = field(data, name); return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null; }
 function mapError(message: string) {
   const value = message.toLowerCase();
   if (value.includes("not allowed") || value.includes("permission")) return "not_allowed";

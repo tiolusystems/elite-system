@@ -292,7 +292,7 @@ begin
        and result.calculo_versao = v_calculo_1
        and result.base_calculo_json ->> 'metodo' = 'balanco_fisico_v1'
        and jsonb_array_length(result.base_calculo_json -> 'inputs') = 1
-       and (result.base_calculo_json #>> '{inputs,0,parametro_lote_id}')::bigint = v_parametro_lote
+       and (result.base_calculo_json #>> '{inputs,0,garantia_lote_id}')::bigint = v_garantia_lote
   ) then
     raise exception 'physical guarantee calculation evidence is incomplete';
   end if;

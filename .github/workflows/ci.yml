@@ -50,7 +50,18 @@ jobs:
       - name: Generate database TypeScript contract
         run: |
           mkdir -p artifacts
-          supabase gen types --local --schema public > artifacts/database.types.ts
+          for attempt in 1 2 3; do
+            if supabase gen types --local --schema public > artifacts/database.types.tmp; then
+              mv artifacts/database.types.tmp artifacts/database.types.ts
+              break
+            fi
+            rm -f artifacts/database.types.tmp
+            if [ "$attempt" -eq 3 ]; then
+              echo "Database type generation failed after 3 attempts" >&2
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
           grep -q "export type Database" artifacts/database.types.ts
       - name: Run architecture integrity smoke
         env:

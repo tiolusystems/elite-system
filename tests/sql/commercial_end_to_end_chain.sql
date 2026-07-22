@@ -14,7 +14,13 @@ declare
   v_payment_retry bigint;
   v_adjustment bigint;
   v_adjustment_retry bigint;
+  v_credit_event bigint;
 begin
+  if has_function_privilege('authenticated', 'public.ajustar_com_limite_credito_cliente(bigint,numeric,text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.ajustar_com_limite_credito_cliente_idempotente(uuid,bigint,numeric,text)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.ajustar_com_limite_credito_cliente_idempotente(uuid,bigint,numeric,text)', 'EXECUTE') then
+    raise exception 'credit limit grants are broader than the idempotent contract';
+  end if;
   insert into auth.users(id, email)
   values (v_actor, 'commercial-chain-0089@test.invalid')
   on conflict (id) do nothing;
@@ -52,6 +58,15 @@ begin
     'PED-CHAIN-0089', v_client, v_person, 'venda', 'blocked',
     current_date, 1000, v_actor, v_actor
   ) returning id into v_order;
+
+  v_credit_event := public.ajustar_com_limite_credito_cliente_idempotente(
+    '89000000-0000-4000-8000-000000000010', v_client, 5000,
+    'Limite sintetico aprovado no smoke integrado'
+  );
+  if public.ajustar_com_limite_credito_cliente_idempotente(
+    '89000000-0000-4000-8000-000000000010', v_client, 5000,
+    'Limite sintetico aprovado no smoke integrado'
+  ) <> v_credit_event then raise exception 'credit limit retry duplicated the event'; end if;
 
   perform public.registrar_com_pedido_decisao_gerencial(
     v_order, 'liberado', 'Limite e cadastro aprovados no smoke integrado'

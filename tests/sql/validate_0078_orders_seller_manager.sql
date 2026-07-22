@@ -111,7 +111,7 @@ end $$;
 
 select set_config('request.jwt.claim.sub', '78000000-0000-4000-8000-000000000001', true);
 do $$
-declare v_order bigint; v_client bigint;
+declare v_order bigint; v_client bigint; v_limit_event bigint;
 begin
   if not public.current_user_manages_seller((select id from public.cad_pessoas_comerciais where nome = 'Vendedor A')) then raise exception 'direct manager hierarchy failed'; end if;
   if public.current_user_manages_seller((select id from public.cad_pessoas_comerciais where nome = 'Vendedor B')) then raise exception 'manager hierarchy leaked unrelated seller'; end if;
@@ -120,7 +120,12 @@ begin
   if (select count(*) from public.consultar_com_carteira_clientes(null)) <> 0 then raise exception 'portfolio search preloaded clients without query'; end if;
   select id, cliente_id into v_order, v_client from public.com_pedidos limit 1;
   if (select count(*) from public.consultar_com_pedidos_aprovacao()) <> 1 then raise exception 'manager queue scope failed'; end if;
-  perform public.ajustar_com_limite_credito_cliente(v_client, 5000, 'Aumento aprovado para teste 0078');
+  v_limit_event := public.ajustar_com_limite_credito_cliente_idempotente(
+    '78000000-0000-4000-8000-000000000010', v_client, 5000, 'Aumento aprovado para teste 0078'
+  );
+  if public.ajustar_com_limite_credito_cliente_idempotente(
+    '78000000-0000-4000-8000-000000000010', v_client, 5000, 'Aumento aprovado para teste 0078'
+  ) <> v_limit_event then raise exception 'credit limit retry duplicated the event'; end if;
   perform public.registrar_com_pedido_decisao_gerencial(v_order, 'liberado', 'Credito revisado e aprovado no teste');
   if (select status from public.com_pedidos where id = v_order) <> 'open' then raise exception 'manager approval failed'; end if;
   if not exists (select 1 from public.cad_limite_credito_eventos where cliente_id = v_client and limite_novo = 5000) then raise exception 'credit ledger failed'; end if;

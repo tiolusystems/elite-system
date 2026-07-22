@@ -37,7 +37,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
     before: ["O cliente deve estar vinculado a carteira do vendedor.", "As apresentacoes precisam estar ativas e os precos devem ser conferidos."],
     steps: ["Pesquise e selecione o cliente.", "Confira limite e situacao de credito.", "Escolha Venda, Bonificacao, Mostruario ou Troca no mesmo formulario.", "Adicione os itens e envie para liberacao.", "O gerente aprova ou reprova com justificativa.", "Depois da aprovacao, use Exportar PDF para imprimir ou salvar o contrato."],
     after: ["Todo pedido nasce bloqueado.", "Pedido liberado pode seguir para impressao, romaneio e faturamento.", "O PDF calcula litros, volumes e peso bruto a partir dos cadastros logisticos."],
-    roles: ["Vendedor cria e acompanha pedidos de sua carteira.", "Gerente consulta sua equipe, ajusta limite autorizado e decide a liberacao."],
+    roles: ["Vendedor cria e acompanha pedidos de sua carteira.", "Gerente consulta sua equipe, ajusta limite autorizado e decide a liberacao; repeticoes da mesma solicitacao nao duplicam o evento financeiro."],
     blockers: ["Cliente fora da carteira, item inativo ou dados obrigatorios impedem o envio.", "Bonificacao exige justificativa e nao gera comissao.", "PDF permanece indisponivel enquanto o pedido estiver bloqueado."],
     records: ["Pedido, itens, decisao gerencial, justificativa, limite e auditoria ficam registrados."],
   }),

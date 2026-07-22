@@ -75,7 +75,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
               <input type="hidden" name="pedido_id" value={order.id} /><label>Justificativa<input name="justificativa" minLength={10} required placeholder="Fundamente a decisão" /></label>
               <button name="decisao" value="liberado" className="primary-button">Liberar</button><button name="decisao" value="bloqueado" className="secondary-button">Reprovar</button>
             </form>
-            <details><summary>Ajustar limite do cliente</summary><form className="approval-limit" action={ajustarLimiteCreditoAction}><input type="hidden" name="cliente_id" value={order.clientId} /><label>Novo limite<input name="limite_novo" inputMode="decimal" required /></label><label>Justificativa<input name="justificativa_limite" minLength={10} required /></label><button className="secondary-button">Registrar limite</button></form></details>
+            <details><summary>Ajustar limite do cliente</summary><form className="approval-limit" action={ajustarLimiteCreditoAction}><input type="hidden" name="idempotency_key" value={randomUUID()} /><input type="hidden" name="cliente_id" value={order.clientId} /><label>Novo limite<input name="limite_novo" inputMode="decimal" required /></label><label>Justificativa<input name="justificativa_limite" minLength={10} required /></label><button className="secondary-button">Registrar limite</button></form></details>
           </article>
         ))}</div> : <div className="empty-state"><strong>Nenhum pedido aguardando sua liberação</strong><span>A fila mostra somente pedidos dentro da sua hierarquia comercial.</span></div>}
       </section>

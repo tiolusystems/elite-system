@@ -128,14 +128,16 @@ export async function decidirPedidoGerencialAction(formData: FormData) {
 }
 
 export async function ajustarLimiteCreditoAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const clienteId = optionalInteger(formData, "cliente_id");
   const limiteNovo = optionalNumber(formData, "limite_novo");
   const justificativa = field(formData, "justificativa_limite");
-  if (!clienteId || limiteNovo === null || limiteNovo < 0 || justificativa.length < 10) {
+  if (!idempotencyKey || !clienteId || limiteNovo === null || limiteNovo < 0 || justificativa.length < 10) {
     redirect("/pedidos?result=invalid_credit_limit#aprovacoes");
   }
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "ajustar_com_limite_credito_cliente", {
+  const { error } = await auditedRpc(supabase, "ajustar_com_limite_credito_cliente_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_cliente_id: clienteId,
     p_justificativa: justificativa,
     p_limite_novo: limiteNovo

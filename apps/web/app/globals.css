@@ -6341,11 +6341,22 @@ h1 {
 }
 
 @media print {
-  @page { size: A4 landscape; margin: 7mm; }
+  @page order-contract { size: A4 landscape; margin: 7mm; }
   body { background: #fff !important; }
   .app-shell, .app-shell-main, .authenticated-main { display: contents !important; }
   .order-contract-document { min-height: 0; padding: 0; background: #fff; }
-  .order-contract-page { width: 283mm; min-height: 196mm; margin: 0; padding: 5mm 7mm 4mm; box-shadow: none; }
+  .order-contract-page {
+    page: order-contract;
+    width: 100%;
+    max-width: none;
+    min-height: 196mm;
+    overflow: visible;
+    margin: 0;
+    padding: 5mm 7mm 4mm;
+    box-shadow: none;
+    break-after: page;
+  }
+  .order-contract-page:last-child { break-after: auto; }
 }
 .manual-content { display: grid; gap: 18px; max-width: 920px; }
 .manual-steps { display: grid; gap: 10px; padding-left: 22px; }
@@ -6394,10 +6405,10 @@ h1 {
 }
 
 @media print {
-  @page { size: A4; margin: 10mm; }
+  @page packaging-order { size: A4 portrait; margin: 10mm; }
   body { background: #fff !important; }
   .print-hidden { display: none !important; }
-  .packaging-print-sheet { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+  .packaging-print-sheet { page: packaging-order; width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
 }
 .production-history-grid {
   display: grid;

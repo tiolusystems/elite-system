@@ -115,6 +115,9 @@ declare v_order bigint; v_client bigint;
 begin
   if not public.current_user_manages_seller((select id from public.cad_pessoas_comerciais where nome = 'Vendedor A')) then raise exception 'direct manager hierarchy failed'; end if;
   if public.current_user_manages_seller((select id from public.cad_pessoas_comerciais where nome = 'Vendedor B')) then raise exception 'manager hierarchy leaked unrelated seller'; end if;
+  if (select count(*) from public.consultar_com_carteira_clientes('Carteira A')) <> 1 then raise exception 'manager cannot find subordinate client'; end if;
+  if (select count(*) from public.consultar_com_carteira_clientes('Carteira B')) <> 0 then raise exception 'manager client search leaked unrelated seller'; end if;
+  if (select count(*) from public.consultar_com_carteira_clientes(null)) <> 0 then raise exception 'portfolio search preloaded clients without query'; end if;
   select id, cliente_id into v_order, v_client from public.com_pedidos limit 1;
   if (select count(*) from public.consultar_com_pedidos_aprovacao()) <> 1 then raise exception 'manager queue scope failed'; end if;
   perform public.ajustar_com_limite_credito_cliente(v_client, 5000, 'Aumento aprovado para teste 0078');

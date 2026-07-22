@@ -128,8 +128,11 @@ export async function getOrderWorkspace(search: string | null) {
   }
   try {
     const supabase = await createSupabaseServerClient();
+    const normalizedSearch = search?.trim() ?? "";
     const [clients, orders, approvals, items] = await Promise.all([
-      supabase.rpc("consultar_com_carteira_clientes", { p_busca: search }),
+      normalizedSearch.length >= 2
+        ? supabase.rpc("consultar_com_carteira_clientes", { p_busca: normalizedSearch })
+        : Promise.resolve({ data: [], error: null }),
       supabase.rpc("consultar_com_pedidos_escopo", { p_limite: 120 }),
       supabase.rpc("consultar_com_pedidos_aprovacao"),
       supabase.from("cad_produto_embalagens")

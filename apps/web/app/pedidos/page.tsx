@@ -13,6 +13,9 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
   const result = single(params.result);
   const workspace = await getOrderWorkspace(search || null);
   const selected = workspace.clients.find((client) => client.linkId === selectedLink) ?? null;
+  const visibleOrders = selected
+    ? workspace.orders.filter((order) => order.clientId === selected.clientId)
+    : workspace.orders;
   const message = resultMessage(result);
 
   return (
@@ -31,9 +34,9 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
 
       <section className="orders-seller-layout">
         <section className="panel orders-portfolio">
-          <div className="panel-header"><div><h2>Minha carteira</h2><p>Pesquise somente clientes vinculados a você.</p></div></div>
+          <div className="panel-header"><div><h2>Carteira comercial</h2><p>Vendedor: clientes próprios. Gerente: clientes próprios e da equipe.</p></div></div>
           <form className="orders-search" method="get">
-            <label><span>Nome do cliente</span><input name="busca" defaultValue={search} placeholder="Digite parte do nome" /></label>
+            <label><span>Nome do cliente</span><input name="busca" defaultValue={search} minLength={2} placeholder="Digite pelo menos 2 letras" /></label>
             <button className="secondary-button" type="submit">Pesquisar</button>
           </form>
           <div className="orders-client-list">
@@ -42,7 +45,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
                 <strong>{client.clientName}</strong><span>{client.propertyName ?? "Cadastro geral do cliente"}</span>
                 <small>Limite disponível: {money(client.availableLimit)} · {creditLabel(client.creditStatus)}</small>
               </Link>
-            )) : <div className="empty-state"><strong>Nenhum cliente encontrado</strong><span>O cliente precisa estar ativo e vinculado à sua carteira.</span></div>}
+            )) : <div className="empty-state"><strong>{search.trim().length < 2 ? "Pesquise um cliente" : "Nenhum cliente encontrado"}</strong><span>{search.trim().length < 2 ? "Digite pelo menos duas letras para consultar a carteira." : "O cliente precisa estar ativo e pertencer à sua carteira ou equipe."}</span></div>}
           </div>
         </section>
 
@@ -77,8 +80,8 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
         ))}</div> : <div className="empty-state"><strong>Nenhum pedido aguardando sua liberação</strong><span>A fila mostra somente pedidos dentro da sua hierarquia comercial.</span></div>}
       </section>
 
-      <section className="panel" id="historico"><div className="panel-header"><div><h2>Histórico visível</h2><p>Vendedor: próprios clientes. Gerente: carteira própria e equipe.</p></div><span className="pill">{workspace.orders.length} pedido(s)</span></div>
-        {workspace.orders.length ? <div className="orders-history"><div className="orders-history-head"><span>Pedido</span><span>Cliente</span><span>Vendedor</span><span>Situação</span><span>Total</span></div>{workspace.orders.map((order) => <article key={order.id}><strong>{order.code}</strong><span>{order.clientName}<small>{order.propertyName ?? "Sem propriedade específica"}</small></span><span>{order.sellerName ?? "Não informado"}</span><span className="status-chip">{statusLabel(order.status)}</span><strong>{money(order.total)}</strong></article>)}</div> : <div className="empty-state"><strong>Nenhum pedido no seu escopo</strong><span>Pedidos de outras carteiras não são exibidos.</span></div>}
+      <section className="panel" id="historico"><div className="panel-header"><div><h2>{selected ? `Histórico de ${selected.clientName}` : "Pedidos recentes no seu escopo"}</h2><p>{selected ? "Somente pedidos do cliente selecionado." : "Vendedor: carteira própria. Gerente: carteira própria e equipe."}</p></div><span className="pill">{visibleOrders.length} pedido(s)</span></div>
+        {visibleOrders.length ? <div className="orders-history"><div className="orders-history-head"><span>Pedido</span><span>Cliente</span><span>Vendedor</span><span>Situação</span><span>Total</span></div>{visibleOrders.map((order) => <article key={order.id}><strong>{order.code}</strong><span>{order.clientName}<small>{order.propertyName ?? "Sem propriedade específica"}</small></span><span>{order.sellerName ?? "Não informado"}</span><span className="status-chip">{statusLabel(order.status)}</span><strong>{money(order.total)}</strong></article>)}</div> : <div className="empty-state"><strong>{selected ? "Este cliente ainda não possui pedidos visíveis" : "Nenhum pedido no seu escopo"}</strong><span>Pedidos de outras carteiras não são exibidos.</span></div>}
       </section>
     </main>
   );

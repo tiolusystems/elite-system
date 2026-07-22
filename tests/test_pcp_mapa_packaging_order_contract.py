@@ -107,7 +107,7 @@ class PcpMapaPackagingOrderContractTests(unittest.TestCase):
         workbench = (WEB / "app" / "producao" / "envase" / "packaging-workbench.tsx").read_text(encoding="utf-8")
         printable = (WEB / "app" / "producao" / "envase" / "[id]" / "imprimir" / "page.tsx").read_text(encoding="utf-8")
         pcp_actions = (WEB / "app" / "pcp" / "actions.ts").read_text(encoding="utf-8")
-        for rpc in ("emitir_pcp_op_mapa_com_envase", "reservar_pcp_ordem_envase_embalagem", "iniciar_pcp_ordem_envase", "finalizar_pcp_ordem_envase"):
+        for rpc in ("emitir_pcp_op_mapa_com_envase_idempotente", "reservar_pcp_ordem_envase_embalagem", "iniciar_pcp_ordem_envase", "finalizar_pcp_ordem_envase"):
             self.assertIn(f'auditedRpc(supabase, "{rpc}"', actions)
         self.assertNotIn('.rpc(', actions)
         self.assertNotIn('"mapa_documental"', pcp_actions.split("const ALLOWED_OP_TYPES", 1)[1].split(";", 1)[0])

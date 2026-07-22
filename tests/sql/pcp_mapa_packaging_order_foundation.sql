@@ -15,6 +15,7 @@ declare
   v_pi_lot_id bigint;
   v_mp_lot_id bigint;
   v_packaging_order_id bigint;
+  v_packaging_order_retry_id bigint;
   v_packaging_plan_id bigint;
   v_pi_movement_count integer;
 begin
@@ -91,10 +92,17 @@ begin
   select count(*) into v_pi_movement_count
     from public.est_movimentos_pi where lote_pi_id = v_pi_lot_id;
 
-  v_packaging_order_id := public.emitir_pcp_op_mapa_com_envase(
-    v_formula_id, v_pi_lot_id, v_sale_item_id, 20,
+  v_packaging_order_id := public.emitir_pcp_op_mapa_com_envase_idempotente(
+    '00000000-0000-4000-8000-000000000099', v_formula_id, v_pi_lot_id, v_sale_item_id, 20,
     'elite-validation-0069', 'Emissao sintetica controlada'
   );
+  v_packaging_order_retry_id := public.emitir_pcp_op_mapa_com_envase_idempotente(
+    '00000000-0000-4000-8000-000000000099', v_formula_id, v_pi_lot_id, v_sale_item_id, 20,
+    'elite-validation-0069', 'Emissao sintetica controlada'
+  );
+  if v_packaging_order_retry_id is distinct from v_packaging_order_id then
+    raise exception 'identical packaging issue retry created different documents';
+  end if;
 
   if not exists (
     select 1
@@ -127,8 +135,8 @@ begin
   ) then raise exception 'emission moved packaging stock prematurely'; end if;
 
   begin
-    perform public.emitir_pcp_op_mapa_com_envase(
-      v_formula_id, v_pi_lot_id, v_sale_item_id, 90,
+    perform public.emitir_pcp_op_mapa_com_envase_idempotente(
+      '00000000-0000-4000-8000-000000000199', v_formula_id, v_pi_lot_id, v_sale_item_id, 90,
       'elite-validation-0069', 'Tentativa acima do saldo restante'
     );
     raise exception 'overcommitted PI volume was accepted';
@@ -177,8 +185,18 @@ $smoke$;
 do $privileges$
 begin
   if has_function_privilege(
-    'anon',
+    'authenticated',
     'public.emitir_pcp_op_mapa_com_envase(bigint,bigint,bigint,numeric,text,text)',
+    'EXECUTE'
+  ) then raise exception 'authenticated retained unkeyed packaging order execution'; end if;
+  if not has_function_privilege(
+    'authenticated',
+    'public.emitir_pcp_op_mapa_com_envase_idempotente(uuid,bigint,bigint,bigint,numeric,text,text)',
+    'EXECUTE'
+  ) then raise exception 'authenticated cannot execute keyed packaging order issue'; end if;
+  if has_function_privilege(
+    'anon',
+    'public.emitir_pcp_op_mapa_com_envase_idempotente(uuid,bigint,bigint,bigint,numeric,text,text)',
     'EXECUTE'
   ) then raise exception 'anon retained packaging order execution'; end if;
   if exists (
@@ -186,7 +204,7 @@ begin
       from pg_proc function_definition
       cross join lateral aclexplode(coalesce(function_definition.proacl, acldefault('f', function_definition.proowner))) function_acl
      where function_definition.oid = to_regprocedure(
-       'public.emitir_pcp_op_mapa_com_envase(bigint,bigint,bigint,numeric,text,text)'
+       'public.emitir_pcp_op_mapa_com_envase_idempotente(uuid,bigint,bigint,bigint,numeric,text,text)'
      )
        and function_acl.grantee = 0
        and function_acl.privilege_type = 'EXECUTE'

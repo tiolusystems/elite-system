@@ -168,8 +168,8 @@ begin
     raise exception 'production MP consumption is inconsistent';
   end if;
 
-  v_packaging_order_id := public.emitir_pcp_op_mapa_com_envase(
-    v_mapa_formula_id, v_pi_lot_id, v_sale_item_id, 5,
+  v_packaging_order_id := public.emitir_pcp_op_mapa_com_envase_idempotente(
+    '00000000-0000-4000-8000-000000000987', v_mapa_formula_id, v_pi_lot_id, v_sale_item_id, 5,
     'elite-validation-0087', 'Emissao integrada de OP MAPA e envase'
   );
   select id into v_packaging_plan_id from public.pcp_ordem_envase_embalagens

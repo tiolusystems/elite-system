@@ -9,14 +9,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function issuePackagingOrderAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) redirect("/producao/envase?result=not_configured#emitir");
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const formulaId = integer(formData, "formula_mapa_versao_id");
   const piLotId = integer(formData, "lote_pi_origem_id");
   const presentationId = integer(formData, "produto_embalagem_id");
   const volume = decimal(formData, "volume_planejado_l");
-  if (!formulaId || !piLotId || !presentationId || !volume || volume <= 0) redirect("/producao/envase?result=missing_packaging_issue#emitir");
+  if (!idempotencyKey || !formulaId || !piLotId || !presentationId || !volume || volume <= 0) redirect("/producao/envase?result=missing_packaging_issue#emitir");
   const requestHeaders = await headers();
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "emitir_pcp_op_mapa_com_envase", {
+  const { error } = await auditedRpc(supabase, "emitir_pcp_op_mapa_com_envase_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_formula_mapa_versao_id: formulaId,
     p_lote_pi_origem_id: piLotId,
     p_observacao: optionalText(formData, "observacao"),
@@ -84,6 +86,7 @@ function text(formData: FormData, name: string): string { return String(formData
 function optionalText(formData: FormData, name: string): string | null { return text(formData, name) || null; }
 function integer(formData: FormData, name: string): number | null { const value = Number.parseInt(text(formData, name), 10); return Number.isInteger(value) && value > 0 ? value : null; }
 function decimal(formData: FormData, name: string): number | null { const raw = text(formData, name).replace(",", "."); if (!raw) return null; const value = Number(raw); return Number.isFinite(value) ? value : null; }
+function uuid(formData: FormData, name: string): string | null { const value = text(formData, name); return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null; }
 function refreshPackaging() { for (const path of ["/producao", "/producao/envase", "/producao/estoque", "/relatorios", "/romaneios"]) revalidatePath(path); }
 function mapError(message: string): string {
   const normalized = message.toLowerCase();

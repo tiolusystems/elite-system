@@ -1,12 +1,15 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { finishPackagingAction, issuePackagingOrderAction, reservePackagingAction, startPackagingAction } from "@/app/producao/envase/actions";
 import type { PackagingComponent, PackagingOrder, PackagingOrdersData } from "@/lib/packaging-orders";
 
 export function PackagingWorkbench({ data }: { data: PackagingOrdersData }) {
+  const issueRequestKey = randomUUID();
   return <>
     <section className="panel form-panel" id="emitir">
       <div className="panel-header"><h2>Emitir OP MAPA e Ordem de Envase</h2><span className="pill">emissão conjunta</span></div>
       <form action={issuePackagingOrderAction}>
+        <input type="hidden" name="idempotency_key" value={issueRequestKey} />
         <div className="form-grid">
           <label className="wide-field">Fórmula MAPA ativa<select name="formula_mapa_versao_id" defaultValue="" required><option value="">Selecione</option>{data.formulas.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
           <label className="wide-field">Lote PI liberado<select name="lote_pi_origem_id" defaultValue="" required><option value="">Selecione</option>{data.piLots.map((item) => <option key={item.id} value={item.id}>{item.label} - {item.detail}</option>)}</select></label>

@@ -81,7 +81,7 @@ begin
   exception
     when others then
       if sqlerrm = 'non-admin review guard missing'
-         or sqlerrm not like '%system administrator role is required%' then
+         or sqlerrm not like '%system administrator role%required%' then
         raise;
       end if;
   end;

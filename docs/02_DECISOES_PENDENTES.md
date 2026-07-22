@@ -29,7 +29,7 @@ Estados permitidos: `pendente`, `autorizada`, `implementada`, `cancelada`.
 
 ### DEC-001 - Suporte autenticado no core
 
-Estado: `autorizada`
+Estado: `implementada`
 
 “Suporte será inicialmente uma subárea autenticada do core, acessível pela
 rota /suporte e apresentada como Ajuda e Solicitações. O core será responsável
@@ -92,10 +92,9 @@ unidades operacionais serao exclusivamente `kg/L produzido`, `L/L produzido`
 e `UN/L produzido`. Formula nao referencia lote. A OP congela a versao e
 preserva lotes, quantidades, custos e garantias previstos e realizados.
 
-A migration 0068 aplica somente `UN/L` a apresentacoes e composicao versionada
-de embalagens. Formula, FIFO, custos e garantias por lote serao implementados
-em pacote estrutural proprio posterior, sem reinterpretar silenciosamente o
-contrato atual.
+A migration 0068 aplicou `UN/L` a apresentacoes e composicao versionada de
+embalagens. Formula, FIFO, custos e garantias por lote foram implementados nas
+migrations posteriores, sem reinterpretar silenciosamente o contrato atual.
 
 Documento: `docs/decisoes-arquiteturais/ADR-013-base-unica-por-litro-custos-garantias-lote.md`.
 

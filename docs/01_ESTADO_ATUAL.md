@@ -41,6 +41,16 @@ dry-run que listou exclusivamente essas quatro:
 Após a aplicação, o ledger remoto confirmou `0090`, `/api/health` respondeu
 `status=ok` com `backendConfigured=true` e `/login` respondeu HTTP 200.
 
+## Tarefa concluida mais recente
+
+Fechamento integrado das cadeias industrial e comercial, com migrations ate
+`0090` validadas em instalacao limpa e aplicadas de forma controlada no staging.
+
+## Validacao desta tarefa
+
+CI integral, rebuild PostgreSQL descartavel, smokes transacionais, lint, build
+Next.js e verificacao do health-check do staging.
+
 ## Fluxos funcionais disponíveis
 
 ### Cadastros
@@ -79,7 +89,7 @@ Após a aplicação, o ledger remoto confirmou `0090`, `/api/health` respondeu
 
 ### Importação histórica
 
-- análise e homologação das fontes sem escrita;
+- análise e homologacao funcional das fontes sem escrita;
 - staging e mapeamento de MP auditados;
 - custos de aquisição com mercadoria, frete, DIFAL e despesas separados;
 - rastreabilidade por workbook, tabela e linha;
@@ -106,12 +116,17 @@ Após a aplicação, o ledger remoto confirmou `0090`, `/api/health` respondeu
 Essas decisões não bloqueiam desenvolvimento e homologação no staging, mas
 bloqueiam entrada segura em produção real ou ativação de saldos oficiais.
 
-## Próxima ação
+## Proxima tarefa
 
 1. Promover o Preview `6802d62` para o domínio estável de staging usando sessão
    autenticada da Vercel.
 2. Executar smoke autenticado de Produção, Pedidos, comissões e importação.
 3. Corrigir somente lacunas objetivas encontradas no staging.
 4. Preparar o corte físico `DEC-012` antes de ativar saldos reais.
+
+## Tarefa seguinte
+
+Concluir a homologacao funcional do workbook e executar a etapa I2 somente para
+fontes aprovadas, mantendo a importacao operacional bloqueada ate essa decisao.
 
 Não reaplicar migrations, não resetar banco e não alterar produção real.

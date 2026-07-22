@@ -9,7 +9,7 @@ class FinanceWorkbenchContractTests(unittest.TestCase):
         actions = (ROOT / "apps/web/app/pedidos/financeiro/actions.ts").read_text(encoding="utf-8")
         for rpc in (
             "definir_com_pedido_comissao",
-            "registrar_com_recebimento",
+            "registrar_com_recebimento_idempotente",
             "registrar_fin_comissao_pagamento",
             "registrar_fin_comissao_ajuste",
         ):

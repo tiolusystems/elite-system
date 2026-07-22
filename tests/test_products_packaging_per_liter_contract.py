@@ -27,11 +27,11 @@ class ProductsPackagingPerLiterContractTests(unittest.TestCase):
         ):
             self.assertIn(contract, text)
 
-    def test_dec_013_is_authorized_not_implemented(self) -> None:
+    def test_dec_013_is_implemented(self) -> None:
         text = DECISIONS.read_text(encoding="utf-8")
         row = next(line for line in text.splitlines() if line.startswith("| `DEC-013`"))
-        self.assertTrue(row.rstrip().endswith("| autorizada |"))
-        self.assertIn("Formula, FIFO, custos e garantias por lote serao implementados", text)
+        self.assertTrue(row.rstrip().endswith("| implementada |"))
+        self.assertIn("Formula, FIFO, custos e garantias por lote foram implementados", text)
 
     def test_migration_adds_normalized_un_l_without_legacy_backfill(self) -> None:
         text = MIGRATION.read_text(encoding="utf-8")

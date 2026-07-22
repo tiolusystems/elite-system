@@ -6,7 +6,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MIGRATION_0027 = REPO_ROOT / "supabase" / "migrations" / "0027_finance_commission_idempotency_contract.sql"
-PEDIDOS_ACTIONS = REPO_ROOT / "apps" / "web" / "app" / "pedidos" / "actions.ts"
+PEDIDOS_ACTIONS = REPO_ROOT / "apps" / "web" / "app" / "pedidos" / "financeiro" / "actions.ts"
 COMMISSIONS_DOC = REPO_ROOT / "docs" / "escopo_comissoes_recebimentos_credito.md"
 
 

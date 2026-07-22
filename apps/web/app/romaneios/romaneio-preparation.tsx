@@ -22,6 +22,7 @@ export function RomaneioPreparation({
   romaneios: RomaneioRecord[];
 }) {
   const [pedidoId, setPedidoId] = useState("");
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [selectedQuantities, setSelectedQuantities] = useState<Record<number, string>>({});
   const [openItemId, setOpenItemId] = useState("");
@@ -118,6 +119,7 @@ export function RomaneioPreparation({
 
         {pedidoId ? (
           <form action={createRomaneioAction}>
+            <input type="hidden" name="idempotency_key" value={idempotencyKey} />
             <input type="hidden" name="pedido_id" value={pedidoId} />
             <div className="romaneio-order-items">
               {orderItems.map((item) => {

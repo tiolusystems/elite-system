@@ -7,6 +7,8 @@
 3. Marque os produtos que entrarão na carga e informe a quantidade de cada um.
 4. Confira a prévia. Consultar a carga não cria registro nem altera estoque.
 5. Selecione **Gravar romaneio**.
+   Se houver duplo clique ou repeticao da mesma solicitacao pela rede, o sistema
+   devolve o rascunho original e nao cria um segundo romaneio.
 6. Para cada produto, escolha um ou mais lotes PA compatíveis e reserve as quantidades.
 7. Imprima o romaneio, se necessário. A impressão pode ocorrer antes da NF.
 8. Informe entregador e veículo.

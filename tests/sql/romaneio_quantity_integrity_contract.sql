@@ -15,9 +15,26 @@ declare
   v_romaneio_1_id bigint;
   v_romaneio_2_id bigint;
   v_romaneio_3_id bigint;
+  v_idempotent_romaneio_id bigint;
+  v_idempotent_retry_id bigint;
+  v_request_key uuid := '00000000-0000-4000-8000-000000000098';
   v_direct_romaneio_id bigint;
   v_balance record;
 begin
+  if has_function_privilege(
+    'authenticated',
+    'public.gravar_exp_romaneio_pedido(bigint,jsonb)',
+    'EXECUTE'
+  ) then
+    raise exception 'legacy unkeyed romaneio save remains executable';
+  end if;
+  if not has_function_privilege(
+    'authenticated',
+    'public.gravar_exp_romaneio_pedido_idempotente(uuid,bigint,jsonb)',
+    'EXECUTE'
+  ) then
+    raise exception 'authenticated cannot execute keyed romaneio save';
+  end if;
   if has_function_privilege(
     'anon',
     'public.create_exp_romaneio(bigint,bigint,numeric,text,text,text,text)',
@@ -127,6 +144,36 @@ begin
     v_order_id, v_product_package_id, 'venda', 20, 0, 0, 0, 'active',
     v_actor, v_actor, 'sistema'
   ) returning id into v_order_item_id;
+
+  v_idempotent_romaneio_id := public.gravar_exp_romaneio_pedido_idempotente(
+    v_request_key,
+    v_order_id,
+    jsonb_build_array(jsonb_build_object('pedido_item_id', v_order_item_id, 'quantidade', 1))
+  );
+  v_idempotent_retry_id := public.gravar_exp_romaneio_pedido_idempotente(
+    v_request_key,
+    v_order_id,
+    jsonb_build_array(jsonb_build_object('pedido_item_id', v_order_item_id, 'quantidade', 1))
+  );
+  if v_idempotent_retry_id is distinct from v_idempotent_romaneio_id then
+    raise exception 'identical romaneio retry created a different draft';
+  end if;
+  if (select count(*) from public.exp_romaneio_requisicoes where idempotency_key = v_request_key) <> 1 then
+    raise exception 'romaneio request key was not stored exactly once';
+  end if;
+  begin
+    perform public.gravar_exp_romaneio_pedido_idempotente(
+      v_request_key,
+      v_order_id,
+      jsonb_build_array(jsonb_build_object('pedido_item_id', v_order_item_id, 'quantidade', 2))
+    );
+    raise exception 'romaneio request key accepted a changed payload';
+  exception when others then
+    if sqlerrm <> 'idempotency key reused with different romaneio request' then
+      raise;
+    end if;
+  end;
+  perform public.cancelar_exp_romaneio(v_idempotent_romaneio_id, 'Liberar saldo do teste idempotente');
 
   perform set_config('request.jwt.claim.sub', v_denied_actor::text, true);
   begin

@@ -13,6 +13,7 @@ export async function createRomaneioAction(formData: FormData) {
     redirect("/romaneios?result=not_configured#novo-romaneio");
   }
 
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const pedidoId = optionalInteger(formData, "pedido_id");
   const itemIds = formData.getAll("pedido_item_id").map(Number).filter((value) => Number.isInteger(value) && value > 0);
   const itens = itemIds.flatMap((pedidoItemId) => {
@@ -20,12 +21,13 @@ export async function createRomaneioAction(formData: FormData) {
     return quantidade !== null && quantidade > 0 ? [{ pedido_item_id: pedidoItemId, quantidade }] : [];
   });
 
-  if (!pedidoId || pedidoId <= 0 || itens.length === 0) {
+  if (!idempotencyKey || !pedidoId || pedidoId <= 0 || itens.length === 0) {
     redirect("/romaneios?result=missing_romaneio_required#novo-romaneio");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "gravar_exp_romaneio_pedido", {
+  const { error } = await auditedRpc(supabase, "gravar_exp_romaneio_pedido_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_itens: itens,
     p_pedido_id: pedidoId,
   });
@@ -229,6 +231,11 @@ function optionalInteger(formData: FormData, name: string): number | null {
   }
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function uuid(formData: FormData, name: string): string | null {
+  const value = field(formData, name);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null;
 }
 
 function mapRomaneioError(message: string): string {

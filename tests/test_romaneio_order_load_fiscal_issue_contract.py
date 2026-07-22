@@ -24,7 +24,7 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
         self.assertIn("Gravar rascunho do romaneio", PREPARATION.read_text(encoding="utf-8"))
         self.assertIn('name="pedido_item_id"', page)
         self.assertIn('name={`quantidade_${item.pedidoItemId}`}', page)
-        self.assertIn('"gravar_exp_romaneio_pedido"', actions)
+        self.assertIn('"gravar_exp_romaneio_pedido_idempotente"', actions)
         self.assertNotIn('name="observacao" placeholder="Opcional"', page)
 
     def test_stock_issue_requires_invoice_and_logistics(self):

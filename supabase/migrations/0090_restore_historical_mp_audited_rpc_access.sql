@@ -38,3 +38,21 @@ comment on function public.register_migration_mp_acquisition_value(
   numeric, numeric, numeric, text, date, text, bigint, bigint, text
 ) is
   'Audited historical MP acquisition-value entrypoint. Authenticated execution requires the union of import and stock permissions.';
+
+-- The historical import composes with the governed stock entrypoint. Keep its
+-- independent stock permission and audit record instead of duplicating a lot
+-- insert inside the import RPC.
+revoke all on function public.create_est_lote_mp(
+  bigint, numeric, text, text, text, date, date, text, text
+) from public;
+revoke execute on function public.create_est_lote_mp(
+  bigint, numeric, text, text, text, date, date, text, text
+) from anon;
+grant execute on function public.create_est_lote_mp(
+  bigint, numeric, text, text, text, date, date, text, text
+) to authenticated;
+
+comment on function public.create_est_lote_mp(
+  bigint, numeric, text, text, text, date, date, text, text
+) is
+  'Audited MP lot entrypoint. Authenticated execution requires estoque.mp.lots.create.';

@@ -118,7 +118,7 @@ export async function decidirPedidoGerencialAction(formData: FormData) {
       action_key: "pedidos.credit.review",
       axis: "status_transition",
       domain: "pedidos",
-      entity: "com_pedidos",
+      entity: "com_pedido_credito_decisoes",
       entity_id: String(pedidoId),
       failure_action: "pedidos.credit_review_failed"
     }

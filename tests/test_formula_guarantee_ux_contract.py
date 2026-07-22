@@ -36,6 +36,16 @@ class FormulaGuaranteeUxContractTests(unittest.TestCase):
         self.assertIn('targets.unidades.map', text)
         self.assertNotIn('placeholder="KG, L, UN"', text)
 
+    def test_formula_version_can_be_prefilled_without_editing_history(self) -> None:
+        workbench = (ROOT / "apps/web/app/producao/formulas/formula-workbench.tsx").read_text(encoding="utf-8")
+        form = EDITOR.read_text(encoding="utf-8")
+        editors = (ROOT / "apps/web/app/pcp/production-editors.tsx").read_text(encoding="utf-8")
+        manual = MANUAL.read_text(encoding="utf-8")
+        self.assertIn("Criar nova versão a partir desta", workbench)
+        self.assertIn("initialFormula", form)
+        self.assertIn("initialComponents", editors)
+        self.assertIn("A versão anterior não é editada nem apagada", manual)
+
     def test_manual_explains_stock_boundary_and_lot_calculation(self) -> None:
         text = MANUAL.read_text(encoding="utf-8")
         self.assertIn("a baixa ocorre somente na finalização da OP", text)

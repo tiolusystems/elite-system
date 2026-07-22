@@ -1,9 +1,15 @@
+"use client";
+
+import { useState } from "react";
+
 import { activatePcpFormulaAction } from "@/app/pcp/actions";
 import { FormulaCreationForm } from "@/app/producao/formulas/formula-creation-form";
 import type { PcpDashboard, PcpFormulaVersion } from "@/lib/pcp";
 import { componentTypeLabel, unitLabel } from "@/lib/production-labels";
 
 export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboard: PcpDashboard; includeActive?: boolean }) {
+  const [template, setTemplate] = useState<PcpFormulaVersion | null>(null);
+
   return (
     <>
       <section className="two-column production-primary-grid">
@@ -12,7 +18,14 @@ export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboar
             <h2 id="nova-formula-title">Nova versão de fórmula</h2>
             <span className="pill">Histórico preservado</span>
           </div>
-          <FormulaCreationForm lookups={dashboard.lookups} />
+          {template ? (
+            <div className="workflow-callout neutral" role="status">
+              <strong>Nova versão baseada na v{template.versao}</strong>
+              <span>Revise produto, componentes e quantidades. Ao salvar, o histórico anterior permanece intacto.</span>
+              <button className="text-button" type="button" onClick={() => setTemplate(null)}>Começar em branco</button>
+            </div>
+          ) : null}
+          <FormulaCreationForm key={template?.id ?? "blank"} initialFormula={template} lookups={dashboard.lookups} />
         </section>
 
         <section className="panel" id="formulas" aria-labelledby="formulas-title">
@@ -23,7 +36,14 @@ export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboar
           {dashboard.formulaVersions.length > 0 ? (
             <div className="module-list">
               {dashboard.formulaVersions.slice(0, 20).map((formula) => (
-                <FormulaCard key={formula.id} formula={formula} />
+                <FormulaCard
+                  key={formula.id}
+                  formula={formula}
+                  onUseAsTemplate={() => {
+                    setTemplate(formula);
+                    document.getElementById("nova-formula")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                />
               ))}
             </div>
           ) : (
@@ -69,7 +89,7 @@ export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboar
   );
 }
 
-function FormulaCard({ formula }: { formula: PcpFormulaVersion }) {
+function FormulaCard({ formula, onUseAsTemplate }: { formula: PcpFormulaVersion; onUseAsTemplate: () => void }) {
   return (
     <article className="module-card">
       <div className="module-card-main">
@@ -92,6 +112,7 @@ function FormulaCard({ formula }: { formula: PcpFormulaVersion }) {
           <span className="tag">Sem componentes operacionais</span>
         )}
       </div>
+      <button className="secondary-button" type="button" onClick={onUseAsTemplate}>Criar nova versão a partir desta</button>
       {!formula.isActive ? (
         <form className="compact-action-form" action={activatePcpFormulaAction}>
           <input type="hidden" name="formula_versao_id" value={formula.id} />

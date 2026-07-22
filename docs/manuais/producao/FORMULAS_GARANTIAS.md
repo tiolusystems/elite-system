@@ -1,5 +1,15 @@
 # Fórmulas e garantias
 
+## Criar nova versão a partir de uma fórmula existente
+
+1. Em **Produção > Fórmulas**, localize a versão que será usada como referência.
+2. Selecione **Criar nova versão a partir desta**.
+3. Revise produto, finalidade, componentes, quantidades por litro e unidades.
+4. Informe a justificativa da nova versão e salve.
+
+A versão anterior não é editada nem apagada. A cópia apenas preenche o
+formulário; a gravação cria uma nova versão auditada.
+
 ## Conciliar cálculos históricos do Excel
 
 1. Acesse **Produção > Garantias > Conciliação do histórico**.

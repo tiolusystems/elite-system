@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { PcpLookupOption } from "@/lib/pcp";
+import type { PcpFormulaComponent, PcpLookupOption } from "@/lib/pcp";
 import { productionOptionLabel, unitOptionLabel } from "@/lib/production-labels";
 
 type FormulaTargets = {
@@ -12,7 +12,15 @@ type FormulaTargets = {
   unidades: PcpLookupOption[];
 };
 
-export function FormulaComponentRows({ targets, perLiterOnly = false }: { targets: FormulaTargets; perLiterOnly?: boolean }) {
+export function FormulaComponentRows({
+  targets,
+  perLiterOnly = false,
+  initialComponents = []
+}: {
+  targets: FormulaTargets;
+  perLiterOnly?: boolean;
+  initialComponents?: PcpFormulaComponent[];
+}) {
   const availableUnits = perLiterOnly
     ? targets.unidades.filter((option) =>
         ["kg_l_produzido", "l_l_produzido", "un_l_produzido"].includes(option.label)
@@ -21,16 +29,24 @@ export function FormulaComponentRows({ targets, perLiterOnly = false }: { target
   return (
     <div className="pcp-component-editor" aria-label="Componentes da formula">
       {Array.from({ length: 6 }, (_, index) => (
-        <FormulaComponentRow key={index + 1} index={index + 1} targets={{ ...targets, unidades: availableUnits }} />
+        <FormulaComponentRow
+          initialComponent={initialComponents[index]}
+          key={index + 1}
+          index={index + 1}
+          targets={{ ...targets, unidades: availableUnits }}
+        />
       ))}
     </div>
   );
 }
 
-function FormulaComponentRow({ index, targets }: { index: number; targets: FormulaTargets }) {
-  const [type, setType] = useState("");
+function FormulaComponentRow({ index, targets, initialComponent }: { index: number; targets: FormulaTargets; initialComponent?: PcpFormulaComponent }) {
+  const [type, setType] = useState(initialComponent?.tipoComponente ?? "");
   const options =
     type === "MP" ? targets.materiasPrimas : type === "PA" ? targets.produtoEmbalagens : type === "PI" ? targets.produtos : [];
+  const initialUnitId = initialComponent?.unidade
+    ? targets.unidades.find((option) => option.label === initialComponent.unidade)?.id
+    : undefined;
 
   return (
     <div className="pcp-component-row">
@@ -46,7 +62,7 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
       </label>
       <label className="wide-field">
         Item
-        <select key={`${index}-${type}`} name={`component_${index}_target_id`} defaultValue="" disabled={!type}>
+        <select key={`${index}-${type}`} name={`component_${index}_target_id`} defaultValue={initialComponent?.targetId ?? ""} disabled={!type}>
           <option value="">Selecione</option>
           {options.map((option) => (
             <option key={`${type}-${option.id}`} value={option.id}>
@@ -57,11 +73,11 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
       </label>
       <label>
         Quantidade por 1 L
-        <input name={`component_${index}_quantidade`} inputMode="decimal" />
+        <input name={`component_${index}_quantidade`} inputMode="decimal" defaultValue={initialComponent?.quantidade} />
       </label>
       <label>
         Unidade
-        <select name={`component_${index}_unidade_id`} defaultValue="" disabled={!type} required={Boolean(type)}>
+        <select name={`component_${index}_unidade_id`} defaultValue={initialUnitId ?? ""} disabled={!type} required={Boolean(type)}>
           <option value="">Selecione</option>
           {targets.unidades.map((option) => (
             <option key={option.id} value={option.id}>{unitOptionLabel(option)}</option>
@@ -70,7 +86,7 @@ function FormulaComponentRow({ index, targets }: { index: number; targets: Formu
       </label>
       <label className="wide-field">
         Observação
-        <input name={`component_${index}_observacao`} placeholder="Opcional" />
+        <input name={`component_${index}_observacao`} placeholder="Opcional" defaultValue={initialComponent?.observacao ?? ""} />
       </label>
     </div>
   );

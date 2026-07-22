@@ -4,17 +4,18 @@ import { useState } from "react";
 
 import { createPcpFormulaAction } from "@/app/pcp/actions";
 import { FormulaComponentRows } from "@/app/pcp/production-editors";
-import type { PcpLookups } from "@/lib/pcp";
+import type { PcpFormulaVersion, PcpLookups } from "@/lib/pcp";
 
-export function FormulaCreationForm({ lookups }: { lookups: PcpLookups }) {
-  const [recipeType, setRecipeType] = useState<"producao" | "mapa">("producao");
+export function FormulaCreationForm({ lookups, initialFormula }: { lookups: PcpLookups; initialFormula?: PcpFormulaVersion | null }) {
+  const initialRecipeType = initialFormula?.tipoReceita === "mapa" ? "mapa" : "producao";
+  const [recipeType, setRecipeType] = useState<"producao" | "mapa">(initialRecipeType);
 
   return (
     <form action={createPcpFormulaAction}>
       <div className="form-grid">
         <label className="wide-field">
           Produto PA ou PI
-          <select name="produto_id" defaultValue="" required>
+          <select name="produto_id" defaultValue={initialFormula?.produtoId ?? ""} required>
             <option value="">Selecione o produto</option>
             {lookups.produtos.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
           </select>
@@ -36,7 +37,7 @@ export function FormulaCreationForm({ lookups }: { lookups: PcpLookups }) {
         </label>
         <label className="full-field">
           Observação
-          <input name="observacao" placeholder="Informação complementar opcional" />
+          <input name="observacao" defaultValue={initialFormula?.observacao ?? ""} placeholder="Informação complementar opcional" />
         </label>
       </div>
 
@@ -49,6 +50,7 @@ export function FormulaCreationForm({ lookups }: { lookups: PcpLookups }) {
         </span>
       </div>
       <FormulaComponentRows
+        initialComponents={initialFormula?.components}
         perLiterOnly={recipeType === "producao"}
         targets={{
           materiasPrimas: lookups.materiasPrimas,

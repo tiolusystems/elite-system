@@ -294,7 +294,14 @@ begin
        and jsonb_array_length(result.base_calculo_json -> 'inputs') = 1
        and nullif(result.base_calculo_json #>> '{inputs,0,garantia_lote_id}', '') is not null
   ) then
-    raise exception 'physical guarantee calculation evidence is incomplete';
+    raise exception 'physical guarantee calculation evidence is incomplete: %',
+      (select result.base_calculo_json
+         from public.pcp_op_garantia_resultados result
+        where result.op_id = v_op_id
+          and result.calculo_versao = v_calculo_1
+          and result.nutriente = 'N'
+        order by result.id
+        limit 1);
   end if;
 
   v_garantia_produto_2 := public.registrar_pcp_garantia_produto(

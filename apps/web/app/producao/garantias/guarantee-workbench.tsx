@@ -345,8 +345,65 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
           </table>
         </div>
       </section>
+
+      <section className="panel" aria-labelledby="op-guarantee-results-title">
+        <div className="panel-header">
+          <div>
+            <h2 id="op-guarantee-results-title">Resultados calculados por OP</h2>
+            <p className="muted">Memória calculada com os lotes efetivamente consumidos, sem substituir laudo ou garantia documental.</p>
+          </div>
+          <span className="pill">{dashboard.opGuaranteeResults.length} resultado(s)</span>
+        </div>
+        <div className="table-scroll production-guarantee-table">
+          <table className="data-table">
+            <thead>
+              <tr><th>OP</th><th>Produto gerado</th><th>Nutriente</th><th>Calculado</th><th>Referência MAPA</th><th>Situação</th></tr>
+            </thead>
+            <tbody>
+              {dashboard.opGuaranteeResults.map((result) => (
+                <tr key={result.id}>
+                  <td>OP {result.opId} / cálculo v{result.calculoVersao}</td>
+                  <td>{result.produtoLabel}</td>
+                  <td>{result.nutriente}</td>
+                  <td>{result.valorCalculado === null ? "Não calculado" : `${formatNumber(result.valorCalculado)} ${unitLabel(result.unidade)}`}</td>
+                  <td>{guaranteeReference(result)}</td>
+                  <td><span className={`status-badge ${guaranteeStatusTone(result.statusResultado)}`}>{guaranteeResultLabel(result.statusResultado)}</span></td>
+                </tr>
+              ))}
+              {dashboard.opGuaranteeResults.length === 0 ? (
+                <tr><td colSpan={6}>Nenhuma OP finalizada possui resultado de garantia calculado.</td></tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </>
   );
+}
+
+function guaranteeReference(result: PcpDashboard["opGuaranteeResults"][number]): string {
+  if (result.valorReferencia === null || !result.tipoLimite) return "Sem referência cadastrada";
+  const upper = result.valorMaximoReferencia === null ? "" : ` a ${formatNumber(result.valorMaximoReferencia)}`;
+  return `${limitLabel(result.tipoLimite)}: ${formatNumber(result.valorReferencia)}${upper} ${unitLabel(result.unidade)}`;
+}
+
+function guaranteeResultLabel(value: string): string {
+  const labels: Record<string, string> = {
+    atende: "Atende",
+    nao_atende: "Não atende",
+    informativo: "Informativo",
+    sem_dados_lote: "Faltam dados do lote",
+    base_incompleta: "Base física incompleta",
+    unidade_incompativel: "Unidade incompatível",
+    sem_referencia_mapa: "Sem referência MAPA"
+  };
+  return labels[value] ?? "Situação não reconhecida";
+}
+
+function guaranteeStatusTone(value: string): string {
+  if (value === "atende") return "is-success";
+  if (value === "nao_atende" || value === "unidade_incompativel") return "is-danger";
+  return "is-warning";
 }
 
 function formatNumber(value: number): string {

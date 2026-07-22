@@ -24,6 +24,15 @@ class FormulaGuaranteeUxContractTests(unittest.TestCase):
         self.assertIn('dashboard.lookups.nutrientes.map', text)
         self.assertIn('dashboard.lookups.unidades.map', text)
 
+    def test_op_guarantee_results_are_visible_without_inventing_missing_values(self) -> None:
+        text = GUARANTEES.read_text(encoding="utf-8")
+        self.assertIn("Resultados calculados por OP", text)
+        self.assertIn("dashboard.opGuaranteeResults.map", text)
+        self.assertIn('result.valorCalculado === null ? "Não calculado"', text)
+        self.assertIn('sem_dados_lote: "Faltam dados do lote"', text)
+        self.assertIn('base_incompleta: "Base física incompleta"', text)
+        self.assertIn('sem_referencia_mapa: "Sem referência MAPA"', text)
+
     def test_production_and_mapa_recipes_are_visibly_separated(self) -> None:
         text = EDITOR.read_text(encoding="utf-8")
         self.assertIn('Produção operacional', text)

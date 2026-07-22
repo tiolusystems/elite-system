@@ -170,6 +170,11 @@ Resultado ausente ou inconclusivo não deve ser inventado. O lote gerado pode
 permanecer bloqueado para análise, reprocessamento, descarte ou liberação
 auditada.
 
+Em **Resultados calculados por OP**, consulte o valor obtido, a referência MAPA
+vigente e a situação. **Faltam dados do lote**, **Base física incompleta** e
+**Unidade incompatível** são pendências técnicas; não representam valor zero nem
+aprovação automática do lote.
+
 ## Rastreabilidade
 
 O caminho auditável é:

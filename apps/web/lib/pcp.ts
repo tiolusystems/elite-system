@@ -227,6 +227,7 @@ export type PcpDashboard = {
   mpLotGuarantees: PcpMpLotGuarantee[];
   mpLotParameters: PcpMpLotParameters[];
   historicalGuarantees: PcpHistoricalGuaranteeReview[];
+  opGuaranteeResults: PcpOpGuaranteeResult[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -640,6 +641,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         sourceRowId: Number(row.source_row_id),
         linhaExcel: nullableNumber(row.linha_excel)
       })),
+      opGuaranteeResults: opGuaranteeResultRows.map((row) => mapOpGuaranteeResult(row, produtoMap)),
       source: firstError ? "error" : "supabase",
       error: firstError
     };
@@ -945,6 +947,7 @@ function emptyDashboard(source: PcpDashboard["source"], error: string | null): P
     mpLotGuarantees: [],
     mpLotParameters: [],
     historicalGuarantees: [],
+    opGuaranteeResults: [],
     source,
     error
   };

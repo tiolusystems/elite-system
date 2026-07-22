@@ -117,8 +117,14 @@ export function PlanningOrderCard({
   returnTo: "ordens" | "transformacoes";
 }) {
   const canReserve = op.status === "draft" || op.status === "planned";
-  const canStart = op.status === "draft" || op.status === "planned";
+  const reservationComplete = op.components.length > 0 && op.components.every(
+    (component) => component.quantidadeReservada >= component.quantidadePlanejada && component.status === "reserved"
+  );
+  const canStart = (op.status === "draft" || op.status === "planned") && reservationComplete;
   const canCancel = op.status === "draft" || op.status === "planned";
+  const reservedComponents = op.components.filter(
+    (component) => component.quantidadeReservada >= component.quantidadePlanejada && component.status === "reserved"
+  ).length;
 
   return (
     <article className={`pcp-op-card op-${op.status}`} id={`op-${op.id}`}>
@@ -136,7 +142,8 @@ export function PlanningOrderCard({
       <div className="tag-row">
         <span className="tag">volume planejado: {op.quantidadePlanejada === null ? "-" : `${formatNumber(op.quantidadePlanejada)} L`}</span>
         <span className="tag">criada: {shortDate(op.createdAt)}</span>
-        <span className="tag">CQ: {op.cqStatus ?? "nao informado"}</span>
+        <span className="tag">reservas: {reservedComponents} de {op.components.length} completas</span>
+        <span className="tag">CQ: {op.cqStatus ? productionStatusLabel(op.cqStatus) : "Não informado"}</span>
       </div>
 
       <section className="pcp-subsection" aria-label={`Componentes da ${op.codigoOp}`}>
@@ -181,6 +188,12 @@ export function PlanningOrderCard({
       ) : null}
 
       <div className="pcp-op-actions planning-actions">
+        {canReserve && !reservationComplete ? (
+          <div className="workflow-callout neutral" role="status">
+            <strong>Conclua as reservas antes de iniciar</strong>
+            <span>Use a reserva automática por FIFO em cada componente pendente. A reserva compromete o saldo, mas ainda não baixa o estoque físico.</span>
+          </div>
+        ) : null}
         {canStart ? (
           <form className="compact-action-form" action={startPcpOpAction}>
             <input type="hidden" name="op_id" value={op.id} />

@@ -30,6 +30,13 @@ class PcpFifoReservationTests(unittest.TestCase):
         self.assertIn("reservePcpComponentFifoAction", orders)
         self.assertIn('auditedRpc(supabase, "reservar_pcp_op_componente_fifo"', actions)
 
+    def test_ui_only_allows_start_after_all_reservations_are_complete(self):
+        orders = ORDERS.read_text(encoding="utf-8")
+        self.assertIn("const reservationComplete", orders)
+        self.assertIn('component.status === "reserved"', orders)
+        self.assertIn("&& reservationComplete", orders)
+        self.assertIn("Conclua as reservas antes de iniciar", orders)
+
     def test_manual_explains_override(self):
         manual = MANUAL.read_text(encoding="utf-8")
         self.assertIn("Reserva FIFO", manual)

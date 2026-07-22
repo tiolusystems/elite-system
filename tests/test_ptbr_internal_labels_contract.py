@@ -34,7 +34,7 @@ class PtBrInternalLabelsContractTests(unittest.TestCase):
 
     def test_status_is_not_rendered_directly_as_visible_text(self) -> None:
         direct_status = re.compile(
-            r">\s*\{[A-Za-z0-9_.]+\.(?:status(?:[A-Z][A-Za-z0-9]*)?|situacao(?:[A-Z][A-Za-z0-9]*)?|actionKey|action_key)\}\s*<"
+            r">\s*\{[A-Za-z0-9_.]+\.(?:status(?:[A-Z][A-Za-z0-9]*)?|situacao(?:[A-Z][A-Za-z0-9]*)?|lifecycle|actionKey|action_key)\}\s*<"
         )
         violations: list[str] = []
         for path in UI_ROOT.rglob("*.tsx"):

@@ -8,6 +8,7 @@ import { getKanbanDashboard } from "@/lib/kanban";
 import { getPcpDashboard } from "@/lib/pcp";
 import { getRomaneioDashboard } from "@/lib/romaneios";
 import { getSecurityDashboard } from "@/lib/security";
+import { internalValueLabel } from "@/lib/labels-ptbr";
 import { moduleMaturityPercent } from "@/lib/system-map";
 
 export const dynamic = "force-dynamic";
@@ -109,7 +110,7 @@ export default async function HomePage() {
                       <strong>{step.displayName}</strong>
                       <span>{step.effectiveAccess === "read_write" ? "operacao" : step.effectiveAccess === "read_only" ? "leitura" : "bloqueado"}</span>
                     </div>
-                    <p>{step.description} · {step.lifecycle ?? "sem rollout"}</p>
+                    <p>{step.description} · {step.lifecycle ? internalValueLabel(step.lifecycle) : "Sem liberação definida"}</p>
                   </div>
                 </div>
               ))}

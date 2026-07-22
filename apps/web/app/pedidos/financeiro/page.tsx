@@ -1,4 +1,4 @@
-import { adjustCommissionAction, payCommissionAction, registerReceiptAction } from "@/app/pedidos/financeiro/actions";
+import { adjustCommissionAction, assignOrderCommissionAction, payCommissionAction, registerReceiptAction } from "@/app/pedidos/financeiro/actions";
 import { getFinanceDashboard } from "@/lib/finance";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -19,6 +19,16 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
     </section>
     {dashboard.error ? <section className="notice-panel warning"><strong>Consulta indisponivel</strong><span>{dashboard.error}</span></section> : null}
     {message ? <section className={`notice-panel ${message.kind}`} role="status"><strong>{message.title}</strong><span>{message.detail}</span></section> : null}
+
+    <section className="panel form-panel" id="previsoes"><div className="panel-header"><div><h2>Definir comissionados da venda</h2><p>O gerente pode atribuir vendedor, agente ou gerente depois da liberacao e antes do primeiro recebimento.</p></div><span className="pill">manual e flexivel</span></div>
+      <form action={assignOrderCommissionAction}><div className="form-grid finance-adjust-grid">
+        <label>Pedido aprovado<select name="pedido_id" defaultValue="" required><option value="" disabled>Selecione</option>{dashboard.orders.map((order) => <option key={order.id} value={order.id}>{order.code} - {order.clientName}</option>)}</select></label>
+        <label>Comissionado<select name="pessoa_id" defaultValue="" required><option value="" disabled>Selecione</option>{dashboard.commissions.map((item) => <option key={item.personId} value={item.personId}>{item.personName}</option>)}</select></label>
+        <label>Papel<select name="papel_comissao" defaultValue="vendedor"><option value="vendedor">Vendedor</option><option value="agente">Agente</option><option value="gerente">Gerente</option><option value="outro">Outro</option></select></label>
+        <label>Percentual<input name="percentual_comissao" inputMode="decimal" min="0.0001" max="100" step="0.0001" required /></label>
+        <label className="wide-field">Justificativa<input name="justificativa" minLength={10} placeholder="Regra comercial aprovada para este pedido" required /></label>
+      </div><div className="form-footer"><span>Podem existir varios comissionados. A previsao fica congelada antes do recebimento.</span><button className="primary-button">Definir comissao</button></div></form>
+    </section>
 
     <section className="finance-columns">
       <section className="panel form-panel" id="recebimentos"><div className="panel-header"><div><h2>Registrar recebimento</h2><p>Escolha um pedido com saldo financeiro aberto.</p></div><span className="pill">liberacao proporcional</span></div>
@@ -60,4 +70,20 @@ function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "
 function date(value: string) { return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)); }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
 function movementLabel(value: string) { return ({ credito_liberacao: "Comissao liberada", debito_pagamento: "Pagamento", debito_estorno: "Estorno", compensacao_futura: "Compensacao futura", ajuste_manual: "Ajuste manual" } as Record<string, string>)[value] ?? "Movimento financeiro"; }
-function messageFor(value?: string) { return ({ receipt_registered: { kind: "success", title: "Recebimento registrado", detail: "A alocacao e a liberacao proporcional foram processadas." }, commission_paid: { kind: "success", title: "Pagamento registrado", detail: "O saldo da conta corrente foi atualizado." }, commission_adjusted: { kind: "success", title: "Ajuste registrado", detail: "O motivo e os valores ficaram auditados." }, not_allowed: { kind: "warning", title: "Operacao nao autorizada", detail: "Seu perfil nao possui a alcada necessaria." }, receipt_exceeds_balance: { kind: "warning", title: "Valor acima do saldo", detail: "Revise o saldo aberto do pedido." }, payment_exceeds_balance: { kind: "warning", title: "Pagamento acima do saldo", detail: "Revise a conta corrente do comissionado." }, already_processed: { kind: "warning", title: "Evento ja processado", detail: "Nenhum valor foi duplicado." }, invalid_adjustment: { kind: "warning", title: "Ajuste incompleto", detail: "Informe pessoa, valor e motivo valido." }, invalid_payment: { kind: "warning", title: "Pagamento incompleto", detail: "Revise pessoa, valor e data." }, invalid_receipt: { kind: "warning", title: "Recebimento incompleto", detail: "Revise pedido, valor e data." }, operation_failed: { kind: "warning", title: "Operacao nao concluida", detail: "Os dados foram preservados. Revise os campos ou sua permissao." } } as Record<string, { kind: string; title: string; detail: string }>)[value ?? ""] ?? null; }
+function messageFor(value?: string) {
+  return ({
+    commission_assigned: { kind: "success", title: "Comissao definida", detail: "A previsao ficou registrada antes do recebimento." },
+    receipt_registered: { kind: "success", title: "Recebimento registrado", detail: "A alocacao e a liberacao proporcional foram processadas." },
+    commission_paid: { kind: "success", title: "Pagamento registrado", detail: "O saldo da conta corrente foi atualizado." },
+    commission_adjusted: { kind: "success", title: "Ajuste registrado", detail: "O motivo e os valores ficaram auditados." },
+    not_allowed: { kind: "warning", title: "Operacao nao autorizada", detail: "Seu perfil nao possui a alcada necessaria." },
+    receipt_exceeds_balance: { kind: "warning", title: "Valor acima do saldo", detail: "Revise o saldo aberto do pedido." },
+    payment_exceeds_balance: { kind: "warning", title: "Pagamento acima do saldo", detail: "Revise a conta corrente do comissionado." },
+    already_processed: { kind: "warning", title: "Evento ja processado", detail: "Nenhum valor foi duplicado." },
+    invalid_assignment: { kind: "warning", title: "Atribuicao incompleta", detail: "Informe pedido, pessoa, papel, percentual e justificativa." },
+    invalid_adjustment: { kind: "warning", title: "Ajuste incompleto", detail: "Informe pessoa, valor e motivo valido." },
+    invalid_payment: { kind: "warning", title: "Pagamento incompleto", detail: "Revise pessoa, valor e data." },
+    invalid_receipt: { kind: "warning", title: "Recebimento incompleto", detail: "Revise pedido, valor e data." },
+    operation_failed: { kind: "warning", title: "Operacao nao concluida", detail: "Os dados foram preservados. Revise os campos ou sua permissao." },
+  } as Record<string, { kind: string; title: string; detail: string }>)[value ?? ""] ?? null;
+}

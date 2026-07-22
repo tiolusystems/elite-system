@@ -84,7 +84,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/pedidos/financeiro", "Financeiro", "Recebimentos e comissoes", "Registrar dinheiro recebido e controlar a conta corrente de comissoes.", {
     before: ["O pedido de venda deve estar liberado ou atendido e possuir saldo financeiro aberto.", "Pagamentos e ajustes de comissao exigem permissao financeira especifica."],
-    steps: ["Selecione um pedido com saldo e registre o recebimento.", "Confira a liberacao proporcional gerada para os comissionados do pedido.", "Consulte o saldo por pessoa.", "Registre pagamento ou ajuste manual somente com documento e motivo adequados."],
+    steps: ["Em venda aprovada e ainda sem recebimento, defina vendedor, agente ou gerente com percentual e justificativa.", "Selecione um pedido com saldo e registre o recebimento.", "Confira a liberacao proporcional gerada para os comissionados do pedido.", "Consulte o saldo por pessoa.", "Registre pagamento ou ajuste manual somente com documento e motivo adequados."],
     after: ["Cada recebimento libera somente a fracao correspondente da comissao prevista.", "Recebimentos, liberacoes, pagamentos e ajustes permanecem em ledgers imutaveis e auditados."],
     roles: ["Financeiro registra recebimentos e pagamentos.", "Gestores autorizados podem executar ajustes manuais justificados.", "Consulta depende das politicas de leitura do dominio."],
     blockers: ["Valor acima do saldo do pedido e recusado.", "O mesmo recebimento nao libera comissao duas vezes.", "Pagamento acima do saldo de comissao e ajuste sem motivo valido sao recusados."],

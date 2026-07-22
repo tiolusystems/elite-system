@@ -8,6 +8,7 @@ class FinanceWorkbenchContractTests(unittest.TestCase):
     def test_finance_route_uses_governed_rpcs(self):
         actions = (ROOT / "apps/web/app/pedidos/financeiro/actions.ts").read_text(encoding="utf-8")
         for rpc in (
+            "definir_com_pedido_comissao",
             "registrar_com_recebimento",
             "registrar_fin_comissao_pagamento",
             "registrar_fin_comissao_ajuste",
@@ -23,6 +24,7 @@ class FinanceWorkbenchContractTests(unittest.TestCase):
         self.assertIn('{ href: "/pedidos/financeiro", label: "Financeiro", moduleKey: "financeiro" }', navigation)
         self.assertIn('manual("/pedidos/financeiro"', manuals)
         self.assertIn("Registrar recebimento", page)
+        self.assertIn("Definir comissionados da venda", page)
         self.assertIn("Conta corrente de comissoes", page)
         self.assertIn("Ajuste manual de comissao", page)
 

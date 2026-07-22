@@ -76,6 +76,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/production_end_to_end_chain.sql
+      - name: Run order commission assignment smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_commission_assignment.sql
       - name: Run historical MP import foundation smoke
         env:
           PGPASSWORD: postgres

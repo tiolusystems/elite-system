@@ -151,7 +151,7 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
             self.assertIn(action, formulas + guarantees)
 
         for rpc in (
-            "create_pcp_formula_versao",
+            "create_pcp_formula_versao_idempotente",
             "activate_pcp_formula_versao",
             "registrar_pcp_garantia_produto",
             "registrar_pcp_garantia_lote_mp",

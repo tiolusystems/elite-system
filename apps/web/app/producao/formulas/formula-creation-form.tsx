@@ -9,9 +9,11 @@ import type { PcpFormulaVersion, PcpLookups } from "@/lib/pcp";
 export function FormulaCreationForm({ lookups, initialFormula }: { lookups: PcpLookups; initialFormula?: PcpFormulaVersion | null }) {
   const initialRecipeType = initialFormula?.tipoReceita === "mapa" ? "mapa" : "producao";
   const [recipeType, setRecipeType] = useState<"producao" | "mapa">(initialRecipeType);
+  const [requestKey] = useState(() => crypto.randomUUID());
 
   return (
     <form action={createPcpFormulaAction}>
+      <input type="hidden" name="idempotency_key" value={requestKey} />
       <div className="form-grid">
         <label className="wide-field">
           Produto PA ou PI

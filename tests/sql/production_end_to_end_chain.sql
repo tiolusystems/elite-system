@@ -27,6 +27,11 @@ declare
   v_pa_lot_id bigint;
   v_cost numeric;
 begin
+  if has_function_privilege('authenticated', 'public.create_pcp_formula_versao(bigint,text,text,jsonb,text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.create_pcp_formula_versao_idempotente(uuid,bigint,text,text,jsonb,text)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.create_pcp_formula_versao_idempotente(uuid,bigint,text,text,jsonb,text)', 'EXECUTE') then
+    raise exception 'formula creation grants are broader than the idempotent contract';
+  end if;
   if has_function_privilege('authenticated', 'public.create_pcp_op(bigint,text,numeric,text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.create_pcp_op_idempotente(uuid,bigint,text,numeric,text)', 'EXECUTE')
      or not has_function_privilege('authenticated', 'public.create_pcp_op_idempotente(uuid,bigint,text,numeric,text)', 'EXECUTE') then
@@ -99,16 +104,23 @@ begin
     (v_formula_entry_id, 12, 'KG', 12, 'BRL', 120, 'not_applicable', 'NF-CHAIN-MP-0087', 'sistema', v_actor),
     (v_packaging_entry_id, 3, 'UN', 3, 'BRL', 6, 'not_applicable', 'NF-CHAIN-EMB-0087', 'sistema', v_actor);
 
-  v_formula_id := public.create_pcp_formula_versao(
-    v_product_id, 'producao', 'Formula operacional integrada 0087',
+  v_formula_id := public.create_pcp_formula_versao_idempotente(
+    '87000000-0000-4000-8000-000000000001', v_product_id, 'producao', 'Formula operacional integrada 0087',
     jsonb_build_array(jsonb_build_object(
       'tipo_componente', 'MP', 'materia_prima_id', v_formula_mp_id,
       'quantidade', 1, 'unidade_id', v_unit_kg, 'unidade', 'kg_l_produzido'
     )), 'Base de um litro'
   );
+  if public.create_pcp_formula_versao_idempotente(
+    '87000000-0000-4000-8000-000000000001', v_product_id, 'producao', 'Formula operacional integrada 0087',
+    jsonb_build_array(jsonb_build_object(
+      'tipo_componente', 'MP', 'materia_prima_id', v_formula_mp_id,
+      'quantidade', 1, 'unidade_id', v_unit_kg, 'unidade', 'kg_l_produzido'
+    )), 'Base de um litro'
+  ) <> v_formula_id then raise exception 'formula retry did not return the original version'; end if;
   perform public.activate_pcp_formula_versao(v_formula_id, 'Formula operacional aprovada no smoke integrado');
-  v_mapa_formula_id := public.create_pcp_formula_versao(
-    v_product_id, 'mapa', 'Formula MAPA documental integrada 0087', '[]'::jsonb,
+  v_mapa_formula_id := public.create_pcp_formula_versao_idempotente(
+    '87000000-0000-4000-8000-000000000002', v_product_id, 'mapa', 'Formula MAPA documental integrada 0087', '[]'::jsonb,
     'Documento MAPA sem consumo de materia-prima'
   );
   perform public.activate_pcp_formula_versao(v_mapa_formula_id, 'Formula MAPA aprovada no smoke integrado');

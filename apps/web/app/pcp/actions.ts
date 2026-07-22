@@ -46,11 +46,12 @@ export async function createPcpFormulaAction(formData: FormData) {
   }
 
   const produtoId = optionalInteger(formData, "produto_id");
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const tipoReceita = field(formData, "tipo_receita") || "producao";
   const justificativa = field(formData, "justificativa");
   const componentes = parseFormulaComponents(formData);
 
-  if (!produtoId || !Number.isInteger(produtoId) || produtoId <= 0 || !justificativa) {
+  if (!idempotencyKey || !produtoId || !Number.isInteger(produtoId) || produtoId <= 0 || !justificativa) {
     redirect("/producao/formulas?result=missing_formula_required#nova-formula");
   }
   if (!ALLOWED_FORMULA_TYPES.has(tipoReceita)) {
@@ -61,7 +62,8 @@ export async function createPcpFormulaAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_pcp_formula_versao", {
+  const { error } = await auditedRpc(supabase, "create_pcp_formula_versao_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_componentes_jsonb: componentes,
     p_justificativa: justificativa,
     p_observacao: optionalField(formData, "observacao"),

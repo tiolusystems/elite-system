@@ -45,7 +45,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
   manual("/producao", "Producao", "Producao", "Acompanhar a cadeia de formula, OP, reserva, CQ e lote."),
   manual("/producao/formulas", "Producao", "Formulas", "Criar e versionar formulas operacionais e documentais.", {
     before: ["Produto e materias-primas devem estar ativos.", "A formula operacional usa base de 1 litro; a formula MAPA e documental."],
-    steps: ["Selecione o produto.", "Crie uma versao e informe os componentes por litro.", "Revise o rendimento e as etapas.", "Ative somente a versao conferida."],
+    steps: ["Selecione o produto.", "Crie uma versao e informe os componentes por litro; repetir a mesma solicitacao nao cria outra versao.", "Revise o rendimento e as etapas.", "Ative somente a versao conferida."],
     after: ["A versao ativa pode abrir OP.", "Nova alteracao gera outra versao e preserva a anterior."],
   }),
   manual("/producao/garantias", "Producao", "Garantias", "Consultar garantias declaradas e calculadas por lote.", {

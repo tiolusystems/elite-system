@@ -64,6 +64,9 @@ begin
     p_controla_estoque => true, p_materia_prima_id => v_packaging_mp_id
   );
   v_sale_item_id := public.create_cad_produto_embalagem(v_product_id, v_package_id, '9087-5L', 'active');
+  perform public.update_cad_apresentacao_logistica(
+    v_sale_item_id, 1, 'Uma unidade sintetica por volume logistico'
+  );
   v_package_version_id := public.create_cad_embalagem_versao_un_l(
     v_package_id, current_date, null, 0.25, 0.02, 'Composicao sintetica integrada'
   );

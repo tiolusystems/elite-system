@@ -17,7 +17,7 @@ begin
   insert into auth.users(id) values (v_actor),(v_denied) on conflict (id) do nothing;
   insert into public.user_profiles(id,display_name,role,status) values
     (v_actor,'Commission Assignment Actor','admin','active'),
-    (v_denied,'Commission Assignment Denied','financeiro','active')
+    (v_denied,'Commission Assignment Denied','auditoria','active')
   on conflict (id) do update set status='active';
   insert into public.user_permission_overrides(user_id,action_key,allowed,updated_by) values
     (v_actor,'pedidos.commissions.assign',true,v_actor),

@@ -27,14 +27,21 @@ export function PackagingWorkbench({ data }: { data: PackagingOrdersData }) {
 
 function PackagingOrderCard({ order, mpLots }: { order: PackagingOrder; mpLots: PackagingOrdersData["mpLots"] }) {
   const canPrepare = ["emitida", "em_separacao"].includes(order.status);
+  const reservationsComplete = order.components.length > 0 && order.components.every(
+    (component) => component.reservedQuantity >= component.plannedQuantity
+  );
+  const reservedComponents = order.components.filter(
+    (component) => component.reservedQuantity >= component.plannedQuantity
+  ).length;
   return <article className="pcp-op-card packaging-order-card">
     <div className="pcp-op-header"><div><h3>{order.code}</h3><p>{order.productName} / {order.packageName}</p></div><div className="pcp-op-meta"><span className={`status-chip ${order.status}`}>{statusLabel(order.status)}</span><strong>{order.mapaOpCode}</strong></div></div>
-    <div className="tag-row"><span className="tag">PI {order.piLotCode}</span><span className="tag">{number(order.plannedVolume)} L</span><span className="tag">{number(order.plannedFinishedPackages)} unidade(s) PA</span><span className="tag">emitida por {order.issuerName}</span></div>
+    <div className="tag-row"><span className="tag">PI {order.piLotCode}</span><span className="tag">{number(order.plannedVolume)} L</span><span className="tag">{number(order.plannedFinishedPackages)} unidade(s) PA</span><span className="tag">embalagens: {reservedComponents} de {order.components.length} completas</span><span className="tag">emitida por {order.issuerName}</span></div>
     <section className="pcp-subsection"><div className="pcp-subsection-title"><strong>Embalagens previstas</strong><span>{order.components.length} componente(s)</span></div>{order.components.map((component) => <PackagingComponentRow key={component.id} component={component} mpLots={mpLots} canReserve={canPrepare} />)}</section>
     {order.outputs.length ? <section className="pcp-subsection"><div className="pcp-subsection-title"><strong>Lotes PA gerados</strong><span>{order.outputs.length}</span></div><div className="tag-row">{order.outputs.map((output) => <span className="tag" key={output.id}>{output.lotLabel}: {number(output.quantity)}</span>)}</div></section> : null}
     <div className="pcp-op-actions planning-actions">
       <Link className="secondary-button" href={`/producao/envase/${order.id}/imprimir`} target="_blank">Imprimir ordem</Link>
-      {canPrepare ? <form action={startPackagingAction}><input type="hidden" name="ordem_envase_id" value={order.id} /><button className="primary-button" type="submit">Iniciar envase</button></form> : null}
+      {canPrepare && !reservationsComplete ? <div className="workflow-callout neutral" role="status"><strong>Conclua a separação das embalagens</strong><span>Reserve integralmente cada componente antes de iniciar o envase.</span></div> : null}
+      {canPrepare && reservationsComplete ? <form action={startPackagingAction}><input type="hidden" name="ordem_envase_id" value={order.id} /><button className="primary-button" type="submit">Iniciar envase</button></form> : null}
     </div>
     {order.status === "em_processo" ? <FinishForm order={order} /> : null}
   </article>;

@@ -113,6 +113,10 @@ class PcpMapaPackagingOrderContractTests(unittest.TestCase):
         self.assertNotIn('"mapa_documental"', pcp_actions.split("const ALLOWED_OP_TYPES", 1)[1].split(";", 1)[0])
         self.assertIn("Lote PI liberado", workbench)
         self.assertIn("Lotes PA gerados", workbench)
+        self.assertIn("const reservationsComplete", workbench)
+        self.assertIn("component.reservedQuantity >= component.plannedQuantity", workbench)
+        self.assertIn("Conclua a separação das embalagens", workbench)
+        self.assertIn("canPrepare && reservationsComplete", workbench)
         self.assertIn("assinaturas dos operadores são físicas", printable)
         self.assertIn("Terminal:", printable)
 

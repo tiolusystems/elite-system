@@ -33,3 +33,10 @@ inscrição ou contato.
 - o PDF não mostra comissão, limite de crédito ou informações internas de
   auditoria;
 - a aprovação exibida vem do histórico de decisões do pedido.
+# Totais físicos do pedido
+
+Depois da liberação, o documento apresenta litros totais, quantidade de volumes
+logísticos e peso bruto total. Os valores são calculados a partir das
+apresentações cadastradas, da densidade de referência do produto, das unidades
+por volume e da tara vigente da embalagem. Quando algum desses dados estiver
+ausente, o sistema informa a pendência e não estima o total.

@@ -61,6 +61,12 @@ export default async function OrderContractPage({ params }: { params: Promise<{ 
           </table>
         </section>
 
+        <section className="order-contract-load-summary" aria-label="Resumo físico do pedido">
+          <Field label="Litros totais" value={metric(contract.totalVolumeLiters, "L")} />
+          <Field label="Volumes totais" value={metric(contract.totalLogisticVolumes, "volume(s)")} />
+          <Field label="Peso bruto total" value={metric(contract.totalGrossWeightKg, "kg")} />
+        </section>
+
         <section className="order-contract-approval">
           <Field label="Aprovado por" value={contract.approvedBy ?? "Aprovação gerencial registrada no sistema"} />
           <Field label="Data da aprovação" value={contract.approvedAt ? dateTime(contract.approvedAt) : "Registrada no histórico do pedido"} />
@@ -116,4 +122,5 @@ function date(value: string) { return new Intl.DateTimeFormat("pt-BR", { timeZon
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
 function number(value: number) { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value); }
 function money(value: number) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value); }
+function metric(value: number | null, unit: string) { return value === null ? "Pendente de cadastro logístico" : `${number(value)} ${unit}`; }
 function orderType(value: string) { return ({ venda: "Venda", bonificacao: "Bonificação", troca: "Troca", mostruario: "Mostruário" } as Record<string, string>)[value] ?? "Pedido comercial"; }

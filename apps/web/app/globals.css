@@ -6314,6 +6314,8 @@ h1 {
 .order-contract-products th:nth-child(2) { width: 25%; }
 .order-contract-products th:nth-child(n + 3), .order-contract-products td:nth-child(n + 3) { text-align: right; }
 .order-contract-total { font-weight: 800; text-transform: uppercase; }
+.order-contract-load-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 8px; border-top: 1px solid #7d8a90; border-left: 1px solid #7d8a90; }
+.order-contract-load-summary .order-contract-field { min-height: 39px; }
 .order-contract-approval { display: grid; grid-template-columns: 1fr 1fr; margin-top: 10px; border-top: 1px solid #7d8a90; border-left: 1px solid #7d8a90; }
 .order-contract-buyer { margin-top: 18px; }
 .order-contract-signature { display: grid; justify-items: center; margin: 34px 0 14px; font-size: 10px; }

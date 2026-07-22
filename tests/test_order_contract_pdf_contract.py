@@ -56,6 +56,16 @@ class OrderContractPdfContractTests(unittest.TestCase):
             self.assertNotIn(forbidden, self.page)
         self.assertIn("não inventa endereço", self.manual)
 
+    def test_document_has_derived_physical_totals(self) -> None:
+        for label in ("Litros totais", "Volumes totais", "Peso bruto total"):
+            self.assertIn(label, self.page)
+        self.assertIn("Pendente de cadastro logístico", self.page)
+        self.assertIn("unidades_por_volume_logistico", self.data)
+        self.assertIn("densidade_kg_l", self.data)
+        self.assertIn("cad_embalagem_configuracoes_atuais", self.data)
+        self.assertIn("peso_tara_kg", self.data)
+        self.assertIn("Math.ceil(quantity / unitsPerVolume)", self.data)
+
 
 if __name__ == "__main__":
     unittest.main()

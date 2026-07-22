@@ -60,6 +60,8 @@ Pedidos comerciais e aprovação gerencial:
 - Bonificação exige justificativa e, assim como Mostruário, não gera comissão;
 - Troca referencia pedido e item de origem dentro do escopo comercial;
 - impressão e PDF ficam disponíveis apenas depois da liberação;
+- o PDF liberado apresenta litros, volumes logísticos e peso bruto derivados
+  dos cadastros governados; dados físicos incompletos aparecem como pendência;
 - migration 0085 aprovada em instalação limpa e upgrade somente em ambientes
   descartáveis `elite-validation-*`, aplicada isoladamente no staging e
   validada com dados sintéticos integralmente revertidos;

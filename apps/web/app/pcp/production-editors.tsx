@@ -92,15 +92,28 @@ function FormulaComponentRow({ index, targets, initialComponent }: { index: numb
   );
 }
 
-export function OutputRows({ targets }: { targets: Pick<FormulaTargets, "produtos" | "produtoEmbalagens"> }) {
+export function OutputRows({
+  targets,
+  fixedProduct,
+  defaultQuantity
+}: {
+  targets: Pick<FormulaTargets, "produtos" | "produtoEmbalagens">;
+  fixedProduct?: { id: number; label: string };
+  defaultQuantity?: number | null;
+}) {
   return (
     <div className="pcp-output-editor" aria-label="Produtos gerados">
-      <OutputRow index={1} targets={targets} />
+      <OutputRow index={1} targets={targets} fixedProduct={fixedProduct} defaultQuantity={defaultQuantity} />
     </div>
   );
 }
 
-function OutputRow({ index, targets }: { index: number; targets: Pick<FormulaTargets, "produtos" | "produtoEmbalagens"> }) {
+function OutputRow({ index, targets, fixedProduct, defaultQuantity }: {
+  index: number;
+  targets: Pick<FormulaTargets, "produtos" | "produtoEmbalagens">;
+  fixedProduct?: { id: number; label: string };
+  defaultQuantity?: number | null;
+}) {
   return (
     <div className="pcp-output-row">
       <span className="pcp-row-index">{index}</span>
@@ -111,18 +124,21 @@ function OutputRow({ index, targets }: { index: number; targets: Pick<FormulaTar
       </label>
       <label className="wide-field">
         Produto gerado
-        <select name={`output_${index}_target_id`} defaultValue="" required>
-          <option value="">Selecione</option>
-          {targets.produtos.map((option) => (
-            <option key={`PI-${option.id}`} value={option.id}>
-              {productionOptionLabel(option)}
-            </option>
-          ))}
-        </select>
+        {fixedProduct ? (
+          <><input value={fixedProduct.label} readOnly /><input type="hidden" name={`output_${index}_target_id`} value={fixedProduct.id} /></>
+        ) : (
+          <select name={`output_${index}_target_id`} defaultValue="" required>
+            <option value="">Selecione</option>
+            {targets.produtos.map((option) => (
+              <option key={`PI-${option.id}`} value={option.id}>{productionOptionLabel(option)}</option>
+            ))}
+          </select>
+        )}
       </label>
       <label>
-        Quantidade
-        <input name={`output_${index}_quantidade`} inputMode="decimal" />
+        Quantidade do lote PI
+        <input value="Igual ao volume real do CQ" readOnly />
+        <input type="hidden" name={`output_${index}_quantidade`} value={defaultQuantity ?? 1} />
       </label>
       <label className="wide-field">
         Observação

@@ -177,6 +177,7 @@ export type PcpRecentOp = {
   codigoOp: string;
   formulaVersionId: number;
   formulaLabel: string;
+  produtoId: number;
   produtoLabel: string;
   tipoOp: string;
   status: string;
@@ -523,6 +524,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         codigoOp: String(row.codigo_op),
         formulaVersionId: Number(row.formula_versao_id),
         formulaLabel: formula ? `${formula.produtoLabel} / ${formula.tipoReceita} v${formula.versao}` : `formula ${row.formula_versao_id}`,
+        produtoId: formula?.produtoId ?? 0,
         produtoLabel: formula?.produtoLabel ?? "produto nao carregado",
         tipoOp: String(row.tipo_op),
         status: String(row.status),

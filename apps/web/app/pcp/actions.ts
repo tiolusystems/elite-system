@@ -234,7 +234,7 @@ export async function finishPcpOpAction(formData: FormData) {
   const formuladorIds = Array.from({ length: 3 }, (_, index) =>
     optionalInteger(formData, `formulador_${index + 1}_pessoa_id`)
   ).filter((value): value is number => value !== null);
-  const outputs = parseOutputs(formData);
+  const parsedOutputs = parseOutputs(formData);
 
   if (!opId || opId <= 0 || !separadorPessoaId || !conferentePessoaId || formuladorIds.length === 0) {
     redirect("/producao/qualidade?result=missing_finish_required#cq-pendente");
@@ -245,10 +245,10 @@ export async function finishPcpOpAction(formData: FormData) {
   if ([ph, densidade, volume, massa, temperatura].some((value) => value === null || !Number.isFinite(value))) {
     redirect("/producao/qualidade?result=missing_cq_numbers#cq-pendente");
   }
-  if (outputs.length === 0) {
+  if (parsedOutputs.length === 0) {
     redirect("/producao/qualidade?result=missing_outputs#cq-pendente");
   }
-  if (outputs.length !== 1) {
+  if (parsedOutputs.length !== 1) {
     redirect("/producao/qualidade?result=single_output_required#cq-pendente");
   }
 
@@ -270,6 +270,7 @@ export async function finishPcpOpAction(formData: FormData) {
     redirect("/producao/qualidade?result=invalid_participants#cq-pendente");
   }
   const correlationId = `pcp_op:${opId}:finish`;
+  const outputs = parsedOutputs.map((output) => ({ ...output, quantidade: volume }));
   const { error } = await auditedRpc(supabase, "finalizar_pcp_op", {
     p_conferente_mp: conferenteMp,
     p_cq_status: cqStatus,

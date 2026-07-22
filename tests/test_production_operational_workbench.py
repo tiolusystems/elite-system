@@ -93,6 +93,16 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn("<OutputRows", component)
         self.assertNotIn(".rpc(", component)
 
+    def test_quality_output_is_fixed_to_formula_product_and_real_volume(self) -> None:
+        component = QUALITY_COMPONENT.read_text(encoding="utf-8")
+        editor = (ROOT / "apps/web/app/pcp/production-editors.tsx").read_text(encoding="utf-8")
+        actions = PCP_ACTIONS.read_text(encoding="utf-8")
+        self.assertIn("fixedProduct={{ id: op.produtoId, label: op.produtoLabel }}", component)
+        self.assertIn("Igual ao volume real do CQ", editor)
+        self.assertIn("quantidade: volume", actions)
+        self.assertIn("opTypeLabel(op.tipoOp)", component)
+        self.assertIn("cqStatusLabel(op.cqStatus)", component)
+
     def test_stock_route_uses_derived_balances_and_audited_release(self) -> None:
         page = STOCK_PAGE.read_text(encoding="utf-8")
         component = STOCK_COMPONENT.read_text(encoding="utf-8")

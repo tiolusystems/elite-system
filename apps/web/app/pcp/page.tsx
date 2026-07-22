@@ -425,7 +425,7 @@ function OpCard({ op, lookups, availableLots }: { op: PcpRecentOp; lookups: PcpL
         ) : null}
       </div>
 
-      {canFinish ? <QualityFinishForm opId={op.id} lookups={lookups} /> : null}
+      {canFinish ? <QualityFinishForm op={op} lookups={lookups} /> : null}
       {op.status === "completed" && op.tipoOp !== "mapa_documental" ? (
         <form className="compact-action-form guarantee-calculate-form" action={calculateOpGuaranteesAction}>
           <input type="hidden" name="op_id" value={op.id} />

@@ -63,7 +63,7 @@ function QualityOrderCard({ op, lookups }: { op: PcpRecentOp; lookups: PcpLookup
         </div>
         <div className="pcp-op-meta">
           <span className="status-chip in_process">Em processo</span>
-          <strong>{op.tipoOp}</strong>
+          <strong>{opTypeLabel(op.tipoOp)}</strong>
         </div>
       </div>
       <div className="tag-row">
@@ -73,15 +73,15 @@ function QualityOrderCard({ op, lookups }: { op: PcpRecentOp; lookups: PcpLookup
         <span className="tag">reservado: {formatNumber(reserved)}</span>
         <span className="tag">iniciada: {shortDate(op.startedAt)}</span>
       </div>
-      <QualityFinishForm opId={op.id} lookups={lookups} />
+      <QualityFinishForm op={op} lookups={lookups} />
     </article>
   );
 }
 
-export function QualityFinishForm({ opId, lookups }: { opId: number; lookups: PcpLookups }) {
+export function QualityFinishForm({ op, lookups }: { op: PcpRecentOp; lookups: PcpLookups }) {
   return (
     <form className="pcp-finish-form" action={finishPcpOpAction}>
-      <input type="hidden" name="op_id" value={opId} />
+      <input type="hidden" name="op_id" value={op.id} />
       <div className="pcp-subsection-title">
         <strong>Dados de processo e CQ</strong>
         <span>baixa insumos e gera um lote na mesma transação</span>
@@ -155,7 +155,11 @@ export function QualityFinishForm({ opId, lookups }: { opId: number; lookups: Pc
           <input name="observacao_finalizacao" placeholder="Ocorrencias, desvios ou informacao complementar" />
         </label>
       </div>
-      <OutputRows targets={{ produtos: lookups.produtos, produtoEmbalagens: lookups.produtoEmbalagens }} />
+      <OutputRows
+        defaultQuantity={op.quantidadePlanejada}
+        fixedProduct={{ id: op.produtoId, label: op.produtoLabel }}
+        targets={{ produtos: lookups.produtos, produtoEmbalagens: lookups.produtoEmbalagens }}
+      />
       <div className="form-footer compact-footer">
         <span>A OP gera um único lote do produto da fórmula. O código do lote é automático e único.</span>
         <button className="primary-button" type="submit">Finalizar OP</button>
@@ -172,7 +176,7 @@ function CompletedQualityCard({ op }: { op: PcpRecentOp }) {
         <span>{op.produtoLabel} / {shortDate(op.completedAt)}</span>
       </div>
       <div className="module-card-meta">
-        <span className={`status-chip ${op.cqStatus ?? "completed"}`}>{op.cqStatus ?? "Finalizada"}</span>
+        <span className={`status-chip ${op.cqStatus ?? "completed"}`}>{cqStatusLabel(op.cqStatus)}</span>
         <strong>{op.outputs.length} lote(s)</strong>
       </div>
       <div className="tag-row">
@@ -210,4 +214,20 @@ function formatNumber(value: number): string {
 function shortDate(value: string | null): string {
   if (!value) return "-";
   return new Intl.DateTimeFormat("pt-BR").format(new Date(value));
+}
+
+function opTypeLabel(value: string): string {
+  return ({
+    estoque: "Produção para estoque",
+    experimental: "Experimental",
+    desenvolvimento: "Desenvolvimento",
+    reprocessamento: "Reprocessamento",
+    mapa_documental: "MAPA documental"
+  } as Record<string, string>)[value] ?? "Tipo não reconhecido";
+}
+
+function cqStatusLabel(value: string | null): string {
+  if (!value) return "Finalizada";
+  return ({ aprovado: "Aprovado", bloqueado: "Bloqueado", reprovado: "Reprovado" } as Record<string, string>)[value]
+    ?? "Situação não reconhecida";
 }

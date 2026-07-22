@@ -125,6 +125,10 @@ para romaneios.
 10. A finalização baixa PI e embalagens sem consumir novamente as MP produtivas.
 11. A Ordem de Envase gera os lotes PA vinculados à OP MAPA e disponíveis para romaneio.
 
+Na finalização da OP, o produto gerado é obrigatoriamente o produto da fórmula.
+O **Volume L** efetivamente informado no CQ define a quantidade do único lote PI;
+não existe uma segunda quantidade de saída para o operador preencher.
+
 ## Conteúdo da Ordem de Envase
 
 - OP MAPA de origem;

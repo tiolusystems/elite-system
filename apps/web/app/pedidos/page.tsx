@@ -72,6 +72,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
           <article key={order.id}>
             <div className="approval-summary"><div><strong>{order.code}</strong><span>{order.clientName} · {order.sellerName}</span></div><div><strong>{money(order.total)}</strong><span>Limite: {money(order.availableLimit)}</span></div></div>
             <form className="approval-decision" action={decidirPedidoGerencialAction}>
+              <input type="hidden" name="idempotency_key" value={randomUUID()} />
               <input type="hidden" name="pedido_id" value={order.id} /><label>Justificativa<input name="justificativa" minLength={10} required placeholder="Fundamente a decisão" /></label>
               <button name="decisao" value="liberado" className="primary-button">Liberar</button><button name="decisao" value="bloqueado" className="secondary-button">Reprovar</button>
             </form>

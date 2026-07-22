@@ -15,7 +15,14 @@ declare
   v_adjustment bigint;
   v_adjustment_retry bigint;
   v_credit_event bigint;
+  v_manager_decision bigint;
 begin
+  if has_function_privilege('authenticated', 'public.registrar_com_pedido_decisao_gerencial(bigint,text,text)', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.registrar_com_pedido_decisao_credito(bigint,text,text,numeric,numeric,text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.registrar_com_pedido_decisao_gerencial_idempotente(uuid,bigint,text,text)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.registrar_com_pedido_decisao_gerencial_idempotente(uuid,bigint,text,text)', 'EXECUTE') then
+    raise exception 'manager decision grants are broader than the idempotent contract';
+  end if;
   if has_function_privilege('authenticated', 'public.ajustar_com_limite_credito_cliente(bigint,numeric,text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.ajustar_com_limite_credito_cliente_idempotente(uuid,bigint,numeric,text)', 'EXECUTE')
      or not has_function_privilege('authenticated', 'public.ajustar_com_limite_credito_cliente_idempotente(uuid,bigint,numeric,text)', 'EXECUTE') then
@@ -68,9 +75,14 @@ begin
     'Limite sintetico aprovado no smoke integrado'
   ) <> v_credit_event then raise exception 'credit limit retry duplicated the event'; end if;
 
-  perform public.registrar_com_pedido_decisao_gerencial(
-    v_order, 'liberado', 'Limite e cadastro aprovados no smoke integrado'
+  v_manager_decision := public.registrar_com_pedido_decisao_gerencial_idempotente(
+    '89000000-0000-4000-8000-000000000011', v_order, 'liberado',
+    'Limite e cadastro aprovados no smoke integrado'
   );
+  if public.registrar_com_pedido_decisao_gerencial_idempotente(
+    '89000000-0000-4000-8000-000000000011', v_order, 'liberado',
+    'Limite e cadastro aprovados no smoke integrado'
+  ) <> v_manager_decision then raise exception 'manager decision retry duplicated the event'; end if;
   if (select status from public.com_pedidos where id = v_order) <> 'open' then
     raise exception 'manager approval did not open the order';
   end if;

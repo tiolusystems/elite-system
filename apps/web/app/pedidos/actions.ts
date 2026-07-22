@@ -8,7 +8,6 @@ import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ALLOWED_TIPO_PEDIDO = new Set(["venda", "bonificacao", "devolucao", "mostruario"]);
-const ALLOWED_DECISAO_CREDITO = new Set(["liberado", "bloqueado", "pendente_aprovacao"]);
 const ALLOWED_MOTIVO_TROCA = new Set(["qualidade", "avaria_transporte", "erro_separacao", "erro_comercial", "acordo_comercial", "outro"]);
 const DECIMAL_SEPARATOR = /,/g;
 
@@ -101,14 +100,16 @@ export async function criarPedidoVendedorAction(formData: FormData) {
 }
 
 export async function decidirPedidoGerencialAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const pedidoId = optionalInteger(formData, "pedido_id");
   const decisao = field(formData, "decisao");
   const justificativa = field(formData, "justificativa");
-  if (!pedidoId || !["liberado", "bloqueado"].includes(decisao) || justificativa.length < 10) {
+  if (!idempotencyKey || !pedidoId || !["liberado", "bloqueado"].includes(decisao) || justificativa.length < 10) {
     redirect("/pedidos?result=invalid_manager_decision#aprovacoes");
   }
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_gerencial", {
+  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_gerencial_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_decisao: decisao,
     p_justificativa: justificativa,
     p_pedido_id: pedidoId
@@ -226,64 +227,6 @@ export async function createPedidoRascunhoAction(formData: FormData) {
 
   revalidatePath("/pedidos");
   redirect("/pedidos?result=pedido_created#novo-pedido");
-}
-
-export async function registrarCreditoPedidoAction(formData: FormData) {
-  const runtime = getRuntimeStatus();
-  if (!runtime.supabaseConfigured) {
-    redirect("/pedidos?result=not_configured#credito-pedido");
-  }
-
-  const pedidoId = optionalInteger(formData, "pedido_id");
-  const decisao = field(formData, "decisao");
-  const motivo = optionalField(formData, "motivo");
-  const limiteDisponivelSnapshot = optionalNumber(formData, "limite_disponivel_snapshot");
-  const inadimplenciaSnapshot = optionalNumber(formData, "inadimplencia_snapshot");
-
-  if (!pedidoId || !decisao) {
-    redirect("/pedidos?result=missing_credit_required#credito-pedido");
-  }
-  if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#credito-pedido");
-  }
-  if (!ALLOWED_DECISAO_CREDITO.has(decisao)) {
-    redirect("/pedidos?result=invalid_credit_decision#credito-pedido");
-  }
-  if (decisao !== "liberado" && !motivo) {
-    redirect("/pedidos?result=missing_credit_reason#credito-pedido");
-  }
-  if (limiteDisponivelSnapshot !== null && (!Number.isFinite(limiteDisponivelSnapshot) || limiteDisponivelSnapshot < 0)) {
-    redirect("/pedidos?result=invalid_non_negative_number#credito-pedido");
-  }
-  if (inadimplenciaSnapshot !== null && (!Number.isFinite(inadimplenciaSnapshot) || inadimplenciaSnapshot < 0)) {
-    redirect("/pedidos?result=invalid_non_negative_number#credito-pedido");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_credito", {
-    p_decisao: decisao,
-    p_inadimplencia_snapshot: inadimplenciaSnapshot,
-    p_limite_disponivel_snapshot: limiteDisponivelSnapshot,
-    p_motivo: motivo,
-    p_observacao: optionalField(formData, "observacao_credito"),
-    p_pedido_id: pedidoId
-  }, {
-    metadata: {
-      action_key: "pedidos.credit.review",
-      axis: "status_transition",
-      domain: "pedidos",
-      entity: "com_pedido_credito_decisoes",
-      entity_id: String(pedidoId),
-      failure_action: "pedidos.credit_review_failed"
-    }
-  });
-
-  if (error) {
-    redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#credito-pedido`);
-  }
-
-  revalidatePath("/pedidos");
-  redirect("/pedidos?result=credit_decision_registered#credito-pedido");
 }
 
 export async function criarTrocaPedidoAction(formData: FormData) {

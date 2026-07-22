@@ -24,6 +24,21 @@ class ReportsFamilyFilterContractTests(unittest.TestCase):
         self.assertIn("validityRows.slice", source)
         self.assertIn("reprocessamentoRows.slice", source)
 
+    def test_date_query_preserves_family_and_hides_unrelated_pa_position(self) -> None:
+        source = REPORTS_PAGE.read_text(encoding="utf-8")
+
+        self.assertIn('family !== "TODOS" ? <input type="hidden" name="familia"', source)
+        self.assertIn('family === "TODOS" || family === "PA"', source)
+        self.assertIn('family === "PI"', source)
+        self.assertIn("A posição retroativa por data ainda não faz parte do contrato histórico de PI.", source)
+
+    def test_internal_statuses_are_translated(self) -> None:
+        source = REPORTS_PAGE.read_text(encoding="utf-8")
+
+        self.assertIn("catalogStatusLabel(item.status)", source)
+        self.assertIn("priorityLabel(row.prioridadeReprocessamento)", source)
+        self.assertIn("stockStatusLabel(row.status)", source)
+
 
 if __name__ == "__main__":
     unittest.main()

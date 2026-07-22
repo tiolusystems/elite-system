@@ -100,15 +100,24 @@ export default async function RelatoriosPage({ searchParams }: ReportsPageProps)
           </section>
         ) : null}
 
-        <section className="panel" aria-labelledby="posicao-pa-title">
+        {family === "TODOS" || family === "PA" ? <section className="panel" aria-labelledby="posicao-pa-title">
           <div className="panel-header">
-            <div><h2 id="posicao-pa-title">Posição de estoque PA</h2><p className="muted">Saldo físico, empenhado em romaneio e disponível no fim da data.</p></div>
-            <form method="get"><label>Data de corte <input type="date" name="data" defaultValue={dataCorte} /></label><button className="secondary-button" type="submit">Consultar</button></form>
+            <div><h2 id="posicao-pa-title">Posição histórica de estoque PA</h2><p className="muted">Saldo físico, empenhado em romaneio e disponível no fim da data.</p></div>
+            <form method="get">
+              {family !== "TODOS" ? <input type="hidden" name="familia" value={family} /> : null}
+              <label>Data de corte <input type="date" name="data" defaultValue={dataCorte} /></label>
+              <button className="secondary-button" type="submit">Consultar</button>
+            </form>
           </div>
           {dashboard.paStockPositionRows.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Lote</th><th>Físico</th><th>Empenhado</th><th>Disponível</th><th>Litros físicos</th><th>Volumes físicos</th><th>Litros empenhados</th><th>Volumes empenhados</th></tr></thead><tbody>
             {dashboard.paStockPositionRows.map((row) => <tr key={row.lotePaId}><td>{row.codigoLote}</td><td>{numberOrDash(row.saldoFisico)}</td><td>{numberOrDash(row.saldoEmpenhado)}</td><td>{numberOrDash(row.saldoDisponivel)}</td><td>{numberOrDash(row.litrosFisicos)}</td><td>{row.volumesFisicos === null ? "Pendente" : numberOrDash(row.volumesFisicos)}</td><td>{numberOrDash(row.litrosEmpenhados)}</td><td>{row.volumesEmpenhados === null ? "Pendente" : numberOrDash(row.volumesEmpenhados)}</td></tr>)}
           </tbody></table></div> : <EmptyState title="Sem posição PA" detail="Lotes e empenhos aparecerão após a movimentação de teste." />}
-        </section>
+        </section> : null}
+
+        {family === "PI" ? <section className="notice-panel" role="status">
+          <strong>Posição corrente de PI</strong>
+          <span>Os saldos de produto intermediário estão na tabela por vencimento abaixo. A posição retroativa por data ainda não faz parte do contrato histórico de PI.</span>
+        </section> : null}
 
         <section className="dashboard-grid">
           <section className="panel" id="catalogo" aria-labelledby="catalogo-title">
@@ -127,7 +136,7 @@ export default async function RelatoriosPage({ searchParams }: ReportsPageProps)
                     <p>{item.descricao}</p>
                     <div className="tag-row">
                       <span className="tag">{item.modulo}</span>
-                      <span className={`status-chip ${item.status}`}>{item.status}</span>
+                      <span className={`status-chip ${item.status}`}>{catalogStatusLabel(item.status)}</span>
                       <span className="tag">{item.fontePrincipal}</span>
                     </div>
                   </article>
@@ -206,6 +215,21 @@ function familyLabel(family: LotFamilyFilter): string {
   return family === "TODOS" ? "todas as famílias" : family;
 }
 
+function catalogStatusLabel(value: string): string {
+  return ({ ativo: "Ativo", inativo: "Inativo", rascunho: "Rascunho" } as Record<string, string>)[value]
+    ?? "Situação não reconhecida";
+}
+
+function stockStatusLabel(value: string): string {
+  return ({ disponivel: "Disponível", bloqueado: "Bloqueado", esgotado: "Esgotado", cancelado: "Cancelado" } as Record<string, string>)[value]
+    ?? "Situação não reconhecida";
+}
+
+function priorityLabel(value: string): string {
+  return ({ alta: "Alta", media: "Média", baixa: "Baixa" } as Record<string, string>)[value]
+    ?? "Não classificada";
+}
+
 function ReprocessamentoItem({ row }: { row: ReprocessamentoRow }) {
   return (
     <article className="queue-row">
@@ -218,8 +242,8 @@ function ReprocessamentoItem({ row }: { row: ReprocessamentoRow }) {
           {row.nomeCadastro} - {numberOrDash(row.saldoDisponivel)} disponivel - {statusLabel(row.statusVencimento)}
         </p>
         <div className="tag-row">
-          <span className={`status-chip ${row.prioridadeReprocessamento}`}>{row.prioridadeReprocessamento}</span>
-          <span className="tag">{row.status}</span>
+          <span className={`status-chip ${row.prioridadeReprocessamento}`}>{priorityLabel(row.prioridadeReprocessamento)}</span>
+          <span className="tag">{stockStatusLabel(row.status)}</span>
           <span className="tag">{dateOrDash(row.dataValidade)}</span>
         </div>
       </div>

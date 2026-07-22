@@ -166,7 +166,7 @@ begin
     codigo_produto, nome, nome_norm, status, payload_origem_json,
     created_by, updated_by, origem_dados
   ) values (
-    'DEC007-PROD', 'DEC-007 fixture product', 'dec-007 fixture product',
+    '7007', 'DEC-007 fixture product', 'dec-007 fixture product',
     'active', '{}'::jsonb, v_human_actor, v_human_actor, 'sistema'
   ) returning id into v_product_id;
 

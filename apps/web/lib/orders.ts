@@ -121,6 +121,41 @@ export type ApprovalOrder = {
 
 export type SalesItem = { id: number; label: string };
 
+export type OrderContractItem = {
+  id: number;
+  product: string;
+  packaging: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+export type OrderContract = {
+  id: number;
+  code: string;
+  status: string;
+  type: string;
+  orderDate: string;
+  deliveryDate: string | null;
+  paymentTerms: string | null;
+  observation: string | null;
+  total: number;
+  client: {
+    name: string;
+    city: string;
+    state: string;
+    propertyName: string | null;
+    propertyCity: string | null;
+    propertyState: string | null;
+    documents: Array<{ type: string; number: string }>;
+    contacts: Array<{ name: string; role: string; phone: string | null; email: string | null }>;
+  };
+  sellerName: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  items: OrderContractItem[];
+};
+
 export async function getOrderWorkspace(search: string | null) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
@@ -166,6 +201,86 @@ export async function getOrderWorkspace(search: string | null) {
   } catch {
     return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], error: "Não foi possível carregar Pedidos agora." };
   }
+}
+
+export async function getOrderContract(orderId: number): Promise<OrderContract | null> {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured || !Number.isInteger(orderId) || orderId <= 0) return null;
+
+  const supabase = await createSupabaseServerClient();
+  const orderResult = await supabase
+    .from("com_pedidos")
+    .select("id,codigo_pedido,cliente_id,propriedade_id,vendedor_gerador_id,tipo_pedido,status,data_pedido,previsao_entrega,condicao_pagamento,valor_total,observacao")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (orderResult.error || !orderResult.data || !["open", "fulfilled"].includes(String(orderResult.data.status))) return null;
+
+  const order = orderResult.data as Record<string, unknown>;
+  const clientId = Number(order.cliente_id);
+  const propertyId = nullableNumber(order.propriedade_id);
+  const sellerId = nullableNumber(order.vendedor_gerador_id);
+  const [clientResult, propertyResult, documentsResult, contactsResult, sellerResult, itemsResult, approvalResult] = await Promise.all([
+    supabase.from("cad_clientes").select("id,nome,cidade,uf").eq("id", clientId).maybeSingle(),
+    propertyId
+      ? supabase.from("cad_cliente_propriedades").select("id,nome,cidade,uf").eq("id", propertyId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from("cad_cliente_documentos").select("tipo,numero").eq("cliente_id", clientId).order("id"),
+    supabase.from("cad_cliente_contatos").select("nome,papel,telefone,email").eq("cliente_id", clientId).eq("status", "active").order("id"),
+    sellerId
+      ? supabase.from("cad_pessoas_comerciais").select("nome").eq("id", sellerId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from("com_pedido_itens")
+      .select("id,quantidade,valor_unitario,valor_total,status,cad_produto_embalagens(codigo_item,cad_produtos_base(nome),cad_embalagens(descricao,volume_litros,unidade))")
+      .eq("pedido_id", orderId).eq("status", "active").order("id"),
+    supabase.from("com_pedido_credito_decisoes")
+      .select("created_at,created_by").eq("pedido_id", orderId).eq("decisao", "liberado").order("created_at", { ascending: false }).limit(1).maybeSingle()
+  ]);
+  if (clientResult.error || !clientResult.data || itemsResult.error) return null;
+
+  const approvalActorId = approvalResult.data?.created_by ? String(approvalResult.data.created_by) : null;
+  const approvalActor = approvalActorId
+    ? await supabase.from("user_profiles").select("display_name").eq("id", approvalActorId).maybeSingle()
+    : { data: null };
+
+  return {
+    id: Number(order.id),
+    code: String(order.codigo_pedido),
+    status: String(order.status),
+    type: String(order.tipo_pedido),
+    orderDate: String(order.data_pedido),
+    deliveryDate: nullableString(order.previsao_entrega),
+    paymentTerms: nullableString(order.condicao_pagamento),
+    observation: nullableString(order.observacao),
+    total: Number(order.valor_total ?? 0),
+    client: {
+      name: String(clientResult.data.nome),
+      city: String(clientResult.data.cidade),
+      state: String(clientResult.data.uf),
+      propertyName: propertyResult.data?.nome ? String(propertyResult.data.nome) : null,
+      propertyCity: propertyResult.data?.cidade ? String(propertyResult.data.cidade) : null,
+      propertyState: propertyResult.data?.uf ? String(propertyResult.data.uf) : null,
+      documents: ((documentsResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({ type: String(row.tipo), number: String(row.numero) })),
+      contacts: ((contactsResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        name: String(row.nome), role: String(row.papel), phone: nullableString(row.telefone), email: nullableString(row.email)
+      }))
+    },
+    sellerName: sellerResult.data?.nome ? String(sellerResult.data.nome) : null,
+    approvedAt: approvalResult.data?.created_at ? String(approvalResult.data.created_at) : null,
+    approvedBy: approvalActor.data?.display_name ? String(approvalActor.data.display_name) : null,
+    items: ((itemsResult.data ?? []) as Array<Record<string, unknown>>).map((row) => {
+      const presentation = firstNested(row.cad_produto_embalagens);
+      const product = firstNested(presentation?.cad_produtos_base);
+      const packaging = firstNested(presentation?.cad_embalagens);
+      return {
+        id: Number(row.id),
+        product: String(product?.nome ?? presentation?.codigo_item ?? "Produto"),
+        packaging: packagingLabel(packaging),
+        quantity: Number(row.quantidade ?? 0),
+        unitPrice: Number(row.valor_unitario ?? 0),
+        total: Number(row.valor_total ?? 0)
+      };
+    })
+  };
 }
 
 const EMPTY_LOOKUPS: OrderLookups = {
@@ -428,6 +543,19 @@ function firstNested(value: unknown): Record<string, unknown> | null {
 
 function nullableNumber(value: unknown): number | null {
   return value === null || value === undefined ? null : Number(value);
+}
+
+function nullableString(value: unknown): string | null {
+  return value === null || value === undefined || String(value).trim() === "" ? null : String(value);
+}
+
+function packagingLabel(packaging: Record<string, unknown> | null): string {
+  if (!packaging) return "Embalagem não informada";
+  const description = nullableString(packaging.descricao) ?? "Embalagem";
+  const volume = nullableNumber(packaging.volume_litros);
+  const unit = nullableString(packaging.unidade);
+  const capacity = volume === null ? null : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(volume)} L`;
+  return [description, capacity, unit].filter(Boolean).join(" - ");
 }
 
 function emptyDashboard(source: OrdersDashboard["source"], error: string | null): OrdersDashboard {

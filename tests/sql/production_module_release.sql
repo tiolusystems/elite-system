@@ -278,10 +278,9 @@ begin
     from public.pcp_op_garantia_resultados result
    where result.op_id = v_op_id
      and result.calculo_versao = v_calculo_1
-     and result.nutriente = 'N'
-     and result.unidade = '%';
+     and result.garantia_produto_id = v_garantia_produto_1;
 
-  if v_valor <> 10 or v_status <> 'atende' then
+  if v_valor is distinct from 10 or v_status is distinct from 'atende' then
     raise exception 'physical guarantee calculation mismatch: value %, status %', v_valor, v_status;
   end if;
 
@@ -290,18 +289,12 @@ begin
       from public.pcp_op_garantia_resultados result
      where result.op_id = v_op_id
        and result.calculo_versao = v_calculo_1
+       and result.garantia_produto_id = v_garantia_produto_1
        and result.base_calculo_json ->> 'metodo' = 'balanco_fisico_v1'
        and jsonb_array_length(result.base_calculo_json -> 'inputs') = 1
        and nullif(result.base_calculo_json #>> '{inputs,0,garantia_lote_id}', '') is not null
   ) then
-    raise exception 'physical guarantee calculation evidence is incomplete: %',
-      (select result.base_calculo_json
-         from public.pcp_op_garantia_resultados result
-        where result.op_id = v_op_id
-          and result.calculo_versao = v_calculo_1
-          and result.nutriente = 'N'
-        order by result.id
-        limit 1);
+    raise exception 'physical guarantee calculation evidence is incomplete';
   end if;
 
   v_garantia_produto_2 := public.registrar_pcp_garantia_produto(
@@ -331,10 +324,11 @@ begin
     from public.pcp_op_garantia_resultados result
    where result.op_id = v_op_id
      and result.calculo_versao = v_calculo_2
-     and result.nutriente = 'N'
-     and result.unidade = '%';
+     and result.garantia_produto_id = v_garantia_produto_2;
 
-  if v_calculo_2 <> v_calculo_1 + 1 or v_valor <> 10 or v_status <> 'nao_atende' then
+  if v_calculo_2 is distinct from v_calculo_1 + 1
+     or v_valor is distinct from 10
+     or v_status is distinct from 'nao_atende' then
     raise exception 'versioned guarantee recalculation mismatch';
   end if;
   if not exists (

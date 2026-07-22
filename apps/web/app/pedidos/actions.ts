@@ -133,8 +133,9 @@ export async function ajustarLimiteCreditoAction(formData: FormData) {
   const clienteId = optionalInteger(formData, "cliente_id");
   const limiteNovo = optionalNumber(formData, "limite_novo");
   const justificativa = field(formData, "justificativa_limite");
+  const target = creditAdjustmentTarget(formData, clienteId);
   if (!idempotencyKey || !clienteId || limiteNovo === null || limiteNovo < 0 || justificativa.length < 10) {
-    redirect("/pedidos?result=invalid_credit_limit#aprovacoes");
+    redirectCreditAdjustment(target, "invalid_credit_limit");
   }
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "ajustar_com_limite_credito_cliente_idempotente", {
@@ -152,9 +153,25 @@ export async function ajustarLimiteCreditoAction(formData: FormData) {
       failure_action: "pedidos.credit_limit_adjust_failed"
     }
   });
-  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#aprovacoes`);
+  if (error) redirectCreditAdjustment(target, mapSupabaseError(error.message));
   revalidatePath("/pedidos");
-  redirect("/pedidos?result=credit_limit_adjusted#aprovacoes");
+  revalidatePath("/cadastros");
+  redirectCreditAdjustment(target, "credit_limit_adjusted");
+}
+
+function creditAdjustmentTarget(formData: FormData, clienteId: number | null): { path: string; hash: string } {
+  const requestedPath = field(formData, "return_to");
+  const clientPath = clienteId
+    ? `/cadastros?grupo=clientes&cliente=${clienteId}&secao=credito`
+    : null;
+  return clientPath && requestedPath === clientPath
+    ? { path: clientPath, hash: "#credito-cliente" }
+    : { path: "/pedidos", hash: "#aprovacoes" };
+}
+
+function redirectCreditAdjustment(target: { path: string; hash: string }, result: string): never {
+  const separator = target.path.includes("?") ? "&" : "?";
+  redirect(`${target.path}${separator}result=${encodeURIComponent(result)}${target.hash}`);
 }
 
 export async function createPedidoRascunhoAction(formData: FormData) {

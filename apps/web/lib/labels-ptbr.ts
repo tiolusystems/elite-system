@@ -27,7 +27,20 @@ const INTERNAL_VALUE_LABELS: Record<string, string> = {
   failed: "Falhou",
   success: "Concluido",
   ignored: "Ignorado",
-  matched: "Conciliado"
+  matched: "Conciliado",
+  liberado: "Liberado",
+  reduzido: "Reduzido",
+  bloqueado: "Bloqueado",
+  pendente_aprovacao: "Pendente de aprovacao",
+  ativa: "Ativa",
+  inativa: "Inativa",
+  suspensa: "Suspensa",
+  baixada: "Baixada",
+  nao_verificada: "Nao verificada",
+  aumento: "Aumento",
+  reducao: "Reducao",
+  bloqueio: "Bloqueio",
+  liberacao: "Liberacao"
 };
 
 export function internalValueLabel(value: string | null | undefined): string {

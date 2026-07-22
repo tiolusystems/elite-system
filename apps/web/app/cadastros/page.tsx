@@ -163,6 +163,8 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             clientes={dashboard.clientes}
             contatos={dashboard.clienteContatos}
             creditos={dashboard.clienteCreditos}
+            creditoEventos={dashboard.clienteCreditoEventos}
+            creditoGravacaoDisponivel={dashboard.creditoGravacaoDisponivel}
             documentos={dashboard.clienteDocumentos}
             enderecos={dashboard.clienteEnderecos}
             estabelecimentos={dashboard.clienteEstabelecimentos}
@@ -300,6 +302,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "ok",
       title: "Cliente desativado",
       detail: "O cadastro foi preservado para consulta e não poderá ser usado em novas operações."
+    },
+    credit_limit_adjusted: {
+      kind: "ok",
+      title: "Limite de crédito atualizado",
+      detail: "O novo limite e a justificativa foram registrados no histórico financeiro auditado."
+    },
+    invalid_credit_limit: {
+      kind: "warning",
+      title: "Limite de crédito inválido",
+      detail: "Informe um valor não negativo e uma justificativa com pelo menos dez caracteres."
     },
     pessoa_created: {
       kind: "ok",

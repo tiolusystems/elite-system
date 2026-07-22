@@ -66,6 +66,7 @@ export type MasterDataProperty = {
 export type MasterDataClientDocument = { id: number; clienteId: number; propriedadeId: number | null; tipo: string; numero: string };
 export type MasterDataClientContact = { id: number; clienteId: number; propriedadeId: number | null; nome: string; papel: string; telefone: string | null; email: string | null; status: string };
 export type MasterDataClientCredit = { id: number; clienteId: number; limiteManual: number | null; limiteCalculado: number | null; limiteDisponivel: number; statusCredito: string; motivo: string | null; updatedAt: string };
+export type MasterDataClientCreditEvent = { id: number; clienteId: number; tipoEvento: string; limiteAnterior: number | null; limiteNovo: number; statusAnterior: string | null; statusNovo: string; justificativa: string; createdAt: string };
 export type MasterDataClientIdentification = { id: number; clienteId: number; tipoPessoa: string; razaoSocial: string | null; nomeFantasia: string | null; situacaoCadastral: string; dataAbertura: string | null; cnaePrincipal: string | null; regimeTributario: string | null; condicaoContribuinte: string | null; fonteInformacao: string; dataConsulta: string | null; updatedAt: string };
 export type MasterDataClientEstablishment = { id: number; clienteId: number; nome: string; tipo: string; status: string };
 export type MasterDataClientAddress = { id: number; clienteId: number; estabelecimentoId: number | null; propriedadeId: number | null; tipo: string; cep: string | null; logradouro: string; numero: string | null; complemento: string | null; bairro: string | null; cidade: string; uf: string; status: string };
@@ -124,6 +125,7 @@ export type MasterDataDashboard = {
   clienteDocumentos: MasterDataClientDocument[];
   clienteContatos: MasterDataClientContact[];
   clienteCreditos: MasterDataClientCredit[];
+  clienteCreditoEventos: MasterDataClientCreditEvent[];
   clienteIdentificacoes: MasterDataClientIdentification[];
   clienteEstabelecimentos: MasterDataClientEstablishment[];
   clienteEnderecos: MasterDataClientAddress[];
@@ -132,6 +134,7 @@ export type MasterDataDashboard = {
   pessoaPapeis: MasterDataPersonRole[];
   areasComerciais: MasterDataCommercialArea[];
   pessoaAreas: MasterDataPersonArea[];
+  creditoGravacaoDisponivel: boolean;
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -226,7 +229,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [metrics, validationResult, lookups, clientData, peopleData] = await Promise.all([
+    const [metrics, validationResult, lookups, clientData, peopleData, creditPermission] = await Promise.all([
       Promise.all(
         MASTER_DATA_MODULES.map(async (module) => {
           const { count, error } = await supabase.from(module.table).select("*", { count: "exact", head: true });
@@ -246,7 +249,8 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
         .limit(8),
       getMasterDataLookups(supabase),
       getClientMasterData(supabase),
-      getPeopleMasterData(supabase)
+      getPeopleMasterData(supabase),
+      supabase.rpc("can_current_user", { p_action_key: "pedidos.credit.limit.adjust" })
     ]);
 
     return {
@@ -259,6 +263,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       clienteDocumentos: clientData.clienteDocumentos,
       clienteContatos: clientData.clienteContatos,
       clienteCreditos: clientData.clienteCreditos,
+      clienteCreditoEventos: clientData.clienteCreditoEventos,
       clienteIdentificacoes: clientData.clienteIdentificacoes,
       clienteEstabelecimentos: clientData.clienteEstabelecimentos,
       clienteEnderecos: clientData.clienteEnderecos,
@@ -267,6 +272,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       pessoaPapeis: peopleData.pessoaPapeis,
       areasComerciais: peopleData.areasComerciais,
       pessoaAreas: peopleData.pessoaAreas,
+      creditoGravacaoDisponivel: !creditPermission.error && creditPermission.data === true,
       source: "supabase",
       error: validationResult.error?.message ?? null
     };
@@ -345,8 +351,8 @@ async function getPeopleMasterData(
 
 async function getClientMasterData(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
-): Promise<Pick<MasterDataDashboard, "clientes" | "propriedades" | "clienteVendedores" | "clienteDocumentos" | "clienteContatos" | "clienteCreditos" | "clienteIdentificacoes" | "clienteEstabelecimentos" | "clienteEnderecos">> {
-  const [clientsResult, propertiesResult, sellersResult, documentsResult, contactsResult, creditsResult, identificationsResult, establishmentsResult, addressesResult] = await Promise.all([
+): Promise<Pick<MasterDataDashboard, "clientes" | "propriedades" | "clienteVendedores" | "clienteDocumentos" | "clienteContatos" | "clienteCreditos" | "clienteCreditoEventos" | "clienteIdentificacoes" | "clienteEstabelecimentos" | "clienteEnderecos">> {
+  const [clientsResult, propertiesResult, sellersResult, documentsResult, contactsResult, creditsResult, creditEventsResult, identificationsResult, establishmentsResult, addressesResult] = await Promise.all([
     supabase
       .from("cad_clientes")
       .select("id,codigo_legado,nome,cidade,uf,status,apelidos_json,valor_total_compras")
@@ -365,6 +371,7 @@ async function getClientMasterData(
     supabase.from("cad_cliente_documentos").select("id,cliente_id,propriedade_id,tipo,numero").order("id", { ascending: false }).limit(1000),
     supabase.from("cad_cliente_contatos").select("id,cliente_id,propriedade_id,nome,papel,telefone,email,status").order("id", { ascending: false }).limit(1000),
     supabase.from("cad_limites_credito_cliente").select("id,cliente_id,limite_manual,limite_calculado,limite_disponivel,status_credito,motivo,updated_at").order("updated_at", { ascending: false }).limit(1000),
+    supabase.from("cad_limite_credito_eventos").select("id,cliente_id,tipo_evento,limite_anterior,limite_novo,status_anterior,status_novo,justificativa,created_at").order("created_at", { ascending: false }).limit(1000),
     supabase.from("cad_cliente_identificacoes").select("id,cliente_id,tipo_pessoa,razao_social,nome_fantasia,situacao_cadastral,data_abertura,cnae_principal,regime_tributario,condicao_contribuinte,fonte_informacao,data_consulta,updated_at").limit(500),
     supabase.from("cad_cliente_estabelecimentos").select("id,cliente_id,nome,tipo,status").order("nome").limit(1000),
     supabase.from("cad_cliente_enderecos").select("id,cliente_id,estabelecimento_id,propriedade_id,tipo,cep,logradouro,numero,complemento,bairro,cidade,uf,status").order("id", { ascending: false }).limit(1500)
@@ -410,6 +417,7 @@ async function getClientMasterData(
     clienteDocumentos: documentsResult.error ? [] : (documentsResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), propriedadeId: item.propriedade_id === null ? null : Number(item.propriedade_id), tipo: item.tipo, numero: item.numero })),
     clienteContatos: contactsResult.error ? [] : (contactsResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), propriedadeId: item.propriedade_id === null ? null : Number(item.propriedade_id), nome: item.nome, papel: item.papel, telefone: item.telefone, email: item.email, status: item.status })),
     clienteCreditos: creditsResult.error ? [] : (creditsResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), limiteManual: item.limite_manual === null ? null : Number(item.limite_manual), limiteCalculado: item.limite_calculado === null ? null : Number(item.limite_calculado), limiteDisponivel: Number(item.limite_disponivel), statusCredito: item.status_credito, motivo: item.motivo, updatedAt: item.updated_at })),
+    clienteCreditoEventos: creditEventsResult.error ? [] : (creditEventsResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), tipoEvento: item.tipo_evento, limiteAnterior: item.limite_anterior === null ? null : Number(item.limite_anterior), limiteNovo: Number(item.limite_novo), statusAnterior: item.status_anterior, statusNovo: item.status_novo, justificativa: item.justificativa, createdAt: item.created_at })),
     clienteIdentificacoes: identificationsResult.error ? [] : (identificationsResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), tipoPessoa: item.tipo_pessoa, razaoSocial: item.razao_social, nomeFantasia: item.nome_fantasia, situacaoCadastral: item.situacao_cadastral, dataAbertura: item.data_abertura, cnaePrincipal: item.cnae_principal, regimeTributario: item.regime_tributario, condicaoContribuinte: item.condicao_contribuinte, fonteInformacao: item.fonte_informacao, dataConsulta: item.data_consulta, updatedAt: item.updated_at })),
     clienteEstabelecimentos: establishmentsResult.error ? [] : (establishmentsResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), nome: item.nome, tipo: item.tipo, status: item.status })),
     clienteEnderecos: addressesResult.error ? [] : (addressesResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), estabelecimentoId: item.estabelecimento_id === null ? null : Number(item.estabelecimento_id), propriedadeId: item.propriedade_id === null ? null : Number(item.propriedade_id), tipo: item.tipo, cep: item.cep, logradouro: item.logradouro, numero: item.numero, complemento: item.complemento, bairro: item.bairro, cidade: item.cidade, uf: item.uf, status: item.status }))
@@ -494,6 +502,7 @@ function emptyDashboard(source: MasterDataDashboard["source"], error: string | n
     clienteDocumentos: [],
     clienteContatos: [],
     clienteCreditos: [],
+    clienteCreditoEventos: [],
     clienteIdentificacoes: [],
     clienteEstabelecimentos: [],
     clienteEnderecos: [],
@@ -502,6 +511,7 @@ function emptyDashboard(source: MasterDataDashboard["source"], error: string | n
     pessoaPapeis: [],
     areasComerciais: [],
     pessoaAreas: [],
+    creditoGravacaoDisponivel: false,
     source,
     error
   };

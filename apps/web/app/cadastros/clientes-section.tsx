@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import Link from "next/link";
 
 import {
@@ -11,6 +13,8 @@ import {
   updateClienteAction,
   upsertClienteIdentificationAction,
 } from "@/app/cadastros/actions";
+import { ajustarLimiteCreditoAction } from "@/app/pedidos/actions";
+import { internalValueLabel } from "@/lib/labels-ptbr";
 import {
   UF_OPTIONS,
   cadastroStatusLabel,
@@ -23,6 +27,7 @@ import type {
   MasterDataClientAddress,
   MasterDataClientContact,
   MasterDataClientCredit,
+  MasterDataClientCreditEvent,
   MasterDataClientDocument,
   MasterDataClientEstablishment,
   MasterDataClientIdentification,
@@ -52,6 +57,8 @@ type Props = {
   documentos: MasterDataClientDocument[];
   contatos: MasterDataClientContact[];
   creditos: MasterDataClientCredit[];
+  creditoEventos: MasterDataClientCreditEvent[];
+  creditoGravacaoDisponivel: boolean;
   identificacoes: MasterDataClientIdentification[];
   estabelecimentos: MasterDataClientEstablishment[];
   enderecos: MasterDataClientAddress[];
@@ -63,19 +70,36 @@ type Props = {
 };
 
 export function ClientesSection(props: Props) {
-  const consulta = props.busca.trim().toLocaleLowerCase("pt-BR");
+  const consulta = normalizeSearch(props.busca);
   const clientesFiltrados = props.clientes.filter(
-    (cliente) =>
-      !consulta ||
-      [
+    (cliente) => {
+      const relatedValues = [
         cliente.nome,
         cliente.codigoLegado,
         cliente.cidade,
         cliente.uf,
         ...cliente.apelidos,
-      ]
-        .filter(Boolean)
-        .some((value) => value!.toLocaleLowerCase("pt-BR").includes(consulta)),
+        ...props.propriedades
+          .filter((item) => item.clienteId === cliente.id)
+          .flatMap((item) => [item.nome, item.cnpj, item.cidade, item.uf]),
+        ...props.documentos
+          .filter((item) => item.clienteId === cliente.id)
+          .flatMap((item) => [item.tipo, item.numero]),
+        ...props.contatos
+          .filter((item) => item.clienteId === cliente.id)
+          .flatMap((item) => [item.nome, item.papel, item.telefone, item.email]),
+        ...props.identificacoes
+          .filter((item) => item.clienteId === cliente.id)
+          .flatMap((item) => [item.razaoSocial, item.nomeFantasia, item.cnaePrincipal]),
+        ...props.estabelecimentos
+          .filter((item) => item.clienteId === cliente.id)
+          .flatMap((item) => [item.nome, item.tipo]),
+        ...props.enderecos
+          .filter((item) => item.clienteId === cliente.id)
+          .flatMap((item) => [item.cep, item.logradouro, item.numero, item.complemento, item.bairro, item.cidade, item.uf]),
+      ];
+      return !consulta || relatedValues.some((value) => matchesSearch(consulta, value));
+    },
   );
   const cliente = props.modoNovo
     ? null
@@ -164,6 +188,7 @@ function ClientDetail(
   const estabelecimentos = byClient(props.estabelecimentos);
   const enderecos = byClient(props.enderecos);
   const credito = byClient(props.creditos)[0] ?? null;
+  const creditoEventos = byClient(props.creditoEventos);
   const identificacao = byClient(props.identificacoes)[0] ?? null;
   const pessoas = new Map(props.pessoas.map((pessoa) => [pessoa.id, pessoa]));
 
@@ -269,7 +294,14 @@ function ClientDetail(
       {secao === "comercial" ? (
         <Commercial vinculos={vinculos} pessoas={pessoas} />
       ) : null}
-      {secao === "credito" ? <Credit credito={credito} /> : null}
+      {secao === "credito" ? (
+        <Credit
+          cliente={cliente}
+          credito={credito}
+          eventos={creditoEventos}
+          gravacaoDisponivel={props.creditoGravacaoDisponivel}
+        />
+      ) : null}
       {secao === "historico" ? <History cliente={cliente} /> : null}
     </div>
   );
@@ -299,7 +331,7 @@ function Summary({
         value={identificacao?.razaoSocial || cliente.nome}
         detail={
           identificacao
-            ? `${personType(identificacao.tipoPessoa)} · ${statusLabel(identificacao.situacaoCadastral)}`
+            ? `${personType(identificacao.tipoPessoa)} · ${internalValueLabel(identificacao.situacaoCadastral)}`
             : "Identificação empresarial pendente"
         }
       />
@@ -322,7 +354,7 @@ function Summary({
         value={credito ? money(credito.limiteDisponivel) : "Não definido"}
         detail={
           credito
-            ? statusLabel(credito.statusCredito)
+            ? internalValueLabel(credito.statusCredito)
             : "Administrado pelo Financeiro"
         }
       />
@@ -723,27 +755,88 @@ function Commercial({
     </Section>
   );
 }
-function Credit({ credito }: { credito: MasterDataClientCredit | null }) {
+function Credit({
+  cliente,
+  credito,
+  eventos,
+  gravacaoDisponivel,
+}: {
+  cliente: MasterDataClient;
+  credito: MasterDataClientCredit | null;
+  eventos: MasterDataClientCreditEvent[];
+  gravacaoDisponivel: boolean;
+}) {
   return (
-    <Section
-      title="Crédito"
-      rows={
-        credito
-          ? [
-              `Disponível: ${money(credito.limiteDisponivel)}`,
-              `Manual: ${credito.limiteManual === null ? "Não definido" : money(credito.limiteManual)}`,
-              `Calculado: ${credito.limiteCalculado === null ? "Não definido" : money(credito.limiteCalculado)}`,
-              `Situação: ${statusLabel(credito.statusCredito)}`,
-              `Motivo: ${credito.motivo || "Não informado"}`,
-            ]
-          : []
-      }
-    >
-      <p className="notice-panel">
-        A alteração pertence ao Financeiro e exige permissão específica e
-        justificativa.
-      </p>
-    </Section>
+    <div className="client-credit-stack" id="credito-cliente">
+      <Section
+        title="Crédito atual"
+        rows={
+          credito
+            ? [
+                `Disponível: ${money(credito.limiteDisponivel)}`,
+                `Manual: ${credito.limiteManual === null ? "Não definido" : money(credito.limiteManual)}`,
+                `Calculado: ${credito.limiteCalculado === null ? "Não definido" : money(credito.limiteCalculado)}`,
+                `Situação: ${internalValueLabel(credito.statusCredito)}`,
+                `Motivo: ${credito.motivo || "Não informado"}`,
+                `Última revisão: ${formatDateTime(credito.updatedAt)}`,
+              ]
+            : []
+        }
+      >
+        <p className="notice-panel">
+          O limite pertence ao Financeiro. Toda alteração exige alçada,
+          justificativa e gera um evento auditado; o cadastro do cliente não é
+          alterado diretamente.
+        </p>
+        {gravacaoDisponivel ? (
+          <form className="client-section-form credit-adjustment-form" action={ajustarLimiteCreditoAction}>
+            <input name="idempotency_key" type="hidden" value={randomUUID()} />
+            <input name="cliente_id" type="hidden" value={cliente.id} />
+            <input
+              name="return_to"
+              type="hidden"
+              value={`/cadastros?grupo=clientes&cliente=${cliente.id}&secao=credito`}
+            />
+            <label>
+              Novo limite manual
+              <input
+                defaultValue={credito?.limiteManual ?? credito?.limiteDisponivel ?? ""}
+                inputMode="decimal"
+                min="0"
+                name="limite_novo"
+                placeholder="0,00"
+                required
+              />
+            </label>
+            <label className="wide-field">
+              Justificativa
+              <textarea
+                minLength={10}
+                name="justificativa_limite"
+                placeholder="Explique a análise e a razão da alteração"
+                required
+                rows={3}
+              />
+            </label>
+            <button className="primary-button" type="submit">Registrar novo limite</button>
+          </form>
+        ) : (
+          <div className="shell-state shell-state-permission compact-state">
+            <h3>Alteração restrita</h3>
+            <p>Você pode consultar o crédito, mas não possui alçada para alterar o limite.</p>
+          </div>
+        )}
+      </Section>
+      <Section
+        title="Histórico de crédito"
+        rows={eventos.map(
+          (evento) =>
+            `${internalValueLabel(evento.tipoEvento)} em ${formatDateTime(evento.createdAt)} · ${evento.limiteAnterior === null ? "Sem limite anterior" : money(evento.limiteAnterior)} → ${money(evento.limiteNovo)} · ${evento.justificativa}`,
+        )}
+      >
+        <p className="muted">O histórico é imutável e acompanha cada decisão financeira registrada.</p>
+      </Section>
+    </div>
   );
 }
 function History({ cliente }: { cliente: MasterDataClient }) {
@@ -942,24 +1035,6 @@ function addressType(value: string) {
     }[value] ?? "Endereço"
   );
 }
-function statusLabel(value: string) {
-  return (
-    {
-      active: "Ativo",
-      inactive: "Inativo",
-      pending_review: "Em revisão",
-      liberado: "Liberado",
-      reduzido: "Reduzido",
-      bloqueado: "Bloqueado",
-      pendente_aprovacao: "Pendente de aprovação",
-      ativa: "Ativa",
-      inativa: "Inativa",
-      suspensa: "Suspensa",
-      baixada: "Baixada",
-      nao_verificada: "Não verificada",
-    }[value] ?? "Situação não identificada"
-  );
-}
 function formatValidity(start: string | null, end: string | null) {
   if (!start && !end) return "Vigência não informada";
   if (start && !end) return `Desde ${formatDate(start)}`;
@@ -969,4 +1044,27 @@ function formatValidity(start: string | null, end: string | null) {
 function formatDate(value: string) {
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Data não informada"
+    : new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+function normalizeSearch(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}
+
+function matchesSearch(query: string, value: string | null | undefined): boolean {
+  const normalizedValue = normalizeSearch(value);
+  if (!normalizedValue) return false;
+  const compactQuery = query.replace(/[^a-z0-9]/g, "");
+  const compactValue = normalizedValue.replace(/[^a-z0-9]/g, "");
+  return normalizedValue.includes(query) || Boolean(compactQuery && compactValue.includes(compactQuery));
 }

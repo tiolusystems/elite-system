@@ -5587,6 +5587,8 @@ h1 {
 .status-chip.status-inactive { border-color: #d4dbe0; background: #f1f3f5; color: #66737c; }
 .clients-detail-panel { min-width: 0; }
 .client-detail-stack { display: grid; gap: 16px; }
+.client-credit-stack { display: grid; gap: 16px; }
+.credit-adjustment-form { margin-top: 4px; }
 .client-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

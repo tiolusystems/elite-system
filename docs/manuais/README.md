@@ -40,15 +40,14 @@ Antes da homologacao final, confirmar:
 |---|---|---|
 | Cadastros | `cadastros/PRODUTOS_APRESENTACOES_EMBALAGENS.md` | Validado localmente no UX-01C |
 | Unidades e conversoes | `cadastros/UNIDADES_CONVERSOES.md` | Manual do contrato existente; gate visual pendente |
-| Clientes e propriedades | A criar no fechamento do UX-01C | Pendente |
-| Pessoas e vinculos | A criar no fechamento do UX-01C | Pendente |
-| Formulas e garantias | `producao/FORMULAS_GARANTIAS.md` | Em validação local |
-| OP MAPA e Ordem de Envase | `producao/ORDEM_ENVASE.md` | Em validação local |
-| Producao | Complemento no fechamento do fluxo de OP | Parcial |
-| Ordens | A criar no UX-01F | Pendente |
-| Qualidade | A criar no UX-01G | Pendente |
-| Romaneio | A criar no UX-01H | Pendente |
+| Clientes e propriedades | `cadastros/CLIENTES_PROPRIEDADES.md` | Implementado |
+| Pessoas e vinculos | `cadastros/PESSOAS_VINCULOS.md` | Implementado |
+| Formulas e garantias | `producao/FORMULAS_GARANTIAS.md` | Implementado; validacao continua por smoke |
+| OP MAPA e Ordem de Envase | `producao/ORDEM_ENVASE.md` | Implementado; validacao continua por smoke |
+| Producao, Ordens e Qualidade | `producao/FORMULAS_GARANTIAS.md` | Fluxo operacional documentado |
+| Romaneio | `ROMANEIO.md` | Implementado |
 | Pedidos e aprovacao | `pedidos/PEDIDOS_E_APROVACAO.md` | Implementado e validado tecnicamente na 0078 |
+| Recebimentos e comissoes | `financeiro/RECEBIMENTOS_COMISSOES.md` | Implementado; validacao continua por smoke |
 
 ## Manutencao
 

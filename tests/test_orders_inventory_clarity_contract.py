@@ -16,7 +16,7 @@ class OrdersInventoryClarityContractTest(unittest.TestCase):
         self.assertIn("Produto ou materia-prima", inventory)
         self.assertIn("Pesquise primeiro o produto", inventory)
         self.assertIn("Familia", inventory)
-        self.assertIn("Validade", inventory)
+        self.assertIn("Apresentacoes do produto", inventory)
 
 
 if __name__ == "__main__":

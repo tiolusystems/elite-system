@@ -6223,6 +6223,12 @@ h1 {
 .pagination > :first-child { justify-self: start; }
 .pagination > :last-child { justify-self: end; }
 .pagination > span { color: var(--brand-text-muted); font-size: 13px; font-weight: 750; }
+.inventory-product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 18px 0; }
+.inventory-product-card { display: grid; gap: 7px; min-height: 142px; padding: 16px; border: 1px solid var(--brand-border); background: var(--brand-surface); color: inherit; text-decoration: none; }
+.inventory-product-card:hover, .inventory-product-card:focus-visible { border-color: var(--brand-primary); box-shadow: 0 4px 14px rgb(20 70 105 / 10%); }
+.inventory-product-card > strong { font-size: 17px; }
+.inventory-product-card > small { color: var(--brand-text-muted); }
+.inventory-product-card > div { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: auto; color: var(--brand-text-muted); font-size: 12px; }
 .approval-list { display: grid; }
 .approval-list > article { display: grid; gap: 14px; padding: 16px; border-top: 1px solid var(--brand-border); }
 .approval-list > article:first-child { border-top: 0; }

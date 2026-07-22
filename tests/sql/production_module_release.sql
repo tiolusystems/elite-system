@@ -10,6 +10,8 @@ declare
   v_lote_mp_id bigint;
   v_lote_sem_densidade_id bigint;
   v_lote_sem_garantia_id bigint;
+  v_unidade_kg_l_id bigint;
+  v_unidade_l_l_id bigint;
   v_formula_id bigint;
   v_op_id bigint;
   v_op_sem_densidade_id bigint;
@@ -208,6 +210,14 @@ begin
       end if;
   end;
 
+  select id into v_unidade_kg_l_id from public.cad_unidades_medida
+   where codigo = 'kg_l_produzido' and status = 'active';
+  select id into v_unidade_l_l_id from public.cad_unidades_medida
+   where codigo = 'l_l_produzido' and status = 'active';
+  if v_unidade_kg_l_id is null or v_unidade_l_l_id is null then
+    raise exception 'governed formula units are missing from production release fixture';
+  end if;
+
   v_formula_id := public.create_pcp_formula_versao(
     v_produto_id,
     'producao',
@@ -217,7 +227,8 @@ begin
         'tipo_componente', 'MP',
         'materia_prima_id', v_materia_prima_id,
         'quantidade', 10,
-        'unidade', 'KG'
+        'unidade_id', v_unidade_kg_l_id,
+        'unidade', 'kg_l_produzido'
       )
     )
   );
@@ -343,7 +354,7 @@ begin
     v_produto_id, 'producao', 'Formula em litros para validar densidade obrigatoria',
     jsonb_build_array(jsonb_build_object(
       'tipo_componente', 'MP', 'materia_prima_id', v_materia_prima_id,
-      'quantidade', 10, 'unidade', 'L'
+      'quantidade', 10, 'unidade_id', v_unidade_l_l_id, 'unidade', 'l_l_produzido'
     ))
   );
   perform public.activate_pcp_formula_versao(v_formula_id, 'Ativacao do teste de base incompleta');

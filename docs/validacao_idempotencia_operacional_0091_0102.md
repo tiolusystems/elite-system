@@ -1,4 +1,4 @@
-# Validacao da idempotencia operacional - migrations 0091 a 0101
+# Validacao da idempotencia operacional - migrations 0091 a 0102
 
 Data: 2026-07-22
 
@@ -23,6 +23,8 @@ intencao do operador, validada novamente no PostgreSQL.
 | 0099 | OP MAPA e Ordem de Envase | par documental criado |
 | 0100 | Pedido de troca | pedido de troca criado |
 | 0101 | Atribuicao manual de comissao | comissionado criado ou revisado |
+| 0102 | Emissao fiscal | nota fiscal criada |
+| 0102 | Estorno pos-pagamento | NF de devolucao e retorno de estoque criados |
 
 ## Contrato comum
 
@@ -45,7 +47,7 @@ intencao do operador, validada novamente no PostgreSQL.
 - migrations instaladas do zero em PostgreSQL descartavel pela CI;
 - smokes SQL cobrem retry identico, payload divergente e privilegios;
 - dry-run remoto listou somente `0097` a `0101` antes da ultima aplicacao;
-- ledger do Supabase de staging alinhado ate `0101`;
+- ledger do Supabase de staging alinhado ate `0102`;
 - `https://elite-system-staging.vercel.app/api/health`: `status=ok` e
   `backendConfigured=true` depois da aplicacao.
 
@@ -59,16 +61,16 @@ Confirmacao, cancelamento e reversao de Romaneio continuam governados por estado
 e locks das linhas operacionais. Uma segunda chamada encontra o estado ja
 consumido e falha antes de repetir a baixa fisica.
 
-## Risco residual documentado
+## Decisao fiscal ainda pendente
 
-`emitir_fat_nota_fiscal` aceita `chave_nfe` opcional. Quando a chave existe, o
-indice unico impede duplicacao fiscal. Quando nao existe, nao ha uma identidade
-externa suficiente para distinguir retry de uma segunda emissao intencional.
+O novo ponto de entrada idempotente impede duplicacao por retry mesmo quando a
+chave de NF-e ainda nao foi informada. Quando a chave existe, o indice unico
+continua fornecendo uma segunda protecao pela identidade fiscal externa.
 
-Esse ponto nao foi alterado silenciosamente porque exige uma decisao fiscal:
+Permanece uma decisao fiscal, que nao foi alterada silenciosamente:
 definir se o sistema admite rascunho sem chave ou se toda emissao definitiva
 deve exigir chave de NF-e. Ate essa decisao, a interface atual nao oferece uma
-criacao fiscal livre e o risco permanece explicitamente registrado.
+criacao fiscal livre.
 
 ## Limites
 
@@ -76,4 +78,4 @@ criacao fiscal livre e o risco permanece explicitamente registrado.
 - nenhuma migration foi aplicada em producao real;
 - `main` nao foi alterada;
 - o frontend mais recente ainda depende de nova janela de deploy da Vercel;
-- o backend de staging esta atualizado e saudavel ate `0101`.
+- o backend de staging esta atualizado e saudavel ate `0102`.

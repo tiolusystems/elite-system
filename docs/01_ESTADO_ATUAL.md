@@ -6,7 +6,7 @@ Atualizado em: 2026-07-22
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
 - commit publicado e aprovado pela CI: `54d18c9`;
-- Supabase de homologacao: ledger alinhado de `0001` a `0101`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0102`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
 - frontend ainda nao promovido para o codigo mais recente por limite diario externo da Vercel;
@@ -27,7 +27,7 @@ O pipeline integral do commit `54d18c9` esta aprovado:
 - catalogos tecnicos, embalagens e logistica;
 - Romaneio, leitura RLS e fronteiras administrativas de Seguranca.
 
-As migrations `0091` a `0101` foram aplicadas no Supabase de staging somente
+As migrations `0091` a `0102` foram aplicadas no Supabase de staging somente
 depois de CI aprovada e dry-run controlado. O ultimo dry-run listou exclusivamente:
 
 - `0097_manager_decision_request_idempotency.sql`;
@@ -36,7 +36,7 @@ depois de CI aprovada e dry-run controlado. O ultimo dry-run listou exclusivamen
 - `0100_exchange_order_request_idempotency.sql`;
 - `0101_commission_assignment_request_idempotency.sql`.
 
-O ledger remoto confirmou `0101` e o health-check permaneceu saudavel depois da
+O ledger remoto confirmou `0102` e o health-check permaneceu saudavel depois da
 aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
 nao alterou o ledger nem a disponibilidade do backend.
 
@@ -52,7 +52,8 @@ Fechamento da idempotencia dos eventos operacionais de maior risco:
 - criacao de rascunho de Romaneio;
 - emissao conjunta de OP MAPA e Ordem de Envase;
 - criacao de pedido de troca;
-- atribuicao manual de comissao.
+- atribuicao manual de comissao;
+- emissao de NF e estorno pos-pagamento com devolucao fisica.
 
 Cada operacao usa chave de requisicao, trava transacional, reaproveitamento do
 resultado em retry identico e rejeicao quando a mesma chave chega com payload
@@ -64,7 +65,7 @@ papeis da API.
 - CI integral do commit `54d18c9` aprovada;
 - instalacao limpa e smokes PostgreSQL executados em ambiente descartavel;
 - dry-run remoto restrito a `0097` ate `0101`;
-- ledger de staging confirmado ate `0101`;
+- ledger de staging confirmado ate `0102`;
 - health-check de staging saudavel depois da aplicacao;
 - nenhum dado real, reset ou alteracao em producao.
 

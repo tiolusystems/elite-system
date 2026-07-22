@@ -68,6 +68,11 @@ Recuperação transversal de UX e ficha completa de Clientes:
   em containers e volumes `elite-validation-*`;
 - staging somente será atualizado depois de gates técnicos, ledger controlado
   e smoke autenticado.
+- ficha completa de Clientes homologada automaticamente no staging com cenário
+  sintético identificado, incluindo documento, contato, propriedade,
+  estabelecimento, endereço, bloqueio de duplicidade e fronteira de Crédito;
+- evidências registradas em
+  `docs/validacoes/VALIDACAO_AUTOMATIZADA_CLIENTES_0084.md`.
 
 ## Entrega industrial anterior
 

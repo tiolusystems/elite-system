@@ -2,131 +2,155 @@
 
 Atualizado em: 2026-07-22
 
-## Referência vigente
+## Referencia vigente
 
-- branch de desenvolvimento: `feature/0044-production-module-release`;
-- commit publicado e aprovado pela CI: `6802d62`;
-- Supabase de homologação: ledger confirmado de `0001` a `0090`;
-- frontend estável: `https://elite-system-staging.vercel.app`;
-- release ainda servido pelo domínio estável: `0dd79bd`;
-- Preview Vercel de `6802d62`: compilado com sucesso no projeto privado
-  `elite-system-staging`, aguardando promoção autenticada;
-- produção real e `main`: não alteradas;
+- branch de desenvolvimento publicada: `feature/0044-production-module-release`;
+- commit publicado e aprovado pela CI: `54d18c9`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0101`;
+- frontend estavel: `https://elite-system-staging.vercel.app`;
+- backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
+- frontend ainda nao promovido para o codigo mais recente por limite diario externo da Vercel;
+- producao real e `main`: nao alteradas;
 - PWA: adiada.
 
-## Estado técnico comprovado
+## Estado tecnico comprovado
 
-O pipeline integral do commit `6802d62` está aprovado:
+O pipeline integral do commit `54d18c9` esta aprovado:
 
-- ESLint e build Next.js;
-- testes Python;
-- reconstrução PostgreSQL limpa com todas as migrations;
-- lint do schema e geração do contrato TypeScript;
-- smokes de arquitetura, rollout e administrador inicial;
-- cadeia industrial integrada;
-- cadeia comercial integrada;
-- importação histórica de matérias-primas;
-- catálogos técnicos, embalagens e logística;
-- contratos históricos DEC-006 a DEC-011;
-- Romaneio, leitura RLS e fronteiras administrativas de Segurança.
+- ESLint, TypeScript e build Next.js;
+- testes Python e contratos estaticos;
+- reconstrucao PostgreSQL limpa com todas as migrations;
+- lint do schema e geracao do contrato TypeScript;
+- smokes transacionais das cadeias industrial e comercial;
+- RLS, grants minimos e escrita operacional somente por RPC;
+- importacao historica de materias-primas;
+- catalogos tecnicos, embalagens e logistica;
+- Romaneio, leitura RLS e fronteiras administrativas de Seguranca.
 
-As migrations abaixo foram aplicadas no Supabase de staging somente após
-dry-run que listou exclusivamente essas quatro:
+As migrations `0091` a `0101` foram aplicadas no Supabase de staging somente
+depois de CI aprovada e dry-run controlado. O ultimo dry-run listou exclusivamente:
 
-- `0087_packaging_single_pa_lot.sql`;
-- `0088_order_commission_assignment.sql`;
-- `0089_pcp_guarantee_per_liter_units.sql`;
-- `0090_restore_historical_mp_audited_rpc_access.sql`.
+- `0097_manager_decision_request_idempotency.sql`;
+- `0098_romaneio_request_idempotency.sql`;
+- `0099_packaging_issue_request_idempotency.sql`;
+- `0100_exchange_order_request_idempotency.sql`;
+- `0101_commission_assignment_request_idempotency.sql`.
 
-Após a aplicação, o ledger remoto confirmou `0090`, `/api/health` respondeu
-`status=ok` com `backendConfigured=true` e `/login` respondeu HTTP 200.
+O ledger remoto confirmou `0101` e o health-check permaneceu saudavel depois da
+aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
+nao alterou o ledger nem a disponibilidade do backend.
 
 ## Tarefa concluida mais recente
 
-Fechamento integrado das cadeias industrial e comercial, com migrations ate
-`0090` validadas em instalacao limpa e aplicadas de forma controlada no staging.
+Fechamento da idempotencia dos eventos operacionais de maior risco:
+
+- recebimento financeiro;
+- pagamento e ajuste de comissao;
+- criacao de pedido por vendedor;
+- criacao de formula e OP;
+- ajuste de limite e decisao gerencial;
+- criacao de rascunho de Romaneio;
+- emissao conjunta de OP MAPA e Ordem de Envase;
+- criacao de pedido de troca;
+- atribuicao manual de comissao.
+
+Cada operacao usa chave de requisicao, trava transacional, reaproveitamento do
+resultado em retry identico e rejeicao quando a mesma chave chega com payload
+divergente. As tabelas de requisicao nao foram abertas para leitura direta dos
+papeis da API.
 
 ## Validacao desta tarefa
 
-CI integral, rebuild PostgreSQL descartavel, smokes transacionais, lint, build
-Next.js e verificacao do health-check do staging.
+- CI integral do commit `54d18c9` aprovada;
+- instalacao limpa e smokes PostgreSQL executados em ambiente descartavel;
+- dry-run remoto restrito a `0097` ate `0101`;
+- ledger de staging confirmado ate `0101`;
+- health-check de staging saudavel depois da aplicacao;
+- nenhum dado real, reset ou alteracao em producao.
 
-## Fluxos funcionais disponíveis
+## Fluxos funcionais disponiveis
 
 ### Cadastros
 
 - Clientes e ficha relacional completa;
-- Pessoas e vínculos comerciais;
-- Matérias-primas e tipos de insumo;
-- Produtos, apresentações e embalagens;
-- catálogos técnicos, unidades, garantias e logística;
-- governança PT-BR e manuais contextuais.
+- Pessoas e vinculos comerciais;
+- Materias-primas e tipos de insumo;
+- Produtos, apresentacoes e embalagens;
+- catalogos tecnicos, unidades, garantias e logistica;
+- governanca PT-BR e manuais contextuais.
 
-### Produção e estoque
+### Producao e estoque
 
-- fórmula operacional com base por litro;
-- garantias documentais e cálculo físico por lote consumido;
-- OP, reserva FIFO, início, CQ e finalização;
+- formula operacional com base por litro;
+- garantias documentais e calculo fisico por lote consumido;
+- OP, reserva FIFO, inicio, CQ e finalizacao;
 - um produto e um lote PI por OP;
 - OP MAPA documental e Ordem de Envase;
-- um lote PA por envase/apresentação;
+- um lote PA por envase/apresentacao;
 - custo por camada de entrada de MP;
 - perda de processo separada de perda de estoque;
 - custo PI por MP e custo PA por PI mais embalagens;
-- relatórios com filtro MP, PI e PA.
+- relatorios com filtro MP, PI e PA.
 
-### Comercial, expedição e financeiro
+### Comercial, expedicao e financeiro
 
-- pedidos de Venda, Bonificação, Mostruário e Troca;
-- todo pedido nasce bloqueado e depende de decisão superior;
-- PDF liberado somente após aprovação, em A4 paisagem;
+- pedidos de Venda, Bonificacao, Mostruario e Troca;
+- todo pedido nasce bloqueado e depende de decisao superior;
+- PDF liberado somente depois da aprovacao, em A4 paisagem;
 - totais de litros, volumes e peso bruto derivados;
-- comissionados flexíveis por pedido: vendedor, agente, gerente ou outro;
-- bonificação e mostruário sem comissão;
-- recebimento, liberação proporcional, pagamento e ajuste de comissão;
+- comissionados flexiveis por pedido: vendedor, agente, gerente ou outro;
+- bonificacao e mostruario sem comissao;
+- recebimento, liberacao proporcional, pagamento e ajuste de comissao;
 - Romaneio por pedido, item, quantidade parcial, lote e embalagem;
-- reserva sem baixa física e baixa consolidada pela informação fiscal.
+- reserva sem baixa fisica e baixa consolidada pela informacao fiscal.
 
-### Importação histórica
+### Importacao fiscal e historica
 
-- análise e homologacao funcional das fontes sem escrita;
+- XML de NF-e possui chave de acesso normalizada unica;
+- cada item XML pode originar somente um lote de MP;
+- analise e homologacao funcional das fontes historicas sem escrita;
 - staging e mapeamento de MP auditados;
-- custos de aquisição com mercadoria, frete, DIFAL e despesas separados;
+- custos de aquisicao com mercadoria, frete, DIFAL e despesas separados;
 - rastreabilidade por workbook, tabela e linha;
-- aplicação integral do workbook continua condicionada à homologação das fontes
-  e ao corte físico de abertura.
+- aplicacao integral do workbook continua condicionada a homologacao das fontes
+  e ao corte fisico de abertura.
 
-## Segurança vigente
+## Seguranca vigente
 
-- contas individuais e escrita sensível por RPC auditada;
-- RLS e menor privilégio;
+- contas individuais e escrita sensivel por RPC auditada;
+- RLS e menor privilegio;
 - escrita direta revogada;
-- fatos históricos append-only;
-- `anon` e `PUBLIC` sem execução das RPCs operacionais;
-- convite, recuperação de senha e troca administrativa de e-mail governados;
+- fatos historicos append-only;
+- `anon` e `PUBLIC` sem execucao das RPCs operacionais;
+- convite, recuperacao de senha e troca administrativa de e-mail governados;
 - assinatura institucional `by ☧ SYSTEMS` preservada.
 
-## Decisões ainda bloqueantes
+## Decisoes ainda bloqueantes
 
-- `DEC-002`: MFA TOTP e exigência de AAL2;
-- `DEC-003`: autoaprovação de troca de e-mail do único administrador;
-- `DEC-004`: política Auth de produção, SMTP corporativo e CAPTCHA;
-- `DEC-012`: corte e inventário físico de abertura.
+- `DEC-002`: MFA TOTP e exigencia de AAL2;
+- `DEC-003`: autoaprovacao de troca de e-mail do unico administrador;
+- `DEC-004`: politica Auth de producao, SMTP corporativo e CAPTCHA;
+- `DEC-012`: corte e inventario fisico de abertura;
+- emissao fiscal sem chave de NF-e: definir se o fluxo admite rascunho fiscal ou
+  se toda emissao definitiva deve exigir chave fiscal antes de ganhar uma chave
+  de requisicao propria.
 
-Essas decisões não bloqueiam desenvolvimento e homologação no staging, mas
-bloqueiam entrada segura em produção real ou ativação de saldos oficiais.
+Essas decisoes nao bloqueiam desenvolvimento e homologacao no staging, mas
+bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. Promover o Preview `6802d62` para o domínio estável de staging usando sessão
-   autenticada da Vercel.
-2. Executar smoke autenticado de Produção, Pedidos, comissões e importação.
-3. Corrigir somente lacunas objetivas encontradas no staging.
-4. Preparar o corte físico `DEC-012` antes de ativar saldos reais.
+1. Promover o frontend aprovado quando o limite diario da Vercel for liberado.
+2. Executar smoke autenticado de Producao, Pedidos, comissoes e Romaneio no
+   frontend promovido.
+3. Continuar a auditoria de idempotencia somente em eventos que criam efeito
+   fisico, fiscal ou financeiro; nao envolver atualizacoes naturalmente
+   serializadas por estado.
+4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
 ## Tarefa seguinte
 
 Concluir a homologacao funcional do workbook e executar a etapa I2 somente para
 fontes aprovadas, mantendo a importacao operacional bloqueada ate essa decisao.
 
-Não reaplicar migrations, não resetar banco e não alterar produção real.
+Nao reaplicar migrations, nao resetar banco e nao alterar producao real.

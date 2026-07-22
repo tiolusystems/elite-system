@@ -59,9 +59,8 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
 
         self.assertIn("<FormulaWorkbench", formulas_page)
         self.assertIn("<GuaranteeWorkbench", guarantees_page)
-        self.assertIn("<FormulaWorkbench", pcp_page)
-        self.assertIn("<GuaranteeWorkbench", pcp_page)
-        self.assertIn("<QualityFinishForm", pcp_page)
+        self.assertIn('redirect("/producao")', pcp_page)
+        self.assertNotIn("<FormulaWorkbench", pcp_page)
 
     def test_orders_route_filters_queue_and_uses_relational_lot_ids(self) -> None:
         page = ORDERS_PAGE.read_text(encoding="utf-8")

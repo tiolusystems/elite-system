@@ -12,6 +12,8 @@ PCP_ACTIONS = REPO_ROOT / "apps" / "web" / "app" / "pcp" / "actions.ts"
 PCP_PAGE = REPO_ROOT / "apps" / "web" / "app" / "pcp" / "page.tsx"
 PCP_EDITORS = REPO_ROOT / "apps" / "web" / "app" / "pcp" / "production-editors.tsx"
 GUARANTEE_WORKBENCH = REPO_ROOT / "apps" / "web" / "app" / "producao" / "garantias" / "guarantee-workbench.tsx"
+STOCK_WORKBENCH = REPO_ROOT / "apps" / "web" / "app" / "producao" / "estoque" / "stock-workbench.tsx"
+TRANSFORMATION_WORKBENCH = REPO_ROOT / "apps" / "web" / "app" / "producao" / "transformacoes" / "transformation-workbench.tsx"
 CADASTROS_PAGE = REPO_ROOT / "apps" / "web" / "app" / "cadastros" / "page.tsx"
 PRODUCTION_ROUTE = REPO_ROOT / "apps" / "web" / "app" / "producao" / "page.tsx"
 CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
@@ -98,6 +100,8 @@ class ProductionModuleReleaseContractTests(unittest.TestCase):
         actions = PCP_ACTIONS.read_text(encoding="utf-8")
         page = PCP_PAGE.read_text(encoding="utf-8")
         guarantee_workbench = GUARANTEE_WORKBENCH.read_text(encoding="utf-8")
+        stock_workbench = STOCK_WORKBENCH.read_text(encoding="utf-8")
+        transformation_workbench = TRANSFORMATION_WORKBENCH.read_text(encoding="utf-8")
 
         for rpc_name in (
             "registrar_pcp_garantia_produto",
@@ -107,11 +111,11 @@ class ProductionModuleReleaseContractTests(unittest.TestCase):
         ):
             self.assertIn(f'auditedRpc(supabase, "{rpc_name}"', actions)
 
-        self.assertIn("<GuaranteeWorkbench", page)
+        self.assertIn('redirect("/producao")', page)
         self.assertIn("registerProductGuaranteeAction", guarantee_workbench)
         self.assertIn("registerMpLotGuaranteeAction", guarantee_workbench)
-        self.assertIn('id="transformacoes"', page)
-        self.assertIn('id="lotes"', page)
+        self.assertIn("releaseBlockedLotAction", stock_workbench)
+        self.assertIn("createPcpOpAction", transformation_workbench)
         self.assertTrue(PRODUCTION_ROUTE.exists())
 
     def test_production_and_master_data_do_not_parse_free_text_lookups(self) -> None:

@@ -16,6 +16,12 @@ type ManualGuide = Partial<Pick<RouteManual, "before" | "steps" | "after" | "rol
 export const ROUTE_MANUALS: RouteManual[] = [
   manual("/", "Nucleo", "Inicio", "Acompanhar o ambiente, os modulos liberados e os principais proximos passos."),
   manual("/modulos", "Nucleo", "Modulos", "Consultar disponibilidade, maturidade e dependencias dos modulos."),
+  manual("/modulo-indisponivel", "Nucleo", "Modulo indisponivel", "Entender por que uma area permanece protegida e acessar os modulos ja liberados.", {
+    before: ["Confira o ambiente e o nome da area apresentados na tela."],
+    steps: ["Leia o motivo da indisponibilidade.", "Use Ver modulos disponiveis para consultar as areas liberadas.", "Volte ao inicio para continuar uma operacao disponivel."],
+    after: ["Nenhum dado e alterado nesta tela.", "A liberacao futura do modulo depende do rollout governado do ambiente."],
+    blockers: ["Modulo suspenso, dependencia indisponivel ou rollout ainda nao autorizado impedem o acesso."],
+  }),
   manual("/cadastros", "Cadastros", "Central de Cadastros", "Consultar e manter dados mestres usados pela operacao."),
   manual("/cadastros/materias-primas", "Cadastros", "Materias-primas", "Cadastrar e revisar insumos, unidades e classificacoes governadas.", {
     before: ["Tenha SKU, nome, tipo de insumo e unidade de estoque.", "Confirme se ja existe material com nome ou codigo semelhante."],

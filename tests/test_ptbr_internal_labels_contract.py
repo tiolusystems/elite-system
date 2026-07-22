@@ -33,11 +33,23 @@ class PtBrInternalLabelsContractTests(unittest.TestCase):
         self.assertEqual([], violations)
 
     def test_status_is_not_rendered_directly_as_visible_text(self) -> None:
-        direct_status = re.compile(r">\s*\{[A-Za-z0-9_.]+\.status\}\s*<")
+        direct_status = re.compile(
+            r">\s*\{[A-Za-z0-9_.]+\.(?:status(?:[A-Z][A-Za-z0-9]*)?|situacao(?:[A-Z][A-Za-z0-9]*)?|actionKey|action_key)\}\s*<"
+        )
         violations: list[str] = []
         for path in UI_ROOT.rglob("*.tsx"):
             for match in direct_status.finditer(path.read_text(encoding="utf-8")):
                 violations.append(f"{path.relative_to(ROOT)}: {match.group(0)}")
+        self.assertEqual([], violations)
+
+    def test_action_keys_and_underscored_identifiers_are_not_literal_labels(self) -> None:
+        literal_internal = re.compile(
+            r">\s*(?:[a-z]+(?:\.[a-z_]+)+|[a-z][a-z0-9]*_[a-z0-9_]+)\s*<"
+        )
+        violations: list[str] = []
+        for path in UI_ROOT.rglob("*.tsx"):
+            for match in literal_internal.finditer(path.read_text(encoding="utf-8")):
+                violations.append(f"{path.relative_to(ROOT)}: {match.group(0).strip()}")
         self.assertEqual([], violations)
 
 

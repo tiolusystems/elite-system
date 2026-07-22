@@ -391,13 +391,13 @@ function PermissionRow({
 
   return (
     <tr>
-      <td>{permission.module}</td>
+      <td>{securityModuleLabel(permission.module)}</td>
       <td>
-        <strong>{permission.actionKey}</strong>
-        <span className="table-subtext">{permission.description}</span>
+        <strong>{permission.description}</strong>
+        <span className="table-subtext">Permissão operacional governada</span>
       </td>
       <td>{labelForBoolean(permission.defaultAllowed)}</td>
-      <td>{permission.overrideAllowed === null ? "default" : labelForBoolean(permission.overrideAllowed)}</td>
+      <td>{permission.overrideAllowed === null ? "Padrão do perfil" : labelForBoolean(permission.overrideAllowed)}</td>
       <td>
         <span className={`status-chip ${permission.effectiveAllowed ? "ativo" : "alta"}`}>
           {permission.effectiveAllowed ? "permitido" : "bloqueado"}
@@ -425,7 +425,7 @@ function PermissionRow({
             <input name="user_id" type="hidden" value={selectedProfile.id} />
             <input name="action_key" type="hidden" value={permission.actionKey} />
             <button className="secondary-button" type="submit" disabled={disabled || permission.overrideAllowed === null}>
-              Default
+              Usar padrão
             </button>
           </form>
         </div>
@@ -454,29 +454,29 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
     case "auth_invitation_sent":
       return { kind: "ok", title: "Convite enviado", detail: "A conta permanecerá pendente até o e-mail ser confirmado e a senha ser criada." };
     case "permission_saved":
-      return { kind: "ok", title: "Alcada atualizada", detail: "O override de permissao foi registrado." };
+      return { kind: "ok", title: "Alcada atualizada", detail: "A exceção individual de permissão foi registrada." };
     case "permission_cleared":
-      return { kind: "ok", title: "Override removido", detail: "O usuario voltou ao default da action key." };
+      return { kind: "ok", title: "Exceção removida", detail: "O usuário voltou ao padrão do perfil." };
     case "not_configured":
       return { kind: "warning", title: "Supabase nao configurado", detail: "Configure o ambiente antes de gravar." };
     case "service_role_missing":
-      return { kind: "warning", title: "Service role ausente", detail: "Configure SUPABASE_SERVICE_ROLE_KEY somente no servidor." };
+      return { kind: "warning", title: "Configuração segura ausente", detail: "O administrador precisa concluir a configuração protegida do servidor." };
     case "auth_user_create_failed":
-      return { kind: "warning", title: "Convite não criado", detail: "O Supabase Auth recusou a criação da conta." };
+      return { kind: "warning", title: "Convite não criado", detail: "O serviço de identidade recusou a criação da conta." };
     case "auth_user_exists":
       return { kind: "warning", title: "E-mail já cadastrado", detail: "Este endereço já pertence a uma conta do sistema. Consulte o status na lista abaixo." };
     case "permission_denied":
       return { kind: "warning", title: "Permissao negada", detail: "Seu perfil nao tem alcada para esta operacao." };
     case "auth_user_missing":
-      return { kind: "warning", title: "Auth ausente", detail: "Crie o usuario no Supabase Auth antes do perfil." };
+      return { kind: "warning", title: "Conta de acesso ausente", detail: "Crie a conta de acesso antes do perfil operacional." };
     case "system_actor_blocked":
       return { kind: "warning", title: "Ator protegido", detail: "Atores de sistema nao usam fluxo operacional." };
     case "permission_action_not_found":
-      return { kind: "warning", title: "Action key invalida", detail: "A permissao informada nao existe no catalogo." };
+      return { kind: "warning", title: "Permissão inválida", detail: "A permissão informada não existe no catálogo." };
     case "target_profile_not_found":
       return { kind: "warning", title: "Perfil nao encontrado", detail: "Selecione um perfil existente." };
     case "invalid_uuid":
-      return { kind: "warning", title: "UUID invalido", detail: "Informe um identificador valido do Supabase Auth." };
+      return { kind: "warning", title: "Identificador inválido", detail: "Informe um identificador válido da conta de acesso." };
     case "invalid_email":
       return { kind: "warning", title: "Email invalido", detail: "Informe um email valido para login." };
     case "fictitious_email":
@@ -500,7 +500,7 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
     case "invalid_role":
       return { kind: "warning", title: "Papel invalido", detail: "Escolha um papel permitido." };
     case "invalid_status":
-      return { kind: "warning", title: "Status invalido", detail: "Escolha active ou inactive." };
+      return { kind: "warning", title: "Situação inválida", detail: "Escolha Ativo ou Inativo." };
     case "missing_profile_required":
     case "missing_auth_user_required":
     case "missing_permission_required":
@@ -518,7 +518,7 @@ function emailChangeStatusLabel(status: string): string {
     confirmation_pending: "aguardando confirmação",
     pending_admin: "aguardando administrador"
   };
-  return labels[status] ?? status;
+  return labels[status] ?? "Situação não reconhecida";
 }
 
 function emailChangeReasonLabel(reason: string): string {
@@ -528,7 +528,26 @@ function emailChangeReasonLabel(reason: string): string {
     professional_change: "Alteração de e-mail profissional",
     registration_correction: "Correção de cadastro"
   };
-  return labels[reason] ?? reason;
+  return labels[reason] ?? "Motivo não reconhecido";
+}
+
+function securityModuleLabel(moduleKey: string): string {
+  const labels: Record<string, string> = {
+    cadastros: "Cadastros",
+    core: "Núcleo",
+    estoque: "Estoque",
+    expedicao: "Expedição",
+    faturamento: "Faturamento",
+    financeiro: "Financeiro",
+    importacao: "Importação",
+    metas: "Metas",
+    pedidos: "Pedidos",
+    pcp: "Produção",
+    relatorios: "Relatórios",
+    security: "Segurança",
+    seguranca: "Segurança",
+  };
+  return labels[moduleKey] ?? "Módulo não reconhecido";
 }
 
 function emailStatusLabel(status: SecurityProfile["emailStatus"]): string {

@@ -8,7 +8,6 @@ ACTIONS = ROOT / "apps/web/app/pcp/actions.ts"
 FORMS = [
     ROOT / "apps/web/app/producao/ordens/orders-workbench.tsx",
     ROOT / "apps/web/app/producao/transformacoes/transformation-workbench.tsx",
-    ROOT / "apps/web/app/pcp/page.tsx",
 ]
 
 

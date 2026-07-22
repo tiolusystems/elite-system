@@ -259,7 +259,7 @@ export function WorkbookHomologationWorkspace({ analysis }: { analysis: Historic
 
       <div className="homologation-policy" role="note">
         <strong>I2 permanece bloqueada.</strong>
-        <span>Somente <code>importar_integralmente</code> será elegível. Adiar ou revisar bloqueia apenas a própria tabela.</span>
+        <span>Somente <strong>Importar integralmente</strong> será elegível. Adiar ou revisar bloqueia apenas a própria tabela.</span>
       </div>
 
       <div className="homologation-summary" aria-label="Resumo por decisão final">

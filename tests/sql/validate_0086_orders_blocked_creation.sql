@@ -42,6 +42,9 @@ declare
   v_item bigint;
   v_seller bigint;
   v_order bigint;
+  v_order_item bigint;
+  v_exchange bigint;
+  v_exchange_retry bigint;
 begin
   select id into v_client from public.cad_clientes where nome = 'Cliente 0086';
   select id into v_item from public.cad_produto_embalagens where codigo_item = '8686-1L';
@@ -64,6 +67,31 @@ begin
     select 1 from public.com_pedido_credito_decisoes
      where pedido_id = v_order and decisao = 'pendente_aprovacao' and status_resultante = 'blocked'
   ) then raise exception 'operational order did not enter approval queue'; end if;
+
+  select id into v_order_item from public.com_pedido_itens where pedido_id = v_order;
+  v_exchange := public.create_com_pedido_troca_idempotente(
+    '86000000-0000-4000-8000-000000000100', v_order, v_order_item, v_item,
+    1, 'blocked', current_date, 'qualidade', 'Troca sintetica idempotente'
+  );
+  v_exchange_retry := public.create_com_pedido_troca_idempotente(
+    '86000000-0000-4000-8000-000000000100', v_order, v_order_item, v_item,
+    1, 'blocked', current_date, 'qualidade', 'Troca sintetica idempotente'
+  );
+  if v_exchange_retry is distinct from v_exchange then
+    raise exception 'identical exchange retry created a different order';
+  end if;
+  if (select count(*) from public.com_pedido_troca_requisicoes where idempotency_key = '86000000-0000-4000-8000-000000000100') <> 1 then
+    raise exception 'exchange request key was not stored exactly once';
+  end if;
+  begin
+    perform public.create_com_pedido_troca_idempotente(
+      '86000000-0000-4000-8000-000000000100', v_order, v_order_item, v_item,
+      2, 'blocked', current_date, 'qualidade', 'Troca sintetica idempotente'
+    );
+    raise exception 'exchange request key accepted changed quantity';
+  exception when others then
+    if sqlerrm <> 'idempotency key reused with different exchange order request' then raise; end if;
+  end;
 end $$;
 
 reset role;

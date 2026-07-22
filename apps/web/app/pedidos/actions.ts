@@ -235,6 +235,7 @@ export async function criarTrocaPedidoAction(formData: FormData) {
     redirect("/pedidos?result=not_configured#troca-pedido");
   }
 
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const pedidoOrigemId = optionalInteger(formData, "pedido_origem_id");
   const pedidoItemOrigemId = optionalInteger(formData, "pedido_item_origem_id");
   const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
@@ -243,7 +244,7 @@ export async function criarTrocaPedidoAction(formData: FormData) {
   const dataPedido = field(formData, "data_troca");
   const motivoTroca = field(formData, "motivo_troca") || "qualidade";
 
-  if (!pedidoOrigemId || !pedidoItemOrigemId || !dataPedido) {
+  if (!idempotencyKey || !pedidoOrigemId || !pedidoItemOrigemId || !dataPedido) {
     redirect("/pedidos?result=missing_exchange_required#troca-pedido");
   }
   if (!Number.isInteger(pedidoOrigemId) || pedidoOrigemId <= 0 || !Number.isInteger(pedidoItemOrigemId) || pedidoItemOrigemId <= 0) {
@@ -263,7 +264,8 @@ export async function criarTrocaPedidoAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_troca", {
+  const { error } = await auditedRpc(supabase, "create_com_pedido_troca_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_data_pedido: dataPedido,
     p_motivo_troca: motivoTroca,
     p_observacao: optionalField(formData, "observacao_troca"),

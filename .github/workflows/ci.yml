@@ -95,6 +95,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/commercial_end_to_end_chain.sql
+
+      - name: Run blocked order and exchange idempotency smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/validate_0086_orders_blocked_creation.sql
       - name: Run historical MP import foundation smoke
         env:
           PGPASSWORD: postgres

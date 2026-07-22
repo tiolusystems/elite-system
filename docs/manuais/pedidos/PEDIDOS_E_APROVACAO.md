@@ -20,6 +20,10 @@ Todo pedido fica como **Aguardando liberação**. Bonificação e mostruário n�
 geram comissão. O vendedor não escolhe outro vendedor, não aumenta limite e
 não libera o próprio pedido.
 
+Duplo clique ou repeticao da mesma requisicao nao cria outro pedido. O sistema
+retorna o pedido bloqueado originalmente criado e preserva uma unica fila de
+liberacao gerencial.
+
 O documento para impressão ou PDF somente fica disponível depois da liberação
 gerencial. Vendedor e gerente podem emiti-lo quando o pedido estiver aberto ou
 atendido.

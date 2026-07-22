@@ -27,20 +27,22 @@ export async function criarPedidoComercialAction(formData: FormData) {
 }
 
 export async function criarPedidoEspecialVendedorAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
   const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
   const quantidade = optionalNumber(formData, "quantidade");
   const tipoPedido = field(formData, "tipo_pedido");
   const dataPedido = field(formData, "data_pedido");
   const justificativa = field(formData, "observacao");
-  if (!vinculoId || !produtoEmbalagemId || quantidade === null || quantidade <= 0 || !dataPedido || !["bonificacao", "mostruario"].includes(tipoPedido)) {
+  if (!idempotencyKey || !vinculoId || !produtoEmbalagemId || quantidade === null || quantidade <= 0 || !dataPedido || !["bonificacao", "mostruario"].includes(tipoPedido)) {
     redirect("/pedidos?result=missing_order_required#novo-pedido");
   }
   if (tipoPedido === "bonificacao" && justificativa.length < 10) {
     redirect("/pedidos?result=missing_bonus_reason#novo-pedido");
   }
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_especial", {
+  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_especial_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_cliente_vendedor_vinculo_id: vinculoId,
     p_data_pedido: dataPedido,
     p_justificativa: justificativa || null,
@@ -62,6 +64,7 @@ export async function criarPedidoEspecialVendedorAction(formData: FormData) {
 }
 
 export async function criarPedidoVendedorAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
   const itensJson = field(formData, "itens_json");
   const dataPedido = field(formData, "data_pedido");
@@ -72,12 +75,13 @@ export async function criarPedidoVendedorAction(formData: FormData) {
   } catch {
     items = [];
   }
-  if (!vinculoId || !dataPedido || !items.length || items.some((item) => !item.produto_embalagem_id || item.quantidade <= 0 || item.valor_unitario < 0)) {
+  if (!idempotencyKey || !vinculoId || !dataPedido || !items.length || items.some((item) => !item.produto_embalagem_id || item.quantidade <= 0 || item.valor_unitario < 0)) {
     redirect("/pedidos?result=missing_order_required#novo-pedido");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_itens", {
+  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_itens_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_cliente_vendedor_vinculo_id: vinculoId,
     p_data_pedido: dataPedido,
     p_itens_jsonb: items,
@@ -369,6 +373,11 @@ function optionalInteger(formData: FormData, name: string): number | null {
     return Number(idPrefix[1]);
   }
   return Number(value);
+}
+
+function uuid(formData: FormData, name: string): string | null {
+  const value = field(formData, name);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null;
 }
 
 function mapSupabaseError(message: string): string {

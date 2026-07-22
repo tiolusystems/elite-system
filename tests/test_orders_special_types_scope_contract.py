@@ -31,7 +31,7 @@ class OrdersSpecialTypesScopeContractTest(unittest.TestCase):
     def test_single_order_form_exposes_governed_types(self):
         actions = ACTIONS.read_text(encoding="utf-8")
         entry = ENTRY.read_text(encoding="utf-8")
-        self.assertIn('"create_com_pedido_vendedor_especial"', actions)
+        self.assertIn('"create_com_pedido_vendedor_especial_idempotente"', actions)
         for label in ("Venda", "Bonificação", "Mostruário", "Troca"):
             self.assertIn(label, entry)
         self.assertIn("Bonificação não gera comissão e exige liberação de superior.", entry)

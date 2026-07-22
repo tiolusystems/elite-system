@@ -2,9 +2,10 @@
 begin;
 
 do $$ begin
-  if has_function_privilege('anon', 'public.create_com_pedido_vendedor_itens(bigint,jsonb,date,text)', 'EXECUTE')
-     or has_function_privilege('public', 'public.create_com_pedido_vendedor_itens(bigint,jsonb,date,text)', 'EXECUTE') then
-    raise exception '0080 grants are broader than the contract';
+  if has_function_privilege('authenticated', 'public.create_com_pedido_vendedor_itens(bigint,jsonb,date,text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.create_com_pedido_vendedor_itens_idempotente(uuid,bigint,jsonb,date,text)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.create_com_pedido_vendedor_itens_idempotente(uuid,bigint,jsonb,date,text)', 'EXECUTE') then
+    raise exception 'seller order grants are broader than the idempotent contract';
   end if;
 end $$;
 
@@ -58,6 +59,7 @@ declare
   v_item_inactive bigint;
   v_item_20 bigint;
   v_order bigint;
+  v_order_retry bigint;
 begin
   select relation.id into v_link
     from public.cad_cliente_vendedores relation
@@ -67,7 +69,8 @@ begin
   select id into v_item_inactive from public.cad_produto_embalagens where codigo_item = '0080-5L';
   select id into v_item_20 from public.cad_produto_embalagens where codigo_item = '0080-20L';
 
-  v_order := public.create_com_pedido_vendedor_itens(
+  v_order := public.create_com_pedido_vendedor_itens_idempotente(
+    '80000000-0000-4000-8000-000000000010',
     v_link,
     jsonb_build_array(
       jsonb_build_object('produto_embalagem_id', v_item_1, 'quantidade', 10, 'valor_unitario', 25.50),
@@ -76,6 +79,19 @@ begin
     current_date,
     'Pedido sintetico com dois itens'
   );
+  v_order_retry := public.create_com_pedido_vendedor_itens_idempotente(
+    '80000000-0000-4000-8000-000000000010',
+    v_link,
+    jsonb_build_array(
+      jsonb_build_object('produto_embalagem_id', v_item_1, 'quantidade', 10, 'valor_unitario', 25.50),
+      jsonb_build_object('produto_embalagem_id', v_item_20, 'quantidade', 2, 'valor_unitario', 400)
+    ),
+    current_date,
+    'Pedido sintetico com dois itens'
+  );
+  if v_order_retry is distinct from v_order then
+    raise exception 'seller order retry did not return the original order';
+  end if;
 
   if (select count(*) from public.com_pedido_itens where pedido_id = v_order and status = 'active') <> 2 then
     raise exception 'multi-item order did not persist exactly two items';
@@ -91,7 +107,8 @@ begin
   end if;
 
   begin
-    perform public.create_com_pedido_vendedor_itens(
+    perform public.create_com_pedido_vendedor_itens_idempotente(
+      '80000000-0000-4000-8000-000000000011',
       v_link,
       jsonb_build_array(jsonb_build_object('produto_embalagem_id', v_item_inactive, 'quantidade', 1, 'valor_unitario', 1)),
       current_date,

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import Link from "next/link";
 
 import { ajustarLimiteCreditoAction, criarPedidoComercialAction, decidirPedidoGerencialAction } from "@/app/pedidos/actions";
@@ -17,6 +19,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
     ? workspace.orders.filter((order) => order.clientId === selected.clientId)
     : workspace.orders;
   const message = resultMessage(result);
+  const orderRequestKey = randomUUID();
 
   return (
     <main className="orders-workspace">
@@ -52,6 +55,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
           <div className="panel-header"><div><h2>Novo pedido</h2><p>{selected ? selected.clientName : "Selecione um cliente da carteira para começar."}</p></div><span className="status-chip status-pending_review">Aguardará liberação</span></div>
           {selected ? (
             <form action={criarPedidoComercialAction}>
+              <input type="hidden" name="idempotency_key" value={orderRequestKey} />
               <input type="hidden" name="cliente_vendedor_vinculo_id" value={selected.linkId} />
               <input type="hidden" name="cliente_id" value={selected.clientId} />
               {selected.propertyId ? <input type="hidden" name="propriedade_id" value={selected.propertyId} /> : null}

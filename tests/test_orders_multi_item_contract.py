@@ -16,7 +16,7 @@ class OrdersMultiItemContractTest(unittest.TestCase):
         self.assertIn("Adicionar item", editor)
         self.assertIn('name="itens_json"', editor)
         self.assertIn("Array.isArray(parsed)", action)
-        self.assertIn('"create_com_pedido_vendedor_itens"', action)
+        self.assertIn('"create_com_pedido_vendedor_itens_idempotente"', action)
 
     def test_database_smoke_covers_atomic_order_contract(self):
         smoke = (ROOT / "tests/sql/validate_0080_orders_multi_item.sql").read_text(encoding="utf-8")
@@ -24,6 +24,7 @@ class OrdersMultiItemContractTest(unittest.TestCase):
         self.assertIn("<> 1055", smoke)
         self.assertIn("pendente_aprovacao", smoke)
         self.assertIn("inactive sale item was accepted", smoke)
+        self.assertIn("seller order retry did not return the original order", smoke)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,6 @@ import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ALLOWED_TIPO_PEDIDO = new Set(["venda", "bonificacao", "devolucao", "mostruario"]);
-const ALLOWED_STATUS_INICIAL = new Set(["draft", "open", "blocked"]);
 const ALLOWED_DECISAO_CREDITO = new Set(["liberado", "bloqueado", "pendente_aprovacao"]);
 const ALLOWED_MOTIVO_TROCA = new Set(["qualidade", "avaria_transporte", "erro_separacao", "erro_comercial", "acordo_comercial", "outro"]);
 const DECIMAL_SEPARATOR = /,/g;
@@ -165,7 +164,7 @@ export async function createPedidoRascunhoAction(formData: FormData) {
   const valorUnitario = optionalNumber(formData, "valor_unitario");
   const percentualComissao = optionalNumber(formData, "percentual_comissao");
   const tipoPedido = field(formData, "tipo_pedido") || "venda";
-  const status = field(formData, "status") || "draft";
+  const status = "blocked";
   const dataPedido = field(formData, "data_pedido");
 
   if (!clienteId || !produtoEmbalagemId || quantidade === null || valorUnitario === null || !dataPedido) {
@@ -192,10 +191,6 @@ export async function createPedidoRascunhoAction(formData: FormData) {
   if (!ALLOWED_TIPO_PEDIDO.has(tipoPedido)) {
     redirect("/pedidos?result=invalid_order_type#novo-pedido");
   }
-  if (!ALLOWED_STATUS_INICIAL.has(status)) {
-    redirect("/pedidos?result=invalid_initial_status#novo-pedido");
-  }
-
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "create_com_pedido_operacional", {
     p_cliente_id: clienteId,
@@ -341,7 +336,7 @@ export async function criarTrocaPedidoAction(formData: FormData) {
   const pedidoItemOrigemId = optionalInteger(formData, "pedido_item_origem_id");
   const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
   const quantidade = optionalNumber(formData, "quantidade_troca");
-  const status = field(formData, "status_troca") || "open";
+  const status = "blocked";
   const dataPedido = field(formData, "data_troca");
   const motivoTroca = field(formData, "motivo_troca") || "qualidade";
 
@@ -356,9 +351,6 @@ export async function criarTrocaPedidoAction(formData: FormData) {
   }
   if (quantidade !== null && (!Number.isFinite(quantidade) || quantidade <= 0)) {
     redirect("/pedidos?result=invalid_positive_number#troca-pedido");
-  }
-  if (!ALLOWED_STATUS_INICIAL.has(status)) {
-    redirect("/pedidos?result=invalid_initial_status#troca-pedido");
   }
   if (!ALLOWED_MOTIVO_TROCA.has(motivoTroca)) {
     redirect("/pedidos?result=invalid_exchange_reason#troca-pedido");

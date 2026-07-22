@@ -10,8 +10,8 @@ Atualizado em: 2026-07-22
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em PostgreSQL descartável: `0085_orders_special_types_portfolio_scope.sql`;
-- ultima migration no staging confirmada por ledger: `0084_complete_customer_master_data.sql`;
+- ultima migration validada em PostgreSQL descartável: `0086_orders_blocked_creation_gate.sql`;
+- ultima migration no staging confirmada por ledger: `0085_orders_special_types_portfolio_scope.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -61,10 +61,13 @@ Pedidos comerciais e aprovação gerencial:
 - Troca referencia pedido e item de origem dentro do escopo comercial;
 - impressão e PDF ficam disponíveis apenas depois da liberação;
 - migration 0085 aprovada em instalação limpa e upgrade somente em ambientes
-  descartáveis `elite-validation-*`.
+  descartáveis `elite-validation-*`, aplicada isoladamente no staging e
+  validada com dados sintéticos integralmente revertidos;
+- migration 0086 fecha a entrada operacional legada para que nenhuma criação
+  aceite estado inicial diferente de bloqueado.
 
-Próxima ação: publicar o pacote, aplicar somente a 0085 no staging e executar
-simulação sintética de criação, bloqueio, liberação e emissão do documento.
+Próxima ação: validar a 0086 em instalação limpa e upgrade descartável, publicar
+e aplicar isoladamente no staging antes da simulação completa de liberação e PDF.
 - ficha completa de Clientes homologada automaticamente no staging com cenário
   sintético identificado, incluindo documento, contato, propriedade,
   estabelecimento, endereço, bloqueio de duplicidade e fronteira de Crédito;

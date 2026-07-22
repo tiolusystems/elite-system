@@ -29,5 +29,14 @@
 - containers e volumes: `elite-validation-0085-clean` e
   `elite-validation-0085-upgrade`, sem contato com runtime ativo ou staging;
 - suíte Python, ESLint, TypeScript, build Next.js e `git diff --check` aprovados.
+- migration `0085` aplicada isoladamente no staging;
+- smoke transacional no staging: `PG_STAGING_SMOKE_0085_SPECIAL_ORDERS_OK`,
+  com rollback integral dos dados sintéticos;
+- a migration complementar `0086` fecha a entrada legada: nenhum pedido pode
+  nascer liberado, e o documento permanece indisponível antes da aprovação.
+- instalação limpa `0001 -> 0086`: `PG_VALIDATE_0086_CLEAN_INSTALL_OK`;
+- upgrade isolado `0085 -> 0086`: `PG_VALIDATE_0086_UPGRADE_OK`;
+- smoke bloqueio/fila: `PG_VALIDATE_0086_BLOCKED_CREATION_OK`;
+- suíte completa: 505 testes aprovados, além de ESLint, TypeScript e build.
 
 Somente dados sintéticos são permitidos no smoke de staging.

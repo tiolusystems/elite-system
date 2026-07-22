@@ -152,18 +152,18 @@ begin
 
   insert into public.cad_embalagem_versoes(
     embalagem_id, versao, peso_tara_kg, cubagem_m3, justificativa,
-    review_status, origem_dados, created_by
+    review_status, origem_dados, created_by, unidades_embalagem_por_litro
   ) values (
     v_system_package_id, 1, 0.8, 0.03, 'Fixture aprovada',
-    'approved', 'sistema', v_human_actor
+    'approved', 'sistema', v_human_actor, 0.05
   ) returning id into v_package_version_id;
 
   insert into public.cad_embalagem_componentes(
     embalagem_versao_id, materia_prima_id, quantidade, unidade_id,
-    review_status, origem_dados, created_by
+    review_status, origem_dados, created_by, quantidade_un_l
   ) values (
-    v_package_version_id, v_component_mp_id, 1, v_un_id,
-    'approved', 'sistema', v_human_actor
+    v_package_version_id, v_component_mp_id, 0.05, v_un_id,
+    'approved', 'sistema', v_human_actor, 0.05
   );
 
   insert into public.cad_embalagem_versao_ativacoes(

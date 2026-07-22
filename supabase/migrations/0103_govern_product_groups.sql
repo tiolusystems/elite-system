@@ -175,7 +175,7 @@ end;
 $$;
 
 create or replace function public.list_cad_grupo_produto_history(p_grupo_id bigint)
-returns table(action text, status text, before_json jsonb, after_json jsonb, metadata_json jsonb, created_at timestamptz)
+returns table(action text, status text, actor_name text, before_json jsonb, after_json jsonb, metadata_json jsonb, created_at timestamptz)
 language plpgsql
 security definer
 set search_path = public
@@ -183,8 +183,10 @@ as $$
 begin
   perform public.require_current_user_permission('cadastros.grupos_produto.read');
   return query
-    select log.action, log.status, log.before_json, log.after_json, log.metadata_json, log.created_at
+    select log.action, log.status, coalesce(actor.display_name, 'Ator de sistema'),
+           log.before_json, log.after_json, log.metadata_json, log.created_at
       from public.action_logs log
+      left join public.user_profiles actor on actor.id = log.actor_user_id
      where log.entity_type = 'cad_grupos_produto' and log.entity_id = p_grupo_id::text
      order by log.created_at desc, log.id desc;
 end;

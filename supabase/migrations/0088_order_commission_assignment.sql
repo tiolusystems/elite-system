@@ -5,10 +5,19 @@ alter table public.com_pedido_comissionados add constraint com_pedido_comissiona
   papel_comissao in ('vendedor', 'agente', 'gerente', 'tecnico_campo', 'campanha', 'outro')
 );
 
-insert into public.permission_actions(action_key, module, description, default_allowed, sort_order)
-values ('pedidos.commissions.assign', 'pedidos', 'Definir comissionados de venda antes do recebimento', false, 108)
+insert into public.permission_actions(
+  action_key, module, description, default_allowed, sort_order,
+  runtime_module_key, runtime_access_kind
+)
+values (
+  'pedidos.commissions.assign', 'pedidos',
+  'Definir comissionados de venda antes do recebimento', false, 108,
+  'pedidos', 'write'
+)
 on conflict (action_key) do update set module=excluded.module, description=excluded.description,
-  default_allowed=excluded.default_allowed, sort_order=excluded.sort_order;
+  default_allowed=excluded.default_allowed, sort_order=excluded.sort_order,
+  runtime_module_key=excluded.runtime_module_key,
+  runtime_access_kind=excluded.runtime_access_kind;
 
 create or replace function public.definir_com_pedido_comissao(
   p_pedido_id bigint, p_pessoa_id bigint, p_papel_comissao text,

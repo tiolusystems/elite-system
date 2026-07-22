@@ -9,6 +9,7 @@ class OrderCommissionAssignmentContractTests(unittest.TestCase):
     def test_assignment_is_permissioned_locked_and_audited(self):
         text = MIGRATION.read_text(encoding="utf-8")
         self.assertIn("'pedidos.commissions.assign'", text)
+        self.assertIn("'pedidos', 'write'", text)
         self.assertIn("pg_advisory_xact_lock", text)
         self.assertIn("commission assignment must precede the first receipt", text)
         self.assertIn("public.log_audited_rpc_change", text)

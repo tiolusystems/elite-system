@@ -1,12 +1,5 @@
 import Link from "next/link";
 
-import {
-  createConversaoUnidadeMpAction,
-  createEmbalagemAction,
-  createMateriaPrimaAction,
-  createProdutoBaseAction,
-  createProdutoEmbalagemAction
-} from "@/app/cadastros/actions";
 import { ClientesSection } from "@/app/cadastros/clientes-section";
 import { PessoasSection } from "@/app/cadastros/pessoas-section";
 import { getMasterDataDashboard } from "@/lib/master-data";
@@ -115,7 +108,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             {visibleGroups.map((group) => {
               const groupCount = countForGroup(group.key, dashboard.metrics);
               return (
-                <Link className="cadastros-group-card" href={`/cadastros?grupo=${group.key}`} key={group.key}>
+                <Link className="cadastros-group-card" href={groupHref(group.key)} key={group.key}>
                   <span className="cadastros-group-icon" aria-hidden="true">{groupInitials(group.key)}</span>
                   <span className="cadastros-group-copy"><strong>{group.title}</strong><small>{group.description}</small></span>
                   <span className="cadastros-group-meta">{group.key === "validacao" ? `${pendingCount} pendente(s)` : groupCount}</span>
@@ -198,279 +191,6 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           />
         ) : null}
 
-        {activeGroup?.key === "materias-primas" ? <section className="panel form-panel cadastros-focused-panel" id="nova-mp" aria-labelledby="nova-mp-title">
-          <div className="panel-header">
-            <h2 id="nova-mp-title">Nova materia-prima</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createMateriaPrimaAction}>
-            <div className="form-grid">
-              <label>
-                Nome
-                <input name="nome" placeholder="Nome da MP" required />
-              </label>
-              <label>
-                SKU corrigido
-                <input name="sku_corrigido" placeholder="Codigo unico" required />
-              </label>
-              <label>
-                Codigo legado
-                <input name="codigo_legado" placeholder="Codigo antigo, se houver" />
-              </label>
-              <label>
-                Unidade base
-                <input name="unidade_base_estoque" placeholder="KG" required />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                Tipo
-                <input name="tipo" placeholder="Liquido, solido, embalagem..." />
-              </label>
-              <label>
-                Densidade
-                <input name="densidade" placeholder="1,20" inputMode="decimal" />
-              </label>
-              <label>
-                Estoque minimo
-                <input name="estoque_minimo" placeholder="0" inputMode="decimal" />
-              </label>
-              <label>
-                NCM
-                <input name="ncm" />
-              </label>
-              <label>
-                IBAMA
-                <input name="ibama" />
-              </label>
-              <label>
-                Codigo ADS
-                <input name="codigo_ads" />
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>SKU corrigido passa a ser a chave unica operacional da materia-prima.</span>
-              <button className="primary-button" type="submit">
-                Salvar MP
-              </button>
-            </div>
-          </form>
-        </section> : null}
-
-        {activeGroup?.key === "produtos" ? <section className="panel form-panel cadastros-focused-panel" id="novo-produto" aria-labelledby="novo-produto-title">
-          <div className="panel-header">
-            <h2 id="novo-produto-title">Novo produto-base</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createProdutoBaseAction}>
-            <div className="form-grid">
-              <label>
-                Codigo produto
-                <input name="codigo_produto" placeholder="0001" required />
-              </label>
-              <label>
-                Nome
-                <input name="nome" placeholder="Nome do produto" required />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                Grupo
-                <input name="grupo" placeholder="Linha ou familia" />
-              </label>
-              <label>
-                Densidade kg/L
-                <input name="densidade_kg_l" placeholder="1,20" inputMode="decimal" />
-              </label>
-              <label>
-                Validade PA/PI em meses
-                <input name="prazo_validade_meses" placeholder="12" inputMode="numeric" />
-              </label>
-              <label>
-                Registro MAPA
-                <input name="reg_mapa" />
-              </label>
-              <label>
-                NCM
-                <input name="ncm" />
-              </label>
-              <label>
-                IBAMA
-                <input name="ibama" />
-              </label>
-              <label>
-                ADS
-                <input name="ads" />
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Produto-base fica separado das embalagens; o item vendavel sera produto + embalagem.</span>
-              <button className="primary-button" type="submit">
-                Salvar produto
-              </button>
-            </div>
-          </form>
-        </section> : null}
-
-        {activeGroup?.key === "embalagens" ? <section className="panel form-panel cadastros-focused-panel" id="nova-embalagem" aria-labelledby="nova-embalagem-title">
-          <div className="panel-header">
-            <h2 id="nova-embalagem-title">Nova embalagem</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createEmbalagemAction}>
-            <div className="form-grid">
-              <label>
-                Descricao
-                <input name="descricao" placeholder="Balde 20L" required />
-              </label>
-              <label>
-                Unidade
-                <input name="unidade" placeholder="UN" required />
-              </label>
-              <label>
-                Volume litros
-                <input name="volume_litros" placeholder="20" inputMode="decimal" />
-              </label>
-              <label>
-                Codigo legado
-                <input name="codigo_legado" />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                MP vinculada
-                <select name="materia_prima_id" defaultValue="">
-                  <option value="">Nenhuma</option>
-                  {lookups.materiasPrimas.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="checkbox-line">
-                <input name="controla_estoque" type="checkbox" value="1" />
-                Controla estoque como insumo
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Embalagem pode ser insumo de MP e depois compor PA/PI.</span>
-              <button className="primary-button" type="submit">
-                Salvar embalagem
-              </button>
-            </div>
-          </form>
-        </section> : null}
-
-        {activeGroup?.key === "produtos" ? <section className="panel form-panel cadastros-focused-panel" id="novo-item-vendavel" aria-labelledby="novo-item-vendavel-title">
-          <div className="panel-header">
-            <h2 id="novo-item-vendavel-title">Novo item vendavel</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createProdutoEmbalagemAction}>
-            <div className="form-grid">
-              <label>
-                Produto
-                <select name="produto_id" defaultValue="" required>
-                  <option value="">Selecione</option>
-                  {lookups.produtos.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Embalagem
-                <select name="embalagem_id" defaultValue="" required>
-                  <option value="">Selecione</option>
-                  {lookups.embalagens.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Codigo do item
-                <input name="codigo_item" placeholder="0001-20L" required />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Produto + embalagem passa a ser o item usado em pedido, faturamento e estoque PA.</span>
-              <button className="primary-button" type="submit">
-                Salvar item
-              </button>
-            </div>
-          </form>
-        </section> : null}
-
-        {activeGroup?.key === "embalagens" ? <section className="panel form-panel cadastros-focused-panel" id="nova-conversao-mp" aria-labelledby="nova-conversao-mp-title">
-          <div className="panel-header">
-            <h2 id="nova-conversao-mp-title">Nova conversao de MP</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createConversaoUnidadeMpAction}>
-            <div className="form-grid">
-              <label>
-                Materia-prima
-                <select name="materia_prima_id" defaultValue="" required>
-                  <option value="">Selecione</option>
-                  {lookups.materiasPrimas.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label} - {option.detail}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Unidade origem
-                <input name="unidade_origem" placeholder="SC" required />
-              </label>
-              <label>
-                Unidade destino
-                <input name="unidade_destino" placeholder="KG" required />
-              </label>
-              <label>
-                Fator
-                <input name="fator" placeholder="50" required inputMode="decimal" />
-              </label>
-              <label>
-                Vigencia inicio
-                <input name="vigencia_inicio" type="date" />
-              </label>
-              <label>
-                Vigencia fim
-                <input name="vigencia_fim" type="date" />
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Conversao define como XML/NF em outra unidade entra no estoque base da MP.</span>
-              <button className="primary-button" type="submit">
-                Salvar conversao
-              </button>
-            </div>
-          </form>
-        </section> : null}
-
         {activeGroup?.key === "tecnicos" ? (
           <section className="cadastros-destination-grid" aria-label="Catalogos tecnicos disponiveis">
             <Link href="/cadastros/unidades"><strong>Unidades e conversoes</strong><span>Padroes de medida usados em XML, estoque e formulas.</span></Link>
@@ -502,14 +222,24 @@ function actionHref(group: CadastroGroupKey): string {
   const hrefs: Record<CadastroGroupKey, string> = {
     clientes: "/cadastros?grupo=clientes&modo=novo#cadastro-cliente",
     pessoas: "/cadastros?grupo=pessoas&modo=novo#cadastro-pessoa",
-    "materias-primas": "#nova-mp",
-    produtos: "#novo-produto",
-    embalagens: "#nova-embalagem",
+    "materias-primas": "/cadastros/materias-primas#nova-materia-prima",
+    produtos: "/cadastros/produtos#novo-produto",
+    embalagens: "/cadastros/embalagens#nova-embalagem",
     logistica: "#",
     tecnicos: "/cadastros/tecnicos",
     validacao: "#validacao"
   };
   return hrefs[group];
+}
+
+function groupHref(group: CadastroGroupKey): string {
+  const canonicalRoutes: Partial<Record<CadastroGroupKey, string>> = {
+    "materias-primas": "/cadastros/materias-primas",
+    produtos: "/cadastros/produtos",
+    embalagens: "/cadastros/embalagens",
+    tecnicos: "/cadastros/tecnicos"
+  };
+  return canonicalRoutes[group] ?? `/cadastros?grupo=${group}`;
 }
 
 function groupInitials(group: CadastroGroupKey): string {

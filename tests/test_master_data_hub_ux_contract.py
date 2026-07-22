@@ -27,7 +27,7 @@ class MasterDataHubUxContractTests(unittest.TestCase):
         ):
             self.assertIn(title, text)
 
-    def test_hub_uses_governed_url_state_and_keeps_existing_actions(self) -> None:
+    def test_hub_routes_governed_catalogs_to_their_canonical_workbenches(self) -> None:
         text = PAGE.read_text(encoding="utf-8") + CLIENTS.read_text(encoding="utf-8") + PEOPLE.read_text(encoding="utf-8")
         person_create = PERSON_CREATE.read_text(encoding="utf-8")
         self.assertIn("params.grupo", text)
@@ -35,14 +35,21 @@ class MasterDataHubUxContractTests(unittest.TestCase):
         self.assertIn('action="/cadastros"', text)
         self.assertIn("activeGroup?.key", text)
         self.assertIn("createClienteAction", text)
-        for action in (
+        for canonical_route in (
+            "/cadastros/materias-primas",
+            "/cadastros/produtos",
+            "/cadastros/embalagens",
+            "/cadastros/tecnicos",
+        ):
+            self.assertIn(canonical_route, text)
+        for legacy_action in (
             "createMateriaPrimaAction",
             "createProdutoBaseAction",
             "createEmbalagemAction",
             "createProdutoEmbalagemAction",
             "createConversaoUnidadeMpAction",
         ):
-            self.assertIn(f"action={{{action}}}", text)
+            self.assertNotIn(legacy_action, PAGE.read_text(encoding="utf-8"))
         self.assertIn("reviewAndCreatePessoaComercialAction", person_create)
 
         self.assertNotIn(".rpc(", text + person_create)

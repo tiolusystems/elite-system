@@ -50,6 +50,14 @@ begin
   select pg_get_functiondef(
     'public.reservar_pcp_op_componente(bigint,bigint,bigint,bigint,numeric,text)'::regprocedure
   ) into v_definition;
+  if position('reservar_pcp_op_componente_impl_0076' in v_definition) = 0
+     or position('pcp_fifo_component:' in v_definition) = 0 then
+    raise exception 'PCP reservation wrapper no longer enforces the FIFO contract';
+  end if;
+
+  select pg_get_functiondef(
+    'public.reservar_pcp_op_componente_impl_0076(bigint,bigint,bigint,bigint,numeric,text)'::regprocedure
+  ) into v_definition;
   if position('observacao = coalesce(v_observacao, reserva.observacao)' in v_definition) = 0
      or position('''observacao'', v_observacao_final' in v_definition) = 0 then
     raise exception 'PCP reservation observation is not persisted and audited';

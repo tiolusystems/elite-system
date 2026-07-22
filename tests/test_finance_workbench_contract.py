@@ -8,7 +8,7 @@ class FinanceWorkbenchContractTests(unittest.TestCase):
     def test_finance_route_uses_governed_rpcs(self):
         actions = (ROOT / "apps/web/app/pedidos/financeiro/actions.ts").read_text(encoding="utf-8")
         for rpc in (
-            "definir_com_pedido_comissao",
+            "definir_com_pedido_comissao_idempotente",
             "registrar_com_recebimento_idempotente",
             "registrar_fin_comissao_pagamento_idempotente",
             "registrar_fin_comissao_ajuste_idempotente",

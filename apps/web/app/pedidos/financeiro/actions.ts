@@ -9,16 +9,18 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function assignOrderCommissionAction(formData: FormData) {
   requireConfigured();
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const orderId = positiveInteger(formData, "pedido_id");
   const personId = positiveInteger(formData, "pessoa_id");
   const percentage = positiveNumber(formData, "percentual_comissao");
   const role = field(formData, "papel_comissao");
   const reason = field(formData, "justificativa");
-  if (!orderId || !personId || !percentage || !new Set(["vendedor", "agente", "gerente", "outro"]).has(role) || reason.length < 10) {
+  if (!idempotencyKey || !orderId || !personId || !percentage || !new Set(["vendedor", "agente", "gerente", "outro"]).has(role) || reason.length < 10) {
     redirect("/pedidos/financeiro?result=invalid_assignment#previsoes");
   }
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "definir_com_pedido_comissao", {
+  const { error } = await auditedRpc(supabase, "definir_com_pedido_comissao_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_pedido_id: orderId, p_pessoa_id: personId, p_papel_comissao: role,
     p_percentual_comissao: percentage, p_justificativa: reason,
   }, { metadata: { action_key: "pedidos.commissions.assign", axis: "change_type", domain: "pedidos", entity: "com_pedido_comissionados", entity_id: String(orderId), failure_action: "pedidos.comissao_definicao_failed" } });

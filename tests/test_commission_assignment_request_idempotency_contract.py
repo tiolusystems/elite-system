@@ -1,0 +1,39 @@
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MIGRATION = ROOT / "supabase/migrations/0101_commission_assignment_request_idempotency.sql"
+ACTIONS = ROOT / "apps/web/app/pedidos/financeiro/actions.ts"
+PAGE = ROOT / "apps/web/app/pedidos/financeiro/page.tsx"
+SMOKE = ROOT / "tests/sql/order_commission_assignment.sql"
+
+
+class CommissionAssignmentRequestIdempotencyContractTests(unittest.TestCase):
+    def test_request_map_is_append_only_and_serialized(self):
+        sql = MIGRATION.read_text(encoding="utf-8")
+        self.assertIn("create table public.com_pedido_comissao_requisicoes", sql)
+        self.assertIn("before update or delete", sql)
+        self.assertIn("before truncate", sql)
+        self.assertIn("pg_advisory_xact_lock", sql)
+
+    def test_only_keyed_assignment_entrypoint_is_exposed(self):
+        sql = MIGRATION.read_text(encoding="utf-8")
+        self.assertIn("definir_com_pedido_comissao_idempotente", sql)
+        self.assertIn(
+            "revoke all on function public.definir_com_pedido_comissao(bigint, bigint, text, numeric, text)",
+            sql,
+        )
+
+    def test_finance_form_and_smoke_use_request_key(self):
+        actions = ACTIONS.read_text(encoding="utf-8")
+        page = PAGE.read_text(encoding="utf-8")
+        smoke = SMOKE.read_text(encoding="utf-8")
+        self.assertIn('"definir_com_pedido_comissao_idempotente"', actions)
+        self.assertIn("p_idempotency_key: idempotencyKey", actions)
+        self.assertIn("assignmentRequestKey", page)
+        self.assertGreaterEqual(smoke.count("definir_com_pedido_comissao_idempotente"), 5)
+
+
+if __name__ == "__main__":
+    unittest.main()

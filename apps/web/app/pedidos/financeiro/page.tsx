@@ -11,6 +11,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
   const result = single(params.result);
   const message = messageFor(result);
   const today = new Date().toISOString().slice(0, 10);
+  const assignmentRequestKey = randomUUID();
   const receiptRequestKey = randomUUID();
   const paymentRequestKey = randomUUID();
   const adjustmentRequestKey = randomUUID();
@@ -26,7 +27,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
     {message ? <section className={`notice-panel ${message.kind}`} role="status"><strong>{message.title}</strong><span>{message.detail}</span></section> : null}
 
     <section className="panel form-panel" id="previsoes"><div className="panel-header"><div><h2>Definir comissionados da venda</h2><p>O gerente pode atribuir vendedor, agente ou gerente depois da liberacao e antes do primeiro recebimento.</p></div><span className="pill">manual e flexivel</span></div>
-      <form action={assignOrderCommissionAction}><div className="form-grid finance-adjust-grid">
+      <form action={assignOrderCommissionAction}><input type="hidden" name="idempotency_key" value={assignmentRequestKey} /><div className="form-grid finance-adjust-grid">
         <label>Pedido aprovado<select name="pedido_id" defaultValue="" required><option value="" disabled>Selecione</option>{dashboard.orders.map((order) => <option key={order.id} value={order.id}>{order.code} - {order.clientName}</option>)}</select></label>
         <label>Comissionado<select name="pessoa_id" defaultValue="" required><option value="" disabled>Selecione</option>{dashboard.commissions.map((item) => <option key={item.personId} value={item.personId}>{item.personName}</option>)}</select></label>
         <label>Papel<select name="papel_comissao" defaultValue="vendedor"><option value="vendedor">Vendedor</option><option value="agente">Agente</option><option value="gerente">Gerente</option><option value="outro">Outro</option></select></label>

@@ -87,8 +87,8 @@ begin
     raise exception 'manager approval did not open the order';
   end if;
 
-  v_assignment := public.definir_com_pedido_comissao(
-    v_order, v_person, 'vendedor', 2.5, 'Comissao aprovada no smoke integrado'
+  v_assignment := public.definir_com_pedido_comissao_idempotente(
+    '89000000-0000-4000-8000-000000000012', v_order, v_person, 'vendedor', 2.5, 'Comissao aprovada no smoke integrado'
   );
   if (select valor_previsto from public.com_pedido_comissionados where id = v_assignment) <> 25 then
     raise exception 'expected commission was not calculated';

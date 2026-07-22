@@ -65,7 +65,7 @@ class ProductsPackagingUxContractTests(unittest.TestCase):
         self.assertIn("dataOriginLabel(item.source)", page)
         self.assertIn('excel_legado: "Excel legado"', governance)
         self.assertNotIn("<dd>{item.source}</dd>", page)
-        self.assertIn('return labels[value] ?? "Situação não reconhecida"', shell)
+        self.assertIn("internalValueLabel(value)", shell)
 
     def test_catalog_supports_selection_without_multiple_simultaneous_flows(self) -> None:
         product = PRODUCT_PAGE.read_text(encoding="utf-8")

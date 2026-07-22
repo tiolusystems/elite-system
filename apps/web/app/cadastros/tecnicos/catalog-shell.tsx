@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { internalValueLabel } from "@/lib/labels-ptbr";
 
-type CatalogRoute = "overview" | "units" | "input-types" | "materials" | "packages" | "products";
+type CatalogRoute = "overview" | "units" | "input-types" | "materials" | "packages" | "products" | "product-groups";
 
 const CATALOG_LINKS: Array<{ key: CatalogRoute; href: string; label: string }> = [
   { key: "overview", href: "/cadastros/tecnicos", label: "Visão geral" },
@@ -10,7 +10,8 @@ const CATALOG_LINKS: Array<{ key: CatalogRoute; href: string; label: string }> =
   { key: "input-types", href: "/cadastros/tipos-insumo", label: "Tipos de insumo" },
   { key: "materials", href: "/cadastros/materias-primas", label: "Matérias-primas" },
   { key: "packages", href: "/cadastros/embalagens", label: "Embalagens" },
-  { key: "products", href: "/cadastros/produtos", label: "Produtos PA/PI" }
+  { key: "products", href: "/cadastros/produtos", label: "Produtos PA/PI" },
+  { key: "product-groups", href: "/cadastros/grupos-produto", label: "Grupos de produto" }
 ];
 
 type CatalogShellProps = {
@@ -98,6 +99,10 @@ const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: 
   produto_regulatory_updated: { kind: "ok", title: "Dados regulatórios atualizados", detail: "MAPA, NCM, IBAMA e ADS foram registrados." },
   produto_deactivated: { kind: "ok", title: "Produto desativado", detail: "O histórico e as apresentações anteriores foram preservados." },
   produto_reactivated: { kind: "ok", title: "Produto reativado", detail: "O produto voltou a ficar disponível para novas operações." },
+  product_group_created: { kind: "ok", title: "Grupo criado", detail: "O grupo está disponível para novos produtos." },
+  product_group_updated: { kind: "ok", title: "Grupo atualizado", detail: "A alteração foi registrada na auditoria." },
+  product_group_deactivated: { kind: "ok", title: "Grupo inativado", detail: "Produtos históricos preservam o vínculo." },
+  product_group_reactivated: { kind: "ok", title: "Grupo reativado", detail: "O grupo voltou a ficar disponível para novos produtos." },
   embalagem_created: { kind: "ok", title: "Embalagem salva", detail: "A embalagem foi registrada no catálogo técnico." },
   embalagem_identity_updated: { kind: "ok", title: "Identidade atualizada", detail: "A descrição foi alterada sem perder o histórico." },
   embalagem_physical_updated: { kind: "ok", title: "Capacidade atualizada", detail: "Unidade, volume e controle de estoque foram registrados." },

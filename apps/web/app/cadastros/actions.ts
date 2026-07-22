@@ -33,7 +33,8 @@ const ALLOWED_CADASTRO_RETURN_PATHS = new Set([
   "/cadastros/materias-primas",
   "/cadastros/unidades",
   "/cadastros/embalagens",
-  "/cadastros/produtos"
+  "/cadastros/produtos",
+  "/cadastros/grupos-produto"
 ]);
 
 export async function createClienteAction(formData: FormData) {
@@ -893,15 +894,14 @@ export async function createProdutoBaseAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc<number>(supabase, "create_cad_produto_base", {
+  const { error } = await auditedRpc<number>(supabase, "create_cad_produto_base_governado", {
     p_ads: optionalField(formData, "ads"),
     p_codigo_produto: codigoProduto.toUpperCase(),
     p_densidade_kg_l: densidadeKgL,
-    p_grupo: optionalField(formData, "grupo"),
+    p_grupo_id: optionalInteger(formData, "grupo_id"),
     p_ibama: optionalField(formData, "ibama"),
     p_ncm: optionalField(formData, "ncm"),
     p_nome: nome,
-    p_nome_norm: normalizeKey(nome),
     p_payload_origem_json: {
       source: "apps/web/app/cadastros",
       form: "produto_base"
@@ -916,6 +916,41 @@ export async function createProdutoBaseAction(formData: FormData) {
   }
   revalidateTechnicalCatalogs();
   redirectCadastroAction(formData, "produto_created", "#novo-produto");
+}
+
+export async function createProdutoGroupAction(formData: FormData) {
+  const codigo = field(formData, "codigo");
+  const nome = field(formData, "nome");
+  const ordem = optionalInteger(formData, "ordem_exibicao") ?? 0;
+  if (!codigo || !nome || ordem < 0) redirectCadastroAction(formData, "missing_product_group", "#novo-grupo");
+  await executeCatalogRpc(formData, "create_cad_grupo_produto", {
+    p_codigo: codigo,
+    p_descricao: optionalField(formData, "descricao"),
+    p_nome: nome,
+    p_ordem_exibicao: ordem
+  }, "product_group_created", "#novo-grupo", null);
+}
+
+export async function updateProdutoGroupAction(formData: FormData) {
+  const grupoId = requiredCatalogId(formData, "grupo_id", "#editar-grupo");
+  await executeCatalogRpc(formData, "update_cad_grupo_produto", {
+    p_codigo: field(formData, "codigo"),
+    p_descricao: optionalField(formData, "descricao"),
+    p_grupo_id: grupoId,
+    p_motivo: field(formData, "motivo"),
+    p_nome: field(formData, "nome"),
+    p_ordem_exibicao: optionalInteger(formData, "ordem_exibicao") ?? 0
+  }, "product_group_updated", "#editar-grupo", grupoId);
+}
+
+export async function setProdutoGroupActiveStateAction(formData: FormData) {
+  const grupoId = requiredCatalogId(formData, "grupo_id", "#editar-grupo");
+  const active = field(formData, "active") === "true";
+  await executeCatalogRpc(formData, "set_cad_grupo_produto_active_state", {
+    p_active: active,
+    p_grupo_id: grupoId,
+    p_motivo: field(formData, "motivo")
+  }, active ? "product_group_reactivated" : "product_group_deactivated", "#editar-grupo", grupoId);
 }
 
 export async function createEmbalagemAction(formData: FormData) {
@@ -1308,6 +1343,7 @@ function revalidateTechnicalCatalogs() {
   revalidatePath("/cadastros/unidades");
   revalidatePath("/cadastros/embalagens");
   revalidatePath("/cadastros/produtos");
+  revalidatePath("/cadastros/grupos-produto");
 }
 
 function field(formData: FormData, name: string): string {

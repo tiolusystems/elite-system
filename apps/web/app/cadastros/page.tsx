@@ -197,6 +197,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             <Link href="/cadastros/materias-primas"><strong>Materias-primas</strong><span>Edicao completa por identidade, SKU, tecnica e regulatorio.</span></Link>
             <Link href="/cadastros/embalagens"><strong>Embalagens</strong><span>Volumes e controle como insumo de estoque.</span></Link>
             <Link href="/cadastros/produtos"><strong>Produtos PA/PI</strong><span>Produto-base, validade e apresentacoes vendaveis.</span></Link>
+            <Link href="/cadastros/grupos-produto"><strong>Grupos de produto</strong><span>Familias governadas usadas em produtos e relatorios.</span></Link>
             <Link href="/producao/garantias"><strong>Garantias</strong><span>Referencias MAPA e garantias dos lotes de MP.</span></Link>
             <Link href="/producao/formulas"><strong>Formulas</strong><span>Receitas de producao e documentacao tecnica.</span></Link>
           </section>
@@ -222,7 +223,7 @@ function actionHref(group: CadastroGroupKey): string {
   const hrefs: Record<CadastroGroupKey, string> = {
     clientes: "/cadastros?grupo=clientes&modo=novo#cadastro-cliente",
     pessoas: "/cadastros?grupo=pessoas&modo=novo#cadastro-pessoa",
-    "materias-primas": "/cadastros/materias-primas#nova-materia-prima",
+    "materias-primas": "/cadastros/materias-primas#nova-mp",
     produtos: "/cadastros/produtos#novo-produto",
     embalagens: "/cadastros/embalagens#nova-embalagem",
     logistica: "#",

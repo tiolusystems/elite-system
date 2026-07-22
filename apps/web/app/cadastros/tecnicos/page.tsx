@@ -72,13 +72,18 @@ export default async function TechnicalCatalogOverviewPage() {
             <strong>Produtos PA/PI</strong>
             <small>Produto-base, validade e variantes vendaveis.</small>
           </Link>
-          <Link href="/producao/formulas">
+          <Link href="/cadastros/grupos-produto">
             <span>05</span>
+            <strong>Grupos de produto</strong>
+            <small>Familias relacionais para produtos e relatorios.</small>
+          </Link>
+          <Link href="/producao/formulas">
+            <span>06</span>
             <strong>Formulas e garantias</strong>
             <small>Versoes de producao, MAPA e composicao tecnica.</small>
           </Link>
           <Link href="/producao#ops">
-            <span>06</span>
+            <span>07</span>
             <strong>OP, CQ e lotes</strong>
             <small>Reserva, consumo, producao, bloqueio e liberacao.</small>
           </Link>

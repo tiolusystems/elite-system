@@ -51,7 +51,7 @@ export function ProductMaintenancePanel({ product, groups, variants }: Props) {
             <div className="form-grid">
               <label>Codigo<input name="codigo_produto" defaultValue={product.code} pattern="[0-9]{4}" required /></label>
               <label>Nome<input name="nome" defaultValue={product.name} required /></label>
-              <label>Grupo<select name="grupo_id" defaultValue={groupId(groups, product.group)}><option value="">Sem grupo</option>{groups.filter((item) => item.status === "active").map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></label>
+              <label>Grupo<select name="grupo_id" defaultValue={product.groupId ?? ""}><option value="">Sem grupo</option>{groups.filter((item) => item.status === "active" || item.id === product.groupId).map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}{item.status === "inactive" ? " (inativo)" : ""}</option>)}</select></label>
               <label className="form-grid-wide">Motivo da alteracao<input name="motivo" minLength={5} required /></label>
             </div>
             <div className="form-footer"><span>Codigo e grupo afetam pedidos, formulas e rastreabilidade.</span><button className="primary-button" type="submit">Salvar identidade</button></div>
@@ -124,10 +124,6 @@ export function ProductMaintenancePanel({ product, groups, variants }: Props) {
 
 function ProductContext({ productId }: { productId: number }) {
   return <><input type="hidden" name="return_to" value="/cadastros/produtos" /><input type="hidden" name="produto_id" value={productId} /></>;
-}
-
-function groupId(groups: TechnicalProductGroup[], code: string | null): string {
-  return String(groups.find((item) => item.code === code)?.id ?? "");
 }
 
 function formatNumber(value: number): string {

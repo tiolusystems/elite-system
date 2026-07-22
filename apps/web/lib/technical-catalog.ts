@@ -83,6 +83,7 @@ export type TechnicalProduct = {
   ibama: string | null;
   ads: string | null;
   source: string;
+  groupId: number | null;
 };
 
 export type TechnicalProductGroup = {
@@ -90,6 +91,15 @@ export type TechnicalProductGroup = {
   code: string;
   name: string;
   status: string;
+  description: string | null;
+  displayOrder: number;
+};
+
+export type TechnicalProductGroupHistory = {
+  action: string;
+  status: string;
+  actorName: string;
+  createdAt: string;
 };
 
 export type TechnicalPackage = {
@@ -225,13 +235,14 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
       supabase
         .from("cad_produtos_base")
         .select(
-          "id,codigo_produto,nome,status,grupo,densidade_kg_l,prazo_validade_meses,reg_mapa,ncm,ibama,ads,origem_dados"
+          "id,codigo_produto,nome,status,grupo,grupo_id,densidade_kg_l,prazo_validade_meses,reg_mapa,ncm,ibama,ads,origem_dados"
         )
         .order("codigo_produto", { ascending: true })
         .limit(800),
       supabase
         .from("cad_grupos_produto")
-        .select("id,codigo,nome,status")
+        .select("id,codigo,nome,status,descricao,ordem_exibicao")
+        .order("ordem_exibicao", { ascending: true })
         .order("nome", { ascending: true })
         .limit(300),
       supabase
@@ -395,13 +406,16 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
         ncm: item.ncm ? String(item.ncm) : null,
         ibama: item.ibama ? String(item.ibama) : null,
         ads: item.ads ? String(item.ads) : null,
-        source: String(item.origem_dados ?? "sistema")
+        source: String(item.origem_dados ?? "sistema"),
+        groupId: toNullableNumber(item.grupo_id)
       })),
       productGroups: (productGroups.data ?? []).map((item) => ({
         id: Number(item.id),
         code: String(item.codigo),
         name: String(item.nome),
-        status: String(item.status)
+        status: String(item.status),
+        description: item.descricao ? String(item.descricao) : null,
+        displayOrder: Number(item.ordem_exibicao ?? 0)
       })),
       packages: packageRows.map((item) => ({
         id: Number(item.id),
@@ -464,6 +478,20 @@ export async function getTechnicalCatalog(): Promise<TechnicalCatalog> {
       error: error instanceof Error ? error.message : "Erro desconhecido"
     };
   }
+}
+
+export async function getTechnicalProductGroupHistory(groupId: number): Promise<TechnicalProductGroupHistory[]> {
+  if (!Number.isSafeInteger(groupId) || groupId <= 0 || !getRuntimeStatus().supabaseConfigured) return [];
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_cad_grupo_produto_history", { p_grupo_id: groupId });
+  if (error) return [];
+  const rows = (data ?? []) as Array<{ action: unknown; status: unknown; actor_name?: unknown; created_at: unknown }>;
+  return rows.map((item) => ({
+    action: String(item.action),
+    status: String(item.status),
+    actorName: String(item.actor_name ?? "Ator de sistema"),
+    createdAt: String(item.created_at)
+  }));
 }
 
 function relationName(value: unknown): string | null {

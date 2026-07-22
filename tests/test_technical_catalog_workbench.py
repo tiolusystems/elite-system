@@ -111,7 +111,7 @@ class TechnicalCatalogWorkbenchTests(unittest.TestCase):
         self.assertIn("unknown or inactive product group", group_fix)
         self.assertIn("'product_group_relational', true", group_fix)
         self.assertIn("p_prazo_validade_meses: prazoValidadeMeses", product_action)
-        self.assertEqual(product_action.count('auditedRpc<number>(supabase, "create_cad_produto_base"'), 1)
+        self.assertEqual(product_action.count('auditedRpc<number>(supabase, "create_cad_produto_base_governado"'), 1)
         self.assertNotIn('auditedRpc(supabase, "set_cad_produto_prazo_validade"', product_action)
         self.assertIn("PG_TECHNICAL_CATALOG_WORKBENCH_OK", smoke)
         self.assertIn("invalid product survived the atomic rollback", smoke)

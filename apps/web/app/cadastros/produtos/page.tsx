@@ -91,12 +91,13 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
               <label>Nome<input name="nome" required /></label>
               <label>
                 Grupo
-                <select name="grupo" defaultValue="">
+                <select name="grupo_id" defaultValue="">
                   <option value="">Sem grupo</option>
                   {catalog.productGroups.filter((item) => item.status === "active").map((item) => (
-                    <option key={item.id} value={item.code}>{item.code} · {item.name}</option>
+                    <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
                   ))}
                 </select>
+                <Link className="field-help-link" href="/cadastros/grupos-produto">Gerenciar grupos</Link>
               </label>
               <label>Validade em meses<input name="prazo_validade_meses" inputMode="numeric" /></label>
               <label>Densidade kg/L<input name="densidade_kg_l" inputMode="decimal" /></label>

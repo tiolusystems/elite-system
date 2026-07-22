@@ -138,7 +138,7 @@ begin
     descricao, descricao_norm, unidade, volume_litros, controla_estoque,
     status, origem_dados, created_by, updated_by
   ) values (
-    'Bombona operacional 20L', 'bombona operacional 20l', 'l', 20, false,
+    'Bombona operacional 20L', 'bombona operacional 20l', 'un', 20, false,
     'active', 'sistema', v_human_actor, v_human_actor
   ) returning id into v_system_package_id;
 
@@ -146,7 +146,7 @@ begin
     descricao, descricao_norm, unidade, volume_litros, controla_estoque,
     status, origem_dados, created_by, updated_by
   ) values (
-    'Frasco operacional 5L', 'frasco operacional 5l', 'l', 5, false,
+    'Frasco operacional 5L', 'frasco operacional 5l', 'un', 5, false,
     'active', 'sistema', v_human_actor, v_human_actor
   ) returning id into v_small_package_id;
 

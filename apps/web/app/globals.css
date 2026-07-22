@@ -5061,7 +5061,7 @@ h1 {
   z-index: 50;
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 224px minmax(180px, 1fr) auto auto;
+  grid-template-columns: 224px minmax(180px, 1fr) auto auto auto;
   align-items: center;
   min-width: 0;
   height: 64px;

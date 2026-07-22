@@ -71,6 +71,7 @@ declare
   v_materia_prima_id bigint;
   v_produto_id bigint;
   v_lote_mp_id bigint;
+  v_unidade_formula_id bigint;
   v_formula_id bigint;
   v_op_id bigint;
   v_componente_id bigint;
@@ -128,6 +129,14 @@ begin
     'smoke-0043',
     'Lote do smoke de observacao'
   );
+  select id
+    into v_unidade_formula_id
+    from public.cad_unidades_medida
+   where codigo = 'kg_l_produzido'
+     and status = 'active';
+  if v_unidade_formula_id is null then
+    raise exception 'governed per-liter unit is missing from schema lint fixture';
+  end if;
   v_formula_id := public.create_pcp_formula_versao(
     v_produto_id,
     'producao',
@@ -137,7 +146,8 @@ begin
         'tipo_componente', 'MP',
         'materia_prima_id', v_materia_prima_id,
         'quantidade', 10,
-        'unidade', 'KG'
+        'unidade_id', v_unidade_formula_id,
+        'unidade', 'kg_l_produzido'
       )
     )
   );

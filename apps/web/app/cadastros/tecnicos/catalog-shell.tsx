@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { internalValueLabel } from "@/lib/labels-ptbr";
 
 type CatalogRoute = "overview" | "units" | "input-types" | "materials" | "packages" | "products";
 
@@ -159,18 +160,7 @@ export function CatalogFeedback({ result }: { result: string | null }) {
 }
 
 export function StatusChip({ value }: { value: string }) {
-  return <span className={`status-chip ${value}`}>{statusLabel(value)}</span>;
-}
-
-function statusLabel(value: string): string {
-  const labels: Record<string, string> = {
-    active: "Ativo",
-    inactive: "Inativo",
-    pending_review: "Em revisão",
-    approved: "Aprovado",
-    rejected: "Rejeitado"
-  };
-  return labels[value] ?? "Situação não reconhecida";
+  return <span className={`status-chip ${value}`}>{internalValueLabel(value)}</span>;
 }
 
 export function singleParam(value: string | string[] | undefined): string | null {

@@ -12,6 +12,7 @@ import {
   type XmlLookupOption
 } from "@/lib/importacao-xml";
 import { getRuntimeStatus } from "@/lib/runtime";
+import { internalValueLabel } from "@/lib/labels-ptbr";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -124,7 +125,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
                       <span>{summary.emitenteNome ?? summary.emitenteCnpj ?? summary.chaveAcesso}</span>
                     </div>
                     <div className="module-card-meta">
-                      <span>{summary.status}</span>
+                      <span>{internalValueLabel(summary.status)}</span>
                       <strong>{moneyOrDash(summary.valorTotalXml)}</strong>
                     </div>
                     <div className="tag-row">
@@ -302,7 +303,7 @@ function XmlReviewCard({ item }: { item: PendingXmlItem }) {
         </div>
         <div className="xml-score">
           <strong>{item.melhorScore === null ? "-" : `${item.melhorScore}`}</strong>
-          <span>{item.status}</span>
+          <span>{internalValueLabel(item.status)}</span>
         </div>
       </div>
 
@@ -347,8 +348,8 @@ function XmlReviewCard({ item }: { item: PendingXmlItem }) {
         <form action={generateMpLotFromNfeItemAction}>
           <input type="hidden" name="item_id" value={item.itemId} />
           <select name="status" defaultValue="disponivel" aria-label="Status inicial do lote MP">
-            <option value="disponivel">disponivel</option>
-            <option value="bloqueado">bloqueado</option>
+            <option value="disponivel">Disponível</option>
+            <option value="bloqueado">Bloqueado</option>
           </select>
           <input name="observacao" placeholder="observacao do lote MP" />
           <button className="secondary-button" type="submit">

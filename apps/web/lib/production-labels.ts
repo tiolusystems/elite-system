@@ -1,4 +1,5 @@
 import type { PcpComponentType, PcpLookupOption } from "@/lib/pcp";
+import { internalValueKnown, internalValueLabel } from "@/lib/labels-ptbr";
 
 const UNIT_LABELS: Record<string, string> = {
   deg_c: "Graus Celsius (°C)",
@@ -72,5 +73,6 @@ export function componentTypeLabel(type: PcpComponentType): string {
 
 export function productionStatusLabel(status: string | null | undefined): string {
   if (!status) return "Não informado";
-  return STATUS_LABELS[status] ?? status.replaceAll("_", " ");
+  if (STATUS_LABELS[status]) return STATUS_LABELS[status];
+  return internalValueKnown(status) ? internalValueLabel(status) : "Situação não reconhecida";
 }

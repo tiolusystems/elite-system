@@ -5,6 +5,7 @@ import {
   setSecurityPermissionOverrideAction,
 } from "@/app/seguranca/actions";
 import { getSecurityDashboard, type EffectivePermission, type SecurityProfile } from "@/lib/security";
+import { internalValueLabel } from "@/lib/labels-ptbr";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -140,7 +141,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                   <dt>Status</dt>
                   <dd>
                     <span className={`status-chip ${dashboard.selectedProfile.status}`}>
-                      {dashboard.selectedProfile.status}
+                      {internalValueLabel(dashboard.selectedProfile.status)}
                     </span>
                   </dd>
                 </div>
@@ -367,7 +368,7 @@ function ProfileRow({ profile, selected }: { profile: SecurityProfile; selected:
       </td>
       <td>{profile.role}</td>
       <td>
-        <span className={`status-chip ${profile.status}`}>{profile.status}</span>
+        <span className={`status-chip ${profile.status}`}>{internalValueLabel(profile.status)}</span>
       </td>
       <td>{profile.overridesCount}</td>
       <td>

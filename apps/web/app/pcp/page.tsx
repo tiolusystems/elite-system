@@ -18,6 +18,7 @@ import {
   type PcpOpComponent,
   type PcpRecentOp
 } from "@/lib/pcp";
+import { internalValueLabel } from "@/lib/labels-ptbr";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -256,7 +257,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
               {dashboard.recentOps.filter((op) => op.tipoOp === "reprocessamento").slice(0, 8).map((op) => (
                 <article className="module-card" key={op.id}>
                   <div className="module-card-main"><h3>{op.codigoOp}</h3><span>{op.formulaLabel}</span></div>
-                  <div className="module-card-meta"><span>{op.status}</span><strong>{op.id}</strong></div>
+                  <div className="module-card-meta"><span>{internalValueLabel(op.status)}</span><strong>{op.id}</strong></div>
                   <p>{op.observacao ?? "Sem observacao"}</p>
                 </article>
               ))}
@@ -298,7 +299,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
                       </td>
                       <td>{lot.targetLabel}</td>
                       <td>
-                        <span className={`status-chip ${lot.status}`}>{lot.status}</span>
+                        <span className={`status-chip ${lot.status}`}>{internalValueLabel(lot.status)}</span>
                       </td>
                       <td>{numberOrDash(lot.saldoFisico)}</td>
                       <td>{numberOrDash(lot.quantidadeReservada)}</td>
@@ -345,7 +346,7 @@ function OpCard({ op, lookups, availableLots }: { op: PcpRecentOp; lookups: PcpL
           <p>{op.formulaLabel}</p>
         </div>
         <div className="pcp-op-meta">
-          <span className={`status-chip ${op.status}`}>{op.status}</span>
+          <span className={`status-chip ${op.status}`}>{internalValueLabel(op.status)}</span>
           <strong>{op.tipoOp}</strong>
         </div>
       </div>
@@ -460,12 +461,12 @@ function OpComponentRow({ component, canReserve, availableLots }: { component: P
           {numberOrDash(component.quantidadeReservada)}
         </span>
       </div>
-      <span className={`status-chip ${component.status}`}>{component.status}</span>
+      <span className={`status-chip ${component.status}`}>{internalValueLabel(component.status)}</span>
       {component.reservations.length > 0 ? (
         <div className="tag-row">
           {component.reservations.map((reservation) => (
             <span className="tag" key={reservation.id}>
-              {reservation.loteLabel}: {numberOrDash(reservation.quantidadeReservada)} / {reservation.status}
+              {reservation.loteLabel}: {numberOrDash(reservation.quantidadeReservada)} / {internalValueLabel(reservation.status)}
             </span>
           ))}
         </div>

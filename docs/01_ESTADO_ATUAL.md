@@ -5,18 +5,18 @@ Atualizado em: 2026-07-22
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit funcional publicado e aprovado pela CI: `13d3b31`;
-- HEAD documental publicado: `dcc2f05`;
-- Supabase de homologacao: ledger alinhado de `0001` a `0102`;
+- commit funcional e documental publicado: `3abb5e0`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0103`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_TRpJ8HQtusKdnHWxXzeQFzpJXKWh`;
+- deployment estavel de staging: `dpl_DPowRqN9P66VtZxbXc9pbvTGmTxU`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
 ## Estado tecnico comprovado
 
-O pipeline integral do commit `13d3b31` esta aprovado:
+O pipeline integral do commit `3abb5e0` esta aprovado na execucao
+`29943476990`:
 
 - ESLint, TypeScript e build Next.js;
 - testes Python e contratos estaticos;
@@ -28,7 +28,7 @@ O pipeline integral do commit `13d3b31` esta aprovado:
 - catalogos tecnicos, embalagens e logistica;
 - Romaneio, leitura RLS e fronteiras administrativas de Seguranca.
 
-As migrations `0091` a `0102` foram aplicadas no Supabase de staging somente
+As migrations `0091` a `0103` foram aplicadas no Supabase de staging somente
 depois de CI aprovada e dry-run controlado. O ultimo dry-run listou exclusivamente:
 
 - `0097_manager_decision_request_idempotency.sql`;
@@ -39,14 +39,30 @@ depois de CI aprovada e dry-run controlado. O ultimo dry-run listou exclusivamen
 
 Um segundo dry-run listou exclusivamente
 `0102_fiscal_request_idempotency.sql` antes de sua aplicacao.
+O dry-run seguinte listou exclusivamente
+`0103_govern_product_groups.sql` antes de sua aplicacao.
 
-O ledger remoto confirmou `0102` e o health-check permaneceu saudavel depois da
+O ledger remoto confirmou `0103` e o health-check permaneceu saudavel depois da
 aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
 nao alterou o ledger nem a disponibilidade do backend.
 
 ## Tarefa concluida mais recente
 
-Fechamento da idempotencia dos eventos operacionais de maior risco:
+Governanca relacional de grupos de produto e eliminacao das interfaces
+concorrentes da Central de Cadastros:
+
+- Central de Cadastros atua como portal para Materias-primas, Produtos,
+  Embalagens e catalogos tecnicos;
+- Produtos usa exclusivamente `grupo_id` para novos vinculos;
+- grupos inativos permanecem legiveis no historico e nao podem receber novos
+  produtos;
+- criacao, edicao, inativacao e reativacao de grupos sao auditadas;
+- rotulos operacionais em PT-BR sao centralizados e enums internos nao sao
+  exibidos diretamente;
+- rota canonica `/cadastros/grupos-produto` possui busca, filtros, manutencao,
+  historico e manual contextual.
+
+O fechamento anterior de idempotencia permanece vigente para:
 
 - recebimento financeiro;
 - pagamento e ajuste de comissao;
@@ -66,11 +82,15 @@ papeis da API.
 
 ## Validacao desta tarefa
 
-- CI integral do commit `13d3b31` aprovada;
-- instalacao limpa e smokes PostgreSQL executados em ambiente descartavel;
-- dry-run remoto restrito a `0097` ate `0101`;
-- ledger de staging confirmado ate `0102`;
+- CI integral do commit `3abb5e0` aprovada nos jobs `database-contract`,
+  `python-tests` e `web-contract`;
+- instalacao limpa, upgrade `0102` para `0103`, concorrencia e smokes
+  PostgreSQL executados em ambientes `elite-validation-*`;
+- ledger de staging confirmado ate `0103`, sem reaplicacao na retomada;
 - health-check de staging saudavel depois da aplicacao;
+- smoke autenticado confirmou Central, Produtos, Grupos, historico e manual;
+- grupo e produto sinteticos foram inativados pelo fluxo governado, sem apagar
+  o historico;
 - nenhum dado real, reset ou alteracao em producao.
 
 ## Fluxos funcionais disponiveis
@@ -145,12 +165,14 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. Executar smoke autenticado de Producao, Pedidos, comissoes e Romaneio no
+1. Retomar o macrociclo UX-01C a partir do staging validado, sem recriar os
+   contratos de Grupos de produto.
+2. Executar smoke autenticado de Producao, Pedidos, comissoes e Romaneio no
    frontend promovido.
-2. Continuar a auditoria de idempotencia somente em eventos que criam efeito
+3. Continuar a auditoria de idempotencia somente em eventos que criam efeito
    fisico, fiscal ou financeiro; nao envolver atualizacoes naturalmente
    serializadas por estado.
-3. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
+4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
 ## Tarefa seguinte
 

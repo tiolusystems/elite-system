@@ -80,8 +80,8 @@ begin
   if v_exchange_retry is distinct from v_exchange then
     raise exception 'identical exchange retry created a different order';
   end if;
-  if (select count(*) from public.com_pedido_troca_requisicoes where idempotency_key = '86000000-0000-4000-8000-000000000100') <> 1 then
-    raise exception 'exchange request key was not stored exactly once';
+  if (select count(*) from public.com_pedidos where pedido_origem_id = v_order and tipo_pedido = 'troca') <> 1 then
+    raise exception 'exchange retry created more than one operational order';
   end if;
   begin
     perform public.create_com_pedido_troca_idempotente(

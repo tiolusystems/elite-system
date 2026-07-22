@@ -156,6 +156,72 @@ export async function deactivateClienteAction(formData: FormData) {
   redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&result=cliente_deactivated`);
 }
 
+export async function upsertClienteIdentificationAction(formData: FormData) {
+  await runClientRpc(formData, "upsert_cad_cliente_identificacao", {
+    p_tipo_pessoa: field(formData, "tipo_pessoa"),
+    p_razao_social: optionalField(formData, "razao_social"),
+    p_nome_fantasia: optionalField(formData, "nome_fantasia"),
+    p_situacao_cadastral: field(formData, "situacao_cadastral"),
+    p_data_abertura: optionalField(formData, "data_abertura"),
+    p_cnae_principal: optionalField(formData, "cnae_principal"),
+    p_regime_tributario: optionalField(formData, "regime_tributario"),
+    p_condicao_contribuinte: optionalField(formData, "condicao_contribuinte"),
+    p_fonte_informacao: field(formData, "fonte_informacao"),
+    p_data_consulta: optionalField(formData, "data_consulta"),
+    p_motivo: field(formData, "motivo")
+  }, "identification_saved", "identificacao");
+}
+
+export async function createClienteDocumentAction(formData: FormData) {
+  await runClientRpc(formData, "create_cad_cliente_documento", {
+    p_tipo: field(formData, "tipo"), p_numero: field(formData, "numero"),
+    p_propriedade_id: optionalInteger(formData, "propriedade_id"), p_motivo: field(formData, "motivo")
+  }, "document_created", "documentos");
+}
+
+export async function createClienteContactAction(formData: FormData) {
+  await runClientRpc(formData, "create_cad_cliente_contato", {
+    p_nome: field(formData, "nome"), p_papel: field(formData, "papel"),
+    p_telefone: optionalField(formData, "telefone"), p_email: optionalField(formData, "email"),
+    p_propriedade_id: optionalInteger(formData, "propriedade_id")
+  }, "contact_created", "contatos");
+}
+
+export async function createClientePropertyAction(formData: FormData) {
+  await runClientRpc(formData, "create_cad_cliente_propriedade", {
+    p_nome: field(formData, "nome"), p_cnpj: optionalField(formData, "cnpj"),
+    p_cidade: optionalField(formData, "cidade"), p_uf: normalizeUf(optionalField(formData, "uf") ?? "") || null
+  }, "property_created", "propriedades");
+}
+
+export async function createClienteEstablishmentAction(formData: FormData) {
+  await runClientRpc(formData, "create_cad_cliente_estabelecimento", {
+    p_nome: field(formData, "nome"), p_tipo: field(formData, "tipo")
+  }, "establishment_created", "propriedades");
+}
+
+export async function createClienteAddressAction(formData: FormData) {
+  await runClientRpc(formData, "create_cad_cliente_endereco", {
+    p_tipo: field(formData, "tipo"), p_cep: optionalField(formData, "cep"),
+    p_logradouro: field(formData, "logradouro"), p_numero: optionalField(formData, "numero"),
+    p_complemento: optionalField(formData, "complemento"), p_bairro: optionalField(formData, "bairro"),
+    p_cidade: field(formData, "cidade"), p_uf: normalizeUf(field(formData, "uf")),
+    p_estabelecimento_id: optionalInteger(formData, "estabelecimento_id"),
+    p_propriedade_id: optionalInteger(formData, "propriedade_id")
+  }, "address_created", "enderecos");
+}
+
+async function runClientRpc(formData: FormData, rpcName: string, payload: Record<string, unknown>, result: string, section: string) {
+  const runtime = getRuntimeStatus();
+  const clienteId = optionalInteger(formData, "cliente_id");
+  if (!runtime.supabaseConfigured || !clienteId) redirect("/cadastros?grupo=clientes&result=missing_required");
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, rpcName, { p_cliente_id: clienteId, ...payload });
+  if (error) redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&secao=${section}&result=${encodeURIComponent(mapSupabaseError(error.message))}`);
+  revalidatePath("/cadastros");
+  redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&secao=${section}&result=${result}`);
+}
+
 export async function createPessoaComercialAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {

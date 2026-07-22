@@ -61,35 +61,6 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Cadastros mestres</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/modulos">Modulos</a>
-          <a href="/cadastros" aria-current="page">
-            Cadastros
-          </a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/producao">Producao</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-          <a href="#validacao">Validacao</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace">
         <div className="cadastros-heading">
           <div>
@@ -197,10 +168,17 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             busca={singleValue(params.busca) ?? ""}
             clienteSelecionadoId={selectedClientId}
             clientes={dashboard.clientes}
+            contatos={dashboard.clienteContatos}
+            creditos={dashboard.clienteCreditos}
+            documentos={dashboard.clienteDocumentos}
+            enderecos={dashboard.clienteEnderecos}
+            estabelecimentos={dashboard.clienteEstabelecimentos}
             gravacaoDisponivel={runtime.supabaseConfigured}
+            identificacoes={dashboard.clienteIdentificacoes}
             modoNovo={newClientMode}
             pessoas={lookups.pessoasComerciais}
             propriedades={dashboard.propriedades}
+            secao={singleValue(params.secao) ?? undefined}
             vinculos={dashboard.clienteVendedores}
           />
         ) : null}

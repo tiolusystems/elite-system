@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-21
+Atualizado em: 2026-07-22
 
 ## Referencia vigente
 
@@ -10,7 +10,7 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em PostgreSQL descartável: `0083_orders_manager_portfolio_search.sql`;
+- ultima migration validada em PostgreSQL descartável: `0084_complete_customer_master_data.sql`;
 - ultima migration no staging confirmada por ledger: `0082_stock_product_packaging_drilldown.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
@@ -53,37 +53,21 @@ DEC-013 - reserva FIFO governada:
 
 ## Tarefa atual
 
-Pedidos por carteira e liberação gerencial:
+Recuperação transversal de UX e ficha completa de Clientes:
 
-- vendedor pesquisa somente clientes vinculados à sua carteira e consulta o
-  limite disponível antes de preencher o pedido;
-- identidade do vendedor vem da sessão e não pode ser informada manualmente;
-- novo pedido de venda nasce bloqueado e aguardando liberação gerencial;
-- gerente consulta pedidos próprios e de vendedores subordinados por vínculo
-  direto ou área comercial, podendo liberar ou reprovar com justificativa;
-- alteração de limite exige justificativa e gera evento append-only;
-- RLS limita pedidos, itens, comissionados e decisões de crédito à carteira ou
-  equipe autorizada;
-- migration 0078 aprovada em upgrade 0077 -> 0078 e instalação limpa 0001 ->
-  0078, exclusivamente em containers `elite-validation-*`;
-- ESLint, TypeScript, build, smoke SQL e 13 testes dirigidos aprovados;
-- manual operacional criado em `docs/manuais/pedidos/PEDIDOS_E_APROVACAO.md`.
-- compatibilidade do frontend anterior endurecida na migration 0079: as RPCs
-  legadas também derivam carteira/vendedor da sessão e exigem escopo gerencial.
-- pedido do vendedor aceita de 1 a 100 itens em uma única transação, calcula o
-  total consolidado e cria somente uma fila de liberação gerencial;
-- apresentações inativas são recusadas e qualquer item inválido desfaz o pedido
-  inteiro; migration 0080 e smoke transacional aprovados apenas em
-  `elite-validation-*`.
-- consulta de estoque foi separada do dashboard amplo: busca, filtros e
-  paginação agora ocorrem no PostgreSQL, com 24 lotes por página e recorte por
-  permissão de MP, PA e PI; nenhum resumo global de lotes aparece em Pedidos.
-- a pesquisa comercial não pré-carrega clientes, exige ao menos duas letras e
-  usa o mesmo escopo governado do histórico: carteira própria para vendedor e
-  carteira própria mais subordinados para gerente;
-- ao selecionar um cliente, a tela restringe o histórico àquele cliente; a
-  migration 0083 e o smoke vendedor/gerente foram aprovados no container
-  descartável `elite-validation-0078-final`.
+- o shell autenticado passa a ser a única fonte de cabeçalho, marca, menu,
+  ambiente, usuário e rodapé;
+- todas as rotas operacionais publicadas possuem manual contextual centralizado;
+- Clientes passa a ter consulta por seções para identificação, documentos,
+  estabelecimentos, propriedades, endereços, contatos, comercial, crédito e
+  histórico, sem transformar o cadastro em um formulário único;
+- crédito permanece pertencendo ao Financeiro e somente é consultado em
+  Cadastros;
+- a migration 0084 é integralmente aditiva, mantém escrita somente por RPC e
+  foi aprovada em instalação limpa 0001 -> 0084 e upgrade 0083 -> 0084 somente
+  em containers e volumes `elite-validation-*`;
+- staging somente será atualizado depois de gates técnicos, ledger controlado
+  e smoke autenticado.
 
 ## Entrega industrial anterior
 
@@ -102,9 +86,9 @@ DEC-013 - custo direto industrial por camadas:
 
 ## Próxima tarefa
 
-Integrar os pedidos liberados ao romaneio consultivo, preservando o fluxo
-pedido -> itens com saldo a entregar -> escolha de lotes -> reserva -> NF ->
-baixa, sem exibir todo o estoque PA antecipadamente.
+Homologar visualmente no staging o shell unificado, os manuais contextuais e a
+ficha completa de Clientes; depois retomar a sequência operacional aprovada sem
+antecipar a PWA.
 
 ## Entrega anterior
 

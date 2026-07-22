@@ -42,3 +42,19 @@
 3. Cobrir rotas operacionais com manuais contextuais.
 4. Integrar estruturas relacionais existentes de Clientes.
 5. Criar contrato aditivo apenas para identificacao empresarial, estabelecimentos e enderecos que nao possuem destino relacional adequado.
+
+## Resultado do macrociclo
+
+- shell e navegacao autenticada unificados no commit `09ad95d`;
+- manuais contextuais disponiveis em todas as rotas publicadas, com instrucoes
+  operacionais especificas no commit `82a2774`;
+- ficha completa de Clientes governada nos commits `b3fe59a` e `e7bc24f`;
+- Pedido unificado por tipo, sempre bloqueado ate liberacao, com PDF protegido e
+  totais fisicos derivados nos commits `40429a7`, `c38511e`, `c431f2d` e
+  `9f9d044`;
+- staging com health `ok`, backend configurado e rota de Pedidos protegida;
+- 511 testes aprovados; nenhum dado operacional, segredo ou workbook foi
+  versionado.
+
+PWA permanece adiada. A sequencia retorna a Formula, Garantias, OP, CQ, Envase,
+OP MAPA e Estoque, usando os contratos e manuais agora consolidados.

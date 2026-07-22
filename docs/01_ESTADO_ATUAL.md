@@ -22,6 +22,18 @@ Atualizado em: 2026-07-22
 
 ## Tarefa concluida mais recente
 
+Macrociclo transversal de UX, manuais, Clientes e Pedido:
+
+- shell e menu globais estabilizados sem cabecalhos principais duplicados;
+- ficha completa de Clientes e estruturas relacionais publicadas no staging;
+- manuais contextuais cobrem todas as rotas e detalham os fluxos prioritarios;
+- todo pedido nasce bloqueado, depende de liberacao e somente entao permite PDF;
+- contrato do pedido usa A4 paisagem sem corte e apresenta litros, volumes e
+  peso bruto derivados, ou pendencia cadastral explicita;
+- migration 0086 aplicada isoladamente no staging; health e autenticacao
+  permaneceram saudaveis;
+- 511 testes, ESLint, TypeScript e build aprovados.
+
 Conciliação de garantias históricas:
 
 - cálculos PP/PV do Excel passam a ter fonte relacional própria, vinculada ao
@@ -93,9 +105,9 @@ DEC-013 - custo direto industrial por camadas:
 
 ## Próxima tarefa
 
-Homologar visualmente no staging o shell unificado, os manuais contextuais e a
-ficha completa de Clientes; depois retomar a sequência operacional aprovada sem
-antecipar a PWA.
+Retomar a sequencia industrial aprovada: Formula operacional, Garantias, OP,
+reservas, CQ e lote PI; depois Envase + OP MAPA, lote PA e relatorios de estoque.
+PWA permanece adiada.
 
 ## Entrega anterior
 

@@ -23,7 +23,7 @@ Estados permitidos: `pendente`, `autorizada`, `implementada`, `cancelada`.
 | `DEC-010` | Campanhas, pontos e premiacao | criar campanhas e regras versionadas, ledger append-only de pontos/premios e vouchers; nao misturar premiacao com comissao | comercial, metas, financeiro e auditoria | implementada |
 | `DEC-011` | Papeis do vinculo cliente-vendedor | distinguir no relacionamento quem cadastrou, quem atende e demais papeis, com vigencia e auditoria | cadastros, visibilidade comercial e pedidos | implementada |
 | `DEC-012` | Corte e inventario fisico de abertura | definir data de corte, data e responsaveis da contagem, depositos, criterio de aprovacao e tratamento dos movimentos durante o inventario; o Excel sera apenas comparador | ativacao dos saldos operacionais de MP, PI, PA, embalagens e outros insumos | pendente |
-| `DEC-013` | Escala operacional da formula na OP | base unica para produzir 1 L; componentes em kg/L, L/L ou UN/L; formula sem lote; OP congela versao, lotes, custos e garantias; embalagem sem arredondamento silencioso | formulas, OP, reservas, consumo, CQ, custos e lotes gerados | autorizada |
+| `DEC-013` | Escala operacional da formula na OP | base unica para produzir 1 L; componentes em kg/L, L/L ou UN/L; formula sem lote; OP congela versao, lotes, custos e garantias; embalagem sem arredondamento silencioso | formulas, OP, reservas, consumo, CQ, custos e lotes gerados | implementada |
 
 ## Decisoes autorizadas aguardando implementacao
 

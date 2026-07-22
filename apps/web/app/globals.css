@@ -6219,6 +6219,10 @@ h1 {
 .order-items-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 8px; }
 .order-items-footer > div { display: grid; gap: 3px; text-align: right; }
 .order-items-footer span { color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
+.pagination { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin-top: 18px; }
+.pagination > :first-child { justify-self: start; }
+.pagination > :last-child { justify-self: end; }
+.pagination > span { color: var(--brand-text-muted); font-size: 13px; font-weight: 750; }
 .approval-list { display: grid; }
 .approval-list > article { display: grid; gap: 14px; padding: 16px; border-top: 1px solid var(--brand-border); }
 .approval-list > article:first-child { border-top: 0; }

@@ -10,8 +10,8 @@ Atualizado em: 2026-07-21
 - entrega atual: Produção liberada no staging para validação de negócio, com
   rótulos PT-BR centralizados em Fórmulas, Garantias, Ordens e CQ e manual
   contextual da cadeia MP -> PI -> envase -> PA;
-- ultima migration validada em instalação limpa descartável: `0080_orders_multi_item_seller_entry.sql`;
-- ultima migration no staging confirmada por ledger: `0079_orders_legacy_rpc_scope_guard.sql`;
+- ultima migration validada em PostgreSQL descartável: `0081_stock_server_search_pagination.sql`;
+- ultima migration no staging confirmada por ledger: `0080_orders_multi_item_seller_entry.sql`;
 - ambiente ativo: Supabase local para teste e Supabase staging para
   homologacao;
 - publicacao externa: staging ativo em
@@ -75,6 +75,9 @@ Pedidos por carteira e liberação gerencial:
 - apresentações inativas são recusadas e qualquer item inválido desfaz o pedido
   inteiro; migration 0080 e smoke transacional aprovados apenas em
   `elite-validation-*`.
+- consulta de estoque foi separada do dashboard amplo: busca, filtros e
+  paginação agora ocorrem no PostgreSQL, com 24 lotes por página e recorte por
+  permissão de MP, PA e PI; nenhum resumo global de lotes aparece em Pedidos.
 
 ## Entrega industrial anterior
 

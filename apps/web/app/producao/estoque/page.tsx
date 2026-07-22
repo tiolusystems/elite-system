@@ -1,42 +1,32 @@
 import Link from "next/link";
 
 import {
-  getLotValidity,
   StockWorkbench,
   type LotValidity
 } from "@/app/producao/estoque/stock-workbench";
 import { ProductionFeedback, ProductionShell, singleProductionParam } from "@/app/producao/production-shell";
-import { getPcpDashboard } from "@/lib/pcp";
+import { getStockWorkspace } from "@/lib/stock";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function ProductionStockPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
-  const dashboard = await getPcpDashboard();
-  const query = singleProductionParam(params.q)?.trim().toLocaleLowerCase("pt-BR") ?? "";
+  const query = singleProductionParam(params.q)?.trim() ?? "";
   const family = singleProductionParam(params.familia) ?? "all";
   const status = singleProductionParam(params.status) ?? "com_saldo";
   const validity = singleProductionParam(params.validade) ?? "all";
+  const page = Math.max(1, Number(singleProductionParam(params.pagina) ?? 1) || 1);
   const today = new Date().toISOString().slice(0, 10);
-  const lots = dashboard.availableLots.filter((lot) => {
-    const lotValidity = getLotValidity(lot, today);
-    const queryMatches = !query
-      || `${lot.codigoLote} ${lot.targetLabel} ${lot.origemRef ?? ""}`.toLocaleLowerCase("pt-BR").includes(query);
-    const familyMatches = family === "all" || lot.tipo === family;
-    const statusMatches = status === "all"
-      || (status === "com_saldo" && lot.saldoFisico > 0)
-      || lot.status === status;
-    const validityMatches = validity === "all" || lotValidity === validity;
-    return queryMatches && familyMatches && statusMatches && validityMatches;
-  });
+  const workspace = await getStockWorkspace({ search: query, family, status, validity, page });
+  const pageCount = Math.max(1, Math.ceil(workspace.total / workspace.pageSize));
 
   return (
     <ProductionShell
       active="estoque"
       title="Lotes e estoque"
       description="Consulta operacional dos saldos fisico, reservado e disponivel por lote de MP, PA e PI."
-      source={dashboard.source}
-      error={dashboard.error}
+      source={workspace.source}
+      error={workspace.error}
       actions={(
         <>
           <Link className="secondary-button" href="/producao/ordens">Ordens</Link>
@@ -88,13 +78,28 @@ export default async function ProductionStockPage({ searchParams }: { searchPara
       <div className="section-heading inventory-results-heading">
         <div>
           <span className="eyebrow">Livro de estoque derivado</span>
-          <h2>{lots.length} lote(s) encontrado(s)</h2>
+          <h2>{workspace.total} lote(s) encontrado(s)</h2>
         </div>
-        <span className="pill">sem edicao direta de saldo</span>
+        <span className="pill">pagina {workspace.page} de {pageCount}</span>
       </div>
-      <StockWorkbench lots={lots} today={today} />
+      <StockWorkbench lots={workspace.lots} today={today} />
+      {pageCount > 1 ? <nav className="pagination" aria-label="Paginas do estoque">
+        {workspace.page > 1 ? <Link className="secondary-button" href={pageHref(params, workspace.page - 1)}>Anterior</Link> : <span />}
+        <span>{workspace.page} de {pageCount}</span>
+        {workspace.page < pageCount ? <Link className="secondary-button" href={pageHref(params, workspace.page + 1)}>Proxima</Link> : <span />}
+      </nav> : null}
     </ProductionShell>
   );
+}
+
+function pageHref(params: SearchParams, page: number) {
+  const next = new URLSearchParams();
+  for (const [key, raw] of Object.entries(params)) {
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (value && key !== "pagina") next.set(key, value);
+  }
+  next.set("pagina", String(page));
+  return `/producao/estoque?${next.toString()}`;
 }
 
 function validityOption(value: LotValidity, label: string) {

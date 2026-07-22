@@ -94,7 +94,7 @@ begin
     descricao, descricao_norm, unidade, volume_litros, controla_estoque,
     status, origem_dados, created_by, updated_by
   ) values (
-    'Frasco Smoke 0060', 'frasco smoke 0060', 'l', 5, false,
+    'Frasco Smoke 0060', 'frasco smoke 0060', 'un', 5, false,
     'active', 'sistema', v_actor, v_actor
   ) returning id into v_package_id;
 

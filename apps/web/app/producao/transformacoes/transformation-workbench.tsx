@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import Link from "next/link";
 
 import { createPcpOpAction } from "@/app/pcp/actions";
@@ -13,6 +15,7 @@ export function TransformationWorkbench({
   transformations: PcpRecentOp[];
   sourceLot: PcpAvailableLot | null;
 }) {
+  const opRequestKey = randomUUID();
   const formulas = transformationFormulas(dashboard.formulaVersions, sourceLot);
 
   return (
@@ -37,6 +40,7 @@ export function TransformationWorkbench({
             <span className="pill">movimentos auditados</span>
           </div>
           <form action={createPcpOpAction}>
+            <input type="hidden" name="idempotency_key" value={opRequestKey} />
             <input type="hidden" name="tipo_op" value="reprocessamento" />
             <input type="hidden" name="return_to" value="transformacoes" />
             <div className="form-grid">
@@ -51,6 +55,10 @@ export function TransformationWorkbench({
                   ))}
                 </select>
               </label>
+              <label>
+                Volume planejado (L)
+                <input name="quantidade_planejada" inputMode="decimal" placeholder="Ex.: 1.000" required />
+              </label>
               <label className="full-field">
                 Justificativa operacional
                 <input
@@ -61,7 +69,7 @@ export function TransformationWorkbench({
               </label>
             </div>
             <div className="form-footer">
-              <span>A formula define as quantidades do lote padrao. O destino e informado no CQ e na finalizacao.</span>
+              <span>O volume multiplica a formula por litro. O destino e informado no CQ e na finalizacao.</span>
               <button className="primary-button" type="submit" disabled={formulas.length === 0}>
                 Abrir transformacao
               </button>

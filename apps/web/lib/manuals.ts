@@ -56,7 +56,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/producao/ordens", "Producao", "Ordens de producao", "Abrir OP, reservar componentes e iniciar a producao.", {
     before: ["Use formula operacional ativa e informe o volume planejado.", "Confira os lotes de MP e seus saldos."],
-    steps: ["Crie a OP para um unico produto.", "Revise os componentes calculados.", "Reserve lotes por FIFO ou justifique escolha manual autorizada.", "Confirme as reservas e inicie a producao."],
+    steps: ["Crie a OP para um unico produto; repeticoes da mesma solicitacao nao abrem outra OP.", "Revise os componentes calculados.", "Reserve lotes por FIFO ou justifique escolha manual autorizada.", "Confirme as reservas e inicie a producao."],
     after: ["As reservas comprometem o saldo sem consumi-lo.", "O consumo ocorre na finalizacao da OP."],
     blockers: ["Saldo insuficiente, formula inativa ou reserva incompleta impedem o inicio."],
   }),

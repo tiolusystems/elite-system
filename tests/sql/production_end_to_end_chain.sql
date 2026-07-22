@@ -27,6 +27,12 @@ declare
   v_pa_lot_id bigint;
   v_cost numeric;
 begin
+  if has_function_privilege('authenticated', 'public.create_pcp_op(bigint,text,numeric,text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.create_pcp_op_idempotente(uuid,bigint,text,numeric,text)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.create_pcp_op_idempotente(uuid,bigint,text,numeric,text)', 'EXECUTE') then
+    raise exception 'OP creation grants are broader than the idempotent contract';
+  end if;
+
   insert into auth.users(id) values (v_actor) on conflict (id) do nothing;
   insert into public.user_profiles(id, display_name, role, status)
   values (v_actor, 'Cadeia industrial sintetica 0087', 'admin', 'active')
@@ -107,7 +113,22 @@ begin
   );
   perform public.activate_pcp_formula_versao(v_mapa_formula_id, 'Formula MAPA aprovada no smoke integrado');
 
-  v_op_id := public.create_pcp_op(v_formula_id, 'estoque', 10, 'OP integrada 0087');
+  v_op_id := public.create_pcp_op_idempotente(
+    '87000000-0000-4000-8000-000000000010', v_formula_id, 'estoque', 10, 'OP integrada 0087'
+  );
+  if public.create_pcp_op_idempotente(
+    '87000000-0000-4000-8000-000000000010', v_formula_id, 'estoque', 10, 'OP integrada 0087'
+  ) <> v_op_id then
+    raise exception 'OP retry did not return the original production order';
+  end if;
+  begin
+    perform public.create_pcp_op_idempotente(
+      '87000000-0000-4000-8000-000000000010', v_formula_id, 'estoque', 11, 'OP integrada 0087'
+    );
+    raise exception 'changed OP payload reused the request key';
+  exception when others then
+    if sqlerrm not like 'idempotency key reused with different production order request%' then raise; end if;
+  end;
   select id into v_component_id from public.pcp_op_componentes_planejados
    where op_id = v_op_id and tipo_componente = 'MP';
   perform public.reservar_pcp_op_componente(

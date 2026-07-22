@@ -109,10 +109,11 @@ export async function createPcpOpAction(formData: FormData) {
   }
 
   const formulaVersionId = optionalInteger(formData, "formula_versao_id");
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const tipoOp = field(formData, "tipo_op") || "estoque";
   const quantidadePlanejada = optionalNumber(formData, "quantidade_planejada");
 
-  if (!formulaVersionId || formulaVersionId <= 0) {
+  if (!idempotencyKey || !formulaVersionId || formulaVersionId <= 0) {
     redirectWithResult(returnTarget.path, "missing_op_required", returnTarget.createAnchor);
   }
   if (!ALLOWED_OP_TYPES.has(tipoOp)) {
@@ -123,7 +124,8 @@ export async function createPcpOpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_pcp_op", {
+  const { error } = await auditedRpc(supabase, "create_pcp_op_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_formula_versao_id: formulaVersionId,
     p_observacao: optionalField(formData, "observacao"),
     p_quantidade_planejada: quantidadePlanejada,
@@ -136,6 +138,13 @@ export async function createPcpOpAction(formData: FormData) {
 
   revalidateProductionPaths();
   redirectWithResult(returnTarget.path, "op_created", returnTarget.queueAnchor);
+}
+
+function uuid(formData: FormData, name: string): string | null {
+  const value = field(formData, name);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : null;
 }
 
 export async function reservePcpComponentAction(formData: FormData) {

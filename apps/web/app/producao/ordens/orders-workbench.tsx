@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import Link from "next/link";
 
 import {
@@ -11,6 +13,7 @@ import type { PcpAvailableLot, PcpDashboard, PcpOpComponent, PcpRecentOp } from 
 import { componentTypeLabel, productionStatusLabel, unitLabel } from "@/lib/production-labels";
 
 export function OrdersWorkbench({ dashboard, orders }: { dashboard: PcpDashboard; orders: PcpRecentOp[] }) {
+  const opRequestKey = randomUUID();
   return (
     <>
       <section className="two-column production-primary-grid">
@@ -20,6 +23,7 @@ export function OrdersWorkbench({ dashboard, orders }: { dashboard: PcpDashboard
             <span className="pill">formula vigente</span>
           </div>
           <form action={createPcpOpAction}>
+            <input type="hidden" name="idempotency_key" value={opRequestKey} />
             <div className="form-grid">
               <label className="wide-field">
                 Formula

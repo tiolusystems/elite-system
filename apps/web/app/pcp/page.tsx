@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   calculateOpGuaranteesAction,
   cancelPcpOpAction,
@@ -25,6 +27,8 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
   const result = singleValue(params.result);
   const formMessage = messageForResult(result);
   const today = new Date().toISOString().slice(0, 10);
+  const opRequestKey = randomUUID();
+  const transformationRequestKey = randomUUID();
 
   return (
     <main className="app-shell">
@@ -119,6 +123,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
               <span className="pill">reserva antes da baixa</span>
             </div>
             <form action={createPcpOpAction}>
+              <input type="hidden" name="idempotency_key" value={opRequestKey} />
               <div className="form-grid">
                 <label className="wide-field">
                   Formula
@@ -134,15 +139,15 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
                 <label>
                   Tipo OP
                   <select name="tipo_op" defaultValue="estoque">
-                    <option value="estoque">estoque</option>
-                    <option value="experimental">experimental</option>
-                    <option value="desenvolvimento">desenvolvimento</option>
-                    <option value="reprocessamento">reprocessamento</option>
+                    <option value="estoque">Producao para estoque</option>
+                    <option value="experimental">Experimental</option>
+                    <option value="desenvolvimento">Desenvolvimento</option>
+                    <option value="reprocessamento">Reprocessamento</option>
                   </select>
                 </label>
                 <label>
                   Quantidade de referencia
-                  <input name="quantidade_planejada" inputMode="decimal" placeholder="nao escala a formula" />
+                  <input name="quantidade_planejada" inputMode="decimal" placeholder="Ex.: 1.000" required />
                 </label>
                 <label className="full-field">
                   Observacao
@@ -150,7 +155,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
                 </label>
               </div>
               <div className="form-footer">
-                <span>OP MAPA documental encerra sem estoque. OP operacional copia os componentes da formula.</span>
+                <span>O volume multiplica os componentes da formula por litro. A baixa ocorre na finalizacao.</span>
                 <button className="primary-button" type="submit">
                   Abrir OP
                 </button>
@@ -218,6 +223,7 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
               <span className="pill">OP de reprocessamento</span>
             </div>
             <form action={createPcpOpAction}>
+              <input type="hidden" name="idempotency_key" value={transformationRequestKey} />
               <input type="hidden" name="tipo_op" value="reprocessamento" />
               <div className="form-grid">
                 <label className="wide-field">

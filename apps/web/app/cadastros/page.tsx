@@ -303,6 +303,36 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Cliente desativado",
       detail: "O cadastro foi preservado para consulta e não poderá ser usado em novas operações."
     },
+    identification_saved: {
+      kind: "ok",
+      title: "Identificação atualizada",
+      detail: "Os dados de identificação foram salvos e a origem da informação foi registrada."
+    },
+    document_created: {
+      kind: "ok",
+      title: "Documento adicionado",
+      detail: "O documento foi vinculado ao cliente e já pode ser localizado pela busca."
+    },
+    contact_created: {
+      kind: "ok",
+      title: "Contato adicionado",
+      detail: "O contato foi vinculado à ficha do cliente."
+    },
+    property_created: {
+      kind: "ok",
+      title: "Propriedade adicionada",
+      detail: "A propriedade foi vinculada ao cliente e permanece disponível no histórico cadastral."
+    },
+    establishment_created: {
+      kind: "ok",
+      title: "Estabelecimento adicionado",
+      detail: "O estabelecimento foi vinculado à ficha do cliente."
+    },
+    address_created: {
+      kind: "ok",
+      title: "Endereço adicionado",
+      detail: "O endereço foi vinculado ao cliente e à entidade selecionada."
+    },
     credit_limit_adjusted: {
       kind: "ok",
       title: "Limite de crédito atualizado",

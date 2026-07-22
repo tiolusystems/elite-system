@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CLIENTS = (ROOT / "apps/web/app/cadastros/clientes-section.tsx").read_text(encoding="utf-8")
 MASTER_DATA = (ROOT / "apps/web/lib/master-data.ts").read_text(encoding="utf-8")
 ORDERS_ACTIONS = (ROOT / "apps/web/app/pedidos/actions.ts").read_text(encoding="utf-8")
+CADASTROS_PAGE = (ROOT / "apps/web/app/cadastros/page.tsx").read_text(encoding="utf-8")
 
 
 class Ux01cCustomerCreditContractTests(unittest.TestCase):
@@ -38,6 +39,18 @@ class Ux01cCustomerCreditContractTests(unittest.TestCase):
         self.assertIn("creditAdjustmentTarget", ORDERS_ACTIONS)
         self.assertIn("requestedPath === clientPath", ORDERS_ACTIONS)
         self.assertIn('revalidatePath("/cadastros")', ORDERS_ACTIONS)
+
+    def test_customer_related_write_results_have_success_messages(self) -> None:
+        for result, title in {
+            "identification_saved": "Identificação atualizada",
+            "document_created": "Documento adicionado",
+            "contact_created": "Contato adicionado",
+            "property_created": "Propriedade adicionada",
+            "establishment_created": "Estabelecimento adicionado",
+            "address_created": "Endereço adicionado",
+        }.items():
+            self.assertIn(result, CADASTROS_PAGE)
+            self.assertIn(title, CADASTROS_PAGE)
 
 
 if __name__ == "__main__":

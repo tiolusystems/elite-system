@@ -46,6 +46,9 @@ permitidos e recebem chaves de requisicao diferentes.
 4. Confirme o pagamento.
 
 O pagamento entra como debito no ledger e nao pode superar o saldo disponivel.
+Duplo clique ou repeticao de rede retorna o pagamento original. Pagamentos e
+ajustes concorrentes da mesma pessoa sao processados em ordem pelo banco, para
+que dois comandos nao utilizem o mesmo saldo simultaneamente.
 
 ## Ajuste manual
 
@@ -53,6 +56,9 @@ Ajuste e excepcional. Exige permissao superior, valor com sinal e motivo
 controlado: correcao de calculo, estorno de devolucao, acordo comercial,
 compensacao futura ou Outro com detalhamento. O movimento original nunca e
 editado ou apagado.
+
+Uma repeticao identica retorna o ajuste original. Alterar os dados reutilizando
+a mesma chave e recusado para preservar a intencao auditada.
 
 ## Auditoria
 

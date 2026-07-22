@@ -11,6 +11,9 @@ declare
   v_receipt bigint;
   v_receipt_retry bigint;
   v_payment bigint;
+  v_payment_retry bigint;
+  v_adjustment bigint;
+  v_adjustment_retry bigint;
 begin
   insert into auth.users(id, email)
   values (v_actor, 'commercial-chain-0089@test.invalid')
@@ -118,9 +121,29 @@ begin
     raise exception 'idempotent receipt privileges are incorrect';
   end if;
 
-  v_payment := public.registrar_fin_comissao_pagamento(
+  v_payment := public.registrar_fin_comissao_pagamento_idempotente(
+    '89000000-0000-4000-8000-000000000002',
     v_person, 10, current_date, 'pix', 'Pagamento do smoke comercial integrado'
   );
+  v_payment_retry := public.registrar_fin_comissao_pagamento_idempotente(
+    '89000000-0000-4000-8000-000000000002',
+    v_person, 10, current_date, 'pix', 'Pagamento do smoke comercial integrado'
+  );
+  if v_payment_retry is distinct from v_payment then
+    raise exception 'commission payment retry did not return the original movement';
+  end if;
+  begin
+    perform public.registrar_fin_comissao_pagamento_idempotente(
+      '89000000-0000-4000-8000-000000000002',
+      v_person, 9, current_date, 'pix', 'Pagamento do smoke comercial integrado'
+    );
+    raise exception 'changed commission payment reused the same idempotency key';
+  exception when others then
+    if sqlerrm = 'changed commission payment reused the same idempotency key'
+       or sqlerrm not like 'idempotency key reused with different commission request%' then
+      raise;
+    end if;
+  end;
   if not exists (
     select 1 from public.fin_comissao_movimentos
      where id = v_payment and pessoa_id = v_person
@@ -130,6 +153,55 @@ begin
   end if;
   if (select saldo_comissao from public.fin_comissao_saldos where pessoa_id = v_person) <> 0 then
     raise exception 'commission current account did not close after payment';
+  end if;
+
+  v_adjustment := public.registrar_fin_comissao_ajuste_idempotente(
+    '89000000-0000-4000-8000-000000000003',
+    v_person, 5, 'correcao_calculo', jsonb_build_object('motivo_detalhe', 'Smoke integrado')
+  );
+  v_adjustment_retry := public.registrar_fin_comissao_ajuste_idempotente(
+    '89000000-0000-4000-8000-000000000003',
+    v_person, 5, 'correcao_calculo', jsonb_build_object('motivo_detalhe', 'Smoke integrado')
+  );
+  if v_adjustment_retry is distinct from v_adjustment then
+    raise exception 'commission adjustment retry did not return the original movement';
+  end if;
+  if (select saldo_comissao from public.fin_comissao_saldos where pessoa_id = v_person) <> 5 then
+    raise exception 'idempotent commission adjustment duplicated the balance';
+  end if;
+
+  if has_function_privilege(
+    'authenticated',
+    'public.registrar_fin_comissao_pagamento(bigint,numeric,date,text,text)',
+    'EXECUTE'
+  ) or has_function_privilege(
+    'authenticated',
+    'public.registrar_fin_comissao_ajuste(bigint,numeric,text,jsonb)',
+    'EXECUTE'
+  ) then
+    raise exception 'unkeyed commission entrypoint remains executable';
+  end if;
+  if not has_function_privilege(
+    'authenticated',
+    'public.registrar_fin_comissao_pagamento_idempotente(uuid,bigint,numeric,date,text,text)',
+    'EXECUTE'
+  ) or has_function_privilege(
+    'anon',
+    'public.registrar_fin_comissao_pagamento_idempotente(uuid,bigint,numeric,date,text,text)',
+    'EXECUTE'
+  ) then
+    raise exception 'idempotent commission payment privileges are incorrect';
+  end if;
+  if not has_function_privilege(
+    'authenticated',
+    'public.registrar_fin_comissao_ajuste_idempotente(uuid,bigint,numeric,text,jsonb)',
+    'EXECUTE'
+  ) or has_function_privilege(
+    'anon',
+    'public.registrar_fin_comissao_ajuste_idempotente(uuid,bigint,numeric,text,jsonb)',
+    'EXECUTE'
+  ) then
+    raise exception 'idempotent commission adjustment privileges are incorrect';
   end if;
 
   if not exists (

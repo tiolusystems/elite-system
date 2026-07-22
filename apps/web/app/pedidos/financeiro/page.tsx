@@ -12,6 +12,8 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
   const message = messageFor(result);
   const today = new Date().toISOString().slice(0, 10);
   const receiptRequestKey = randomUUID();
+  const paymentRequestKey = randomUUID();
+  const adjustmentRequestKey = randomUUID();
 
   return <main className="app-shell"><section className="workspace dashboard-workspace finance-workspace">
     <div className="dashboard-header"><div><span className="eyebrow">Financeiro auditado</span><h1>Recebimentos e comissoes</h1><p className="muted">O recebimento libera a comissao proporcional; pagamentos e ajustes entram na conta corrente sem apagar historico.</p></div></div>
@@ -46,7 +48,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
 
       <section className="panel" id="comissoes"><div className="panel-header"><div><h2>Conta corrente de comissoes</h2><p>Selecione uma pessoa somente quando houver saldo.</p></div><span className="pill">append-only</span></div>
         <div className="finance-balance-list">{dashboard.commissions.length ? dashboard.commissions.map((item) => <article key={item.personId}><span>{item.personName}</span><strong>{money(item.balance)}</strong></article>) : <div className="empty-state compact-empty"><strong>Nenhum saldo carregado</strong><span>As comissoes aparecem apos recebimentos de pedidos com previsao.</span></div>}</div>
-        <form action={payCommissionAction}><div className="form-grid finance-form-grid">
+        <form action={payCommissionAction}><input type="hidden" name="idempotency_key" value={paymentRequestKey} /><div className="form-grid finance-form-grid">
           <label className="wide-field">Comissionado<select name="pessoa_id" defaultValue="" required><option value="" disabled>Selecione</option>{dashboard.commissions.filter((item) => item.balance > 0).map((item) => <option key={item.personId} value={item.personId}>{item.personName} - {money(item.balance)}</option>)}</select></label>
           <label>Valor pago<input name="valor_pago" inputMode="decimal" min="0.01" step="0.01" required /></label><label>Data<input name="data_pagamento" type="date" defaultValue={today} required /></label>
           <label>Forma de pagamento<input name="forma_pagamento" placeholder="Pix, transferencia..." /></label><label className="wide-field">Referencia<input name="referencia_pagamento" placeholder="Lote de pagamento ou comprovante" /></label>
@@ -55,7 +57,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
     </section>
 
     <section className="panel form-panel" id="ajustes"><div className="panel-header"><div><h2>Ajuste manual de comissao</h2><p>Uso excepcional, com alçada alta e motivo fechado.</p></div><span className="pill">justificativa auditada</span></div>
-      <form action={adjustCommissionAction}><div className="form-grid finance-adjust-grid">
+      <form action={adjustCommissionAction}><input type="hidden" name="idempotency_key" value={adjustmentRequestKey} /><div className="form-grid finance-adjust-grid">
         <label>Comissionado<select name="pessoa_id" defaultValue="" required><option value="" disabled>Selecione</option>{dashboard.commissions.map((item) => <option key={item.personId} value={item.personId}>{item.personName}</option>)}</select></label>
         <label>Valor do ajuste<input name="valor_ajuste" inputMode="decimal" step="0.01" placeholder="Positivo ou negativo" required /></label>
         <label>Motivo<select name="motivo_codigo" defaultValue="correcao_calculo"><option value="correcao_calculo">Correcao de calculo</option><option value="estorno_devolucao">Estorno por devolucao</option><option value="acordo_comercial">Acordo comercial</option><option value="compensacao_futura">Compensacao futura</option><option value="outro">Outro</option></select></label>

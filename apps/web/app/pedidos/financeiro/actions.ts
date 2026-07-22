@@ -50,12 +50,14 @@ export async function registerReceiptAction(formData: FormData) {
 
 export async function payCommissionAction(formData: FormData) {
   requireConfigured();
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const personId = positiveInteger(formData, "pessoa_id");
   const value = positiveNumber(formData, "valor_pago");
   const date = field(formData, "data_pagamento");
-  if (!personId || !value || !date) redirect("/pedidos/financeiro?result=invalid_payment#comissoes");
+  if (!idempotencyKey || !personId || !value || !date) redirect("/pedidos/financeiro?result=invalid_payment#comissoes");
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "registrar_fin_comissao_pagamento", {
+  const { error } = await auditedRpc(supabase, "registrar_fin_comissao_pagamento_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_pessoa_id: personId,
     p_valor_pago: value,
     p_data_pagamento: date,
@@ -69,14 +71,16 @@ export async function payCommissionAction(formData: FormData) {
 
 export async function adjustCommissionAction(formData: FormData) {
   requireConfigured();
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const personId = positiveInteger(formData, "pessoa_id");
   const value = signedNumber(formData, "valor_ajuste");
   const reason = field(formData, "motivo_codigo");
   const detail = optionalField(formData, "motivo_detalhe");
   const reasons = new Set(["correcao_calculo", "estorno_devolucao", "acordo_comercial", "compensacao_futura", "outro"]);
-  if (!personId || !value || !reasons.has(reason) || (reason === "outro" && (!detail || detail.length < 10))) redirect("/pedidos/financeiro?result=invalid_adjustment#ajustes");
+  if (!idempotencyKey || !personId || !value || !reasons.has(reason) || (reason === "outro" && (!detail || detail.length < 10))) redirect("/pedidos/financeiro?result=invalid_adjustment#ajustes");
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "registrar_fin_comissao_ajuste", {
+  const { error } = await auditedRpc(supabase, "registrar_fin_comissao_ajuste_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_pessoa_id: personId,
     p_valor_ajuste: value,
     p_motivo: reason,

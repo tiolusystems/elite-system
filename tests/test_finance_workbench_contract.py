@@ -10,8 +10,8 @@ class FinanceWorkbenchContractTests(unittest.TestCase):
         for rpc in (
             "definir_com_pedido_comissao",
             "registrar_com_recebimento_idempotente",
-            "registrar_fin_comissao_pagamento",
-            "registrar_fin_comissao_ajuste",
+            "registrar_fin_comissao_pagamento_idempotente",
+            "registrar_fin_comissao_ajuste_idempotente",
         ):
             self.assertIn(f'await auditedRpc(supabase, "{rpc}"', actions)
         self.assertNotIn('.from("com_recebimentos").insert', actions)

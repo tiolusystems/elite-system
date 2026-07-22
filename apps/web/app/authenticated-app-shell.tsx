@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { DeveloperSignature } from "@/app/developer-signature";
+import { ManualTrigger } from "@/app/manual-trigger";
 import { logoutAction, switchUserAction } from "@/app/login/actions";
 import { navigationGroups, navigationItemForPath } from "@/lib/app-navigation";
 import type { AuthStatus } from "@/lib/auth";
@@ -68,6 +69,7 @@ export function AuthenticatedAppShell({ auth, build, modules, runtime, children 
           <strong>{current.label}</strong>
         </div>
         <span className="shell-environment">{environmentLabel(runtime.databaseMode)}</span>
+        <ManualTrigger />
         <details className="shell-user-menu" ref={userMenuRef}>
           <summary aria-label="Abrir menu do usuario">
             <span className="user-avatar" aria-hidden="true">{initials(displayName)}</span>
@@ -90,14 +92,15 @@ export function AuthenticatedAppShell({ auth, build, modules, runtime, children 
         </div>
         <nav>
           {navigationGroups.map((group) => {
-            const items = group.items.filter((item) => enabledModules.has(item.moduleKey));
+            const items = group.items;
             if (items.length === 0) return null;
             return (
               <section className="navigation-group" key={group.label}>
                 <h2>{group.label}</h2>
                 {items.map((item) => {
                   const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-                  return (
+                  const enabled = enabledModules.has(item.moduleKey);
+                  return enabled ? (
                     <Link
                       href={item.href}
                       aria-current={active ? "page" : undefined}
@@ -107,6 +110,12 @@ export function AuthenticatedAppShell({ auth, build, modules, runtime, children 
                       <span className="navigation-mark" aria-hidden="true" />
                       {item.label}
                     </Link>
+                  ) : (
+                    <span className="navigation-disabled" key={item.href} aria-disabled="true" title="Modulo ainda nao liberado neste ambiente">
+                      <span className="navigation-mark" aria-hidden="true" />
+                      <span>{item.label}</span>
+                      <small>Indisponivel</small>
+                    </span>
                   );
                 })}
               </section>

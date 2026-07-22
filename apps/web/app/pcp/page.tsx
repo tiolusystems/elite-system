@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import {
   calculateOpGuaranteesAction,
   cancelPcpOpAction,
@@ -18,13 +16,11 @@ import {
   type PcpOpComponent,
   type PcpRecentOp
 } from "@/lib/pcp";
-import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function PcpPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
-  const runtime = getRuntimeStatus();
   const dashboard = await getPcpDashboard();
   const result = singleValue(params.result);
   const formMessage = messageForResult(result);
@@ -32,34 +28,6 @@ export default async function PcpPage({ searchParams }: { searchParams?: Promise
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Producao</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/modulos">Modulos</a>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/producao" aria-current="page">
-            Producao
-          </a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace dashboard-workspace">
         <div className="dashboard-header">
           <div>

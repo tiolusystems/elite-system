@@ -1,11 +1,8 @@
-import Link from "next/link";
-
 import { getAuthStatus } from "@/lib/auth";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getModuleRuntimeDashboard, moduleRuntimeFor } from "@/lib/modules";
 import { getOrdersDashboard } from "@/lib/orders";
 import { getReportsDashboard } from "@/lib/reports";
-import { getRuntimeStatus } from "@/lib/runtime";
 import { getImportacaoXmlDashboard } from "@/lib/importacao-xml";
 import { getKanbanDashboard } from "@/lib/kanban";
 import { getPcpDashboard } from "@/lib/pcp";
@@ -27,7 +24,6 @@ const AUDIT_STEPS = [
 ];
 
 export default async function HomePage() {
-  const runtime = getRuntimeStatus();
   const [auth, cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios, seguranca, moduleRuntime] = await Promise.all([
     getAuthStatus(),
     getMasterDataDashboard(),
@@ -50,35 +46,6 @@ export default async function HomePage() {
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Painel operacional</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/" aria-current="page">
-            Inicio
-          </Link>
-          <a href="/modulos">Modulos</a>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/importacao-historica/mp">Historico MP</a>
-          <a href="/producao">Producao</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace dashboard-workspace">
         <div className="dashboard-header">
           <div>

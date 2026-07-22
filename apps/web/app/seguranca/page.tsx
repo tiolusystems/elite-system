@@ -1,12 +1,9 @@
-import Link from "next/link";
-
 import {
   clearSecurityPermissionOverrideAction,
   inviteSecurityAuthUserAction,
   reviewSecurityEmailChangeAction,
   setSecurityPermissionOverrideAction,
 } from "@/app/seguranca/actions";
-import { getRuntimeStatus } from "@/lib/runtime";
 import { getSecurityDashboard, type EffectivePermission, type SecurityProfile } from "@/lib/security";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -19,7 +16,6 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
   const params = searchParams ? await searchParams : {};
   const selectedUserId = singleValue(params.user_id);
   const result = singleValue(params.result);
-  const runtime = getRuntimeStatus();
   const dashboard = await getSecurityDashboard(selectedUserId);
   const formMessage = messageForResult(result);
   const selectedProfile = dashboard.selectedProfile;
@@ -27,34 +23,6 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Seguranca</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/modulos">Modulos</a>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/producao">Producao</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca" aria-current="page">
-            Seguranca
-          </a>
-          <a href="/login">Login</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace">
         <div className="toolbar">
           <div>

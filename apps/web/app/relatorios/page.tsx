@@ -5,7 +5,6 @@ import {
   type ReprocessamentoRow,
   type ValidityLotRow
 } from "@/lib/reports";
-import { getRuntimeStatus } from "@/lib/runtime";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +16,6 @@ const LOT_FAMILY_OPTIONS = ["TODOS", "PI", "PA", "MP"] as const;
 type LotFamilyFilter = (typeof LOT_FAMILY_OPTIONS)[number];
 
 export default async function RelatoriosPage({ searchParams }: ReportsPageProps) {
-  const runtime = getRuntimeStatus();
   const params = await searchParams;
   const dataCorte = /^\d{4}-\d{2}-\d{2}$/.test(params.data ?? "") ? params.data! : new Date().toISOString().slice(0, 10);
   const dashboard = await getReportsDashboard(dataCorte);
@@ -33,35 +31,6 @@ export default async function RelatoriosPage({ searchParams }: ReportsPageProps)
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Relatorios</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/modulos">Modulos</a>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/importacao-historica/mp">Historico MP</a>
-          <a href="/producao">Producao</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios" aria-current="page">
-            Relatorios
-          </a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace dashboard-workspace">
         <div className="dashboard-header">
           <div>

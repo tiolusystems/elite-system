@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import {
   setSystemModuleRolloutAction,
   setSystemRuntimeEnvironmentAction
@@ -56,29 +54,6 @@ export default async function ModulosPage({ searchParams }: { searchParams?: Pro
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Implantacao modular</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/modulos" aria-current="page">Modulos</a>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/producao">Producao</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca">Seguranca</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${dashboard.activeEnvironment === "production" ? "operational" : ""}`}>
-        <strong>DB ativo: {environmentLabel(dashboard.activeEnvironment)}</strong>
-        <span>Estado autoritativo do PostgreSQL. Frontend declarado: {runtime.databaseMode}.</span>
-        <span className="pill">{dashboard.source}</span>
-      </aside>
-
       <section className="workspace module-runtime-workspace">
         <div className="toolbar">
           <div>

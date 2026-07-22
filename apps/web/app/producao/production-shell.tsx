@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { getRuntimeStatus } from "@/lib/runtime";
 
 export type ProductionRoute =
   | "overview"
@@ -45,33 +44,8 @@ export function ProductionShell({
   actions,
   children
 }: ProductionShellProps) {
-  const runtime = getRuntimeStatus();
-
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Producao</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <Link href="/modulos">Modulos</Link>
-          <Link href="/cadastros">Cadastros</Link>
-          <Link href="/pedidos">Pedidos</Link>
-          <Link href="/producao" aria-current="page">Producao</Link>
-          <Link href="/romaneios">Romaneio</Link>
-          <Link href="/relatorios">Relatorios</Link>
-          <Link href="/seguranca">Seguranca</Link>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace technical-workspace production-workspace">
         <nav className="catalog-tabs production-tabs" aria-label="Areas de Producao">
           {PRODUCTION_LINKS.map((item) => (

@@ -8,9 +8,10 @@ export type StockWorkspace = { lots: PcpAvailableLot[]; total: number; page: num
 export async function getStockWorkspace(query: StockQuery): Promise<StockWorkspace> {
   const pageSize = 24;
   if (!getRuntimeStatus().supabaseConfigured) return { lots: [], total: 0, page: 1, pageSize, source: "not_configured", error: "Banco de dados nao configurado." };
+  if (!query.search.trim()) return { lots: [], total: 0, page: 1, pageSize, source: "supabase", error: null };
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("consultar_est_estoque_lotes", {
-    p_busca: query.search || null,
+    p_busca: query.search,
     p_familia: query.family,
     p_limite: pageSize,
     p_offset: (query.page - 1) * pageSize,

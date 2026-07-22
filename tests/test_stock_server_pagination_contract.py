@@ -20,6 +20,9 @@ class StockServerPaginationContractTest(unittest.TestCase):
         self.assertIn("getStockWorkspace", page)
         self.assertNotIn("getPcpDashboard", page)
         self.assertIn("p_limite: pageSize", service)
+        self.assertIn("if (!query.search.trim())", service)
+        self.assertIn("Pesquise primeiro o produto", page)
+        self.assertIn("required", page)
         self.assertIn("Anterior", page)
         self.assertIn("Proxima", page)
 

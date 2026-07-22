@@ -38,8 +38,8 @@ export default async function ProductionStockPage({ searchParams }: { searchPara
 
       <form className="catalog-filter inventory-filter" method="get">
         <label>
-          Buscar lote
-          <input name="q" defaultValue={singleProductionParam(params.q) ?? ""} placeholder="Codigo, item ou origem" />
+          Produto ou materia-prima
+          <input name="q" defaultValue={singleProductionParam(params.q) ?? ""} placeholder="Nome, SKU ou codigo do produto" required />
         </label>
         <label>
           Familia
@@ -75,7 +75,7 @@ export default async function ProductionStockPage({ searchParams }: { searchPara
         <Link href="/producao/estoque">Limpar</Link>
       </form>
 
-      <div className="section-heading inventory-results-heading">
+      {query ? <><div className="section-heading inventory-results-heading">
         <div>
           <span className="eyebrow">Livro de estoque derivado</span>
           <h2>{workspace.total} lote(s) encontrado(s)</h2>
@@ -87,7 +87,10 @@ export default async function ProductionStockPage({ searchParams }: { searchPara
         {workspace.page > 1 ? <Link className="secondary-button" href={pageHref(params, workspace.page - 1)}>Anterior</Link> : <span />}
         <span>{workspace.page} de {pageCount}</span>
         {workspace.page < pageCount ? <Link className="secondary-button" href={pageHref(params, workspace.page + 1)}>Proxima</Link> : <span />}
-      </nav> : null}
+      </nav> : null}</> : <section className="empty-state inventory-query-required">
+        <strong>Pesquise primeiro o produto</strong>
+        <span>Os lotes serao exibidos somente depois de informar um produto, apresentacao, materia-prima ou SKU.</span>
+      </section>}
     </ProductionShell>
   );
 }

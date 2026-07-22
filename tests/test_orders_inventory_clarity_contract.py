@@ -13,7 +13,8 @@ class OrdersInventoryClarityContractTest(unittest.TestCase):
     def test_inventory_starts_with_contextual_filters_not_global_counters(self):
         inventory = (ROOT / "apps/web/app/producao/estoque/page.tsx").read_text(encoding="utf-8")
         self.assertNotIn('aria-label="Resumo dos lotes"', inventory)
-        self.assertIn("Buscar lote", inventory)
+        self.assertIn("Produto ou materia-prima", inventory)
+        self.assertIn("Pesquise primeiro o produto", inventory)
         self.assertIn("Familia", inventory)
         self.assertIn("Validade", inventory)
 

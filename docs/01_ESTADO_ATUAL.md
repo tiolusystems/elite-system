@@ -5,17 +5,18 @@ Atualizado em: 2026-07-22
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit publicado e aprovado pela CI: `54d18c9`;
+- commit funcional publicado e aprovado pela CI: `13d3b31`;
+- HEAD documental publicado: `dcc2f05`;
 - Supabase de homologacao: ledger alinhado de `0001` a `0102`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- frontend ainda nao promovido para o codigo mais recente por limite diario externo da Vercel;
+- deployment estavel de staging: `dpl_TRpJ8HQtusKdnHWxXzeQFzpJXKWh`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
 ## Estado tecnico comprovado
 
-O pipeline integral do commit `54d18c9` esta aprovado:
+O pipeline integral do commit `13d3b31` esta aprovado:
 
 - ESLint, TypeScript e build Next.js;
 - testes Python e contratos estaticos;
@@ -35,6 +36,9 @@ depois de CI aprovada e dry-run controlado. O ultimo dry-run listou exclusivamen
 - `0099_packaging_issue_request_idempotency.sql`;
 - `0100_exchange_order_request_idempotency.sql`;
 - `0101_commission_assignment_request_idempotency.sql`.
+
+Um segundo dry-run listou exclusivamente
+`0102_fiscal_request_idempotency.sql` antes de sua aplicacao.
 
 O ledger remoto confirmou `0102` e o health-check permaneceu saudavel depois da
 aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
@@ -62,7 +66,7 @@ papeis da API.
 
 ## Validacao desta tarefa
 
-- CI integral do commit `54d18c9` aprovada;
+- CI integral do commit `13d3b31` aprovada;
 - instalacao limpa e smokes PostgreSQL executados em ambiente descartavel;
 - dry-run remoto restrito a `0097` ate `0101`;
 - ledger de staging confirmado ate `0102`;
@@ -141,13 +145,12 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. Promover o frontend aprovado quando o limite diario da Vercel for liberado.
-2. Executar smoke autenticado de Producao, Pedidos, comissoes e Romaneio no
+1. Executar smoke autenticado de Producao, Pedidos, comissoes e Romaneio no
    frontend promovido.
-3. Continuar a auditoria de idempotencia somente em eventos que criam efeito
+2. Continuar a auditoria de idempotencia somente em eventos que criam efeito
    fisico, fiscal ou financeiro; nao envolver atualizacoes naturalmente
    serializadas por estado.
-4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
+3. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
 ## Tarefa seguinte
 

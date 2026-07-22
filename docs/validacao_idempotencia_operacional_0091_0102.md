@@ -50,6 +50,10 @@ intencao do operador, validada novamente no PostgreSQL.
 - ledger do Supabase de staging alinhado ate `0102`;
 - `https://elite-system-staging.vercel.app/api/health`: `status=ok` e
   `backendConfigured=true` depois da aplicacao.
+- Preview `dpl_TRpJ8HQtusKdnHWxXzeQFzpJXKWh` compilado diretamente do checkout
+  validado e promovido ao dominio estavel de staging;
+- `/login` respondeu HTTP 200 com `Elite System` e assinatura `by ☧ SYSTEMS`,
+  sem as assinaturas antigas.
 
 ## Idempotencia natural mantida
 
@@ -77,5 +81,5 @@ criacao fiscal livre.
 - nenhum dado comercial real foi criado;
 - nenhuma migration foi aplicada em producao real;
 - `main` nao foi alterada;
-- o frontend mais recente ainda depende de nova janela de deploy da Vercel;
+- o frontend validado esta ativo no dominio estavel de staging;
 - o backend de staging esta atualizado e saudavel ate `0102`.

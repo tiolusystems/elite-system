@@ -5,18 +5,18 @@ Atualizado em: 2026-07-22
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit funcional e documental publicado: `3abb5e0`;
-- Supabase de homologacao: ledger alinhado de `0001` a `0103`;
+- commit funcional publicado: `b70e286`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0104`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_DPowRqN9P66VtZxbXc9pbvTGmTxU`;
+- deployment estavel de staging: `dpl_CFaYp26oLuHCaKFozVPYDxUR1yZh`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
 ## Estado tecnico comprovado
 
-O pipeline integral do commit `3abb5e0` esta aprovado na execucao
-`29943476990`:
+O pipeline integral do commit `b70e286` esta aprovado na execucao
+`29968432605`:
 
 - ESLint, TypeScript e build Next.js;
 - testes Python e contratos estaticos;
@@ -28,7 +28,7 @@ O pipeline integral do commit `3abb5e0` esta aprovado na execucao
 - catalogos tecnicos, embalagens e logistica;
 - Romaneio, leitura RLS e fronteiras administrativas de Seguranca.
 
-As migrations `0091` a `0103` foram aplicadas no Supabase de staging somente
+As migrations `0091` a `0104` foram aplicadas no Supabase de staging somente
 depois de CI aprovada e dry-run controlado. O ultimo dry-run listou exclusivamente:
 
 - `0097_manager_decision_request_idempotency.sql`;
@@ -41,12 +41,28 @@ Um segundo dry-run listou exclusivamente
 `0102_fiscal_request_idempotency.sql` antes de sua aplicacao.
 O dry-run seguinte listou exclusivamente
 `0103_govern_product_groups.sql` antes de sua aplicacao.
+O dry-run mais recente listou exclusivamente
+`0104_separate_credit_limit_adjust_permission.sql` antes de sua aplicacao.
 
-O ledger remoto confirmou `0103` e o health-check permaneceu saudavel depois da
+O ledger remoto confirmou `0104` e o health-check permaneceu saudavel depois da
 aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
 nao alterou o ledger nem a disponibilidade do backend.
 
 ## Tarefa concluida mais recente
+
+Separacao da revisao de pedido e da manutencao do limite cadastral de credito:
+
+- `pedidos.credit.review` revisa exclusivamente o pedido bloqueado;
+- `financeiro.credit_limits.adjust` altera exclusivamente o limite permanente;
+- a nova alcada e individual, explicita, pertence ao Financeiro e nasce
+  bloqueada;
+- nenhum papel organizacional, inclusive gerente, Financeiro ou admin, concede
+  a nova permissao automaticamente;
+- a action key legada permanece somente para historico e nao autoriza a RPC;
+- nenhum override positivo legado existia e nenhuma concessao foi migrada;
+- Clientes, Pedidos, Seguranca, manuais e testes refletem a separacao.
+
+O fechamento anterior de grupos de produto permanece vigente:
 
 Governanca relacional de grupos de produto e eliminacao das interfaces
 concorrentes da Central de Cadastros:
@@ -82,13 +98,14 @@ papeis da API.
 
 ## Validacao desta tarefa
 
-- CI integral do commit `3abb5e0` aprovada nos jobs `database-contract`,
+- CI integral do commit `b70e286` aprovada nos jobs `database-contract`,
   `python-tests` e `web-contract`;
 - instalacao limpa, upgrade `0102` para `0103`, concorrencia e smokes
   PostgreSQL executados em ambientes `elite-validation-*`;
-- ledger de staging confirmado ate `0103`, sem reaplicacao na retomada;
+- ledger de staging confirmado ate `0104`;
 - health-check de staging saudavel depois da aplicacao;
-- smoke autenticado confirmou Central, Produtos, Grupos, historico e manual;
+- smoke autenticado confirmou Clientes em somente leitura, nova alcada
+  bloqueada na Seguranca e ausencia do ajuste permanente em Pedidos;
 - grupo e produto sinteticos foram inativados pelo fluxo governado, sem apagar
   o historico;
 - nenhum dado real, reset ou alteracao em producao.
@@ -146,6 +163,8 @@ papeis da API.
 - RLS e menor privilegio;
 - escrita direta revogada;
 - fatos historicos append-only;
+- limite de credito controlado pela alcada individual
+  `financeiro.credit_limits.adjust`, sem inferencia por papel;
 - `anon` e `PUBLIC` sem execucao das RPCs operacionais;
 - convite, recuperacao de senha e troca administrativa de e-mail governados;
 - assinatura institucional `by ☧ SYSTEMS` preservada.
@@ -166,7 +185,7 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 ## Proxima tarefa
 
 1. Retomar o macrociclo UX-01C a partir do staging validado, sem recriar os
-   contratos de Grupos de produto.
+   contratos de Grupos de produto ou de credito.
 2. Executar smoke autenticado de Producao, Pedidos, comissoes e Romaneio no
    frontend promovido.
 3. Continuar a auditoria de idempotencia somente em eventos que criam efeito

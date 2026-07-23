@@ -21,7 +21,7 @@ class Ux01cCustomerCreditContractTests(unittest.TestCase):
         self.assertIn("normalizeSearch", CLIENTS)
 
     def test_credit_remains_finance_owned_and_permission_checked(self) -> None:
-        self.assertIn('p_action_key: "pedidos.credit.limit.adjust"', MASTER_DATA)
+        self.assertIn('p_action_key: "financeiro.credit_limits.adjust"', MASTER_DATA)
         self.assertIn("creditoGravacaoDisponivel", MASTER_DATA)
         self.assertIn("ajustarLimiteCreditoAction", CLIENTS)
         self.assertIn('name="justificativa_limite"', CLIENTS)

@@ -250,7 +250,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       getMasterDataLookups(supabase),
       getClientMasterData(supabase),
       getPeopleMasterData(supabase),
-      supabase.rpc("can_current_user", { p_action_key: "pedidos.credit.limit.adjust" })
+      supabase.rpc("can_current_user", { p_action_key: "financeiro.credit_limits.adjust" })
     ]);
 
     return {

@@ -28,7 +28,7 @@ O documento para impressão ou PDF somente fica disponível depois da liberaçã
 gerencial. Vendedor e gerente podem emiti-lo quando o pedido estiver aberto ou
 atendido.
 
-## Gerente
+## Revisão do pedido
 
 1. Abra **Pedidos**. A busca mostra clientes próprios e clientes dos vendedores
    subordinados por vínculo direto ou área comercial.
@@ -36,8 +36,21 @@ atendido.
 3. Confira cliente, vendedor, valor do pedido e limite disponível.
 4. Escreva a justificativa.
 5. Clique em **Liberar** ou **Reprovar**.
-6. Quando necessário, abra **Ajustar limite do cliente**, informe o novo valor
-   e uma justificativa, registre o limite e depois tome a decisão do pedido.
+
+A aprovação excepcional vale apenas para o pedido analisado. Ela não altera o
+limite permanente do cliente.
+
+## Limite cadastral do cliente
+
+1. A pessoa com alçada financeira individual abre a ficha do cliente.
+2. Consulta os limites manual, calculado e disponível e o histórico.
+3. Informa o novo limite manual e uma justificativa.
+4. Registra a alteração, que gera um evento financeiro auditado.
+
+Ser gerente, trabalhar no Financeiro ou possuir papel administrativo não
+concede essa alçada automaticamente. A pessoa pode revisar pedidos sem alterar
+limites, ou alterar limites sem revisar pedidos, conforme suas permissões
+individuais.
 
 ## Visibilidade
 
@@ -46,4 +59,4 @@ atendido.
   vínculo direto ou área comercial.
 - Selecionar um cliente restringe o histórico visível àquele cliente.
 - Uma pesquisa sem nome não devolve a lista completa de clientes.
-- Alterações de limite e decisões gerenciais são auditadas.
+- Alterações de limite e decisões de pedido são auditadas separadamente.

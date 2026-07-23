@@ -304,7 +304,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
 
         <section className="panel" id="alcadas" aria-labelledby="alcadas-title">
           <div className="panel-header">
-            <h2 id="alcadas-title">Alcadas efetivas</h2>
+            <h2 id="alcadas-title">Alçadas efetivas</h2>
             <form className="security-user-picker" action="/seguranca" method="get">
               <select name="user_id" defaultValue={selectedProfile?.id ?? ""}>
                 {dashboard.profiles.map((profile) => (
@@ -396,8 +396,8 @@ function PermissionRow({
         <strong>{permission.description}</strong>
         <span className="table-subtext">Permissão operacional governada</span>
       </td>
-      <td>{labelForBoolean(permission.defaultAllowed)}</td>
-      <td>{permission.overrideAllowed === null ? "Padrão do perfil" : labelForBoolean(permission.overrideAllowed)}</td>
+      <td>{permission.defaultAllowed ? "Permitido" : "Bloqueado"}</td>
+      <td>{permission.overrideAllowed === null ? "Padrão da ação" : "Decisão individual"}</td>
       <td>
         <span className={`status-chip ${permission.effectiveAllowed ? "ativo" : "alta"}`}>
           {permission.effectiveAllowed ? "permitido" : "bloqueado"}
@@ -425,7 +425,7 @@ function PermissionRow({
             <input name="user_id" type="hidden" value={selectedProfile.id} />
             <input name="action_key" type="hidden" value={permission.actionKey} />
             <button className="secondary-button" type="submit" disabled={disabled || permission.overrideAllowed === null}>
-              Usar padrão
+              Remover decisão individual
             </button>
           </form>
         </div>
@@ -436,10 +436,6 @@ function PermissionRow({
 
 function valueOrDash(value: number | null): string {
   return value === null ? "sem conexao" : String(value);
-}
-
-function labelForBoolean(value: boolean): string {
-  return value ? "permitido" : "bloqueado";
 }
 
 function singleValue(value: string | string[] | undefined): string | null {
@@ -454,9 +450,9 @@ function messageForResult(result: string | null): { kind: "ok" | "warning"; titl
     case "auth_invitation_sent":
       return { kind: "ok", title: "Convite enviado", detail: "A conta permanecerá pendente até o e-mail ser confirmado e a senha ser criada." };
     case "permission_saved":
-      return { kind: "ok", title: "Alcada atualizada", detail: "A exceção individual de permissão foi registrada." };
+      return { kind: "ok", title: "Alçada atualizada", detail: "A exceção individual de permissão foi registrada." };
     case "permission_cleared":
-      return { kind: "ok", title: "Exceção removida", detail: "O usuário voltou ao padrão do perfil." };
+      return { kind: "ok", title: "Decisão individual removida", detail: "O usuário voltou ao padrão da ação." };
     case "not_configured":
       return { kind: "warning", title: "Supabase nao configurado", detail: "Configure o ambiente antes de gravar." };
     case "service_role_missing":

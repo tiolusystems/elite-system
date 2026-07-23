@@ -23,7 +23,10 @@ class OrdersSellerManagerContractTest(unittest.TestCase):
         self.assertNotIn('name="status"', page)
         self.assertIn("Enviar para liberação", entry)
         self.assertIn("Liberações gerenciais", page)
-        self.assertIn("Ajustar limite do cliente", page)
+        self.assertNotIn("ajustarLimiteCreditoAction", page)
+        self.assertNotIn("Ajustar limite do cliente", page)
+        self.assertIn("Consultar credito do cliente", page)
+        self.assertIn("nao altera o limite cadastral do cliente", page)
         self.assertNotIn("pendente_aprovacao</option>", page)
         self.assertIn('["open", "fulfilled"].includes(order.status)', page)
         self.assertIn("Disponível após aprovação", page)
@@ -33,7 +36,8 @@ class OrdersSellerManagerContractTest(unittest.TestCase):
         self.assertTrue(manual.exists())
         text = manual.read_text(encoding="utf-8")
         self.assertIn("## Vendedor", text)
-        self.assertIn("## Gerente", text)
+        self.assertIn("## Revisão do pedido", text)
+        self.assertIn("## Limite cadastral do cliente", text)
 
 
 if __name__ == "__main__":

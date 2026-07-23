@@ -48,7 +48,16 @@ unico campo. Cada informacao permanece vinculada ao cliente por relacionamento.
 - vinculos comerciais preservam vigencia e historico;
 - limite de credito pertence ao dominio Financeiro e nao e gravado diretamente
   no cliente;
-- alteracao de limite exige permissao e justificativa auditada.
+- alteracao de limite exige permissao financeira individual, explicitamente
+  concedida, e justificativa auditada;
+- o papel de gerente, Financeiro, Administrativo ou Comercial nao concede essa
+  permissao automaticamente;
+- revisar um pedido bloqueado e alterar o limite cadastral sao operacoes
+  independentes;
+- aprovar uma excecao para um pedido nao aumenta o limite permanente do
+  cliente;
+- limite manual, limite calculado e limite disponivel permanecem informacoes
+  distintas.
 
 ## Correcao e inativacao
 

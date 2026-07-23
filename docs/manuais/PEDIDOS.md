@@ -6,7 +6,7 @@
 2. Seleciona cliente ou propriedade e confere o limite disponível.
 3. Informa os itens, quantidades, valores e a data do pedido.
 4. Envia o pedido para liberação.
-5. O gerente registra a decisão e a justificativa.
+5. Uma pessoa com alçada de revisão registra a decisão e a justificativa.
 
 ## Exportar para assinatura
 
@@ -30,6 +30,8 @@ inscrição ou contato.
 - pedido aguardando aprovação não gera contrato;
 - a leitura respeita o mesmo escopo do pedido: vendedor vê sua carteira e
   gerente vê sua carteira e equipe;
+- revisar um pedido bloqueado não altera o limite cadastral do cliente;
+- alterar o limite exige uma alçada financeira individual e independente;
 - o PDF não mostra comissão, limite de crédito ou informações internas de
   auditoria;
 - a aprovação exibida vem do histórico de decisões do pedido.

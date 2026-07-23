@@ -234,6 +234,10 @@ Regras iniciais:
 - inadimplencia pode reduzir limite ou bloquear pedido.
 - pedido acima do limite nao deve ser aprovado automaticamente.
 - gerente/financeiro/comercial autorizado pode aprovar excecao conforme alcada.
+- aprovacao excepcional de pedido nao modifica o limite permanente do cliente.
+- alteracao de limite pertence ao Financeiro e exige permissao individual
+  explicita, nunca inferida do papel organizacional.
+- revisar pedido e manter limite cadastral sao alcadas independentes.
 - a analise de credito usada no pedido deve ficar gravada como snapshot auditavel.
 
 Detalhamento: `docs/escopo_comissoes_recebimentos_credito.md`.

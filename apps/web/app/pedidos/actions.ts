@@ -145,12 +145,12 @@ export async function ajustarLimiteCreditoAction(formData: FormData) {
     p_limite_novo: limiteNovo
   }, {
     metadata: {
-      action_key: "pedidos.credit.limit.adjust",
+      action_key: "financeiro.credit_limits.adjust",
       axis: "change_type",
-      domain: "pedidos",
+      domain: "financeiro",
       entity: "cad_limites_credito_cliente",
       entity_id: String(clienteId),
-      failure_action: "pedidos.credit_limit_adjust_failed"
+      failure_action: "financeiro.credit_limit_adjust_failed"
     }
   });
   if (error) redirectCreditAdjustment(target, mapSupabaseError(error.message));

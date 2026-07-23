@@ -5,6 +5,8 @@ import { getRuntimeStatus } from "@/lib/runtime";
 import { createSupabaseAdminClient, hasSupabaseAdminConfig } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const LEGACY_PERMISSION_KEYS = new Set(["pedidos.credit.limit.adjust"]);
+
 export type AuthEmailStatus =
   | "confirmed"
   | "missing"
@@ -107,7 +109,9 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
 
     const permissions = permissionsResult.error
       ? []
-      : ((permissionsResult.data ?? []) as Array<Record<string, unknown>>).map(mapPermission);
+      : ((permissionsResult.data ?? []) as Array<Record<string, unknown>>)
+          .map(mapPermission)
+          .filter((permission) => !LEGACY_PERMISSION_KEYS.has(permission.actionKey));
     const emailChangeRequests = emailChangeResult.error
       ? []
       : ((emailChangeResult.data ?? []) as Array<Record<string, unknown>>).map(mapEmailChangeRequest);

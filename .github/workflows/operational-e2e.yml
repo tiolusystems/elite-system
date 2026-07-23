@@ -1,0 +1,87 @@
+name: Operational E2E and traceability
+
+on:
+  workflow_dispatch:
+
+jobs:
+  elite-validation-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Enable pinned pnpm
+        run: corepack enable && corepack prepare pnpm@11.11.0 --activate
+      - name: Prepare isolated project
+        run: |
+          export E2E_RUN_ID="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          export VALIDATION_ROOT="$RUNNER_TEMP/elite-validation-e2e-$E2E_RUN_ID"
+          mkdir -p "$VALIDATION_ROOT"
+          cp -R supabase "$VALIDATION_ROOT/supabase"
+          sed -i "s/project_id = \"elite-system\"/project_id = \"elite-validation-e2e-$E2E_RUN_ID\"/" "$VALIDATION_ROOT/supabase/config.toml"
+          echo "E2E_RUN_ID=$E2E_RUN_ID" >> "$GITHUB_ENV"
+          echo "VALIDATION_ROOT=$VALIDATION_ROOT" >> "$GITHUB_ENV"
+          echo "E2E_ACCOUNTS_PATH=$RUNNER_TEMP/elite-validation-e2e-$E2E_RUN_ID/accounts.json" >> "$GITHUB_ENV"
+      - name: Start isolated Supabase and install every migration
+        run: |
+          supabase start --workdir "$VALIDATION_ROOT"
+          supabase db reset --workdir "$VALIDATION_ROOT"
+          supabase status --workdir "$VALIDATION_ROOT" -o env > "$RUNNER_TEMP/supabase-status.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-status.env"
+          set +a
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> "$GITHUB_ENV"
+          echo "DB_URL=$DB_URL" >> "$GITHUB_ENV"
+      - name: Run operational SQL chains
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/operational_stock_external_fiscal_refs.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/production_end_to_end_chain.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/commercial_end_to_end_chain.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/total_traceability_contract.sql
+      - name: Install web and pinned browser runner
+        working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm add --lockfile=false -D @playwright/test@1.51.1
+          pnpm exec playwright install --with-deps chromium
+      - name: Bootstrap individual synthetic users
+        working-directory: apps/web
+        env:
+          E2E_SYNTHETIC_PASSWORD: "E2E-only-Strong-Password-2026!"
+        run: node e2e/bootstrap-synthetic-users.mjs
+      - name: Build and start test frontend
+        working-directory: apps/web
+        env:
+          ELITE_DATABASE_MODE: test
+          ELITE_DATABASE_LABEL: Banco descartavel E2E
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+          NEXT_PUBLIC_BUILD_VERSION: e2e-${{ github.run_id }}
+        run: |
+          pnpm build
+          pnpm start --hostname 127.0.0.1 --port 3100 > "$RUNNER_TEMP/elite-e2e-web.log" 2>&1 &
+          for attempt in $(seq 1 60); do curl -fsS http://127.0.0.1:3100/api/health && exit 0; sleep 2; done
+          cat "$RUNNER_TEMP/elite-e2e-web.log"
+          exit 1
+      - name: Run browser regression in five viewports
+        working-directory: apps/web
+        env:
+          E2E_BASE_URL: http://127.0.0.1:3100
+        run: pnpm test:e2e:operational
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: elite-operational-e2e-${{ github.run_id }}
+          path: artifacts/e2e
+          if-no-files-found: warn
+      - name: Stop isolated Supabase
+        if: always()
+        run: supabase stop --workdir "$VALIDATION_ROOT" --no-backup

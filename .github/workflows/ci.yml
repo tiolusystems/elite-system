@@ -99,6 +99,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/credit_limit_atomic_permission.sql
+      - name: Run operational stock and external fiscal reference smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/operational_stock_external_fiscal_refs.sql
+      - name: Run total traceability permission smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/total_traceability_contract.sql
 
       - name: Run blocked order and exchange idempotency smoke
         env:

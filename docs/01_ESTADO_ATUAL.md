@@ -184,13 +184,13 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. Retomar o macrociclo UX-01C a partir do staging validado, sem recriar os
-   contratos de Grupos de produto ou de credito.
-2. Executar smoke autenticado de Producao, Pedidos, comissoes e Romaneio no
-   frontend promovido.
-3. Continuar a auditoria de idempotencia somente em eventos que criam efeito
-   fisico, fiscal ou financeiro; nao envolver atualizacoes naturalmente
-   serializadas por estado.
+1. Executar em `elite-validation-e2e-*` as migrations candidatas `0105` e
+   `0106`, os smokes SQL e o navegador full-stack descritos em
+   `docs/validacao_e2e_rastreabilidade_total.md`.
+2. Somente depois de instalacao limpa, upgrade, CI e reconciliacao aprovados,
+   publicar e aplicar o bloco no Supabase de staging por dry-run unitario.
+3. Executar no staging o ensaio sintetico `HOM-E2E-*`, sem dados reais, e
+   neutralizar seus efeitos pelo fluxo governado.
 4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
 ## Tarefa seguinte
@@ -199,3 +199,12 @@ Concluir a homologacao funcional do workbook e executar a etapa I2 somente para
 fontes aprovadas, mantendo a importacao operacional bloqueada ate essa decisao.
 
 Nao reaplicar migrations, nao resetar banco e nao alterar producao real.
+
+## Candidato local em validacao
+
+O macrociclo `E2E-01 + TRACE-01` preparou localmente entrada operacional de MP
+com custo, referencias fiscais exclusivamente externas e rastreabilidade total
+derivada. Os gates locais passaram, mas o executor de PostgreSQL descartavel
+ficou indisponivel antes da comprovacao integral. As migrations `0105` e `0106`
+nao foram aplicadas nem publicadas; o resultado permanece reprovado ate o
+ensaio completo.

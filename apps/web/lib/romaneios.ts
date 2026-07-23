@@ -97,6 +97,7 @@ export type RomaneioRecord = {
   movements: RomaneioMovement[];
   logistics: RomaneioLogistics | null;
   fiscalDocuments: RomaneioFiscalDocument[];
+  simpleBillingReferences: RomaneioFiscalDocument[];
   carga: {
     volumeLiquidoL: number;
     volumesLogisticos: number | null;
@@ -288,8 +289,8 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         .limit(300),
       supabase
         .from("fat_notas_fiscais")
-        .select("id,romaneio_id,numero,serie,tipo,status_atual,data_emissao,valor_nf")
-        .not("romaneio_id", "is", null)
+        .select("id,pedido_id,romaneio_id,numero,serie,tipo,status_atual,data_emissao,valor_nf,origem_registro")
+        .eq("origem_registro", "externa")
         .order("data_emissao", { ascending: false })
         .limit(300),
       cargasPromise,
@@ -338,8 +339,12 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       })
     );
     const fiscalDocumentsByRomaneio = groupBy(
-      rows(notasFiscais).map(mapFiscalDocument),
+      rows(notasFiscais).filter((row) => row.romaneio_id != null).map(mapFiscalDocument),
       (document) => document.romaneioId
+    );
+    const simpleReferencesByOrder = groupBy(
+      rows(notasFiscais).filter((row) => row.tipo === "simples_faturamento").map(mapFiscalDocument),
+      (document) => document.pedidoId
     );
     const cargaByRomaneio = new Map(rows(cargas).map((row) => [Number(row.romaneio_id), mapCarga(row)]));
     const userNameById = new Map(rows(usuarios).map((row) => [String(row.id), String(row.display_name)]));
@@ -384,6 +389,14 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         movements: movementsByRomaneio.get(id) ?? [],
         logistics: logisticsByRomaneio.get(id) ?? null,
         fiscalDocuments: (fiscalDocumentsByRomaneio.get(id) ?? []).map((document) => ({
+          id: document.id,
+          numberLabel: document.numberLabel,
+          type: document.type,
+          status: document.status,
+          issuedAt: document.issuedAt,
+          value: document.value
+        })),
+        simpleBillingReferences: (simpleReferencesByOrder.get(Number(row.pedido_id)) ?? []).map((document) => ({
           id: document.id,
           numberLabel: document.numberLabel,
           type: document.type,
@@ -582,12 +595,13 @@ function mapMovement(row: Record<string, unknown>, lotMap: Map<number, string>):
   };
 }
 
-function mapFiscalDocument(row: Record<string, unknown>): RomaneioFiscalDocument & { romaneioId: number } {
+function mapFiscalDocument(row: Record<string, unknown>): RomaneioFiscalDocument & { romaneioId: number; pedidoId: number } {
   const number = nullableString(row.numero);
   const series = nullableString(row.serie);
   return {
     id: Number(row.id),
     romaneioId: Number(row.romaneio_id),
+    pedidoId: Number(row.pedido_id),
     numberLabel: number ? `${number}${series ? ` / serie ${series}` : ""}` : "numero pendente",
     type: String(row.tipo),
     status: String(row.status_atual),

@@ -107,8 +107,8 @@ class RomaneioLogisticsOperationalContractTests(unittest.TestCase):
             "Atribuir entrega",
             "Atualizar entrega",
             "Remover atribuicao",
-            "Faturamento",
-            "Emita e vincule a NF no faturamento. A baixa fisica ocorrera somente ao confirmar esta NF.",
+            "Referências fiscais externas",
+            "Registrar o número não baixa estoque nem libera comissão.",
         ):
             self.assertIn(text, self.page)
         self.assertIn(".compact-action-form select", STYLES.read_text(encoding="utf-8"))

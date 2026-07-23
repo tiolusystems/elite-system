@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 
+import { registerValuedMpEntryAction } from "@/app/producao/estoque/actions";
 import {
   StockWorkbench,
 } from "@/app/producao/estoque/stock-workbench";
@@ -40,6 +42,35 @@ export default async function ProductionStockPage({ searchParams }: { searchPara
       )}
     >
       <ProductionFeedback result={singleProductionParam(params.result)} />
+
+      {selectedProduct?.family === "MP" ? (
+        <details className="panel form-panel" id="entrada-mp">
+          <summary><strong>Registrar entrada e custo da matéria-prima</strong><span>movimento auditado</span></summary>
+          <form action={registerValuedMpEntryAction} className="form-grid inventory-entry-form">
+            <input type="hidden" name="idempotency_key" value={randomUUID()} />
+            <input type="hidden" name="materia_prima_id" value={selectedProduct.id} />
+            <input type="hidden" name="return_query" value={stockReturnQuery(params)} />
+            <div className="wide-field field-note"><strong>{selectedProduct.name}</strong><span>{selectedProduct.code}</span></div>
+            <label>Lote do fornecedor<input name="codigo_lote_fornecedor" required /></label>
+            <label>Quantidade<input name="quantidade" inputMode="decimal" min="0.000001" step="any" required /></label>
+            <label>Unidade de origem<input name="unidade_origem" defaultValue="UN_BASE" required /></label>
+            <label>Situação de qualidade<select name="status_lote" defaultValue="bloqueado"><option value="bloqueado">Bloqueado até liberação do CQ</option><option value="disponivel">Disponível</option></select></label>
+            <label>Fabricação<input name="data_fabricacao" type="date" /></label>
+            <label>Validade<input name="data_validade" type="date" /></label>
+            <label>Documento de entrada<input name="documento_ref" placeholder="Número do documento externo" required /></label>
+            <label>Data do documento<input name="data_documento" type="date" /></label>
+            <label>Valor da matéria-prima<input name="valor_materia_prima" inputMode="decimal" min="0" step="0.01" defaultValue="0" required /></label>
+            <label>Frete<input name="frete" inputMode="decimal" min="0" step="0.01" defaultValue="0" /></label>
+            <label>DIFAL de ICMS<input name="difal_icms" inputMode="decimal" min="0" step="0.01" defaultValue="0" /></label>
+            <label>Situação do DIFAL<select name="difal_status" defaultValue="not_applicable"><option value="not_applicable">Não aplicável</option><option value="informed">Informado</option><option value="pending_review">Pendente de revisão</option></select></label>
+            <label>UF do emitente<input name="uf_emitente" maxLength={2} placeholder="SP" /></label>
+            <label>Outras despesas<input name="outras_despesas" inputMode="decimal" min="0" step="0.01" defaultValue="0" /></label>
+            <label className="wide-field">Motivo da pendência do DIFAL<input name="difal_motivo" /></label>
+            <label className="wide-field">Observação<input name="observacao" /></label>
+            <div className="form-footer wide-field"><span>A gravação cria o lote, a entrada física e a camada de custo na mesma transação.</span><button className="primary-button" type="submit">Registrar entrada</button></div>
+          </form>
+        </details>
+      ) : null}
 
       <form className="catalog-filter inventory-filter" method="get">
         <label>
@@ -114,4 +145,14 @@ function selectionHref(params: SearchParams, productId: number, targetId: number
   next.set("produto", String(productId));
   if (targetId) next.set("alvo", String(targetId));
   return `/producao/estoque?${next.toString()}`;
+}
+
+function stockReturnQuery(params: SearchParams) {
+  const next = new URLSearchParams();
+  for (const key of ["q", "familia", "produto", "alvo"]) {
+    const raw = params[key];
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (value) next.set(key, value);
+  }
+  return next.toString();
 }

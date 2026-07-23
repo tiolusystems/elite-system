@@ -154,6 +154,62 @@ export async function confirmRomaneioAction(formData: FormData) {
   redirect("/romaneios?result=romaneio_confirmed#romaneios");
 }
 
+export async function registerExternalFiscalReferenceAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) redirect("/romaneios?result=not_configured#romaneios");
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const romaneioId = optionalInteger(formData, "romaneio_id");
+  const parentId = optionalInteger(formData, "referencia_pai_id");
+  const type = field(formData, "tipo");
+  const number = field(formData, "numero");
+  const reason = field(formData, "motivo");
+  if (!idempotencyKey || !pedidoId || !number || reason.length < 5
+      || !["simples_faturamento", "remessa_total", "remessa_vinculada"].includes(type)) {
+    redirect("/romaneios?result=missing_external_reference#romaneios");
+  }
+  if (type !== "simples_faturamento" && !romaneioId) redirect("/romaneios?result=missing_external_reference#romaneios");
+  if (type === "remessa_vinculada" && !parentId) redirect("/romaneios?result=missing_external_reference_parent#romaneios");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_fat_referencia_externa_idempotente", {
+    p_data_documento: optionalField(formData, "data_documento"),
+    p_idempotency_key: idempotencyKey,
+    p_motivo: reason,
+    p_numero: number,
+    p_pedido_id: pedidoId,
+    p_referencia_pai_id: parentId,
+    p_romaneio_id: type === "simples_faturamento" ? null : romaneioId,
+    p_serie: optionalField(formData, "serie"),
+    p_tipo: type
+  });
+  if (error) redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+  revalidatePath("/romaneios");
+  revalidatePath("/pedidos");
+  redirect("/romaneios?result=external_reference_registered#romaneios");
+}
+
+export async function correctExternalFiscalReferenceAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) redirect("/romaneios?result=not_configured#romaneios");
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const referenceId = optionalInteger(formData, "nota_fiscal_id");
+  const number = field(formData, "numero_novo");
+  const reason = field(formData, "motivo");
+  if (!idempotencyKey || !referenceId || !number || reason.length < 10) {
+    redirect("/romaneios?result=missing_external_reference_correction#romaneios");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "corrigir_fat_referencia_externa_numero_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_motivo: reason,
+    p_nota_fiscal_id: referenceId,
+    p_numero_novo: number,
+    p_serie_nova: optionalField(formData, "serie_nova")
+  });
+  if (error) redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+  revalidatePath("/romaneios");
+  redirect("/romaneios?result=external_reference_corrected#romaneios");
+}
+
 export async function cancelRomaneioAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
     redirect("/romaneios?result=not_configured#romaneios");
@@ -242,6 +298,10 @@ function mapRomaneioError(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
+  }
+  if (normalized.includes("idempotency")) return "external_reference_repeated_payload";
+  if (normalized.includes("external fiscal") || normalized.includes("shipping reference") || normalized.includes("parent")) {
+    return "external_reference_invalid";
   }
   if (normalized.includes("not found") || normalized.includes("foreign key")) {
     return "missing_related_record";

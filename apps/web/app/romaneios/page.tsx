@@ -1,11 +1,14 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 
 import {
   assignRomaneioLogisticsAction,
   cancelRomaneioAction,
   confirmRomaneioAction,
+  correctExternalFiscalReferenceAction,
   createRomaneioAction,
   removeRomaneioLogisticsAction,
+  registerExternalFiscalReferenceAction,
   reserveRomaneioPaLotAction,
   reverseRomaneioAction
 } from "@/app/romaneios/actions";
@@ -304,8 +307,9 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
     romaneio.items.length > 0 &&
     romaneio.items.every((item) => item.quantidadeReservada >= item.quantidadeRomaneada);
   const logisticsComplete = Boolean(romaneio.logistics?.entregadorId && romaneio.logistics?.veiculoId);
-  const emittedFiscalDocuments = romaneio.fiscalDocuments.filter((document) => document.status === "emitida");
-  const canConfirm = statusAllowsConfirmation && reservationsComplete && logisticsComplete && emittedFiscalDocuments.length > 0;
+  const shippingReferences = romaneio.fiscalDocuments.filter((document) => document.status === "emitida");
+  const activeSimpleReference = romaneio.simpleBillingReferences.find((document) => document.status === "emitida") ?? null;
+  const canConfirm = statusAllowsConfirmation && reservationsComplete && logisticsComplete && shippingReferences.length > 0;
 
   return (
     <article className={`romaneio-card romaneio-${romaneio.status}`}>
@@ -399,30 +403,71 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
 
       <section className="romaneio-subsection">
         <div className="romaneio-subsection-title">
-          <strong>Faturamento</strong>
+          <strong>Referências fiscais externas</strong>
           <span>
             {romaneio.fiscalDocuments.length > 0
-              ? `${romaneio.fiscalDocuments.length} documento(s)`
+              ? `${romaneio.fiscalDocuments.length} referência(s) de remessa`
               : romaneio.status === "confirmado"
-                ? "aguardando documento fiscal"
-                : "aguarda confirmacao"}
+                ? "baixa confirmada"
+                : "referência de remessa pendente"}
           </span>
         </div>
         {romaneio.fiscalDocuments.length > 0 ? (
           <div className="tag-row">
             {romaneio.fiscalDocuments.map((document) => (
               <span className="tag" key={document.id}>
-                {fiscalDocumentTypeLabel(document.type)}: {document.numberLabel} / {fiscalStatusLabel(document.status)} / {currency(document.value)}
+                {fiscalDocumentTypeLabel(document.type)}: {document.numberLabel} / {fiscalStatusLabel(document.status)}
               </span>
             ))}
           </div>
         ) : (
           <p className="muted">
             {romaneio.status === "confirmado"
-              ? "A NF emitida consolidou a baixa fisica do estoque."
-              : "Emita e vincule a NF no faturamento. A baixa fisica ocorrera somente ao confirmar esta NF."}
+              ? "A confirmação do Romaneio consolidou a baixa física. A referência apenas identifica o documento externo."
+              : "Registre o número da NF de remessa emitida fora do Elite. Registrar o número não baixa estoque nem libera comissão."}
           </p>
         )}
+        {activeSimpleReference ? <p className="field-note"><strong>NF de simples faturamento do pedido-mãe:</strong> {activeSimpleReference.numberLabel}</p> : null}
+        {statusAllowsConfirmation ? <div className="romaneio-actions">
+          {!activeSimpleReference ? <form className="compact-action-form" action={registerExternalFiscalReferenceAction}>
+            <input type="hidden" name="idempotency_key" value={randomUUID()} />
+            <input type="hidden" name="pedido_id" value={romaneio.pedidoId} />
+            <input type="hidden" name="tipo" value="simples_faturamento" />
+            <strong>NF de simples faturamento do pedido</strong>
+            <input name="numero" placeholder="Número da nota fiscal" required />
+            <input name="serie" placeholder="Série (opcional)" />
+            <input name="data_documento" type="date" required />
+            <input name="motivo" placeholder="Motivo do registro" minLength={5} required />
+            <button className="secondary-button" type="submit">Registrar número da nota fiscal</button>
+          </form> : null}
+          <form className="compact-action-form" action={registerExternalFiscalReferenceAction}>
+            <input type="hidden" name="idempotency_key" value={randomUUID()} />
+            <input type="hidden" name="pedido_id" value={romaneio.pedidoId} />
+            <input type="hidden" name="romaneio_id" value={romaneio.id} />
+            <strong>NF de remessa deste Romaneio</strong>
+            <select name="tipo" defaultValue={activeSimpleReference ? "remessa_vinculada" : "remessa_total"}>
+              <option value="remessa_total">Nota única de remessa</option>
+              {activeSimpleReference ? <option value="remessa_vinculada">Remessa vinculada ao simples faturamento</option> : null}
+            </select>
+            {activeSimpleReference ? <input type="hidden" name="referencia_pai_id" value={activeSimpleReference.id} /> : null}
+            <input name="numero" placeholder="Número da nota fiscal" required />
+            <input name="serie" placeholder="Série (opcional)" />
+            <input name="data_documento" type="date" required />
+            <input name="motivo" placeholder="Motivo do registro" minLength={5} required />
+            <button className="secondary-button" type="submit">Registrar referência de remessa</button>
+          </form>
+        </div> : null}
+        {romaneio.fiscalDocuments.map((document) => <details key={`correction-${document.id}`} className="compact-disclosure">
+          <summary>Corrigir número {document.numberLabel}</summary>
+          <form className="compact-action-form" action={correctExternalFiscalReferenceAction}>
+            <input type="hidden" name="idempotency_key" value={randomUUID()} />
+            <input type="hidden" name="nota_fiscal_id" value={document.id} />
+            <input name="numero_novo" placeholder="Novo número" required />
+            <input name="serie_nova" placeholder="Nova série" />
+            <input name="motivo" placeholder="Motivo detalhado da correção" minLength={10} required />
+            <button className="secondary-button" type="submit">Corrigir referência</button>
+          </form>
+        </details>)}
       </section>
 
       {romaneio.movements.length > 0 ? (
@@ -447,20 +492,20 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
             <strong>Antes da baixa de estoque</strong>
             <span>{reservationsComplete ? "Reserva completa" : "1. Reserve todos os produtos por lote"}</span>
             <span>{logisticsComplete ? "Entregador e veiculo informados" : "2. Informe entregador e veiculo"}</span>
-            <span>{emittedFiscalDocuments.length > 0 ? "NF emitida vinculada" : "3. Emita e vincule a NF"}</span>
+            <span>{shippingReferences.length > 0 ? "Referência de remessa registrada" : "3. Registre a referência fiscal externa"}</span>
           </div>
         ) : null}
         {canConfirm ? (
           <form className="compact-action-form" action={confirmRomaneioAction}>
             <input type="hidden" name="romaneio_id" value={romaneio.id} />
             <select name="nota_fiscal_id" defaultValue="" required>
-              <option value="" disabled>Selecione a NF emitida</option>
-              {emittedFiscalDocuments.map((document) => (
+              <option value="" disabled>Selecione a referência de remessa</option>
+              {shippingReferences.map((document) => (
                 <option key={document.id} value={document.id}>{document.numberLabel}</option>
               ))}
             </select>
             <button className="primary-button" type="submit">
-              Confirmar NF e baixar estoque
+              Confirmar Romaneio e baixar estoque
             </button>
           </form>
         ) : null}
@@ -546,10 +591,6 @@ function groupPendingByOrder(items: RomaneioPendingItem[]): Array<[number, Roman
   return [...grouped.entries()];
 }
 
-function currency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-}
-
 function labelFromMap(value: string, labels: Record<string, string>): string {
   return labels[value] ?? "Estado nao reconhecido";
 }
@@ -587,7 +628,7 @@ function lotStatusLabel(value: string): string {
 }
 
 function fiscalStatusLabel(value: string): string {
-  return labelFromMap(value, { emitida: "Emitida", cancelada: "Cancelada", substituida: "Substituida" });
+  return labelFromMap(value, { emitida: "Ativa", cancelada: "Cancelada", substituida: "Substituída" });
 }
 
 function fiscalDocumentTypeLabel(value: string): string {
@@ -609,6 +650,41 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     return null;
   }
   const messages: Record<string, { kind: "ok" | "warning"; title: string; detail: string }> = {
+    external_reference_registered: {
+      kind: "ok",
+      title: "Referência fiscal registrada",
+      detail: "O número externo foi vinculado sem movimentar estoque ou liberar comissão."
+    },
+    external_reference_corrected: {
+      kind: "ok",
+      title: "Referência fiscal corrigida",
+      detail: "O valor anterior e o novo foram preservados na auditoria."
+    },
+    missing_external_reference: {
+      kind: "warning",
+      title: "Referência incompleta",
+      detail: "Informe tipo, número, data e motivo do registro."
+    },
+    missing_external_reference_parent: {
+      kind: "warning",
+      title: "Vínculo do documento pendente",
+      detail: "Selecione a referência de simples faturamento do mesmo pedido."
+    },
+    missing_external_reference_correction: {
+      kind: "warning",
+      title: "Correção incompleta",
+      detail: "Informe novo número e motivo detalhado."
+    },
+    external_reference_invalid: {
+      kind: "warning",
+      title: "Referência fiscal incompatível",
+      detail: "O documento precisa pertencer ao mesmo pedido e Romaneio."
+    },
+    external_reference_repeated_payload: {
+      kind: "warning",
+      title: "Solicitação já utilizada",
+      detail: "Atualize a página antes de registrar dados diferentes."
+    },
     romaneio_created: {
       kind: "ok",
       title: "Romaneio criado",
@@ -697,22 +773,22 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     logistics_incomplete_for_issue: {
       kind: "warning",
       title: "Entrega incompleta",
-      detail: "Informe entregador e veículo antes de confirmar a nota fiscal e baixar o estoque."
+      detail: "Informe entregador e veículo antes de confirmar a expedição e baixar o estoque."
     },
     invoice_link_mismatch: {
       kind: "warning",
-      title: "Nota fiscal não pertence ao romaneio",
-      detail: "Selecione uma nota fiscal emitida para este mesmo pedido e romaneio."
+      title: "Referência fiscal não pertence ao romaneio",
+      detail: "Selecione uma referência fiscal externa registrada para este mesmo pedido e romaneio."
     },
     invoice_not_ready: {
       kind: "warning",
-      title: "Nota fiscal ainda não emitida",
-      detail: "A baixa exige uma nota fiscal de remessa emitida e vinculada ao romaneio."
+      title: "Referência fiscal pendente",
+      detail: "A baixa exige o número da NF de remessa emitida externamente e vinculada ao romaneio."
     },
     invoice_items_mismatch: {
       kind: "warning",
-      title: "Itens da nota fiscal divergentes",
-      detail: "Produtos e quantidades da nota fiscal precisam coincidir com o romaneio."
+      title: "Itens da referência fiscal divergentes",
+      detail: "Produtos e quantidades associados à referência fiscal precisam coincidir com o romaneio."
     },
     load_measurements_pending: {
       kind: "warning",

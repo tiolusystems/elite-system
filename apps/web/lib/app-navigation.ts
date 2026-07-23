@@ -37,6 +37,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: "Controle",
     items: [
       { href: "/pedidos/financeiro", label: "Financeiro", moduleKey: "financeiro" },
+      { href: "/qualidade/rastreabilidade", label: "Rastreabilidade", moduleKey: "relatorios" },
       { href: "/relatorios", label: "Relatorios", moduleKey: "relatorios" },
       { href: "/importacao-historica/mp", label: "Excel historico", moduleKey: "auditoria" },
       { href: "/seguranca", label: "Seguranca", moduleKey: "seguranca" }

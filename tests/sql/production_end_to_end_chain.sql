@@ -208,6 +208,38 @@ begin
   if v_cost is null or v_cost <= 0 then raise exception 'PA direct material cost was not materialized'; end if;
 
   if not exists (
+    select 1
+      from public.consultar_rel_rastreabilidade(
+        'MP', 'MP-CHAIN-LOT-0087', null, null, null, null, 'frente', 500
+      ) trace
+     where trace.destino_tipo = 'OP' and trace.destino_id = v_op_id
+  ) or not exists (
+    select 1
+      from public.consultar_rel_rastreabilidade(
+        'MP', 'MP-CHAIN-LOT-0087', null, null, null, null, 'frente', 500
+      ) trace
+     where trace.destino_tipo = 'PA' and trace.destino_id = v_pa_lot_id
+  ) then
+    raise exception 'derived traceability did not connect MP, OP, PI, packaging and PA';
+  end if;
+  if not exists (
+    select 1
+      from public.consultar_rel_rastreabilidade(
+        'EMBALAGEM', 'EMB-CHAIN-LOT-0087', null, null, null, null, 'frente', 500
+      ) trace
+     where trace.destino_tipo = 'PA' and trace.destino_id = v_pa_lot_id
+  ) then
+    raise exception 'packaging material lot did not reach the finished PA lot';
+  end if;
+  if exists (
+    select 1 from public.rel_rastreabilidade_conciliacao reconciliation
+     where reconciliation.lote_id in (v_formula_lot_id, v_packaging_lot_id, v_pi_lot_id, v_pa_lot_id)
+       and reconciliation.divergencia <> 0
+  ) then
+    raise exception 'traceability quantitative reconciliation found a divergence';
+  end if;
+
+  if not exists (
     select 1 from public.consultar_est_estoque_pa_posicao(current_date) position
      where position.lote_pa_id = v_pa_lot_id
        and position.saldo_fisico = 1

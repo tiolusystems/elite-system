@@ -84,17 +84,23 @@ export const ROUTE_MANUALS: RouteManual[] = [
     steps: ["Selecione o lote PI e a apresentacao destino.", "Informe o volume de envase.", "Emita conjuntamente a OP MAPA e a Ordem de Envase.", "Imprima para assinaturas fisicas dos operadores.", "Finalize para baixar PI e embalagens e gerar o lote PA."],
     after: ["O lote PA gerado alimenta estoque e romaneios.", "A OP MAPA permanece documental e nao baixa MP."],
   }),
-  manual("/producao/estoque", "Estoque", "Lotes e estoque", "Consultar saldos, reservas e rastreabilidade por lote.", {
+  manual("/producao/estoque", "Estoque", "Lotes e estoque", "Registrar entradas valorizadas e consultar saldos e reservas por lote.", {
     before: ["Escolha primeiro a familia MP, PI ou PA e filtre o produto."],
-    steps: ["Pesquise o produto.", "Abra a apresentacao quando aplicavel.", "Consulte os lotes e seus saldos fisico, reservado e disponivel.", "Abra a rastreabilidade para conferir os movimentos."],
-    after: ["A consulta nao altera saldo.", "Correcoes de estoque exigem novo movimento auditado."],
+    steps: ["Pesquise o produto.", "Para MP, abra Registrar entrada e custo e informe lote, documento, quantidade e componentes do custo.", "Abra a apresentacao quando aplicavel.", "Consulte os lotes e seus saldos fisico, reservado e disponivel.", "Abra a rastreabilidade para conferir os movimentos."],
+    after: ["A consulta nao altera saldo.", "A entrada cria lote, movimento fisico e camada de custo na mesma transacao.", "Correcoes de estoque exigem novo movimento auditado."],
   }),
   manual("/producao/transformacoes", "Producao", "Transformacoes", "Acompanhar reprocessamentos e transformacoes de produto."),
-  manual("/romaneios", "Expedicao", "Romaneios", "Separar itens de pedidos por lote e consolidar a baixa com a NF.", {
+  manual("/romaneios", "Expedicao", "Romaneios", "Separar itens de pedidos por lote, registrar referência fiscal externa e confirmar a baixa física.", {
     before: ["O pedido deve estar liberado e possuir saldo a entregar.", "Produtos PA precisam ter lotes disponiveis e configuracao logistica."],
-    steps: ["Abra a lista de pedidos com saldo.", "Selecione o pedido e os itens da entrega parcial ou total.", "Informe a quantidade de cada produto.", "Consulte e reserve os lotes do produto selecionado.", "Grave o romaneio.", "Informe NF, entregador e veiculo antes de confirmar a baixa."],
-    after: ["A reserva reduz o disponivel sem baixar o fisico.", "A NF emitida e a confirmacao consolidam a saida de estoque.", "O romaneio pode ser impresso apos a reserva ou depois da NF."],
-    blockers: ["Quantidade acima do saldo do pedido ou do lote e recusada.", "Falta de NF, entregador, veiculo ou dados logisticos impede a baixa final."],
+    steps: ["Abra a lista de pedidos com saldo.", "Selecione o pedido e os itens da entrega parcial ou total.", "Informe a quantidade de cada produto.", "Consulte e reserve os lotes do produto selecionado.", "Grave o romaneio.", "Informe entregador e veiculo.", "Registre somente o número da NF de remessa emitida no sistema fiscal externo.", "Confirme o Romaneio para baixar o estoque."],
+    after: ["A reserva reduz o disponivel sem baixar o fisico.", "Registrar a referência fiscal não baixa estoque nem libera comissão.", "A confirmação do Romaneio consolida a saida de estoque.", "O Romaneio pode ser impresso antes ou depois da referência externa."],
+    blockers: ["Quantidade acima do saldo do pedido ou do lote e recusada.", "Falta de referência de remessa, entregador, veiculo ou dados logisticos impede a baixa final."],
+  }),
+  manual("/qualidade/rastreabilidade", "Qualidade", "Rastreabilidade total", "Consultar a genealogia de lotes, destinos e referências externas e simular recolhimento sem movimentar estoque.", {
+    before: ["Tenha ao menos um código de lote, OP, pedido, Romaneio, cliente ou referência fiscal externa.", "A consulta depende de alçada individual de Qualidade."],
+    steps: ["Informe o ponto de partida e a direção da consulta.", "Revise cada elo da cadeia.", "Use Simular recolhimento para listar somente destinos ativos.", "Exporte CSV quando possuir a alçada específica."],
+    after: ["A consulta e a simulação não alteram lotes, pedidos ou expedições.", "A exportação registra usuário, data e filtros na auditoria."],
+    blockers: ["Falta de alçada ou genealogia operacional incompleta impedem o resultado.", "Divergências devem ser investigadas; a tela não as corrige silenciosamente."],
   }),
   manual("/pedidos/financeiro", "Financeiro", "Recebimentos e comissoes", "Registrar dinheiro recebido e controlar a conta corrente de comissoes.", {
     before: ["O pedido de venda deve estar liberado ou atendido e possuir saldo financeiro aberto.", "Pagamentos e ajustes de comissao exigem permissao financeira especifica."],

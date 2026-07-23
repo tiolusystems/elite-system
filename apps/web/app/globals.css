@@ -6463,3 +6463,67 @@ h1 {
 .production-history-grid .production-form {
   margin: 0;
 }
+/* Operational traceability keeps the genealogy dense without forcing horizontal scrolling. */
+.trace-filter-form,
+.traceability-workspace {
+  min-width: 0;
+}
+
+.trace-edge-list {
+  display: grid;
+  gap: 8px;
+}
+
+.trace-edge {
+  display: grid;
+  grid-template-columns: 72px minmax(140px, 1fr) 28px minmax(140px, 1fr) minmax(180px, auto);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color, #d5dee8);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.trace-edge > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.trace-edge strong,
+.trace-edge small {
+  overflow-wrap: anywhere;
+}
+
+.trace-depth,
+.trace-arrow {
+  color: #287da4;
+  font-weight: 700;
+}
+
+.trace-arrow {
+  text-align: center;
+  font-size: 20px;
+}
+
+.trace-quantity {
+  text-align: right;
+}
+
+.trace-inactive {
+  opacity: .68;
+  border-style: dashed;
+}
+
+@media (max-width: 760px) {
+  .trace-edge {
+    grid-template-columns: 1fr 24px 1fr;
+  }
+
+  .trace-depth,
+  .trace-quantity {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+}

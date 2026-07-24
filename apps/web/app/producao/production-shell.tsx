@@ -51,17 +51,32 @@ export async function ProductionShell({
   const visibleLinks = showOverview
     ? PRODUCTION_LINKS
     : PRODUCTION_LINKS.filter((item) => item.key !== "overview");
+  const activeLabel = visibleLinks.find((item) => item.key === active)?.label ?? "Produção";
 
   return (
     <main className="app-shell">
       <section className="workspace technical-workspace production-workspace">
-        <nav className="catalog-tabs production-tabs" aria-label="Áreas de Produção">
+        <nav className="catalog-tabs catalog-tabs-desktop production-tabs" aria-label="Áreas de Produção">
           {visibleLinks.map((item) => (
             <Link key={item.key} href={item.href} aria-current={active === item.key ? "page" : undefined}>
               {item.label}
             </Link>
           ))}
         </nav>
+
+        <details className="catalog-tabs-mobile">
+          <summary>
+            <span>Área de Produção</span>
+            <strong>{activeLabel}</strong>
+          </summary>
+          <nav className="catalog-tabs" aria-label="Áreas de Produção">
+            {visibleLinks.map((item) => (
+              <Link key={item.key} href={item.href} aria-current={active === item.key ? "page" : undefined}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </details>
 
         <div className="toolbar technical-toolbar">
           <div>

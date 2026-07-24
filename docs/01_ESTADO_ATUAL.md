@@ -1,22 +1,22 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-22
+Atualizado em: 2026-07-24
 
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit funcional publicado: `b70e286`;
-- Supabase de homologacao: ledger alinhado de `0001` a `0104`;
+- commit funcional publicado: `c0a2566`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0107`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_CFaYp26oLuHCaKFozVPYDxUR1yZh`;
+- deployment estavel de staging: `dpl_DzNFwMovxU8zc8ro7KsL4CG6C6A9`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
 ## Estado tecnico comprovado
 
-O pipeline integral do commit `b70e286` esta aprovado na execucao
-`29968432605`:
+O pipeline integral do commit `c0a2566` esta aprovado na execucao
+`30120331312`:
 
 - ESLint, TypeScript e build Next.js;
 - testes Python e contratos estaticos;
@@ -28,7 +28,7 @@ O pipeline integral do commit `b70e286` esta aprovado na execucao
 - catalogos tecnicos, embalagens e logistica;
 - Romaneio, leitura RLS e fronteiras administrativas de Seguranca.
 
-As migrations `0091` a `0104` foram aplicadas no Supabase de staging somente
+As migrations `0091` a `0107` foram aplicadas no Supabase de staging somente
 depois de CI aprovada e dry-run controlado. O ultimo dry-run listou exclusivamente:
 
 - `0097_manager_decision_request_idempotency.sql`;
@@ -43,12 +43,28 @@ O dry-run seguinte listou exclusivamente
 `0103_govern_product_groups.sql` antes de sua aplicacao.
 O dry-run mais recente listou exclusivamente
 `0104_separate_credit_limit_adjust_permission.sql` antes de sua aplicacao.
+Os dry-runs seguintes listaram unitariamente `0105`, `0106` e
+`0107_pcp_supervisor_dashboard_access.sql` antes de cada aplicacao.
 
-O ledger remoto confirmou `0104` e o health-check permaneceu saudavel depois da
+O ledger remoto confirmou `0107` e o health-check permaneceu saudavel depois da
 aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
 nao alterou o ledger nem a disponibilidade do backend.
 
 ## Tarefa concluida mais recente
+
+Visao geral supervisoria de Producao e navegacao responsiva:
+
+- a alcada individual `pcp.dashboard.view` pertence ao PCP, e somente leitura
+  e nasce bloqueada;
+- sem a alcada, `/producao` redireciona no servidor para a primeira fila
+  operacional e nao consulta o painel;
+- com a alcada, a Visao geral apresenta somente pendencias, excecoes e atalhos
+  de supervisao;
+- no desktop, as areas de Producao permanecem em abas;
+- no tablet e celular, somente a area atual ocupa a barra compacta e as demais
+  aparecem sob abertura explicita;
+- o mapa didatico das oito etapas pertence a `Como operar`, sem duplicacao no
+  painel supervisor.
 
 Separacao da revisao de pedido e da manutencao do limite cadastral de credito:
 
@@ -98,11 +114,11 @@ papeis da API.
 
 ## Validacao desta tarefa
 
-- CI integral do commit `b70e286` aprovada nos jobs `database-contract`,
+- CI integral do commit `c0a2566` aprovada nos jobs `database-contract`,
   `python-tests` e `web-contract`;
 - instalacao limpa, upgrade `0102` para `0103`, concorrencia e smokes
   PostgreSQL executados em ambientes `elite-validation-*`;
-- ledger de staging confirmado ate `0104`;
+- ledger de staging confirmado ate `0107`;
 - health-check de staging saudavel depois da aplicacao;
 - smoke autenticado confirmou Clientes em somente leitura, nova alcada
   bloqueada na Seguranca e ausencia do ajuste permanente em Pedidos;
@@ -184,11 +200,12 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. Ampliar o ensaio de navegador para percorrer formula, OP, CQ, PI, envase,
+1. UX-01E - homologar Formulas como proxima tela do fluxo visual oficial.
+2. Ampliar o ensaio de navegador para percorrer formula, OP, CQ, PI, envase,
    PA, pedido, Romaneio, recebimento e comissao pela interface.
-2. Executar no staging o ensaio sintetico `HOM-E2E-*`, sem dados reais, e
+3. Executar no staging o ensaio sintetico `HOM-E2E-*`, sem dados reais, e
    neutralizar seus efeitos pelo fluxo governado.
-3. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
+4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
 ## Tarefa seguinte
 
@@ -204,7 +221,9 @@ limpa, upgrades `0066 -> 0067` e `0104 -> 0105 -> 0106`, quatro cadeias SQL,
 Playwright `15/15`, 608 testes Python, build e CI foram aprovados.
 
 As migrations `0105` e `0106` foram aplicadas separadamente no staging depois
-de dry-runs unitarios. O ledger termina em `0106`, o health-check esta
-saudavel e os smokes remotos terminaram em rollback sem dados sinteticos
-residuais. O resultado e **aprovado com ressalvas** ate que toda a cadeia seja
-tambem executada pelo navegador.
+de dry-runs unitarios. Esse fechamento E2E confirmou o ledger ate `0106`; o
+estado atual do staging ja inclui a `0107`, aplicada unitariamente para a
+Visao geral de Producao. O health-check esta saudavel e os smokes remotos
+terminaram em rollback sem dados sinteticos residuais. O resultado e
+**aprovado com ressalvas** ate que toda a cadeia seja tambem executada pelo
+navegador.

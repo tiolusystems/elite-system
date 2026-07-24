@@ -16,8 +16,9 @@ test("supervisor autorizado consulta somente pendências e exceções", async ({
   await expect(page.getByText("Produções em andamento")).toBeVisible();
   await expect(page.getByText("Componentes sem reserva")).toBeVisible();
   await expect(page.getByText("Lotes bloqueados", { exact: true })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Áreas de Produção" }).getByRole("link", { name: "Visão geral" })).toBeVisible();
+  await expect(page.locator('nav[aria-label="Áreas de Produção"] a[href="/producao"]')).toHaveCount(2);
   await expect(page.locator("body")).not.toContainText("8 etapas");
+  await assertResponsiveProductionNavigation(page, "Visão geral", testInfo);
 
   await assertNoHorizontalOverflow(page);
   await page.screenshot({
@@ -31,10 +32,10 @@ test("operador sem alçada não consulta nem vê o painel supervisor", async ({ 
   await page.goto("/producao");
 
   await expect(page).toHaveURL((url) => url.pathname === "/producao/ordens");
-  const productionNavigation = page.getByRole("navigation", { name: "Áreas de Produção" });
-  await expect(productionNavigation.getByRole("link", { name: "Visão geral" })).toHaveCount(0);
+  await expect(page.locator('nav[aria-label="Áreas de Produção"] a[href="/producao"]')).toHaveCount(0);
   await expect(page.locator("body")).not.toContainText("Acompanhamento da produção");
   await expect(page.locator("body")).not.toContainText("OPs aguardando preparo");
+  await assertResponsiveProductionNavigation(page, "Ordens", testInfo);
 
   await assertNoHorizontalOverflow(page);
   await page.screenshot({
@@ -59,4 +60,27 @@ async function assertNoHorizontalOverflow(page) {
     scrollWidth: document.documentElement.scrollWidth
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+}
+
+async function assertResponsiveProductionNavigation(page, activeLabel, testInfo) {
+  const desktopNavigation = page.locator(".catalog-tabs-desktop");
+  const mobileNavigation = page.locator(".catalog-tabs-mobile");
+  const usesCompactNavigation = testInfo.project.name.startsWith("mobile-")
+    || testInfo.project.name.startsWith("tablet-");
+
+  if (usesCompactNavigation) {
+    await expect(desktopNavigation).toBeHidden();
+    await expect(mobileNavigation).toBeVisible();
+    await expect(mobileNavigation.locator("summary strong")).toHaveText(activeLabel);
+    await expect(mobileNavigation).not.toHaveAttribute("open", "");
+    await mobileNavigation.locator("summary").click();
+    await expect(mobileNavigation).toHaveAttribute("open", "");
+    await expect(mobileNavigation.getByRole("link", { name: activeLabel, exact: true })).toBeVisible();
+    await mobileNavigation.locator("summary").click();
+    await expect(mobileNavigation).not.toHaveAttribute("open", "");
+    return;
+  }
+
+  await expect(desktopNavigation).toBeVisible();
+  await expect(mobileNavigation).toBeHidden();
 }

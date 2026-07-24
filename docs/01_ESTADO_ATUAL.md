@@ -5,18 +5,18 @@ Atualizado em: 2026-07-24
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit funcional publicado: `c0a2566`;
+- commit funcional publicado: `dd4aeab`;
 - Supabase de homologacao: ledger alinhado de `0001` a `0107`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_DzNFwMovxU8zc8ro7KsL4CG6C6A9`;
+- deployment estavel de staging: `dpl_5YgVQry2i3n531JmtN9PczMWUxP3`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
 ## Estado tecnico comprovado
 
-O pipeline integral do commit `c0a2566` esta aprovado na execucao
-`30120331312`:
+O pipeline integral do commit `dd4aeab` esta aprovado na execucao
+`30127023435`:
 
 - ESLint, TypeScript e build Next.js;
 - testes Python e contratos estaticos;
@@ -114,8 +114,10 @@ papeis da API.
 
 ## Validacao desta tarefa
 
-- CI integral do commit `c0a2566` aprovada nos jobs `database-contract`,
+- CI integral do commit `dd4aeab` aprovada nos jobs `database-contract`,
   `python-tests` e `web-contract`;
+- ambiente descartavel `elite-validation-prodnav-dd4aeab` confirmou todas as
+  migrations, quatro cadeias SQL e Playwright `30/30` em cinco resolucoes;
 - instalacao limpa, upgrade `0102` para `0103`, concorrencia e smokes
   PostgreSQL executados em ambientes `elite-validation-*`;
 - ledger de staging confirmado ate `0107`;

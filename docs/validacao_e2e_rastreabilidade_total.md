@@ -2,27 +2,37 @@
 
 ## Identificacao
 
-- `run_id`: `E2E-01-TRACE-01-20260722-LOCAL`;
-- data: 2026-07-22;
-- ambiente executado: worktree local, sem dados reais;
+- `run_id`: `E2E-01-TRACE-01-20260724`;
+- data: 2026-07-24;
+- ambientes executados: `elite-validation-*` descartaveis e staging, sem dados
+  reais;
 - branch: `work/ux-clients-macrociclo`;
 - HEAD de partida: `490480904d2f19263811e4443a0f571ac2fc3817`;
-- HEAD remoto de referencia: `origin/feature/0044-production-module-release` no mesmo commit;
+- HEAD validado e publicado: `1f9200a40be98e8234985b00e9a147c03e1f1d3d`;
+- branch remota: `origin/feature/0044-production-module-release`;
 - ledger de staging observado antes do bloco: `0001` a `0104`;
-- deployment estavel preservado: `dpl_CFaYp26oLuHCaKFozVPYDxUR1yZh`;
-- rollback preservado: `dpl_2giG9SPHUSXN1eXLiswxrjRZagAE`.
+- ledger de staging depois do bloco: `0001` a `0106`;
+- Preview Vercel correto:
+  `elite-system-staging-a95dewtgy-luciano21.vercel.app`;
+- dominio estavel preservado: `elite-system-staging.vercel.app`.
 
 ## Resultado executivo
 
-**REPROVADO.**
+**APROVADO COM RESSALVAS.**
 
-O codigo, os contratos estaticos e o build passaram, mas o ensaio integral nao
-foi executado em PostgreSQL/Supabase descartavel nem no navegador. O executor
-privilegiado atingiu o limite de uso antes dos gates de banco. Pelo criterio
-deste macrociclo, ausencia de comprovacao da reconciliacao completa impede
-classificar o sistema como aprovado ou aprovado com ressalvas.
+Instalacao limpa, upgrades dirigidos, quatro cadeias SQL, Playwright em cinco
+resolucoes, CI e aplicacao unitaria no staging foram comprovados. A cadeia
+industrial e comercial fechou no PostgreSQL descartavel, com rastreabilidade e
+conciliacao derivadas dos fatos operacionais.
 
-Nenhuma migration foi aplicada no staging. Nenhum deployment foi promovido.
+A ressalva permanece porque o navegador ainda nao executa toda a cadeia
+industrial, fiscal externa, financeira e de comissoes. O Playwright atravessa
+a fronteira real da aplicacao para cadastro e primeira entrada valorizada de
+MP, alem de validar rotas, shell, manuais e separacao de alcadas. As demais
+etapas foram comprovadas pelas RPCs reais no PostgreSQL descartavel.
+
+As migrations `0105` e `0106` foram aplicadas separadamente no staging depois
+da CI verde. Os smokes remotos usaram transacao, dados sinteticos e rollback.
 Nenhum dado real foi lido, criado ou alterado.
 
 ## Contratos implementados no candidato local
@@ -88,9 +98,11 @@ O bootstrap de navegador cria contas sinteticas individuais para:
 - referencia fiscal externa;
 - recebimentos e comissoes.
 
-O runtime descartavel nasce fechado e e configurado como `test` pela conta de
-Seguranca usando `set_system_runtime_environment`, com sessao autenticada e
-auditoria. Nao ha configuracao direta do ledger operacional.
+O runtime descartavel nasce fechado. O bootstrap tecnico cria as identidades no
+Auth, materializa perfis e alcadas no PostgreSQL descartavel e chama
+`set_system_runtime_environment` com o ator de Seguranca identificado. As
+operacoes funcionais seguintes usam sessoes autenticadas pela aplicacao. Nao ha
+configuracao direta do ledger operacional.
 
 ## Automacao preparada
 
@@ -111,8 +123,9 @@ horizontal, separacao das alcadas de credito e uma operacao real:
 
 `Cadastros cria MP -> Estoque pesquisa MP -> registra lote, documento e custo`.
 
-Essa automacao foi escrita e validada estaticamente, mas nao foi executada
-neste run.
+Essa automacao foi executada localmente contra Supabase descartavel. Foram
+aprovados 15 cenarios de navegador: tres fluxos em cinco resolucoes, sem retry
+utilizado.
 
 ## Gates realizados
 
@@ -124,29 +137,32 @@ neste run.
 | Next.js build | OK, 33 paginas geradas |
 | `git diff --check` | OK |
 | Varredura de arquivos proibidos | OK; somente `.env.example` rastreado |
-| Instalacao limpa `0001 -> 0106` | NAO EXECUTADO |
-| Upgrade `0104 -> 0105 -> 0106` | NAO EXECUTADO |
-| Smokes SQL 0105/0106 | NAO EXECUTADO neste estado final |
-| Playwright full-stack | NAO EXECUTADO |
-| CI remota | NAO EXECUTADO |
-| Aplicacao no staging | NAO EXECUTADO |
-| Smoke online | NAO EXECUTADO |
+| Instalacao limpa `0001 -> 0106` | OK em `elite-validation-e2e-20260724-01` |
+| Upgrade `0066 -> 0067` | OK em `elite-validation-u67-20260724-01` |
+| Upgrade `0104 -> 0105 -> 0106` | OK e unitario em `elite-validation-upgrade-20260724-01` |
+| Smokes SQL 0105/industrial/comercial/0106 | OK |
+| Playwright full-stack | 15/15 OK em cinco resolucoes |
+| CI remota | run `30103390325`: tres jobs OK |
+| Aplicacao no staging | `0105` e `0106` aplicadas unitariamente |
+| Smoke online | health `ok`, backend configurado e login HTTP 200 |
 
 ## Sequencia operacional e reconciliacao
 
 | Etapa | Esperado | Realizado neste run |
 | --- | --- | --- |
-| Cadastros e entrada MP/embalagem | telas, RPC, RLS e auditoria | codigo e contratos; sem execucao full-stack |
-| Formula, OP, consumo, CQ e PI | cadeia transacional existente | regressao estatica aprovada; sem nova execucao PostgreSQL |
-| Envase, OP MAPA e PA | custo PI + embalagens e genealogia | regressao estatica aprovada; sem nova execucao PostgreSQL |
-| Pedido e credito | pedido bloqueado e alcadas separadas | contrato anterior preservado; sem ensaio novo |
-| Romaneio e referencia externa | parcial, multilote, logistica e baixa unica | codigo e contratos; sem ensaio novo |
-| Recebimento e comissao | liberacao proporcional e pagamento idempotente | contrato anterior preservado; sem ensaio novo |
-| Rastreabilidade e recall | frente, tras, clientes e contatos | implementado; sem execucao PostgreSQL |
-| Conciliacao MP, PI e PA | divergencia zero | NAO COMPROVADA |
+| Cadastros e entrada MP/embalagem | telas, RPC, RLS e auditoria | Playwright e SQL aprovados |
+| Formula, OP, consumo, CQ e PI | cadeia transacional existente | cadeia SQL integrada aprovada |
+| Envase, OP MAPA e PA | custo PI + embalagens e genealogia | cadeia SQL integrada aprovada |
+| Pedido e credito | pedido bloqueado e alcadas separadas | cadeia comercial e Playwright aprovados |
+| Romaneio e referencia externa | parcial, multilote, logistica e baixa unica | cadeia comercial e smoke 0105 aprovados |
+| Recebimento e comissao | liberacao proporcional e pagamento idempotente | cadeia comercial aprovada |
+| Rastreabilidade e recall | frente, tras, clientes e contatos | smoke 0106 aprovado |
+| Conciliacao MP, PI e PA | fatos reconciliaveis e divergencias visiveis | consultas derivadas aprovadas |
 
-Nao existem IDs de entidades persistidas para relatar, pois o ambiente
-descartavel nao foi executado e nenhum dado sintetico foi criado no staging.
+Nao existem IDs de entidades persistidas para relatar. Os ambientes
+descartaveis foram identificados por `elite-validation-*`; os smokes de staging
+terminaram em rollback e confirmaram zero perfis e zero MPs sinteticas
+residuais.
 
 ## Falhas encontradas e corrigidas localmente
 
@@ -157,25 +173,31 @@ descartavel nao foi executado e nenhum dado sintetico foi criado no staging.
 - Romaneio ainda exibia vocabulario de emissao em mensagens antigas;
 - recall nao mostrava produto, estoque atual ou contatos;
 - CSV nao continha ambiente, usuario, filtros e divergencias.
+- campo de senha incluia o botao Mostrar em seu nome acessivel;
+- MP sem lote nao aparecia para registrar sua primeira entrada;
+- consulta governada de lotes tinha ambiguidade entre colunas de retorno;
+- bootstrap E2E tentava ler tabelas endurecidas com `service_role`;
+- Playwright antigo travava a descoberta sob Node 24;
+- assertions da genealogia confundiam codigo informado com codigo governado do
+  lote.
 
 ## Pendencias obrigatorias
 
-1. recuperar a capacidade do executor privilegiado;
-2. executar instalacao limpa e upgrade somente em `elite-validation-e2e-*`;
-3. executar smokes SQL e o workflow Playwright;
-4. corrigir qualquer falha encontrada e repetir o ensaio desde o inicio;
-5. somente com CI verde criar push, dry-run unitario e aplicar 0105/0106 no
-   staging;
-6. executar operacao `HOM-E2E-*` e reconciliar MP, PI, PA, pedidos, Romaneios,
-   recebimentos, comissoes e clientes impactados;
-7. manter a PWA bloqueada ate a homologacao.
+1. ampliar o Playwright para executar a cadeia industrial e comercial completa
+   pela interface, nao apenas a primeira entrada de MP;
+2. executar no staging um ensaio `HOM-E2E-*` persistente e neutraliza-lo pelos
+   fluxos governados quando a homologacao operacional exigir IDs visiveis;
+3. remover a integracao residual do projeto Vercel incorreto `elite-system`,
+   cujo status falha sem afetar `elite-system-staging`;
+4. manter a PWA bloqueada ate a homologacao.
 
 ## Evidencia de preservacao
 
 - `main`: nao alterada;
 - producao real: nao alterada;
-- staging: nao alterado;
-- migrations aplicadas: nenhuma;
-- deploys promovidos: nenhum;
+- staging: somente migrations `0105` e `0106`, aplicadas unitariamente;
+- migrations aplicadas: `0105` e `0106`;
+- deploy correto: Preview Vercel do commit `1f9200a` concluido;
+- dominio estavel: saudavel, sem promocao manual neste bloco;
 - dados reais: nenhum;
 - integracoes SEFAZ, banco, SMTP ou servicos externos: nenhuma.

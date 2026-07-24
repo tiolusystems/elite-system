@@ -184,14 +184,11 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. Executar em `elite-validation-e2e-*` as migrations candidatas `0105` e
-   `0106`, os smokes SQL e o navegador full-stack descritos em
-   `docs/validacao_e2e_rastreabilidade_total.md`.
-2. Somente depois de instalacao limpa, upgrade, CI e reconciliacao aprovados,
-   publicar e aplicar o bloco no Supabase de staging por dry-run unitario.
-3. Executar no staging o ensaio sintetico `HOM-E2E-*`, sem dados reais, e
+1. Ampliar o ensaio de navegador para percorrer formula, OP, CQ, PI, envase,
+   PA, pedido, Romaneio, recebimento e comissao pela interface.
+2. Executar no staging o ensaio sintetico `HOM-E2E-*`, sem dados reais, e
    neutralizar seus efeitos pelo fluxo governado.
-4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
+3. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
 ## Tarefa seguinte
 
@@ -200,11 +197,14 @@ fontes aprovadas, mantendo a importacao operacional bloqueada ate essa decisao.
 
 Nao reaplicar migrations, nao resetar banco e nao alterar producao real.
 
-## Candidato local em validacao
+## E2E-01 + TRACE-01
 
-O macrociclo `E2E-01 + TRACE-01` preparou localmente entrada operacional de MP
-com custo, referencias fiscais exclusivamente externas e rastreabilidade total
-derivada. Os gates locais passaram, mas o executor de PostgreSQL descartavel
-ficou indisponivel antes da comprovacao integral. As migrations `0105` e `0106`
-nao foram aplicadas nem publicadas; o resultado permanece reprovado ate o
-ensaio completo.
+O commit `1f9200a` esta publicado na branch de desenvolvimento. Instalacao
+limpa, upgrades `0066 -> 0067` e `0104 -> 0105 -> 0106`, quatro cadeias SQL,
+Playwright `15/15`, 608 testes Python, build e CI foram aprovados.
+
+As migrations `0105` e `0106` foram aplicadas separadamente no staging depois
+de dry-runs unitarios. O ledger termina em `0106`, o health-check esta
+saudavel e os smokes remotos terminaram em rollback sem dados sinteticos
+residuais. O resultado e **aprovado com ressalvas** ate que toda a cadeia seja
+tambem executada pelo navegador.

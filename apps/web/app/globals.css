@@ -3769,6 +3769,80 @@ h1 {
   font-size: 24px;
 }
 
+.technical-entry-section {
+  margin-bottom: 20px;
+}
+
+.technical-entry-header {
+  margin-bottom: 12px;
+}
+
+.technical-entry-header h2 {
+  margin: 5px 0 0;
+  font-size: 19px;
+}
+
+.technical-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.technical-action-grid a {
+  display: grid;
+  gap: 6px;
+  min-height: 112px;
+  align-content: start;
+  border: 1px solid var(--border);
+  border-left: 4px solid #279ed0;
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 16px;
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+}
+
+.technical-action-grid a:hover {
+  border-color: #65add0;
+  background: #f7fbfd;
+}
+
+.technical-action-grid small,
+.technical-action-grid span,
+.technical-plain-links span {
+  color: var(--muted);
+}
+
+.technical-action-grid span {
+  width: fit-content;
+  border-radius: 999px;
+  background: #fff3dc;
+  padding: 3px 8px;
+  color: #76510b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.technical-plain-links {
+  display: grid;
+}
+
+.technical-plain-links a {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding: 13px 16px;
+  color: var(--text);
+}
+
+.technical-plain-links a:last-child {
+  border-bottom: 0;
+}
+
+.technical-plain-links a:hover {
+  background: #f7fafd;
+}
+
 .technical-sequence,
 .technical-lists,
 .catalog-split,
@@ -4862,6 +4936,7 @@ h1 {
 
   .catalog-tabs,
   .technical-kpis,
+  .technical-action-grid,
   .technical-flow-grid,
   .catalog-filter,
   .catalog-filter.single-search,
@@ -4871,6 +4946,11 @@ h1 {
   .responsive-record-grid,
   .catalog-form-columns {
     grid-template-columns: 1fr;
+  }
+
+  .technical-action-grid a {
+    min-height: auto;
+    padding: 14px;
   }
 
   .catalog-tabs {

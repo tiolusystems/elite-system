@@ -1,12 +1,13 @@
 import Link from "next/link";
 
-import { CatalogShell, StatusChip } from "@/app/cadastros/tecnicos/catalog-shell";
+import { CatalogShell } from "@/app/cadastros/tecnicos/catalog-shell";
 import { getTechnicalCatalog } from "@/lib/technical-catalog";
+
+export const dynamic = "force-dynamic";
 
 export default async function TechnicalCatalogOverviewPage() {
   const catalog = await getTechnicalCatalog();
   const pendingMaterials = catalog.materials.filter((item) => item.status === "pending_review").length;
-  const stockPackages = catalog.packages.filter((item) => item.controlsStock).length;
   const productsWithoutVariants = catalog.products.filter(
     (product) => !catalog.saleItems.some((item) => item.productId === product.id)
   ).length;
@@ -14,78 +15,35 @@ export default async function TechnicalCatalogOverviewPage() {
   return (
     <CatalogShell
       active="overview"
-      title="Base tecnica da operacao"
-      description="Cadastros que alimentam formulas, estoque, ordens de producao, pedidos e rastreabilidade."
+      title="Cadastros da produção"
+      description="Escolha o cadastro que deseja consultar ou alterar."
       source={catalog.source}
       error={catalog.error}
-      actions={<Link className="primary-button" href="/cadastros/materias-primas#nova-mp">Nova materia-prima</Link>}
+      actions={<Link className="primary-button" href="/cadastros/materias-primas#nova-mp">Cadastrar matéria-prima</Link>}
     >
-      <section className="technical-kpis" aria-label="Resumo dos catalogos tecnicos">
-        <article>
-          <span>Unidades canonicas</span>
-          <strong>{catalog.units.length}</strong>
-          <small>{catalog.conversions.length} conversoes de MP</small>
-        </article>
-        <article>
-          <span>Materias-primas</span>
-          <strong>{catalog.materials.length}</strong>
-          <small>{pendingMaterials} em revisao</small>
-        </article>
-        <article>
-          <span>Embalagens</span>
-          <strong>{catalog.packages.length}</strong>
-          <small>{stockPackages} controladas em estoque</small>
-        </article>
-        <article>
-          <span>Produtos PA/PI</span>
-          <strong>{catalog.products.length}</strong>
-          <small>{productsWithoutVariants} sem item vendavel</small>
-        </article>
-      </section>
-
-      <section className="panel technical-sequence" aria-labelledby="technical-sequence-title">
-        <div className="panel-header">
-          <div>
-            <span className="eyebrow">Sequencia operacional</span>
-            <h2 id="technical-sequence-title">Da unidade aprovada ao lote produzido</h2>
-          </div>
-          <StatusChip value={catalog.source === "supabase" ? "active" : "pending_review"} />
+      <section className="technical-entry-section" aria-labelledby="technical-entry-title">
+        <div className="technical-entry-header">
+          <span className="eyebrow">Acesso rápido</span>
+          <h2 id="technical-entry-title">O que você precisa cadastrar?</h2>
         </div>
-        <div className="technical-flow-grid">
-          <Link href="/cadastros/unidades">
-            <span>01</span>
-            <strong>Unidades e conversoes</strong>
-            <small>Base de medida para XML, estoque e formula.</small>
-          </Link>
+        <div className="technical-action-grid">
           <Link href="/cadastros/materias-primas">
-            <span>02</span>
-            <strong>Materias-primas</strong>
-            <small>SKU, unidade, densidade, estoque e regulatorio.</small>
+            <strong>Matérias-primas</strong>
+            <small>Insumos usados nas fórmulas e controlados no estoque.</small>
+            {pendingMaterials > 0 ? <span>{pendingMaterials} para revisar</span> : null}
           </Link>
           <Link href="/cadastros/embalagens">
-            <span>03</span>
             <strong>Embalagens</strong>
-            <small>Volume e vinculo opcional ao estoque de insumos.</small>
+            <small>Frascos, caixas, tampas e outros materiais de envase.</small>
           </Link>
           <Link href="/cadastros/produtos">
-            <span>04</span>
             <strong>Produtos PA/PI</strong>
-            <small>Produto-base, validade e variantes vendaveis.</small>
+            <small>Produtos intermediários, acabados e suas apresentações.</small>
+            {productsWithoutVariants > 0 ? <span>{productsWithoutVariants} sem apresentação</span> : null}
           </Link>
           <Link href="/cadastros/grupos-produto">
-            <span>05</span>
             <strong>Grupos de produto</strong>
-            <small>Familias relacionais para produtos e relatorios.</small>
-          </Link>
-          <Link href="/producao/formulas">
-            <span>06</span>
-            <strong>Formulas e garantias</strong>
-            <small>Versoes de producao, MAPA e composicao tecnica.</small>
-          </Link>
-          <Link href="/producao#ops">
-            <span>07</span>
-            <strong>OP, CQ e lotes</strong>
-            <small>Reserva, consumo, producao, bloqueio e liberacao.</small>
+            <small>Famílias usadas para organizar produtos e relatórios.</small>
           </Link>
         </div>
       </section>
@@ -93,29 +51,39 @@ export default async function TechnicalCatalogOverviewPage() {
       <section className="two-column technical-lists">
         <article className="panel">
           <div className="panel-header">
-            <h2>Pendencias tecnicas</h2>
-            <Link href="/cadastros/materias-primas?status=pending_review">Abrir fila</Link>
+            <h2>Configurações de produção</h2>
           </div>
-          <div className="compact-list">
-            {pendingMaterials === 0 && productsWithoutVariants === 0 ? (
-              <p className="empty-state">Nenhuma pendencia estrutural identificada.</p>
-            ) : (
-              <>
-                {pendingMaterials > 0 ? <p><strong>{pendingMaterials}</strong> materias-primas aguardam revisao.</p> : null}
-                {productsWithoutVariants > 0 ? <p><strong>{productsWithoutVariants}</strong> produtos ainda nao possuem embalagem vendavel.</p> : null}
-              </>
-            )}
-          </div>
+          <nav className="technical-plain-links" aria-label="Configurações de produção">
+            <Link href="/cadastros/unidades">
+              <strong>Unidades de medida</strong>
+              <span>kg, L e UN, com suas conversões.</span>
+            </Link>
+            <Link href="/cadastros/tipos-insumo">
+              <strong>Tipos de insumo</strong>
+              <span>Classificação usada nas matérias-primas.</span>
+            </Link>
+            <Link href="/producao/formulas">
+              <strong>Fórmulas e garantias</strong>
+              <span>Receitas e especificações dos produtos.</span>
+            </Link>
+          </nav>
         </article>
         <article className="panel">
           <div className="panel-header">
-            <h2>Producao</h2>
-            <Link href="/producao">Abrir modulo</Link>
+            <h2>Revisões pendentes</h2>
+            {pendingMaterials > 0 ? (
+              <Link href="/cadastros/materias-primas?status=pending_review">Abrir revisões</Link>
+            ) : null}
           </div>
           <div className="compact-list">
-            <p><strong>Formula</strong><span>Versao imutavel e receita ativa.</span></p>
-            <p><strong>OP</strong><span>Reserva, consumo e produto gerado.</span></p>
-            <p><strong>CQ</strong><span>Resultado, bloqueio e liberacao auditada.</span></p>
+            {pendingMaterials === 0 && productsWithoutVariants === 0 ? (
+              <p className="empty-state">Nenhuma revisão pendente.</p>
+            ) : (
+              <>
+                {pendingMaterials > 0 ? <p><strong>{pendingMaterials}</strong><span>matérias-primas aguardam revisão.</span></p> : null}
+                {productsWithoutVariants > 0 ? <p><strong>{productsWithoutVariants}</strong><span>produtos ainda não possuem apresentação.</span></p> : null}
+              </>
+            )}
           </div>
         </article>
       </section>

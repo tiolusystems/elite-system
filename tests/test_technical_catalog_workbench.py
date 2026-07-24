@@ -30,13 +30,35 @@ class TechnicalCatalogWorkbenchTests(unittest.TestCase):
         overview = OVERVIEW.read_text(encoding="utf-8")
         for href in (
             "/cadastros/unidades",
+            "/cadastros/tipos-insumo",
             "/cadastros/materias-primas",
             "/cadastros/embalagens",
             "/cadastros/produtos",
+            "/cadastros/grupos-produto",
             "/producao/formulas",
-            "/producao#ops",
         ):
             self.assertIn(href, overview)
+
+    def test_overview_uses_operator_language_and_only_actionable_counts(self) -> None:
+        overview = OVERVIEW.read_text(encoding="utf-8")
+
+        for expected in (
+            'export const dynamic = "force-dynamic"',
+            "Cadastros da produção",
+            "O que você precisa cadastrar?",
+            "Unidades de medida",
+            "Revisões pendentes",
+        ):
+            self.assertIn(expected, overview)
+
+        for technical_noise in (
+            "Unidades canonicas",
+            "technical-kpis",
+            "catalog.units.length",
+            "Da unidade aprovada ao lote produzido",
+            "Sequencia operacional",
+        ):
+            self.assertNotIn(technical_noise, overview)
 
     def test_catalog_loader_reads_normalized_relational_sources(self) -> None:
         text = CATALOG_LIB.read_text(encoding="utf-8")

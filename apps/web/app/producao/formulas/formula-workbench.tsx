@@ -1,127 +1,283 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { activatePcpFormulaAction } from "@/app/pcp/actions";
 import { FormulaCreationForm } from "@/app/producao/formulas/formula-creation-form";
 import type { PcpDashboard, PcpFormulaVersion } from "@/lib/pcp";
-import { componentTypeLabel, unitLabel } from "@/lib/production-labels";
+import {
+  componentTypeLabel,
+  formulaBasisLabel,
+  formulaPurposeLabel,
+  unitLabel
+} from "@/lib/production-labels";
 
-export function FormulaWorkbench({ dashboard, includeActive = true }: { dashboard: PcpDashboard; includeActive?: boolean }) {
+type PurposeFilter = "all" | "producao" | "mapa";
+type StatusFilter = "active" | "all" | "history";
+
+export function FormulaWorkbench({
+  dashboard,
+  startCreating = false
+}: {
+  dashboard: PcpDashboard;
+  startCreating?: boolean;
+}) {
+  const router = useRouter();
   const [template, setTemplate] = useState<PcpFormulaVersion | null>(null);
+  const [isCreating, setIsCreating] = useState(startCreating);
+  const [query, setQuery] = useState("");
+  const [purpose, setPurpose] = useState<PurposeFilter>("all");
+  const [status, setStatus] = useState<StatusFilter>("active");
+
+  const filteredFormulas = useMemo(() => {
+    const normalizedQuery = normalize(query);
+    return dashboard.formulaVersions.filter((formula) => {
+      if (purpose !== "all" && formula.tipoReceita !== purpose) return false;
+      if (status === "active" && !formula.isActive) return false;
+      if (status === "history" && formula.isActive) return false;
+      if (!normalizedQuery) return true;
+      return normalize(`${formula.produtoLabel} ${formula.justificativa} ${formula.observacao ?? ""}`).includes(normalizedQuery);
+    });
+  }, [dashboard.formulaVersions, purpose, query, status]);
+
+  const activeOperational = dashboard.activeFormulas.filter((formula) => formula.tipoReceita === "producao").length;
+  const activeMapa = dashboard.activeFormulas.filter((formula) => formula.tipoReceita === "mapa").length;
+
+  function startBlankFormula() {
+    setTemplate(null);
+    setIsCreating(true);
+    scrollToCreation();
+  }
+
+  function startFromTemplate(formula: PcpFormulaVersion) {
+    setTemplate(formula);
+    setIsCreating(true);
+    scrollToCreation();
+  }
+
+  function closeCreation() {
+    setTemplate(null);
+    setIsCreating(false);
+    router.replace("/producao/formulas#formulas", { scroll: false });
+    document.getElementById("formulas")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (isCreating) {
+    return (
+      <section className="panel formula-create-panel" id="nova-formula" aria-labelledby="nova-formula-title">
+        <div className="panel-header formula-create-header">
+          <div>
+            <span className="formula-section-eyebrow">Nova versão</span>
+            <h2 id="nova-formula-title">{template ? `Baseada na versão ${template.versao}` : "Criar fórmula"}</h2>
+            <p>
+              {template
+                ? `Os dados de ${template.produtoLabel} foram copiados para revisão. O histórico permanece intacto.`
+                : "Cadastre a composição operacional por litro ou a referência documental MAPA."}
+            </p>
+          </div>
+          <button className="secondary-button" type="button" onClick={closeCreation}>Voltar às fórmulas</button>
+        </div>
+        <FormulaCreationForm
+          key={template?.id ?? "blank"}
+          initialFormula={template}
+          lookups={dashboard.lookups}
+          onCancel={closeCreation}
+        />
+      </section>
+    );
+  }
 
   return (
-    <>
-      <section className="two-column production-primary-grid">
-        <section className="panel form-panel" id="nova-formula" aria-labelledby="nova-formula-title">
-          <div className="panel-header">
-            <h2 id="nova-formula-title">Nova versão de fórmula</h2>
-            <span className="pill">Histórico preservado</span>
-          </div>
-          {template ? (
-            <div className="workflow-callout neutral" role="status">
-              <strong>Nova versão baseada na v{template.versao}</strong>
-              <span>Revise produto, componentes e quantidades. Ao salvar, o histórico anterior permanece intacto.</span>
-              <button className="text-button" type="button" onClick={() => setTemplate(null)}>Começar em branco</button>
-            </div>
-          ) : null}
-          <FormulaCreationForm key={template?.id ?? "blank"} initialFormula={template} lookups={dashboard.lookups} />
-        </section>
+    <section className="formula-catalog" id="formulas" aria-labelledby="formulas-title">
+      <div className="formula-reference-strip" aria-label="Referências vigentes">
+        <div>
+          <span>Produção operacional</span>
+          <strong>{activeOperational}</strong>
+          <small>referência(s) vigente(s)</small>
+        </div>
+        <div>
+          <span>Documentação MAPA</span>
+          <strong>{activeMapa}</strong>
+          <small>referência(s) vigente(s)</small>
+        </div>
+        <p>
+          Uma versão ativa é a referência vigente. Fórmulas históricas sinalizadas precisam ser revisadas antes da OP.
+        </p>
+      </div>
 
-        <section className="panel" id="formulas" aria-labelledby="formulas-title">
-          <div className="panel-header">
-            <h2 id="formulas-title">Histórico de versões</h2>
-            <span className="pill">{dashboard.formulaVersions.length} versão(ões)</span>
+      <section className="panel formula-list-panel" aria-labelledby="formulas-title">
+        <div className="panel-header formula-list-heading">
+          <div>
+            <h2 id="formulas-title">Fórmulas cadastradas</h2>
+            <p>Consulte a versão vigente ou abra o histórico de um produto.</p>
           </div>
-          {dashboard.formulaVersions.length > 0 ? (
-            <div className="module-list">
-              {dashboard.formulaVersions.slice(0, 20).map((formula) => (
-                <FormulaCard
-                  key={formula.id}
-                  formula={formula}
-                  onUseAsTemplate={() => {
-                    setTemplate(formula);
-                    document.getElementById("nova-formula")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <strong>Nenhuma fórmula cadastrada</strong>
-              <span>Cadastre a primeira versão para iniciar o fluxo de produção.</span>
-            </div>
-          )}
-        </section>
+          <button className="primary-button" type="button" onClick={startBlankFormula}>Nova fórmula</button>
+        </div>
+
+        <div className="formula-filter-bar" aria-label="Filtros de fórmulas">
+          <label className="formula-search-field">
+            Buscar
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Produto, justificativa ou observação"
+            />
+          </label>
+          <label>
+            Finalidade
+            <select value={purpose} onChange={(event) => setPurpose(event.target.value as PurposeFilter)}>
+              <option value="all">Todas</option>
+              <option value="producao">Produção operacional</option>
+              <option value="mapa">Documentação MAPA</option>
+            </select>
+          </label>
+          <label>
+            Exibir
+            <select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
+              <option value="active">Somente vigentes</option>
+              <option value="all">Todas as versões</option>
+              <option value="history">Somente histórico</option>
+            </select>
+          </label>
+          <span className="formula-result-count">{filteredFormulas.length} resultado(s)</span>
+        </div>
+
+        {filteredFormulas.length > 0 ? (
+          <div className="formula-version-list">
+            {filteredFormulas.map((formula) => (
+              <FormulaRecord key={formula.id} formula={formula} onUseAsTemplate={() => startFromTemplate(formula)} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state formula-empty-state">
+            <strong>{dashboard.formulaVersions.length === 0 ? "Nenhuma fórmula cadastrada" : "Nenhuma fórmula encontrada"}</strong>
+            <span>
+              {dashboard.formulaVersions.length === 0
+                ? "Crie a primeira versão para iniciar o fluxo de produção."
+                : "Altere a busca ou os filtros para consultar outras versões."}
+            </span>
+            {dashboard.formulaVersions.length === 0 ? (
+              <button className="primary-button" type="button" onClick={startBlankFormula}>Criar primeira fórmula</button>
+            ) : null}
+          </div>
+        )}
       </section>
-
-      {includeActive ? (
-        <section className="panel" aria-labelledby="formulas-ativas-title">
-          <div className="panel-header">
-            <h2 id="formulas-ativas-title">Referencias vigentes</h2>
-            <span className="pill">{dashboard.activeFormulas.length} ativa(s)</span>
-          </div>
-          {dashboard.activeFormulas.length > 0 ? (
-            <div className="operation-card-grid">
-              {dashboard.activeFormulas.map((formula) => (
-                <article className="module-card" key={`${formula.produtoId}-${formula.tipoReceita}`}>
-                  <div className="module-card-main">
-                    <h3>{formula.produtoLabel}</h3>
-                    <span>{recipeTypeLabel(formula.tipoReceita)} v{formula.versao} / {shortDate(formula.ativadaAt)}</span>
-                  </div>
-                  <div className="module-card-meta">
-                    <span>fórmula</span>
-                    <strong>{formula.formulaVersionId}</strong>
-                  </div>
-                  <p>{formula.motivoAtivacao}</p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <strong>Nenhuma fórmula ativa</strong>
-              <span>Ative uma versão aprovada antes de abrir uma OP operacional.</span>
-            </div>
-          )}
-        </section>
-      ) : null}
-    </>
+    </section>
   );
 }
 
-function FormulaCard({ formula, onUseAsTemplate }: { formula: PcpFormulaVersion; onUseAsTemplate: () => void }) {
+function FormulaRecord({
+  formula,
+  onUseAsTemplate
+}: {
+  formula: PcpFormulaVersion;
+  onUseAsTemplate: () => void;
+}) {
+  const needsReview = formula.baseCalculo === "legado_nao_comprovado";
+
   return (
-    <article className="module-card">
-      <div className="module-card-main">
-        <h3>{formula.produtoLabel}</h3>
-        <span>{recipeTypeLabel(formula.tipoReceita)} v{formula.versao} / {shortDate(formula.createdAt)}</span>
+    <details className={`formula-version-record ${formula.isActive ? "is-active" : ""}`}>
+      <summary>
+        <span className="formula-record-product">
+          <strong>{formula.produtoLabel}</strong>
+          <small>{formulaPurposeLabel(formula.tipoReceita)}</small>
+        </span>
+        <span className="formula-record-version">
+          <strong>Versão {formula.versao}</strong>
+          <small>{shortDate(formula.createdAt)}</small>
+        </span>
+        <span className={`formula-basis-label ${needsReview ? "needs-review" : ""}`}>
+          {formulaBasisLabel(formula.baseCalculo)}
+        </span>
+        <span className={`formula-status-label ${formula.isActive ? "is-active" : ""}`}>
+          {formula.isActive ? "Vigente" : "Histórico"}
+        </span>
+        <span className="formula-expand-label">Ver detalhes</span>
+      </summary>
+
+      <div className="formula-record-detail">
+        <div className="formula-version-notes">
+          <div>
+            <span>Justificativa</span>
+            <p>{formula.justificativa}</p>
+          </div>
+          {formula.observacao ? (
+            <div>
+              <span>Observação</span>
+              <p>{formula.observacao}</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="formula-component-summary">
+          <div className="formula-component-summary-heading">
+            <h3>{formula.tipoReceita === "mapa" ? "Composição declarada" : "Componentes por 1 L"}</h3>
+            <span>{formula.components.length} componente(s)</span>
+          </div>
+          {formula.components.length > 0 ? (
+            <div className="formula-component-table" role="table" aria-label={`Componentes da versão ${formula.versao}`}>
+              <div className="formula-component-table-head" role="row">
+                <span role="columnheader">Tipo</span>
+                <span role="columnheader">Item</span>
+                <span role="columnheader">Quantidade</span>
+                <span role="columnheader">Observação</span>
+              </div>
+              {formula.components.map((component) => (
+                <div className="formula-component-table-row" role="row" key={component.id}>
+                  <span role="cell">{componentTypeLabel(component.tipoComponente)}</span>
+                  <strong role="cell">{component.targetLabel}</strong>
+                  <span role="cell">{formatNumber(component.quantidade)} {unitLabel(component.unidade)}</span>
+                  <span role="cell">{component.observacao ?? "Sem observação"}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state compact">
+              <strong>Sem composição declarada</strong>
+              <span>Esta versão documental não possui componentes informados.</span>
+            </div>
+          )}
+        </div>
+
+        {needsReview ? (
+          <div className="notice-panel warning formula-legacy-warning" role="status">
+            <strong>Versão histórica sem base por litro comprovada</strong>
+            <span>Use esta versão como referência, revise as quantidades e crie uma nova versão antes de abrir uma OP.</span>
+          </div>
+        ) : null}
+
+        <div className="formula-record-actions">
+          <button className="secondary-button" type="button" onClick={onUseAsTemplate}>Criar nova versão a partir desta</button>
+          {!formula.isActive && !needsReview ? (
+            <details className="formula-activation-disclosure">
+              <summary>Ativar esta versão</summary>
+              <form className="compact-action-form" action={activatePcpFormulaAction}>
+                <input type="hidden" name="formula_versao_id" value={formula.id} />
+                <label>
+                  Motivo da ativação
+                  <input name="motivo" placeholder="Explique por que esta versão passa a valer" required />
+                </label>
+                <button className="primary-button" type="submit">Confirmar ativação</button>
+              </form>
+              <p>Esta versão substituirá a referência vigente do mesmo produto e finalidade, sem apagar o histórico.</p>
+            </details>
+          ) : null}
+        </div>
       </div>
-      <div className="module-card-meta">
-        <span>{formula.isActive ? "ativa" : "versão"}</span>
-        <strong>{formula.id}</strong>
-      </div>
-      <p>{formula.justificativa}</p>
-      <div className="tag-row">
-        {formula.components.length > 0 ? (
-          formula.components.slice(0, 8).map((component) => (
-            <span className="tag" key={component.id}>
-              {componentTypeLabel(component.tipoComponente)} {formatNumber(component.quantidade)} {unitLabel(component.unidade)} - {component.targetLabel}
-            </span>
-          ))
-        ) : (
-          <span className="tag">Sem componentes operacionais</span>
-        )}
-      </div>
-      <button className="secondary-button" type="button" onClick={onUseAsTemplate}>Criar nova versão a partir desta</button>
-      {!formula.isActive ? (
-        <form className="compact-action-form" action={activatePcpFormulaAction}>
-          <input type="hidden" name="formula_versao_id" value={formula.id} />
-          <input name="motivo" placeholder="Motivo para ativar esta versão" required />
-          <button className="secondary-button" type="submit">Ativar</button>
-        </form>
-      ) : null}
-    </article>
+    </details>
   );
+}
+
+function scrollToCreation() {
+  window.requestAnimationFrame(() => {
+    document.getElementById("nova-formula")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+function normalize(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
 function formatNumber(value: number): string {
@@ -129,10 +285,6 @@ function formatNumber(value: number): string {
 }
 
 function shortDate(value: string | null): string {
-  if (!value) return "-";
+  if (!value) return "Data não informada";
   return new Intl.DateTimeFormat("pt-BR").format(new Date(value));
-}
-
-function recipeTypeLabel(value: string): string {
-  return value === "mapa" ? "Documentação MAPA" : "Produção operacional";
 }

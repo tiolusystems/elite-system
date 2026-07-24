@@ -59,8 +59,10 @@ export const ROUTE_MANUALS: RouteManual[] = [
   manual("/producao", "Producao", "Producao", "Acompanhar a cadeia de formula, OP, reserva, CQ e lote."),
   manual("/producao/formulas", "Producao", "Formulas", "Criar e versionar formulas operacionais e documentais.", {
     before: ["Produto e materias-primas devem estar ativos.", "A formula operacional usa base de 1 litro; a formula MAPA e documental."],
-    steps: ["Selecione o produto.", "Crie uma versao e informe os componentes por litro; repetir a mesma solicitacao nao cria outra versao.", "Revise o rendimento e as etapas.", "Ative somente a versao conferida."],
-    after: ["A versao ativa pode abrir OP.", "Nova alteracao gera outra versao e preserva a anterior."],
+    steps: ["Consulte as referencias vigentes ou use os filtros para abrir o historico.", "Selecione Nova formula ou use uma versao anterior como base.", "Informe produto, finalidade e componentes por litro; repetir a mesma solicitacao nao cria outra versao.", "Registre a justificativa, salve e confira os detalhes da nova versao.", "Ative somente a versao conferida e informe o motivo da ativacao."],
+    after: ["A versao operacional ativa e revisada pode abrir OP.", "A formula MAPA permanece documental e nao movimenta estoque.", "Nova alteracao gera outra versao e preserva a anterior."],
+    blockers: ["Formula operacional sem componente ou unidade por litro e recusada.", "Versao historica sem base por litro comprovada precisa ser copiada e revisada antes de abrir OP.", "Sem alcada, a criacao ou ativacao e negada pelo banco."],
+    records: ["Produto, finalidade, componentes, justificativa, versao e ativacao permanecem auditaveis.", "A formula nao reserva nem baixa estoque; isso ocorre no fluxo da OP."]
   }),
   manual("/producao/garantias", "Producao", "Garantias", "Consultar garantias declaradas e calculadas por lote.", {
     before: ["Cadastre nutrientes, unidades e garantias das materias-primas.", "A garantia final depende dos lotes realmente consumidos e do CQ."],

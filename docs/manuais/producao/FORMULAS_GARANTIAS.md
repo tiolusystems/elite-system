@@ -2,10 +2,12 @@
 
 ## Criar nova versão a partir de uma fórmula existente
 
-1. Em **Produção > Fórmulas**, localize a versão que será usada como referência.
-2. Selecione **Criar nova versão a partir desta**.
-3. Revise produto, finalidade, componentes, quantidades por litro e unidades.
-4. Informe a justificativa da nova versão e salve.
+1. Em **Produção > Fórmulas**, altere **Exibir** para **Todas as versões**.
+2. Pesquise o produto ou filtre a finalidade.
+3. Abra **Ver detalhes** na versão que será usada como referência.
+4. Selecione **Criar nova versão a partir desta**.
+5. Revise produto, finalidade, componentes, quantidades por litro e unidades.
+6. Informe a justificativa da nova versão e salve.
 
 A versão anterior não é editada nem apagada. A cópia apenas preenche o
 formulário; a gravação cria uma nova versão auditada.
@@ -51,15 +53,19 @@ produzido**. Isso significa que a quantidade de cada componente informa quanto
 - `UN/L produzido` para componentes contados em unidades.
 
 1. Acesse **Produção > Fórmulas**.
-2. Acione **Nova versão**.
-3. Selecione o produto PA ou PI.
-4. Em **Finalidade da receita**, escolha **Produção operacional**.
-5. Informe a justificativa da versão.
-6. Para cada componente, escolha MP, PA ou PI.
-7. Selecione o item pelo cadastro, nunca digitando seu identificador.
-8. Informe a quantidade necessária para 1 L e selecione a unidade governada.
-9. Salve a versão.
-10. No histórico, informe o motivo e ative a versão que poderá abrir OP.
+2. Confira primeiro as referências vigentes. Use **Todas as versões** apenas
+   quando precisar consultar o histórico.
+3. Acione **Nova fórmula**.
+4. Selecione o produto PA ou PI.
+5. Em **Finalidade**, escolha **Produção operacional**.
+6. Inclua os componentes necessários. A tela começa com uma linha; use
+   **Adicionar componente** somente quando precisar.
+7. Para cada componente, escolha MP, PA ou PI.
+8. Selecione o item pelo cadastro, nunca digitando seu identificador.
+9. Informe a quantidade necessária para 1 L e selecione a unidade governada.
+10. Informe a justificativa e salve a versão.
+11. Abra os detalhes da nova versão, escolha **Ativar esta versão**, informe o
+    motivo e confirme.
 
 Criar ou ativar fórmula não reserva e não baixa estoque. A reserva acontece na
 OP; a baixa ocorre somente na finalização da OP, com os lotes efetivamente
@@ -68,6 +74,10 @@ consumidos.
 Fórmulas operacionais criadas antes desta regra continuam no histórico, mas não
 são convertidas automaticamente. Para utilizá-las em uma nova OP, crie e ative
 uma nova versão revisada na base de 1 L.
+
+Na consulta, essas fórmulas aparecem como **Revisão por litro necessária**. Elas
+podem ser abertas e copiadas para revisão, mas não devem ser reativadas como
+referência operacional.
 
 ## Abrir uma OP pelo volume planejado
 

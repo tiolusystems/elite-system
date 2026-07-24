@@ -55,6 +55,39 @@ class FormulaGuaranteeUxContractTests(unittest.TestCase):
         self.assertIn("initialComponents", editors)
         self.assertIn("A versão anterior não é editada nem apagada", manual)
 
+    def test_formula_catalog_is_query_first_and_hides_technical_ids(self) -> None:
+        workbench = (ROOT / "apps/web/app/producao/formulas/formula-workbench.tsx").read_text(encoding="utf-8")
+        page = (ROOT / "apps/web/app/producao/formulas/page.tsx").read_text(encoding="utf-8")
+        self.assertIn('useState<StatusFilter>("active")', workbench)
+        self.assertIn("Fórmulas cadastradas", workbench)
+        self.assertIn("Somente vigentes", workbench)
+        self.assertIn("Todas as versões", workbench)
+        self.assertIn("Revisão por litro necessária", (ROOT / "apps/web/lib/production-labels.ts").read_text(encoding="utf-8"))
+        self.assertNotIn("<strong>{formula.id}</strong>", workbench)
+        self.assertIn('startCreating={startCreating}', page)
+        self.assertNotIn("error={dashboard.error}", page)
+        self.assertIn("Não foi possível carregar as fórmulas neste ambiente", page)
+
+    def test_formula_creation_uses_progressive_component_rows(self) -> None:
+        editor = (ROOT / "apps/web/app/pcp/production-editors.tsx").read_text(encoding="utf-8")
+        form = EDITOR.read_text(encoding="utf-8")
+        self.assertIn("setRowCount", editor)
+        self.assertIn("Adicionar componente", editor)
+        self.assertIn("Remover último", editor)
+        self.assertNotIn("Array.from({ length: 6 }", editor)
+        self.assertIn("formula-form-section", form)
+        self.assertIn("Identificação", form)
+        self.assertIn("Componentes por 1 L", form)
+        self.assertIn("Registro da versão", form)
+
+    def test_formula_labels_are_centralized_in_pt_br(self) -> None:
+        labels = (ROOT / "apps/web/lib/production-labels.ts").read_text(encoding="utf-8")
+        workbench = (ROOT / "apps/web/app/producao/formulas/formula-workbench.tsx").read_text(encoding="utf-8")
+        self.assertIn("FORMULA_PURPOSE_LABELS", labels)
+        self.assertIn("FORMULA_BASIS_LABELS", labels)
+        self.assertIn("formulaPurposeLabel", workbench)
+        self.assertIn("formulaBasisLabel", workbench)
+
     def test_manual_explains_stock_boundary_and_lot_calculation(self) -> None:
         text = MANUAL.read_text(encoding="utf-8")
         self.assertIn("a baixa ocorre somente na finalização da OP", text)

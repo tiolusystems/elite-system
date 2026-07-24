@@ -215,6 +215,26 @@ inventado pela interface.
 - Nao sera criado construtor generico de campos nesta fase.
 - Toda extensao segue `migration -> RPC -> interface -> testes -> staging`.
 
+## Inventario UX-01E - Formulas
+
+| Campo | Finalidade | Classificacao | Fonte de verdade | Valor interno | Rotulo PT-BR | Dependencia | Obrigatorio | Schema |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Produto | Identificar o PA ou PI da formula | Relacionamento | `cad_produtos_base.id` | ID numerico | Produto PA ou PI | Produto cadastrado | Sim | Existente |
+| Finalidade | Separar receita fabril e documento MAPA | Valor controlado | `pcp_formula_versoes.tipo_receita` | `producao`, `mapa` | Producao operacional, Documentacao MAPA | Nenhuma | Sim | Existente |
+| Tipo do componente | Definir a entidade consumida ou declarada | Valor controlado | Contrato da RPC | `MP`, `PA`, `PI` | Materia-prima, Produto acabado, Produto intermediario | Finalidade | Quando houver componente | Existente |
+| Item | Identificar o componente | Relacionamento | Catalogo correspondente por ID | ID numerico | Item | Tipo do componente | Quando houver componente | Existente |
+| Quantidade | Informar consumo por litro ou valor documental | Valor numerico | `pcp_formula_itens.quantidade` | Decimal positivo | Quantidade por 1 L | Formula operacional | Na formula operacional | Existente |
+| Unidade | Governar a dimensao do componente | Relacionamento | `cad_unidades_medida.id` | ID numerico | Unidade | Finalidade e quantidade | Quando houver componente | Existente |
+| Justificativa | Explicar a criacao da versao | Texto livre legitimo | `pcp_formula_versoes.justificativa` | Texto | Justificativa da versao | Nenhuma | Sim | Existente |
+| Observacao | Registrar complemento nao estrutural | Texto livre legitimo | `pcp_formula_versoes.observacao` | Texto | Observacao | Nenhuma | Nao | Existente |
+| Base de calculo | Informar se a versao e por litro, documental ou historica | Valor controlado somente leitura | `pcp_formula_versoes.base_calculo` | `por_litro`, `documental_mapa`, `legado_nao_comprovado` | Base de 1 L, Composicao documental, Revisao por litro necessaria | Finalidade e origem da versao | Calculado | Existente |
+| Versao | Preservar a sequencia imutavel | Calculado | RPC de criacao | Inteiro | Versao | Produto e finalidade | Calculado | Existente |
+| Vigencia | Identificar a referencia ativa | Calculado | `pcp_formula_ativa` | Relacao ativa | Vigente, Historico | Ativacao auditada | Calculado | Existente |
+
+Decisao do macrociclo: nao ha lacuna estrutural para UX-01E. A interface usa os
+IDs e catalogos existentes, mantem os valores internos estaveis, nao permite
+edicao de versao gravada e nao cria exportacao Excel.
+
 ## Governanca documental por fluxo
 
 Cada tela ou fluxo homologavel deve atualizar seu manual operacional no mesmo

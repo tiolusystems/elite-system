@@ -202,12 +202,17 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. UX-01E - homologar Formulas como proxima tela do fluxo visual oficial.
-2. Ampliar o ensaio de navegador para percorrer formula, OP, CQ, PI, envase,
+1. UX-01F - homologar Ordens e reservas como proxima tela do fluxo visual oficial.
+2. Ampliar o ensaio de navegador para percorrer OP, CQ, PI, envase,
    PA, pedido, Romaneio, recebimento e comissao pela interface.
 3. Executar no staging o ensaio sintetico `HOM-E2E-*`, sem dados reais, e
    neutralizar seus efeitos pelo fluxo governado.
 4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
+
+UX-01E esta concluido no codigo: Formulas opera por consulta, busca e filtros,
+isola a criacao em fluxo proprio, preserva versoes imutaveis e diferencia base
+de 1 L, documento MAPA e historico que exige revisao. A entrega nao alterou o
+shell de Producao, contratos de banco ou exportacao Excel.
 
 ## Tarefa seguinte
 

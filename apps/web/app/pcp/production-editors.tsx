@@ -26,16 +26,40 @@ export function FormulaComponentRows({
         ["kg_l_produzido", "l_l_produzido", "un_l_produzido"].includes(option.label)
       )
     : targets.unidades;
+  const [rowCount, setRowCount] = useState(() => Math.min(6, Math.max(1, initialComponents.length)));
+
   return (
-    <div className="pcp-component-editor" aria-label="Componentes da formula">
-      {Array.from({ length: 6 }, (_, index) => (
-        <FormulaComponentRow
-          initialComponent={initialComponents[index]}
-          key={index + 1}
-          index={index + 1}
-          targets={{ ...targets, unidades: availableUnits }}
-        />
-      ))}
+    <div className="pcp-component-editor" aria-label="Componentes da fórmula">
+      <div className="pcp-component-rows">
+        {Array.from({ length: rowCount }, (_, index) => (
+          <FormulaComponentRow
+            initialComponent={initialComponents[index]}
+            key={index + 1}
+            index={index + 1}
+            targets={{ ...targets, unidades: availableUnits }}
+          />
+        ))}
+      </div>
+      <div className="formula-component-actions">
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={rowCount >= 6}
+          onClick={() => setRowCount((current) => Math.min(6, current + 1))}
+        >
+          Adicionar componente
+        </button>
+        {rowCount > 1 ? (
+          <button
+            className="text-button"
+            type="button"
+            onClick={() => setRowCount((current) => Math.max(1, current - 1))}
+          >
+            Remover último
+          </button>
+        ) : null}
+        <span>{rowCount === 1 ? "1 componente exibido" : `${rowCount} componentes exibidos`} · máximo 6</span>
+      </div>
     </div>
   );
 }
@@ -54,7 +78,7 @@ function FormulaComponentRow({ index, targets, initialComponent }: { index: numb
       <label>
         Tipo
         <select name={`component_${index}_tipo`} value={type} onChange={(event) => setType(event.target.value)}>
-          <option value="">Não utilizar esta linha</option>
+          <option value="">Não usar</option>
           <option value="MP">Matéria-prima</option>
           <option value="PA">Produto acabado</option>
           <option value="PI">Produto intermediário</option>

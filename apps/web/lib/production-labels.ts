@@ -21,6 +21,17 @@ const COMPONENT_LABELS: Record<PcpComponentType, string> = {
   PI: "Produto intermediário"
 };
 
+const FORMULA_PURPOSE_LABELS: Record<string, string> = {
+  producao: "Produção operacional",
+  mapa: "Documentação MAPA"
+};
+
+const FORMULA_BASIS_LABELS: Record<string, string> = {
+  por_litro: "Base de 1 L",
+  documental_mapa: "Composição documental",
+  legado_nao_comprovado: "Revisão por litro necessária"
+};
+
 const STATUS_LABELS: Record<string, string> = {
   aprovado: "Aprovado",
   bloqueado: "Bloqueado",
@@ -69,6 +80,14 @@ export function productionOptionLabel(option: PcpLookupOption): string {
 
 export function componentTypeLabel(type: PcpComponentType): string {
   return COMPONENT_LABELS[type];
+}
+
+export function formulaPurposeLabel(value: string): string {
+  return FORMULA_PURPOSE_LABELS[value] ?? "Finalidade não reconhecida";
+}
+
+export function formulaBasisLabel(value: string): string {
+  return FORMULA_BASIS_LABELS[value] ?? "Base não reconhecida";
 }
 
 export function productionStatusLabel(status: string | null | undefined): string {

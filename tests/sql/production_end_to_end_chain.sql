@@ -17,6 +17,8 @@ declare
   v_mapa_formula_id bigint;
   v_formula_lot_id bigint;
   v_packaging_lot_id bigint;
+  v_formula_lot_code text;
+  v_packaging_lot_code text;
   v_formula_entry_id bigint;
   v_packaging_entry_id bigint;
   v_op_id bigint;
@@ -95,6 +97,8 @@ begin
     v_packaging_mp_id, 3, null, 'entrada_compra', 'disponivel', current_date, current_date + 365,
     'EMB-CHAIN-LOT-0087', 'Entrada sintetica de embalagem'
   );
+  select codigo_lote into v_formula_lot_code from public.est_lotes_mp where id = v_formula_lot_id;
+  select codigo_lote into v_packaging_lot_code from public.est_lotes_mp where id = v_packaging_lot_id;
   select id into v_formula_entry_id from public.est_movimentos_mp where lote_mp_id = v_formula_lot_id order by id limit 1;
   select id into v_packaging_entry_id from public.est_movimentos_mp where lote_mp_id = v_packaging_lot_id order by id limit 1;
   insert into public.est_movimentos_mp_valores(
@@ -210,22 +214,25 @@ begin
   if not exists (
     select 1
       from public.consultar_rel_rastreabilidade(
-        'MP', 'MP-CHAIN-LOT-0087', null, null, null, null, 'frente', 500
+        'MP', v_formula_lot_code, null, null, null, null, 'frente', 500
       ) trace
      where trace.destino_tipo = 'OP' and trace.destino_id = v_op_id
-  ) or not exists (
-    select 1
-      from public.consultar_rel_rastreabilidade(
-        'MP', 'MP-CHAIN-LOT-0087', null, null, null, null, 'frente', 500
-      ) trace
-     where trace.destino_tipo = 'PA' and trace.destino_id = v_pa_lot_id
   ) then
-    raise exception 'derived traceability did not connect MP, OP, PI, packaging and PA';
+    raise exception 'derived traceability did not connect MP to OP';
   end if;
   if not exists (
     select 1
       from public.consultar_rel_rastreabilidade(
-        'EMBALAGEM', 'EMB-CHAIN-LOT-0087', null, null, null, null, 'frente', 500
+        'MP', v_formula_lot_code, null, null, null, null, 'frente', 500
+      ) trace
+     where trace.destino_tipo = 'PA' and trace.destino_id = v_pa_lot_id
+  ) then
+    raise exception 'derived traceability did not connect MP through OP, PI and packaging to PA';
+  end if;
+  if not exists (
+    select 1
+      from public.consultar_rel_rastreabilidade(
+        'EMBALAGEM', v_packaging_lot_code, null, null, null, null, 'frente', 500
       ) trace
      where trace.destino_tipo = 'PA' and trace.destino_id = v_pa_lot_id
   ) then

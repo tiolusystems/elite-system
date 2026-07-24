@@ -27,6 +27,7 @@ jobs:
           echo "E2E_RUN_ID=$E2E_RUN_ID" >> "$GITHUB_ENV"
           echo "VALIDATION_ROOT=$VALIDATION_ROOT" >> "$GITHUB_ENV"
           echo "E2E_ACCOUNTS_PATH=$RUNNER_TEMP/elite-validation-e2e-$E2E_RUN_ID/accounts.json" >> "$GITHUB_ENV"
+          echo "E2E_BOOTSTRAP_SQL_PATH=$RUNNER_TEMP/elite-validation-e2e-$E2E_RUN_ID/bootstrap.sql" >> "$GITHUB_ENV"
       - name: Start isolated Supabase and install every migration
         run: |
           supabase start --workdir "$VALIDATION_ROOT"
@@ -51,13 +52,16 @@ jobs:
         working-directory: apps/web
         run: |
           pnpm install --frozen-lockfile
-          pnpm add --lockfile=false -D @playwright/test@1.51.1
           pnpm exec playwright install --with-deps chromium
       - name: Bootstrap individual synthetic users
         working-directory: apps/web
         env:
           E2E_SYNTHETIC_PASSWORD: "E2E-only-Strong-Password-2026!"
         run: node e2e/bootstrap-synthetic-users.mjs
+      - name: Bootstrap disposable profiles and atomic authorities
+        env:
+          PGPASSWORD: postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$E2E_BOOTSTRAP_SQL_PATH"
       - name: Build and start test frontend
         working-directory: apps/web
         env:

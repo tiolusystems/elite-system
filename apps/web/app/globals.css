@@ -574,7 +574,8 @@ h1 {
   padding: 22px;
 }
 
-.auth-form-fields label {
+.auth-form-fields label,
+.auth-form-field {
   display: grid;
   gap: 7px;
   min-width: 0;
@@ -6500,6 +6501,11 @@ h1 {
 .trace-arrow {
   color: #287da4;
   font-weight: 700;
+}
+
+.auth-form-field label {
+  color: inherit;
+  font: inherit;
 }
 
 .trace-arrow {

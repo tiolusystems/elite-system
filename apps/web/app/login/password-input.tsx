@@ -14,8 +14,8 @@ export function PasswordInput({ autoComplete, label, minLength, name }: Password
   const [visible, setVisible] = useState(false);
 
   return (
-    <label htmlFor={id}>
-      {label}
+    <span className="auth-form-field">
+      <label htmlFor={id}>{label}</label>
       <span className="auth-password-control">
         <input
           id={id}
@@ -35,6 +35,6 @@ export function PasswordInput({ autoComplete, label, minLength, name }: Password
           {visible ? "Ocultar" : "Mostrar"}
         </button>
       </span>
-    </label>
+    </span>
   );
 }

@@ -515,3 +515,239 @@ comment on function public.registrar_fat_referencia_externa_idempotente(
 comment on function public.corrigir_fat_referencia_externa_numero_idempotente(
   uuid, bigint, text, text, text
 ) is 'Corrige numero externo com motivo, valores anterior/novo e auditoria append-only.';
+
+-- The first governed entry must be reachable before a material has any lot.
+-- Keep PA/PI focused on positive availability, but include active MP catalog
+-- rows with a zero-lot count so the operator can create their initial layer.
+create or replace function public.consultar_est_estoque_produtos(
+  p_busca text,
+  p_familia text default 'all',
+  p_limite integer default 30
+)
+returns table (
+  familia text,
+  produto_id bigint,
+  codigo text,
+  nome text,
+  apresentacoes bigint,
+  lotes_disponiveis bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with itens as (
+    select
+      'MP'::text as familia,
+      materia.id as produto_id,
+      materia.sku_corrigido as codigo,
+      materia.nome,
+      1::bigint as apresentacoes,
+      count(saldo.lote_mp_id) filter (where saldo.saldo_disponivel > 0)::bigint as lotes_disponiveis
+    from public.cad_materias_primas materia
+    left join public.est_lotes_mp_saldos saldo
+      on saldo.materia_prima_id = materia.id
+    where public.can_current_user('estoque.mp.view')
+      and materia.status = 'active'
+    group by materia.id, materia.sku_corrigido, materia.nome
+
+    union all
+
+    select
+      'PI',
+      produto.id,
+      produto.codigo_produto,
+      produto.nome,
+      1::bigint,
+      count(*)::bigint
+    from public.est_lotes_pi_saldos saldo
+    join public.cad_produtos_base produto
+      on produto.id = saldo.produto_id
+    where public.can_current_user('estoque.pi.view')
+      and saldo.saldo_disponivel > 0
+    group by produto.id, produto.codigo_produto, produto.nome
+
+    union all
+
+    select
+      'PA',
+      produto.id,
+      produto.codigo_produto,
+      produto.nome,
+      count(distinct apresentacao.id)::bigint,
+      count(*)::bigint
+    from public.est_lotes_pa_saldos saldo
+    join public.cad_produto_embalagens apresentacao
+      on apresentacao.id = saldo.produto_embalagem_id
+    join public.cad_produtos_base produto
+      on produto.id = apresentacao.produto_id
+    where public.can_current_user('estoque.pa.view')
+      and saldo.saldo_disponivel > 0
+    group by produto.id, produto.codigo_produto, produto.nome
+  )
+  select
+    item.familia,
+    item.produto_id,
+    item.codigo,
+    item.nome,
+    item.apresentacoes,
+    item.lotes_disponiveis
+  from itens item
+  where nullif(btrim(p_busca), '') is not null
+    and (p_familia = 'all' or item.familia = p_familia)
+    and lower(concat_ws(' ', item.codigo, item.nome))
+      like '%' || lower(btrim(p_busca)) || '%'
+  order by item.nome, item.familia
+  limit least(greatest(coalesce(p_limite, 30), 1), 100)
+$$;
+
+comment on function public.consultar_est_estoque_produtos(text, text, integer) is
+  'Pesquisa alvos do estoque. Materias-primas ativas aparecem antes da primeira entrada; PA e PI exigem saldo disponivel.';
+
+create or replace function public.consultar_est_estoque_lotes_alvo(
+  p_familia text,
+  p_alvo_id bigint,
+  p_limite integer default 24,
+  p_offset integer default 0
+)
+returns table (
+  lote_id bigint,
+  familia text,
+  alvo_id bigint,
+  alvo_label text,
+  codigo_lote text,
+  status text,
+  saldo_fisico numeric,
+  quantidade_reservada numeric,
+  saldo_disponivel numeric,
+  data_validade date,
+  origem_ref text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  total_count bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if p_familia not in ('MP', 'PA', 'PI') or p_alvo_id is null then
+    raise exception 'invalid stock target';
+  end if;
+  if not public.can_current_user('estoque.' || lower(p_familia) || '.view') then
+    raise exception 'not allowed: estoque.view';
+  end if;
+
+  return query
+  with lotes(
+    lote_id,
+    familia,
+    alvo_id,
+    alvo_label,
+    codigo_lote,
+    status,
+    saldo_fisico,
+    quantidade_reservada,
+    saldo_disponivel,
+    data_validade,
+    origem_ref,
+    created_at,
+    updated_at
+  ) as (
+    select
+      saldo.lote_mp_id,
+      'MP'::text,
+      saldo.materia_prima_id,
+      concat_ws(' - ', materia.sku_corrigido, materia.nome),
+      saldo.codigo_lote,
+      saldo.status,
+      saldo.saldo_fisico,
+      saldo.quantidade_reservada,
+      saldo.saldo_disponivel,
+      saldo.data_validade,
+      saldo.origem_ref,
+      saldo.created_at,
+      saldo.updated_at
+    from public.est_lotes_mp_saldos saldo
+    join public.cad_materias_primas materia
+      on materia.id = saldo.materia_prima_id
+    where p_familia = 'MP'
+      and saldo.materia_prima_id = p_alvo_id
+      and saldo.saldo_disponivel > 0
+
+    union all
+
+    select
+      saldo.lote_pa_id,
+      'PA',
+      saldo.produto_embalagem_id,
+      concat_ws(' - ', apresentacao.codigo_item, produto.nome, embalagem.descricao),
+      saldo.codigo_lote,
+      saldo.status,
+      saldo.saldo_fisico,
+      saldo.quantidade_reservada,
+      saldo.saldo_disponivel,
+      saldo.data_validade,
+      saldo.origem_ref,
+      saldo.created_at,
+      saldo.updated_at
+    from public.est_lotes_pa_saldos saldo
+    join public.cad_produto_embalagens apresentacao
+      on apresentacao.id = saldo.produto_embalagem_id
+    join public.cad_produtos_base produto
+      on produto.id = apresentacao.produto_id
+    join public.cad_embalagens embalagem
+      on embalagem.id = apresentacao.embalagem_id
+    where p_familia = 'PA'
+      and saldo.produto_embalagem_id = p_alvo_id
+      and saldo.saldo_disponivel > 0
+
+    union all
+
+    select
+      saldo.lote_pi_id,
+      'PI',
+      saldo.produto_id,
+      concat_ws(' - ', produto.codigo_produto, produto.nome),
+      saldo.codigo_lote,
+      saldo.status,
+      saldo.saldo_fisico,
+      saldo.quantidade_reservada,
+      saldo.saldo_disponivel,
+      saldo.data_validade,
+      saldo.origem_ref,
+      saldo.created_at,
+      saldo.updated_at
+    from public.est_lotes_pi_saldos saldo
+    join public.cad_produtos_base produto
+      on produto.id = saldo.produto_id
+    where p_familia = 'PI'
+      and saldo.produto_id = p_alvo_id
+      and saldo.saldo_disponivel > 0
+  )
+  select
+    lotes.lote_id,
+    lotes.familia,
+    lotes.alvo_id,
+    lotes.alvo_label,
+    lotes.codigo_lote,
+    lotes.status,
+    lotes.saldo_fisico,
+    lotes.quantidade_reservada,
+    lotes.saldo_disponivel,
+    lotes.data_validade,
+    lotes.origem_ref,
+    lotes.created_at,
+    lotes.updated_at,
+    count(*) over ()
+  from lotes
+  order by lotes.updated_at desc
+  limit least(greatest(coalesce(p_limite, 24), 1), 100)
+  offset greatest(coalesce(p_offset, 0), 0);
+end;
+$$;
+
+comment on function public.consultar_est_estoque_lotes_alvo(text, bigint, integer, integer) is
+  'Lista saldos positivos do alvo sem ambiguidade entre colunas e parametros de retorno.';

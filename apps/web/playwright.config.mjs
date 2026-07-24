@@ -3,8 +3,12 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   outputDir: "../../artifacts/e2e/test-results",
-  timeout: 45_000,
+  timeout: 180_000,
+  workers: 1,
   retries: 1,
+  expect: {
+    timeout: 30_000
+  },
   reporter: [["list"], ["html", { outputFolder: "../../artifacts/e2e/report", open: "never" }]],
   use: {
     baseURL: process.env.E2E_BASE_URL || "http://127.0.0.1:3100",

@@ -13,11 +13,8 @@ const routes = [
   "/romaneios", "/pedidos/financeiro", "/relatorios", "/qualidade/rastreabilidade", "/seguranca"
 ];
 
-test.beforeEach(async ({ page }) => {
-  await loginAs(page, administrator);
-});
-
 test("shell, manuals and canonical operational routes remain usable", async ({ page }, testInfo) => {
+  await loginAs(page, administrator);
   for (const route of routes) {
     await page.goto(route);
     await expect(page.locator("body")).not.toContainText(/AuthRetryableFetchError|permission denied|SQLSTATE|stack trace/i);
@@ -39,7 +36,8 @@ test("credit authority accounts remain distinct", async ({ page }) => {
 test("material registration and valued stock entry cross the real application boundary", async ({ page }, testInfo) => {
   const masterData = accounts.find((account) => account.name === "master-data");
   const stockOperator = accounts.find((account) => account.name === "stock-operator");
-  const suffix = `${runId}-${testInfo.project.name}`.replace(/[^a-z0-9-]/gi, "-").toUpperCase();
+  const executionId = Date.now().toString(36);
+  const suffix = `${runId}-${testInfo.project.name}-R${testInfo.retry}-${executionId}`.replace(/[^a-z0-9-]/gi, "-").toUpperCase();
   const sku = `MP-${suffix}`;
   const materialName = `Materia-prima sintetica ${suffix}`;
 
@@ -68,7 +66,9 @@ test("material registration and valued stock entry cross the real application bo
   await entryPanel.locator('input[name="uf_emitente"]').fill("SP");
   await entryPanel.getByRole("button", { name: /registrar entrada/i }).click();
   await expect(page).toHaveURL(/result=stock_entry_created/);
-  await expect(page.locator("body")).toContainText(`LOTE-${suffix}`);
+  const lotCard = page.locator(".inventory-lot-card").filter({ hasText: materialName });
+  await expect(lotCard).toContainText(`DOC-${suffix}`);
+  await expect(lotCard.getByLabel(/saldos do lote/i)).toContainText(/Fisico\s*25.*Reservado\s*0.*Disponivel\s*25/s);
 });
 
 async function loginAs(page, account) {
@@ -78,5 +78,5 @@ async function loginAs(page, account) {
   await page.getByLabel(/e-mail/i).fill(account.email);
   await page.getByLabel(/^senha$/i).fill(account.password);
   await page.getByRole("button", { name: /^entrar$/i }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL((url) => url.pathname === "/", { timeout: 30_000 });
 }

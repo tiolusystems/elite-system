@@ -49,12 +49,15 @@ class E2ETraceabilityContractTests(unittest.TestCase):
         self.assertIn('manual("/qualidade/rastreabilidade"', manuals)
         self.assertIn('href: "/qualidade/rastreabilidade"', navigation)
 
-    def test_disposable_browser_bootstrap_configures_runtime_through_audited_rpc(self):
+    def test_disposable_browser_bootstrap_separates_auth_from_database_bootstrap(self):
         bootstrap = (ROOT / "apps/web/e2e/bootstrap-synthetic-users.mjs").read_text(encoding="utf-8")
         browser = (ROOT / "apps/web/e2e/operational-routes.spec.mjs").read_text(encoding="utf-8")
-        self.assertIn('signInWithPassword', bootstrap)
-        self.assertIn('rpc("set_system_runtime_environment"', bootstrap)
-        self.assertIn('p_environment: "test"', bootstrap)
+        workflow = (ROOT / ".github/workflows/operational-e2e.yml").read_text(encoding="utf-8")
+        self.assertIn("auth.admin.createUser", bootstrap)
+        self.assertIn("E2E_BOOTSTRAP_SQL_PATH", bootstrap)
+        self.assertIn("perform public.set_system_runtime_environment", bootstrap)
+        self.assertNotIn('.from("permission_actions")', bootstrap)
+        self.assertIn('psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$E2E_BOOTSTRAP_SQL_PATH"', workflow)
         self.assertIn('material registration and valued stock entry cross the real application boundary', browser)
         self.assertIn('input[name="codigo_lote_fornecedor"]', browser)
         self.assertIn('result=stock_entry_created', browser)

@@ -31,17 +31,18 @@ begin
     (v_actor, 'E2E 0105 autorizado', 'admin', 'active'),
     (v_denied, 'E2E 0105 sem alcada', 'admin', 'active')
   on conflict (id) do update set status = 'active';
-  perform set_config('request.jwt.claim.sub', v_actor::text, true);
-  if public.current_system_environment() = 'unconfigured' then
-    perform public.set_system_runtime_environment('test', 'test_reset', 'E2E 0105 descartavel');
-  end if;
   insert into public.user_permission_overrides(user_id, action_key, allowed, updated_by)
   values
+    (v_actor, 'system.admin', true, v_actor),
     (v_actor, 'estoque.mp.lots.create', true, v_actor),
     (v_actor, 'estoque.mp.acquisition_value.register', true, v_actor),
     (v_actor, 'faturamento.external_references.register', true, v_actor),
     (v_actor, 'faturamento.external_references.correct', true, v_actor)
   on conflict (user_id, action_key) do update set allowed = excluded.allowed, updated_by = excluded.updated_by;
+  perform set_config('request.jwt.claim.sub', v_actor::text, true);
+  if public.current_system_environment() = 'unconfigured' then
+    perform public.set_system_runtime_environment('test', 'test_reset', 'E2E 0105 descartavel');
+  end if;
 
   select id into v_unit from public.cad_unidades_medida where status = 'active' order by id limit 1;
   v_mp := public.create_cad_materia_prima_governada(
@@ -49,6 +50,14 @@ begin
     p_sku_corrigido => 'MP-E2E-0105', p_unidade_base_estoque_id => v_unit,
     p_status => 'active'
   );
+  if not exists (
+    select 1
+    from public.consultar_est_estoque_produtos('MP-E2E-0105', 'MP', 30) item
+    where item.produto_id = v_mp
+      and item.lotes_disponiveis = 0
+  ) then
+    raise exception 'active raw material without lots is not available for its first stock entry';
+  end if;
   v_lot := public.registrar_est_entrada_mp_idempotente(
     '10500000-0000-4000-8000-000000000001', v_mp, 25, 'disponivel',
     current_date - 1, current_date + 365, 'FORN-E2E-0105', 'DOC-E2E-0105',
@@ -67,6 +76,15 @@ begin
   if (select custo_aquisicao_total from public.est_movimentos_mp_valores valor join public.est_movimentos_mp mov on mov.id = valor.movimento_mp_id where mov.lote_mp_id = v_lot) <> 269 then
     raise exception 'stock entry cost is inconsistent';
   end if;
+  if not exists (
+    select 1
+    from public.consultar_est_estoque_lotes_alvo('MP', v_mp, 24, 0) lote
+    where lote.lote_id = v_lot
+      and lote.saldo_fisico = 25
+      and lote.saldo_disponivel = 25
+  ) then
+    raise exception 'governed stock query did not return the new raw-material lot';
+  end if;
   begin
     perform public.registrar_est_entrada_mp_idempotente(
       '10500000-0000-4000-8000-000000000001', v_mp, 26, 'disponivel',
@@ -80,8 +98,16 @@ begin
        or sqlerrm not like 'idempotency key reused with different stock entry request%' then raise; end if;
   end;
 
-  v_product := public.create_cad_produto_base('1050', 'Produto E2E 0105', 'PRODUTO E2E 0105', 'active', 24);
-  v_package := public.create_cad_embalagem('Embalagem E2E 0105', 'EMBALAGEM E2E 0105', 'UN', 'active', 5, false, null);
+  v_product := public.create_cad_produto_base(
+    p_codigo_produto => '1050', p_nome => 'Produto E2E 0105',
+    p_nome_norm => 'PRODUTO E2E 0105', p_status => 'active',
+    p_prazo_validade_meses => 24
+  );
+  v_package := public.create_cad_embalagem(
+    p_descricao => 'Embalagem E2E 0105', p_descricao_norm => 'EMBALAGEM E2E 0105',
+    p_unidade => 'UN', p_status => 'active', p_volume_litros => 5,
+    p_controla_estoque => false, p_materia_prima_id => null
+  );
   v_presentation := public.create_cad_produto_embalagem(v_product, v_package, '1050-5L', 'active');
   insert into public.cad_clientes(nome, nome_norm, cidade, uf, status, created_by, updated_by)
   values ('Cliente E2E 0105', 'cliente e2e 0105', 'Campinas', 'SP', 'active', v_actor, v_actor)

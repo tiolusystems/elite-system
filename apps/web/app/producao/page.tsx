@@ -1,91 +1,115 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ProductionShell } from "@/app/producao/production-shell";
-import { getPcpDashboard } from "@/lib/pcp";
+import {
+  canCurrentUserViewPcpDashboard,
+  getPcpSupervisorDashboard
+} from "@/lib/pcp";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProductionOverviewPage() {
-  const dashboard = await getPcpDashboard();
+  const canViewDashboard = await canCurrentUserViewPcpDashboard();
+  if (!canViewDashboard) redirect("/producao/ordens");
+
+  const dashboard = await getPcpSupervisorDashboard();
+  const metrics = dashboard.metrics;
+  const hasPendingItems = [
+    metrics.opsAguardando,
+    metrics.opsEmProducao,
+    metrics.componentesSemReserva,
+    metrics.lotesBloqueados
+  ].some((value) => (value ?? 0) > 0);
 
   return (
     <ProductionShell
       active="overview"
-      title="Central de producao"
-      description="Da base tecnica ao lote liberado, com cada etapa separada por responsabilidade operacional."
+      title="Acompanhamento da produção"
+      description="Pendências e exceções que precisam de atenção da supervisão."
       source={dashboard.source}
       error={dashboard.error}
+      canViewOverview
       actions={(
         <>
-          <Link className="secondary-button" href="/cadastros/tecnicos">Base tecnica</Link>
-          <Link className="primary-button" href="/producao/formulas">Abrir formulas</Link>
+          <Link className="secondary-button" href="/producao/manual">Como operar</Link>
+          <Link className="primary-button" href="/producao/ordens">Ver ordens</Link>
         </>
       )}
     >
-      <section className="kpi-grid" aria-label="Resumo da producao">
+      <section className="kpi-grid" aria-label="Pendências da produção">
+        <article className="kpi-card accent-amber">
+          <span>OPs aguardando preparo</span>
+          <strong>{valueOrDash(metrics.opsAguardando)}</strong>
+          <p>Ordens em rascunho ou planejadas.</p>
+        </article>
         <article className="kpi-card accent-blue">
-          <span>Formulas versionadas</span>
-          <strong>{valueOrDash(dashboard.metrics.formulasVersionadas)}</strong>
-          <p>{valueOrDash(dashboard.metrics.formulasAtivas)} referencia(s) vigente(s).</p>
+          <span>Produções em andamento</span>
+          <strong>{valueOrDash(metrics.opsEmProducao)}</strong>
+          <p>Ordens iniciadas aguardando conclusão ou CQ.</p>
         </article>
         <article className="kpi-card accent-amber">
-          <span>OP abertas</span>
-          <strong>{valueOrDash(dashboard.metrics.opsAbertas)}</strong>
-          <p>Rascunho, planejada ou em processo.</p>
-        </article>
-        <article className="kpi-card accent-green">
-          <span>OP em processo</span>
-          <strong>{valueOrDash(dashboard.metrics.opsEmProcesso)}</strong>
-          <p>Aguardando CQ ou finalizacao.</p>
+          <span>Componentes sem reserva</span>
+          <strong>{valueOrDash(metrics.componentesSemReserva)}</strong>
+          <p>Itens planejados que ainda precisam de lote.</p>
         </article>
         <article className="kpi-card accent-red">
           <span>Lotes bloqueados</span>
-          <strong>{valueOrDash(dashboard.metrics.lotesBloqueados)}</strong>
-          <p>Dependem de decisao auditada.</p>
+          <strong>{valueOrDash(metrics.lotesBloqueados)}</strong>
+          <p>Dependem de avaliação ou decisão auditada.</p>
         </article>
       </section>
 
-      <section className="panel" aria-labelledby="production-flow-title">
+      {dashboard.source === "supabase" && !hasPendingItems ? (
+        <section className="notice-panel ok" aria-label="Produção sem pendências críticas">
+          <strong>Nenhuma pendência crítica</strong>
+          <span>As filas supervisionadas não possuem exceções neste momento.</span>
+        </section>
+      ) : null}
+
+      <section className="panel" aria-labelledby="production-priorities-title">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">Fluxo operacional</span>
-            <h2 id="production-flow-title">Sequencia da producao</h2>
+            <span className="eyebrow">Ações prioritárias</span>
+            <h2 id="production-priorities-title">Onde atuar</h2>
           </div>
-          <span className="pill">8 etapas</span>
         </div>
-        <div className="operation-card-grid production-stage-grid">
-          <StageCard number="01" title="Base tecnica" detail="MP, unidades, embalagens e produtos." href="/cadastros/tecnicos" status="Operacional" />
-          <StageCard number="02" title="Formulas" detail="Receitas versionadas de producao e MAPA." href="/producao/formulas" status="Operacional" />
-          <StageCard number="03" title="Garantias" detail="Declaracoes de produto e analises por lote de MP." href="/producao/garantias" status="Operacional" />
-          <StageCard number="04" title="Ordens e reservas" detail="Abertura de OP e reserva de MP, PA ou PI." href="/producao/ordens" status="Operacional" />
-          <StageCard number="05" title="CQ e finalizacao" detail="Dados de processo, aprovacao e produto gerado." href="/producao/qualidade" status="Operacional" />
-          <StageCard number="06" title="OP MAPA e envase" detail="Documento MAPA, baixa de PI e embalagens e geração de PA." href="/producao/envase" status="Em validação" />
-          <StageCard number="07" title="Lotes e estoque" detail="Saldos fisico, reservado e disponivel por lote." href="/producao/estoque" status="Operacional" />
-          <StageCard number="08" title="Transformacoes" detail="PA para PI, PI para PA, reenvasamento e reprocessamento." href="/producao/transformacoes" status="Operacional" />
+        <div className="operation-card-grid">
+          <PriorityLink
+            href="/producao/ordens"
+            title="Preparar e acompanhar ordens"
+            detail="Reservar componentes, iniciar OPs e tratar ordens paradas."
+          />
+          <PriorityLink
+            href="/producao/qualidade"
+            title="Concluir CQ"
+            detail="Registrar o processo, avaliar resultados e finalizar a produção."
+          />
+          <PriorityLink
+            href="/producao/estoque"
+            title="Avaliar lotes bloqueados"
+            detail="Consultar o lote e seguir o fluxo auditado de liberação."
+          />
         </div>
-      </section>
-
-      <section className="panel production-next-band">
-        <div>
-          <span className="eyebrow">Fluxo integrado</span>
-          <h2>Do lote de origem ao novo lote</h2>
-          <p className="muted">Estoque, reserva, reprocessamento, CQ e saida permanecem ligados pela ordem de producao.</p>
-        </div>
-        <Link className="secondary-button" href="/producao/estoque">Consultar lotes atuais</Link>
       </section>
     </ProductionShell>
   );
 }
 
-function StageCard({ number, title, detail, href, status }: { number: string; title: string; detail: string; href: string; status: string }) {
-  const operational = status === "Operacional" || status === "Em validação";
+function PriorityLink({
+  href,
+  title,
+  detail
+}: {
+  href: string;
+  title: string;
+  detail: string;
+}) {
   return (
-    <article className={`operation-stage-card ${operational ? "is-operational" : ""}`}>
-      <div className="operation-stage-heading">
-        <span className="operation-stage-number">{number}</span>
-        <span className="status-chip">{status}</span>
-      </div>
+    <article className="operation-stage-card is-operational">
       <h3>{title}</h3>
       <p>{detail}</p>
-      <Link href={href}>Abrir etapa</Link>
+      <Link href={href}>Abrir fila</Link>
     </article>
   );
 }

@@ -233,6 +233,17 @@ export type PcpDashboard = {
   error: string | null;
 };
 
+export type PcpSupervisorDashboard = {
+  metrics: {
+    opsAguardando: number | null;
+    opsEmProducao: number | null;
+    componentesSemReserva: number | null;
+    lotesBloqueados: number | null;
+  };
+  source: "supabase" | "not_configured" | "error";
+  error: string | null;
+};
+
 const EMPTY_LOOKUPS: PcpLookups = {
   produtos: [],
   materiasPrimas: [],
@@ -242,6 +253,52 @@ const EMPTY_LOOKUPS: PcpLookups = {
   nutrientes: [],
   unidades: []
 };
+
+export async function canCurrentUserViewPcpDashboard(): Promise<boolean> {
+  if (!getRuntimeStatus().supabaseConfigured) return false;
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("can_current_user", {
+      p_action_key: "pcp.dashboard.view"
+    });
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getPcpSupervisorDashboard(): Promise<PcpSupervisorDashboard> {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    return emptySupervisorDashboard("not_configured", null);
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("get_pcp_supervisor_dashboard");
+    if (error) return emptySupervisorDashboard("error", error.message);
+
+    const row = data && typeof data === "object"
+      ? data as Record<string, unknown>
+      : {};
+
+    return {
+      metrics: {
+        opsAguardando: nullableNumber(row.ops_aguardando),
+        opsEmProducao: nullableNumber(row.ops_em_producao),
+        componentesSemReserva: nullableNumber(row.componentes_sem_reserva),
+        lotesBloqueados: nullableNumber(row.lotes_bloqueados)
+      },
+      source: "supabase",
+      error: null
+    };
+  } catch (error) {
+    return emptySupervisorDashboard(
+      "error",
+      error instanceof Error ? error.message : "Não foi possível carregar o painel supervisor."
+    );
+  }
+}
 
 export async function getPcpDashboard(): Promise<PcpDashboard> {
   const runtime = getRuntimeStatus();
@@ -926,6 +983,22 @@ function nullableString(value: unknown): string | null {
 
 function nullableNumber(value: unknown): number | null {
   return value === null || value === undefined ? null : Number(value);
+}
+
+function emptySupervisorDashboard(
+  source: PcpSupervisorDashboard["source"],
+  error: string | null
+): PcpSupervisorDashboard {
+  return {
+    metrics: {
+      opsAguardando: null,
+      opsEmProducao: null,
+      componentesSemReserva: null,
+      lotesBloqueados: null
+    },
+    source,
+    error
+  };
 }
 
 function emptyDashboard(source: PcpDashboard["source"], error: string | null): PcpDashboard {

@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PRODUCTION = ROOT / "apps" / "web" / "app" / "producao"
 OVERVIEW = PRODUCTION / "page.tsx"
 SHELL = PRODUCTION / "production-shell.tsx"
+MANUAL = PRODUCTION / "manual" / "page.tsx"
 FORMULAS_PAGE = PRODUCTION / "formulas" / "page.tsx"
 FORMULAS_COMPONENT = PRODUCTION / "formulas" / "formula-workbench.tsx"
 FORMULAS_EDITOR = PRODUCTION / "formulas" / "formula-creation-form.tsx"
@@ -44,13 +45,14 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
             self.assertIn(route, shell if route != "/producao" else overview + shell)
 
         self.assertIn("ProductionShell", overview)
-        self.assertIn("Sequencia da producao", overview)
+        self.assertIn("Acompanhamento da produção", overview)
         self.assertIn('href="/producao/ordens"', overview)
         self.assertIn('href="/producao/qualidade"', overview)
-        self.assertIn('href="/producao/envase"', overview)
         self.assertIn('href="/producao/estoque"', overview)
-        self.assertIn('href="/producao/transformacoes"', overview)
-        self.assertIn("8 etapas", overview)
+        self.assertIn("getPcpSupervisorDashboard", overview)
+        self.assertNotIn("getPcpDashboard", overview)
+        self.assertNotIn("8 etapas", overview)
+        self.assertIn("8. Executar transformações controladas", MANUAL.read_text(encoding="utf-8"))
 
     def test_formula_and_guarantee_pages_reuse_shared_business_components(self) -> None:
         formulas_page = FORMULAS_PAGE.read_text(encoding="utf-8")

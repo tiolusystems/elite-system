@@ -44,6 +44,12 @@ const STEPS = [
     detail: "Valide saldos físicos, reservados e disponíveis por MP, PI e PA, preservando a rastreabilidade até a OP de origem.",
     href: "/producao/estoque",
     action: "Abrir lotes e estoque"
+  },
+  {
+    title: "8. Executar transformações controladas",
+    detail: "Use a ordem apropriada para reprocessamento, reenvasamento ou transformação entre PI e PA, sempre preservando origem, consumo, CQ e lote gerado.",
+    href: "/producao/transformacoes",
+    action: "Abrir transformações"
   }
 ];
 
@@ -66,6 +72,11 @@ export default function ProductionManualPage() {
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="notice-panel ok">
+        <strong>Visão geral para supervisão</strong>
+        <span>O painel de pendências e exceções aparece somente para pessoas com a alçada individual de consulta supervisória. Operadores seguem diretamente para suas filas de trabalho.</span>
       </section>
 
       <section className="notice-panel warning">

@@ -83,6 +83,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/production_module_release.sql
+      - name: Run production supervisor dashboard access smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/pcp_supervisor_dashboard_access.sql
       - name: Run integrated production chain smoke
         env:
           PGPASSWORD: postgres

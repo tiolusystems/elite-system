@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { canCurrentUserViewPcpDashboard } from "@/lib/pcp";
 
 export type ProductionRoute =
   | "overview"
@@ -14,14 +15,14 @@ export type ProductionRoute =
   | "manual";
 
 const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: string }> = [
-  { key: "overview", href: "/producao", label: "Visao geral" },
-  { key: "formulas", href: "/producao/formulas", label: "Formulas" },
+  { key: "overview", href: "/producao", label: "Visão geral" },
+  { key: "formulas", href: "/producao/formulas", label: "Fórmulas" },
   { key: "garantias", href: "/producao/garantias", label: "Garantias" },
   { key: "ordens", href: "/producao/ordens", label: "Ordens" },
-  { key: "qualidade", href: "/producao/qualidade", label: "CQ e finalizacao" },
+  { key: "qualidade", href: "/producao/qualidade", label: "CQ e finalização" },
   { key: "envase", href: "/producao/envase", label: "OP MAPA e envase" },
   { key: "estoque", href: "/producao/estoque", label: "Lotes e estoque" },
-  { key: "transformacoes", href: "/producao/transformacoes", label: "Transformacoes" },
+  { key: "transformacoes", href: "/producao/transformacoes", label: "Transformações" },
   { key: "manual", href: "/producao/manual", label: "Como operar" }
 ];
 
@@ -33,22 +34,29 @@ type ProductionShellProps = {
   error: string | null;
   actions?: ReactNode;
   children: ReactNode;
+  canViewOverview?: boolean;
 };
 
-export function ProductionShell({
+export async function ProductionShell({
   active,
   title,
   description,
   source,
   error,
   actions,
-  children
+  children,
+  canViewOverview
 }: ProductionShellProps) {
+  const showOverview = canViewOverview ?? await canCurrentUserViewPcpDashboard();
+  const visibleLinks = showOverview
+    ? PRODUCTION_LINKS
+    : PRODUCTION_LINKS.filter((item) => item.key !== "overview");
+
   return (
     <main className="app-shell">
       <section className="workspace technical-workspace production-workspace">
-        <nav className="catalog-tabs production-tabs" aria-label="Areas de Producao">
-          {PRODUCTION_LINKS.map((item) => (
+        <nav className="catalog-tabs production-tabs" aria-label="Áreas de Produção">
+          {visibleLinks.map((item) => (
             <Link key={item.key} href={item.href} aria-current={active === item.key ? "page" : undefined}>
               {item.label}
             </Link>
@@ -57,7 +65,7 @@ export function ProductionShell({
 
         <div className="toolbar technical-toolbar">
           <div>
-            <span className="eyebrow">Operacao industrial</span>
+            <span className="eyebrow">Operação industrial</span>
             <h1>{title}</h1>
             <p className="muted">{description}</p>
           </div>
@@ -66,14 +74,14 @@ export function ProductionShell({
 
         {source === "not_configured" ? (
           <div className="notice-panel warning">
-            <strong>Banco nao configurado</strong>
-            <span>O modulo de Producao fica disponivel quando o ambiente Supabase estiver ativo.</span>
+            <strong>Banco não configurado</strong>
+            <span>O módulo de Produção fica disponível quando o ambiente Supabase estiver ativo.</span>
           </div>
         ) : null}
         {source === "error" ? (
           <div className="notice-panel warning">
-            <strong>Falha ao carregar Producao</strong>
-            <span>{error ?? "Nao foi possivel consultar o banco."}</span>
+            <strong>Falha ao carregar Produção</strong>
+            <span>{error ?? "Não foi possível consultar o banco."}</span>
           </div>
         ) : null}
 

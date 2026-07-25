@@ -4,16 +4,24 @@ import Link from "next/link";
 
 import { createPcpOpAction } from "@/app/pcp/actions";
 import { PlanningOrderCard } from "@/app/producao/ordens/orders-workbench";
-import type { PcpAvailableLot, PcpDashboard, PcpFormulaVersion, PcpRecentOp } from "@/lib/pcp";
+import type {
+  PcpAvailableLot,
+  PcpDashboard,
+  PcpFormulaVersion,
+  PcpOrderCapabilities,
+  PcpRecentOp
+} from "@/lib/pcp";
 
 export function TransformationWorkbench({
   dashboard,
   transformations,
-  sourceLot
+  sourceLot,
+  capabilities
 }: {
   dashboard: PcpDashboard;
   transformations: PcpRecentOp[];
   sourceLot: PcpAvailableLot | null;
+  capabilities: PcpOrderCapabilities;
 }) {
   const opRequestKey = randomUUID();
   const formulas = transformationFormulas(dashboard.formulaVersions, sourceLot);
@@ -31,6 +39,7 @@ export function TransformationWorkbench({
       ) : null}
 
       <section className="two-column production-primary-grid">
+        {capabilities.canCreate ? (
         <section className="panel form-panel" id="nova-transformacao" aria-labelledby="new-transformation-title">
           <div className="panel-header">
             <div>
@@ -79,6 +88,12 @@ export function TransformationWorkbench({
             ) : null}
           </form>
         </section>
+        ) : (
+          <section className="notice-panel warning" aria-label="Transformação em modo de consulta">
+            <strong>Criação de transformação não autorizada</strong>
+            <span>Você pode consultar as ordens existentes, mas não possui alçada para abrir uma nova.</span>
+          </section>
+        )}
 
         <section className="panel transformation-flow-panel" aria-labelledby="transformation-flow-title">
           <div className="panel-header">
@@ -110,6 +125,7 @@ export function TransformationWorkbench({
                 key={op.id}
                 op={op}
                 availableLots={dashboard.availableLots}
+                capabilities={capabilities}
                 returnTo="transformacoes"
               />
             ))}

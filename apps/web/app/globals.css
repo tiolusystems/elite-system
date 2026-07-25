@@ -1779,6 +1779,238 @@ h1 {
   padding: 14px;
 }
 
+.order-status-navigation {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.order-status-link {
+  display: flex;
+  min-width: 0;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 9px 11px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.order-status-link strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.order-status-link.is-active {
+  border-color: #55a6d0;
+  background: #eef8fc;
+  color: #075985;
+}
+
+.order-create-workflow {
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
+}
+
+.order-formula-reference {
+  align-content: start;
+}
+
+.order-formula-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.order-formula-list article {
+  display: grid;
+  gap: 3px;
+  border-bottom: 1px solid var(--border);
+  padding: 9px 0;
+}
+
+.order-formula-list span,
+.order-formula-list small {
+  color: var(--muted);
+}
+
+.order-record {
+  padding: 0;
+  overflow: clip;
+}
+
+.order-record-summary {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) minmax(120px, 0.7fr) minmax(140px, 0.8fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 72px;
+  padding: 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.order-record-summary::-webkit-details-marker {
+  display: none;
+}
+
+.order-record-summary:focus-visible {
+  outline: 3px solid rgba(25, 122, 167, 0.25);
+  outline-offset: -3px;
+}
+
+.order-record-identity,
+.order-record-volume,
+.order-record-reservation {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.order-record-identity strong,
+.order-record-identity small {
+  overflow-wrap: anywhere;
+}
+
+.order-record-summary small,
+.order-record-expand {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.order-record-expand {
+  color: var(--link);
+  font-weight: 800;
+}
+
+.order-record[open] .order-record-expand {
+  visibility: hidden;
+}
+
+.order-record-detail {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--border);
+  padding: 14px;
+}
+
+.order-record-context,
+.order-reservation-overview,
+.order-component-balance {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.order-record-context > div,
+.order-reservation-overview > div,
+.order-component-balance > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border-left: 2px solid #b9cad8;
+  padding: 4px 8px;
+}
+
+.order-record-context span,
+.order-reservation-overview span,
+.order-component-balance span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.order-reservation-overview {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.order-reservation-overview p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.order-component-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-component-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.order-component-balance progress {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 7px;
+  accent-color: #22936b;
+}
+
+.order-current-reservations {
+  display: grid;
+  gap: 7px;
+}
+
+.order-lot-availability {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.order-lot-availability summary {
+  width: fit-content;
+  color: var(--link);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.order-lot-table {
+  display: grid;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.order-lot-row {
+  display: grid;
+  grid-template-columns: 80px minmax(140px, 1.2fr) minmax(100px, 0.8fr) repeat(3, minmax(90px, 0.7fr)) minmax(110px, 0.8fr);
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.order-lot-row:first-child {
+  border-top: 0;
+}
+
+.order-lot-head {
+  background: #eef3f7;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.order-stock-shortage {
+  margin: 0;
+}
+
+.order-readonly-notice {
+  margin-bottom: 0;
+}
+
 .pcp-op-card.op-planned {
   border-left-color: var(--amber-accent);
 }
@@ -1880,7 +2112,7 @@ h1 {
   font-weight: 800;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .pcp-fifo-action {
     grid-template-columns: 1fr;
   }
@@ -1888,6 +2120,69 @@ h1 {
   .pcp-fifo-action .primary-button {
     width: 100%;
   }
+
+  .order-status-navigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .order-record-summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .order-record-volume,
+  .order-record-reservation {
+    grid-row: 2;
+  }
+
+  .order-record-summary .status-chip {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .order-record-expand {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .order-record-context,
+  .order-reservation-overview,
+  .order-component-balance {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .order-lot-table {
+    border: 0;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .order-lot-head {
+    display: none;
+  }
+
+  .order-lot-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+  }
+
+  .order-lot-row span::before,
+  .order-lot-row strong::before {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .order-lot-row span:nth-child(1)::before { content: "Prioridade"; }
+  .order-lot-row strong:nth-child(2)::before { content: "Lote"; }
+  .order-lot-row span:nth-child(3)::before { content: "Validade"; }
+  .order-lot-row span:nth-child(4)::before { content: "Físico"; }
+  .order-lot-row span:nth-child(5)::before { content: "Reservado"; }
+  .order-lot-row span:nth-child(6)::before { content: "Disponível"; }
+  .order-lot-row span:nth-child(7)::before { content: "Situação"; }
 }
 
 .pcp-op-actions {

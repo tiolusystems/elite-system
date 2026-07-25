@@ -2,6 +2,7 @@ begin;
 do $$
 declare
   v_actor uuid := '00000000-0000-4000-8000-000000000776';
+  v_readonly uuid := '00000000-0000-4000-8000-000000007776';
   v_output bigint; v_input bigint; v_unit bigint; v_formula bigint;
   v_op_manual bigint; v_op_auto bigint; v_component_manual bigint; v_component_auto bigint;
   v_old_lot bigint; v_new_lot bigint; v_reservation bigint; v_count integer;
@@ -64,6 +65,59 @@ begin
     raise exception 'FIFO total reservation mismatch'; end if;
   if not exists(select 1 from public.action_logs where action='pcp.op_fifo_override' and entity_id=v_reservation::text) then
     raise exception 'FIFO override audit not found'; end if;
+
+  insert into auth.users(id) values (v_readonly) on conflict (id) do nothing;
+  insert into public.user_profiles(id, display_name, role, status)
+  values (v_readonly, 'FIFO read-only reviewer', 'admin', 'active')
+  on conflict (id) do update set status = 'active';
+  insert into public.user_permission_overrides(user_id, action_key, allowed, updated_by) values
+    (v_readonly, 'pcp.op.create', false, v_actor),
+    (v_readonly, 'pcp.op.reserve_components', false, v_actor),
+    (v_readonly, 'pcp.op.reserve_override_fifo', false, v_actor),
+    (v_readonly, 'pcp.op.start', false, v_actor),
+    (v_readonly, 'pcp.op.cancel', false, v_actor)
+  on conflict (user_id, action_key) do update set allowed = false, updated_by = excluded.updated_by;
+  perform set_config('request.jwt.claim.sub', v_readonly::text, true);
+
+  if not exists(select 1 from public.pcp_ordens_producao where id = v_op_auto) then
+    raise exception 'read-only actor cannot consult the production order';
+  end if;
+  if public.can_current_user('pcp.op.create')
+     or public.can_current_user('pcp.op.reserve_components')
+     or public.can_current_user('pcp.op.reserve_override_fifo')
+     or public.can_current_user('pcp.op.start')
+     or public.can_current_user('pcp.op.cancel') then
+    raise exception 'read-only actor received an operational production capability';
+  end if;
+
+  begin
+    perform public.create_pcp_op_idempotente(
+      '76000000-0000-4000-8000-000000007776', v_formula, 'estoque', 1, 'Tentativa sem alcada'
+    );
+    raise exception 'read-only actor created a production order';
+  exception when others then
+    if sqlerrm not like 'not allowed:%' then raise; end if;
+  end;
+  begin
+    perform public.reservar_pcp_op_componente_fifo(v_component_auto);
+    raise exception 'read-only actor reserved a production component';
+  exception when others then
+    if sqlerrm not like 'not allowed:%' then raise; end if;
+  end;
+  begin
+    perform public.iniciar_pcp_op(v_op_auto, 'Tentativa sem alcada');
+    raise exception 'read-only actor started a production order';
+  exception when others then
+    if sqlerrm not like 'not allowed:%' then raise; end if;
+  end;
+  begin
+    perform public.cancelar_pcp_op(v_op_auto, 'Tentativa sem alcada');
+    raise exception 'read-only actor cancelled a production order';
+  exception when others then
+    if sqlerrm not like 'not allowed:%' then raise; end if;
+  end;
+
+  perform set_config('request.jwt.claim.sub', v_actor::text, true);
   if has_function_privilege('authenticated','public.reservar_pcp_op_componente_impl_0076(bigint,bigint,bigint,bigint,numeric,text)','EXECUTE')
     or has_function_privilege('anon','public.reservar_pcp_op_componente_fifo(bigint)','EXECUTE') then
     raise exception 'internal implementation or anonymous FIFO RPC remains exposed'; end if;

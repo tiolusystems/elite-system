@@ -244,6 +244,14 @@ export type PcpSupervisorDashboard = {
   error: string | null;
 };
 
+export type PcpOrderCapabilities = {
+  canCreate: boolean;
+  canReserve: boolean;
+  canOverrideFifo: boolean;
+  canStart: boolean;
+  canCancel: boolean;
+};
+
 const EMPTY_LOOKUPS: PcpLookups = {
   produtos: [],
   materiasPrimas: [],
@@ -253,6 +261,41 @@ const EMPTY_LOOKUPS: PcpLookups = {
   nutrientes: [],
   unidades: []
 };
+
+const PCP_ORDER_PERMISSION_KEYS = {
+  canCreate: "pcp.op.create",
+  canReserve: "pcp.op.reserve_components",
+  canOverrideFifo: "pcp.op.reserve_override_fifo",
+  canStart: "pcp.op.start",
+  canCancel: "pcp.op.cancel"
+} as const;
+
+const EMPTY_ORDER_CAPABILITIES: PcpOrderCapabilities = {
+  canCreate: false,
+  canReserve: false,
+  canOverrideFifo: false,
+  canStart: false,
+  canCancel: false
+};
+
+export async function getPcpOrderCapabilities(): Promise<PcpOrderCapabilities> {
+  if (!getRuntimeStatus().supabaseConfigured) return EMPTY_ORDER_CAPABILITIES;
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const entries = await Promise.all(
+      Object.entries(PCP_ORDER_PERMISSION_KEYS).map(async ([capability, actionKey]) => {
+        const { data, error } = await supabase.rpc("can_current_user", {
+          p_action_key: actionKey
+        });
+        return [capability, !error && data === true] as const;
+      })
+    );
+    return Object.fromEntries(entries) as PcpOrderCapabilities;
+  } catch {
+    return EMPTY_ORDER_CAPABILITIES;
+  }
+}
 
 export async function canCurrentUserViewPcpDashboard(): Promise<boolean> {
   if (!getRuntimeStatus().supabaseConfigured) return false;

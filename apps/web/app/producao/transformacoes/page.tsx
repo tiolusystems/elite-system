@@ -2,13 +2,16 @@ import Link from "next/link";
 
 import { ProductionFeedback, ProductionShell, singleProductionParam } from "@/app/producao/production-shell";
 import { TransformationWorkbench } from "@/app/producao/transformacoes/transformation-workbench";
-import { getPcpDashboard, type PcpComponentType } from "@/lib/pcp";
+import { getPcpDashboard, getPcpOrderCapabilities, type PcpComponentType } from "@/lib/pcp";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function ProductionTransformationsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
-  const dashboard = await getPcpDashboard();
+  const [dashboard, capabilities] = await Promise.all([
+    getPcpDashboard(),
+    getPcpOrderCapabilities()
+  ]);
   const query = singleProductionParam(params.q)?.trim().toLocaleLowerCase("pt-BR") ?? "";
   const status = singleProductionParam(params.status) ?? "open";
   const sourceType = componentType(singleProductionParam(params.source_type));
@@ -42,7 +45,7 @@ export default async function ProductionTransformationsPage({ searchParams }: { 
       actions={(
         <>
           <Link className="secondary-button" href="/producao/estoque">Lotes e estoque</Link>
-          <a className="primary-button" href="#nova-transformacao">Nova transformacao</a>
+          {capabilities.canCreate ? <a className="primary-button" href="#nova-transformacao">Nova transformacao</a> : null}
         </>
       )}
     >
@@ -78,7 +81,12 @@ export default async function ProductionTransformationsPage({ searchParams }: { 
         <Link href="/producao/transformacoes">Limpar</Link>
       </form>
 
-      <TransformationWorkbench dashboard={dashboard} transformations={transformations} sourceLot={sourceLot} />
+      <TransformationWorkbench
+        capabilities={capabilities}
+        dashboard={dashboard}
+        transformations={transformations}
+        sourceLot={sourceLot}
+      />
     </ProductionShell>
   );
 }

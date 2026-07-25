@@ -70,11 +70,13 @@ export const ROUTE_MANUALS: RouteManual[] = [
     after: ["O resultado fica vinculado aos insumos consumidos e ao lote produzido."],
     blockers: ["Dados tecnicos ausentes geram resultado pendente; o sistema nao estima valores."],
   }),
-  manual("/producao/ordens", "Producao", "Ordens de producao", "Abrir OP, reservar componentes e iniciar a producao.", {
-    before: ["Use formula operacional ativa e informe o volume planejado.", "Confira os lotes de MP e seus saldos."],
-    steps: ["Crie a OP para um unico produto; repeticoes da mesma solicitacao nao abrem outra OP.", "Revise os componentes calculados.", "Reserve lotes por FIFO ou justifique escolha manual autorizada.", "Confirme as reservas e inicie a producao."],
-    after: ["As reservas comprometem o saldo sem consumi-lo.", "O consumo ocorre na finalizacao da OP."],
-    blockers: ["Saldo insuficiente, formula inativa ou reserva incompleta impedem o inicio."],
+  manual("/producao/ordens", "Producao", "Ordens e reservas", "Consultar OPs, planejar a produção e reservar lotes antes do consumo.", {
+    before: ["Use uma fórmula operacional vigente, revisada e com base de 1 litro.", "Confira o volume planejado e mantenha lotes disponíveis para cada componente."],
+    steps: ["Consulte a fila por situação, finalidade, código ou produto.", "Use Abrir OP somente para iniciar um novo planejamento.", "Selecione a fórmula vigente e informe o volume; repetir a mesma solicitação não cria outra OP.", "Abra a OP na fila e confira as quantidades necessárias, reservadas e pendentes.", "Consulte os lotes somente dentro do componente que será separado.", "Reserve automaticamente por FIFO; se houver alçada para exceção, escolha outro lote e justifique.", "Inicie somente depois que todos os componentes estiverem integralmente reservados."],
+    after: ["As reservas comprometem o saldo disponível sem baixar o saldo físico.", "O consumo acontece na finalização da OP, depois da execução e do CQ.", "Cancelamento governado trata as reservas sem apagar o histórico."],
+    roles: ["Consulta, criação, reserva, exceção ao FIFO, início e cancelamento são alçadas independentes.", "Nenhuma ação é liberada automaticamente pelo cargo do usuário."],
+    blockers: ["Fórmula inativa ou histórica sem base por litro não abre OP.", "Saldo insuficiente, lote bloqueado ou reserva incompleta impedem o início.", "Lote fora da prioridade FIFO exige alçada específica e justificativa com pelo menos 10 caracteres."],
+    records: ["A OP preserva fórmula, produto, volume, componentes e estados.", "Cada reserva registra lote, quantidade, prioridade FIFO, usuário e data.", "Início, cancelamento e exceções permanecem auditáveis."]
   }),
   manual("/producao/qualidade", "Producao", "CQ e finalizacao", "Registrar processo e CQ antes de finalizar a OP.", {
     before: ["A OP deve estar em producao e possuir reservas validas.", "Tenha volume produzido, perdas e resultados de CQ."],

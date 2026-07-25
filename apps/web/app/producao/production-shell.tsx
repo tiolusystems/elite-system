@@ -174,7 +174,7 @@ export function ProductionFeedback({ result }: { result: string | null }) {
   const feedback = FEEDBACK[result] ?? {
     kind: "warning" as const,
     title: "Operacao nao concluida",
-    detail: `Codigo retornado: ${result}`
+    detail: "A solicitação não pôde ser concluída. Atualize a página e tente novamente ou procure o suporte."
   };
 
   return (

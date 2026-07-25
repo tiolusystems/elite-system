@@ -32,6 +32,29 @@ const FORMULA_BASIS_LABELS: Record<string, string> = {
   legado_nao_comprovado: "Revisão por litro necessária"
 };
 
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  draft: "Rascunho",
+  planned: "Planejada",
+  in_process: "Em processo",
+  completed: "Finalizada",
+  cancelled: "Cancelada"
+};
+
+const ORDER_TYPE_LABELS: Record<string, string> = {
+  estoque: "Produção para estoque",
+  experimental: "Experimental",
+  desenvolvimento: "Desenvolvimento",
+  reprocessamento: "Reprocessamento",
+  mapa_documental: "MAPA documental"
+};
+
+const COMPONENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendente",
+  partial: "Parcial",
+  reserved: "Reservado",
+  consumed: "Consumido"
+};
+
 const STATUS_LABELS: Record<string, string> = {
   aprovado: "Aprovado",
   bloqueado: "Bloqueado",
@@ -46,10 +69,12 @@ const STATUS_LABELS: Record<string, string> = {
   atende: "Atende",
   nao_atende: "Não atende",
   informativo: "Informativo",
+  ativa: "Ativa",
   disponivel: "Disponível",
   reservado: "Reservado",
   consumido: "Consumido",
   cancelado: "Cancelado",
+  cancelada: "Cancelada",
   completed: "Finalizada"
 };
 
@@ -88,6 +113,18 @@ export function formulaPurposeLabel(value: string): string {
 
 export function formulaBasisLabel(value: string): string {
   return FORMULA_BASIS_LABELS[value] ?? "Base não reconhecida";
+}
+
+export function orderStatusLabel(value: string): string {
+  return ORDER_STATUS_LABELS[value] ?? "Situação não reconhecida";
+}
+
+export function orderTypeLabel(value: string): string {
+  return ORDER_TYPE_LABELS[value] ?? "Tipo não reconhecido";
+}
+
+export function componentStatusLabel(value: string): string {
+  return COMPONENT_STATUS_LABELS[value] ?? "Situação não reconhecida";
 }
 
 export function productionStatusLabel(status: string | null | undefined): string {

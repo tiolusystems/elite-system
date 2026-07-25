@@ -1,5 +1,91 @@
 # Validacao E2E-01 + TRACE-01
 
+## Execucao online HOM-E2E-20260725-MS08GPR2
+
+### Resultado
+
+**REPROVADO PARA A CADEIA TOTAL. BLOCO INDUSTRIAL ATE PA APROVADO.**
+
+O commit funcional `5d94325` foi aprovado pela CI `30156953429` e promovido
+no projeto `elite-system-staging` pelo deployment
+`dpl_F9kRyxh3DsnDTmMWMqPJdjZxhpnM`. O deployment anterior
+`dpl_G2kFxfxcgaq9s76CHBd59mWcZS2r` foi preservado para rollback.
+
+O health-check respondeu HTTP 200, `status=ok` e
+`backendConfigured=true`. O ledger permaneceu em `0107`; nenhuma migration,
+configuracao Supabase, producao real, `main` ou PWA foi alterada.
+
+### Cadeia comprovada pela interface
+
+O ensaio sintetico executou:
+
+`MP em duas camadas de lote -> formula operacional -> OP -> reserva FIFO ->`
+`producao -> CQ aprovado -> lote PI -> formula MAPA -> Ordem de Envase ->`
+`consumo de PI e embalagem -> lote PA`.
+
+Resultados principais:
+
+- dois lotes da mesma MP permaneceram separados, inclusive por camada de
+  entrada;
+- a OP consumiu 12 kg do primeiro lote e 8 kg do segundo;
+- a finalizacao sem participantes foi recusada sem efeito parcial;
+- o CQ aprovado gerou um unico lote PI;
+- o envase consumiu PI e uma unidade de embalagem e gerou um lote PA;
+- a reserva parcial do Romaneio reduziu o saldo disponivel do pedido de 20 para
+  15 sem reduzir o saldo fisico;
+- o cancelamento governado do Romaneio liberou a reserva e restaurou o saldo
+  disponivel para 20;
+- a tentativa sem alcada de referencia fiscal foi negada;
+- a alcada temporaria usada apenas para diagnostico foi removida.
+
+### Bloqueios comprovados
+
+O E2E total nao prosseguiu por contratos do ambiente, nao por falha de login:
+
+1. Faturamento esta desabilitado no rollout. A RPC de referencia fiscal negou
+   a operacao com `module_disabled` mesmo depois da concessao individual
+   temporaria, comprovando que a alcada nao contorna o modulo bloqueado.
+2. Financeiro esta desabilitado, impedindo recebimento e comissao online.
+3. Relatorios e Rastreabilidade estao desabilitados e redirecionam para o
+   estado governado de modulo indisponivel.
+4. Nao existe veiculo governado disponivel para concluir o Romaneio.
+5. O usuario autenticado nao possui vinculo comercial com o cliente sintetico,
+   impedindo criar pedido para esse cliente pelo fluxo da carteira.
+6. A apresentacao HML usada no Romaneio nao possui configuracao completa de
+   tara e volumes.
+7. O produto sintetico ainda nao possui garantias configuradas.
+
+Esses bloqueios impedem confirmar pela interface: referencia fiscal,
+confirmacao da expedicao, recebimento, liberacao/pagamento de comissao,
+rastreabilidade para frente e para tras, recolhimento e reconciliacao final.
+
+### Responsividade e rotas
+
+- 20 rotas autenticadas foram percorridas no dominio estavel, sendo 18
+  operacionais e 2 bloqueadas pelo rollout;
+- nenhuma rota operacional testada exibiu erro SQL ou action key;
+- Relatorios e Rastreabilidade foram bloqueados de forma compreensivel;
+- o Romaneio foi validado em 1920 x 1080, 1366 x 768, 768 x 1024,
+  390 x 844 e 360 x 800;
+- nao houve rolagem horizontal nas cinco resolucoes;
+- o commit `5d94325` substituiu o erro tecnico por
+  `Modulo responsavel indisponivel`.
+
+### Residuos sinteticos
+
+- o Romaneio do ensaio foi cancelado pelo fluxo governado;
+- a conta tecnica isolada teve a alcada removida e o acesso Auth bloqueado,
+  sem apagar o historico; seu perfil ainda aparece ativo na tela de Seguranca
+  e permanece como residuo a inativar pelo fluxo governado;
+- permanecem registros sinteticos de MP, produto, formulas, OP, PI, PA e
+  cliente, identificados pelo prefixo `HOM-E2E-20260725-MS08GPR2`;
+- permanece uma MP sintetica criada com unidade incorreta durante o ensaio;
+- o lote PI conserva saldo de 4,5 L.
+
+Os fatos append-only nao foram apagados. A neutralizacao restante deve usar
+inativacao, cancelamento, estorno ou ajuste governado depois que os modulos
+necessarios estiverem disponiveis.
+
 ## Atualizacao da revisao integral em 2026-07-25
 
 - baseline funcional recuperado: `4a47ca4`;

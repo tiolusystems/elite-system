@@ -1,16 +1,16 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-24
+Atualizado em: 2026-07-25
 
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit funcional publicado: `9e56e15`;
+- commit funcional publicado: `5d94325`;
 - Supabase de homologacao: ledger alinhado de `0001` a `0107`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_G8XBztHpeaRjYzPSYVpcYYSLAZR4`;
-- deployment anterior preservado para rollback: `dpl_DK9R39zWNHshkQ9xPGwhqi2TvZDy`;
+- deployment estavel de staging: `dpl_F9kRyxh3DsnDTmMWMqPJdjZxhpnM`;
+- deployment anterior preservado para rollback: `dpl_G2kFxfxcgaq9s76CHBd59mWcZS2r`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
@@ -52,6 +52,32 @@ aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
 nao alterou o ledger nem a disponibilidade do backend.
 
 ## Tarefa concluida mais recente
+
+Promocao controlada e ensaio online `HOM-E2E-20260725-MS08GPR2`:
+
+- o commit `5d94325` foi publicado no projeto Vercel
+  `elite-system-staging` e promovido ao dominio estavel;
+- a CI `30156953429` aprovou `database-contract`, `python-tests` e
+  `web-contract`;
+- `/api/health` respondeu `status=ok` e `backendConfigured=true`;
+- o smoke autenticado percorreu 18 rotas operacionais sem erro tecnico ou
+  rolagem horizontal;
+- a cadeia industrial foi executada pela interface ate formula operacional,
+  OP, reserva FIFO em duas camadas de lote, producao, CQ aprovado, lote PI,
+  formula MAPA, envase, consumo de embalagem e lote PA;
+- a reserva de um Romaneio parcial reduziu apenas o saldo disponivel do pedido,
+  sem baixar o estoque fisico, e o cancelamento liberou integralmente a reserva;
+- o frontend agora traduz o bloqueio do modulo responsavel e nao afirma que
+  entregador e veiculo foram ambos gravados quando apenas um deles foi
+  informado;
+- nenhuma migration, configuracao Supabase, `main`, producao real ou PWA foi
+  alterada.
+
+O ensaio completo permanece tecnicamente reprovado: Faturamento, Financeiro,
+Relatorios e Rastreabilidade estao desabilitados no rollout do staging. A
+referencia fiscal externa foi negada mesmo com alcada individual, com causa
+exata `module_disabled`; sem essa etapa nao e possivel confirmar a expedicao,
+o recebimento, a comissao e a rastreabilidade online completa.
 
 UX-01F - Ordens e reservas:
 
@@ -151,6 +177,18 @@ divergente. As tabelas de requisicao nao foram abertas para leitura direta dos
 papeis da API.
 
 ## Validacao desta tarefa
+
+- CI integral do commit `5d94325` aprovada no run `30156953429`;
+- deployment `dpl_F9kRyxh3DsnDTmMWMqPJdjZxhpnM` ativo no dominio estavel,
+  contendo exatamente o commit `5d94325`;
+- health-check HTTP 200 com backend configurado;
+- 20 rotas autenticadas percorridas online; 18 operacionais e 2 bloqueadas
+  corretamente pelo rollout (`Relatorios` e `Rastreabilidade`);
+- Romaneio validado em 1920 x 1080, 1366 x 768, 768 x 1024, 390 x 844 e
+  360 x 800, sem rolagem horizontal e sem mensagem tecnica;
+- ensaio funcional `HOM-E2E-20260725-MS08GPR2` neutralizado no Romaneio pelo
+  cancelamento governado, preservando auditoria;
+- nenhum dado real, reset, migration ou alteracao em producao.
 
 - CI integral do commit `9e56e15` aprovada nos jobs `database-contract`,
   `python-tests` e `web-contract`;
@@ -257,11 +295,12 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. UX-01G - Qualidade e finalizacao como proxima tela do fluxo visual oficial.
-2. Ampliar o ensaio de navegador para percorrer OP, CQ, PI, envase,
-   PA, pedido, Romaneio, recebimento e comissao pela interface.
-3. Executar no staging o ensaio sintetico `HOM-E2E-*`, sem dados reais, e
-   neutralizar seus efeitos pelo fluxo governado.
+1. Corrigir de forma governada o rollout de Faturamento, Financeiro,
+   Relatorios e Rastreabilidade no staging, sem ampliar alcadas individuais.
+2. Fechar as lacunas operacionais de veiculo, vinculo do usuario com a carteira
+   comercial, configuracao logistica da apresentacao e garantias do produto.
+3. Reexecutar o ensaio `HOM-E2E-*` desde pedido ate referencia fiscal,
+   recebimento, comissao, rastreabilidade, recolhimento e reconciliacao.
 4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
 UX-01F esta publicado e tecnicamente validado no staging: Ordens opera por
@@ -298,14 +337,14 @@ tecnicos nas telas de Estoque e Rastreabilidade, preservaram ausencia como
 Transformacoes e Rastreabilidade. A CI `30139897844` passou em Python, web e
 contratos de banco.
 
-O staging permanece no deployment estavel `dpl_G8XBztHpeaRjYzPSYVpcYYSLAZR4`,
-com rollback `dpl_DK9R39zWNHshkQ9xPGwhqi2TvZDy`, porque a promocao do novo SHA
-aguarda deployment criado no projeto correto `elite-system-staging`. Nao houve
-alteracao de migration, banco, Supabase, main, producao real ou PWA.
+O staging esta no deployment estavel `dpl_F9kRyxh3DsnDTmMWMqPJdjZxhpnM`,
+com rollback `dpl_G2kFxfxcgaq9s76CHBd59mWcZS2r`, contendo o commit
+`5d94325`. Nao houve alteracao de migration, banco, Supabase, main, producao
+real ou PWA.
 
-Pendencias tecnicas reais desta revisao: publicar e validar o novo frontend no
-staging; executar a cadeia completa pelo navegador, incluindo CQ, PI, Envase,
-PA, pedido, Romaneio, recebimento, comissao e rastreabilidade; fechar a
+Pendencias tecnicas reais desta revisao: liberar de forma governada os modulos
+necessarios no rollout do staging; concluir a cadeia pelo navegador desde a
+referencia fiscal ate recebimento, comissao e rastreabilidade; fechar a
 reconciliacao e os cenarios negativos no mesmo ensaio sintetico.
 
 O commit `e7b9599` preserva os filtros relacionais da Rastreabilidade com
@@ -315,6 +354,7 @@ entrada da interface. O CI `30140598039` passou em Python, web e banco
 descartavel. O commit documental `bf6c074` tambem passou no CI `30140733341`.
 
 O health-check do dominio estavel respondeu `status=ok` e
-`backendConfigured=true`, mas a pagina ainda serve o deployment anterior
-`9e56e15`; nao houve promocao dos novos commits porque a sessao nao possui CLI
-ou credencial Vercel verificavel.
+`backendConfigured=true`. O ensaio online confirmou a cadeia industrial ate
+PA e o comportamento correto de reserva/cancelamento do Romaneio, mas nao
+concluiu referencia fiscal, recebimento, comissao e rastreabilidade porque os
+modulos proprietarios correspondentes permanecem desabilitados no rollout.

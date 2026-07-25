@@ -21,7 +21,7 @@ export type RecallDestination = {
   finishedLotCode: string;
   product: string;
   lotStatus: string;
-  currentBalance: number;
+  currentBalance: number | null;
   shipmentId: number;
   shipmentCode: string;
   orderId: number;
@@ -29,7 +29,7 @@ export type RecallDestination = {
   customerId: number;
   customerName: string;
   propertyName: string | null;
-  quantity: number;
+  quantity: number | null;
   shippedAt: string;
   fiscalReference: string | null;
   contacts: Array<{ name: string; role: string; phone: string | null; email: string | null }>;
@@ -88,12 +88,12 @@ function mapEdge(row: Record<string, unknown>): TraceEdge {
 function mapRecall(row: Record<string, unknown>): RecallDestination {
   return {
     finishedLotId: Number(row.lote_pa_id), finishedLotCode: String(row.codigo_lote),
-    product: String(row.produto), lotStatus: String(row.status_lote), currentBalance: Number(row.saldo_fisico),
+    product: String(row.produto), lotStatus: String(row.status_lote), currentBalance: row.saldo_fisico == null ? null : Number(row.saldo_fisico),
     shipmentId: Number(row.romaneio_id), shipmentCode: String(row.codigo_romaneio),
     orderId: Number(row.pedido_id), orderCode: String(row.codigo_pedido),
     customerId: Number(row.cliente_id), customerName: String(row.cliente_nome),
     propertyName: row.propriedade_nome == null ? null : String(row.propriedade_nome),
-    quantity: Number(row.quantidade), shippedAt: String(row.expedido_em),
+    quantity: row.quantidade == null ? null : Number(row.quantidade), shippedAt: String(row.expedido_em),
     fiscalReference: row.referencia_fiscal == null ? null : String(row.referencia_fiscal),
     contacts: Array.isArray(row.contatos) ? row.contatos.map((contact) => {
       const value = contact as Record<string, unknown>;

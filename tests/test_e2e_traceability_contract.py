@@ -46,6 +46,8 @@ class E2ETraceabilityContractTests(unittest.TestCase):
         navigation = (ROOT / "apps/web/lib/app-navigation.ts").read_text(encoding="utf-8")
         self.assertIn("Rastreabilidade total", page)
         self.assertIn("Simular recolhimento", page)
+        self.assertNotIn('placeholder="Código interno"', page)
+        self.assertNotIn("defaultValue={filters.customerId}", page)
         self.assertIn('manual("/qualidade/rastreabilidade"', manuals)
         self.assertIn('href: "/qualidade/rastreabilidade"', navigation)
 

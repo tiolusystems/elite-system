@@ -13,8 +13,7 @@ export default async function TraceabilityPage({ searchParams }: { searchParams?
   const recall = await getRecall(recallType, recallLotId);
   const exportQuery = new URLSearchParams({
     tipo: filters.type, codigo: filters.code, direcao: filters.direction,
-    cliente: filters.customerId?.toString() ?? "", pedido: filters.orderId?.toString() ?? "",
-    romaneio: filters.shipmentId?.toString() ?? "", referencia: filters.fiscalReference
+    referencia: filters.fiscalReference
   });
 
   return <main className="app-shell">
@@ -29,9 +28,6 @@ export default async function TraceabilityPage({ searchParams }: { searchParams?
         <div className="form-grid">
           <label>Tipo<select name="tipo" defaultValue={filters.type}><option value="">Qualquer tipo</option><option value="MP">Lote de matéria-prima</option><option value="EMBALAGEM">Lote de embalagem</option><option value="PI">Lote de produto intermediário</option><option value="PA">Lote de produto acabado</option><option value="OP">Ordem de produção</option><option value="ENVASE">Ordem de envase</option><option value="PEDIDO">Pedido</option><option value="ROMANEIO">Romaneio</option></select></label>
           <label>Código<input name="codigo" defaultValue={filters.code} placeholder="Lote, OP, pedido ou Romaneio" /></label>
-          <label>Cliente<input name="cliente" inputMode="numeric" defaultValue={filters.customerId ?? ""} placeholder="Código interno" /></label>
-          <label>Pedido<input name="pedido" inputMode="numeric" defaultValue={filters.orderId ?? ""} placeholder="Código interno" /></label>
-          <label>Romaneio<input name="romaneio" inputMode="numeric" defaultValue={filters.shipmentId ?? ""} placeholder="Código interno" /></label>
           <label>Referência fiscal externa<input name="referencia" defaultValue={filters.fiscalReference} placeholder="Número da NF de remessa" /></label>
           <label>Direção<select name="direcao" defaultValue={filters.direction}><option value="ambas">Para frente e para trás</option><option value="frente">Para frente</option><option value="tras">Para trás</option></select></label>
         </div>
@@ -51,11 +47,10 @@ export default async function TraceabilityPage({ searchParams }: { searchParams?
 }
 
 function parseFilters(params: SearchParams): TraceFilters {
-  return { type: value(params.tipo).toUpperCase(), code: value(params.codigo), customerId: positiveInteger(value(params.cliente)), orderId: positiveInteger(value(params.pedido)), shipmentId: positiveInteger(value(params.romaneio)), fiscalReference: value(params.referencia), direction: value(params.direcao) || "ambas" };
+  return { type: value(params.tipo).toUpperCase(), code: value(params.codigo), customerId: null, orderId: null, shipmentId: null, fiscalReference: value(params.referencia), direction: value(params.direcao) || "ambas" };
 }
 function value(raw: string | string[] | undefined) { return (Array.isArray(raw) ? raw[0] : raw ?? "").trim(); }
-function positiveInteger(raw: string) { const parsed = Number(raw); return Number.isInteger(parsed) && parsed > 0 ? parsed : null; }
-function formatQuantity(quantity: number | null, unit: string | null) { return quantity == null ? "Vínculo" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 6 }).format(quantity)}${unit ? ` ${unit}` : ""}`; }
+function formatQuantity(quantity: number | null, unit: string | null) { return quantity == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 6 }).format(quantity)}${unit ? ` ${unit}` : ""}`; }
 function formatDate(raw: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(raw)); }
 function nodeTypeLabel(type: string) { return ({ MP: "Matéria-prima", EMBALAGEM: "Embalagem", PI: "Produto intermediário", PA: "Produto acabado", OP: "Ordem de produção", ENVASE: "Ordem de envase", ROMANEIO: "Romaneio", PEDIDO: "Pedido", CLIENTE: "Cliente", PROPRIEDADE: "Propriedade", REFERENCIA_FISCAL: "Referência fiscal" } as Record<string, string>)[type] ?? "Registro operacional"; }
 function eventLabel(event: string) { return ({ consumo_real: "Consumo real", producao_lote: "Lote produzido", consumo_envase: "Consumo no envase", producao_envase: "Lote envasado", expedicao_confirmada: "Expedição confirmada", expedicao_estornada: "Expedição estornada", romaneio_do_pedido: "Atendimento do pedido", pedido_do_cliente: "Cliente do pedido", pedido_da_propriedade: "Propriedade do pedido", referencia_fiscal_externa: "Referência fiscal externa" } as Record<string, string>)[event] ?? "Evento operacional"; }

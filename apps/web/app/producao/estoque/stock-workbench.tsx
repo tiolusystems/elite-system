@@ -26,7 +26,7 @@ export function StockWorkbench({ lots, today }: { lots: PcpAvailableLot[]; today
           <article className="inventory-lot-card" key={`${lot.tipo}-${lot.id}`}>
             <div className="inventory-lot-heading">
               <div>
-                <span className="eyebrow">{lot.tipo} - lote {lot.id}</span>
+                <span className="eyebrow">{lot.tipo} - lote</span>
                 <h2>{lot.codigoLote}</h2>
                 <p>{lot.targetLabel}</p>
               </div>
@@ -102,7 +102,7 @@ function statusLabel(value: string): string {
     bloqueado: "Bloqueado",
     esgotado: "Esgotado",
     cancelado: "Cancelado"
-  } as Record<string, string>)[value] ?? value;
+  } as Record<string, string>)[value] ?? "Situação não reconhecida";
 }
 
 function validityLabel(value: LotValidity): string {

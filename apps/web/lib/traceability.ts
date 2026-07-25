@@ -38,9 +38,9 @@ export type RecallDestination = {
 export type TraceFilters = {
   type: string;
   code: string;
-  customerId: number | null;
-  orderId: number | null;
-  shipmentId: number | null;
+  customerQuery: string;
+  orderQuery: string;
+  shipmentQuery: string;
   fiscalReference: string;
   direction: string;
 };
@@ -49,31 +49,68 @@ export async function getTraceability(filters: TraceFilters) {
   if (!hasTraceFilter(filters)) return { edges: [] as TraceEdge[], error: null, source: "empty" as const };
   if (!getRuntimeStatus().supabaseConfigured) return { edges: [] as TraceEdge[], error: "Banco de homologação indisponível.", source: "error" as const };
   const supabase = await createSupabaseServerClient();
+  const [customer, order, shipment] = await Promise.all([
+    resolvePresentedId(supabase, "cad_clientes", "nome", filters.customerQuery),
+    resolvePresentedId(supabase, "com_pedidos", "codigo_pedido", filters.orderQuery),
+    resolvePresentedId(supabase, "exp_romaneios", "codigo_romaneio", filters.shipmentQuery)
+  ]);
+  const resolutionError = customer.error ?? order.error ?? shipment.error;
+  if (resolutionError) return { edges: [] as TraceEdge[], error: resolutionError, source: "error" as const };
   const { data, error } = await supabase.rpc("consultar_rel_rastreabilidade", {
-    p_cliente_id: filters.customerId,
+    p_cliente_id: customer.id,
     p_codigo: filters.code || null,
     p_direcao: filters.direction || "ambas",
     p_limite: 500,
-    p_pedido_id: filters.orderId,
+    p_pedido_id: order.id,
     p_referencia_fiscal: filters.fiscalReference || null,
-    p_romaneio_id: filters.shipmentId,
+    p_romaneio_id: shipment.id,
     p_tipo: filters.type || null
   });
   if (error) return { edges: [] as TraceEdge[], error: humanTraceError(error.message), source: "error" as const };
   return { edges: ((data ?? []) as Array<Record<string, unknown>>).map(mapEdge), error: null, source: "supabase" as const };
 }
 
-export async function getRecall(type: string, lotId: number | null) {
-  if (!type || !lotId) return { destinations: [] as RecallDestination[], error: null };
+export async function getRecall(type: string, lotCode: string) {
+  if (!type || !lotCode) return { destinations: [] as RecallDestination[], error: null };
   if (!getRuntimeStatus().supabaseConfigured) return { destinations: [] as RecallDestination[], error: "Banco de homologação indisponível." };
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("simular_rel_recolhimento", { p_lote_id: lotId, p_tipo_lote: type });
+  const lot = await resolveLotId(supabase, type, lotCode);
+  if (lot.error) return { destinations: [] as RecallDestination[], error: lot.error };
+  if (!lot.id) return { destinations: [] as RecallDestination[], error: "Lote não encontrado para a família informada." };
+  const { data, error } = await supabase.rpc("simular_rel_recolhimento", { p_lote_id: lot.id, p_tipo_lote: type });
   if (error) return { destinations: [] as RecallDestination[], error: humanTraceError(error.message) };
   return { destinations: ((data ?? []) as Array<Record<string, unknown>>).map(mapRecall), error: null };
 }
 
 export function hasTraceFilter(filters: TraceFilters) {
-  return Boolean(filters.type || filters.code || filters.customerId || filters.orderId || filters.shipmentId || filters.fiscalReference);
+  return Boolean(filters.type || filters.code || filters.customerQuery || filters.orderQuery || filters.shipmentQuery || filters.fiscalReference);
+}
+
+async function resolvePresentedId(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  table: "cad_clientes" | "com_pedidos" | "exp_romaneios",
+  column: "nome" | "codigo_pedido" | "codigo_romaneio",
+  query: string
+) {
+  if (!query) return { id: null as number | null, error: null as string | null };
+  const { data, error } = await supabase.from(table).select("id").ilike(column, `%${query}%`).limit(2);
+  if (error) return { id: null, error: "Não foi possível localizar o registro informado." };
+  if (!data?.length) return { id: null, error: "Nenhum registro corresponde ao filtro informado." };
+  if (data.length > 1) return { id: null, error: "O filtro corresponde a mais de um registro; refine a busca." };
+  return { id: Number(data[0].id), error: null };
+}
+
+async function resolveLotId(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  type: string,
+  code: string
+) {
+  const table = type === "MP" || type === "EMBALAGEM" ? "est_lotes_mp" : type === "PI" ? "est_lotes_pi" : "est_lotes_pa";
+  const { data, error } = await supabase.from(table).select("id").ilike("codigo_lote", `%${code}%`).limit(2);
+  if (error) return { id: null as number | null, error: "Não foi possível localizar o lote informado." };
+  if (!data?.length) return { id: null, error: null };
+  if (data.length > 1) return { id: null, error: "O código corresponde a mais de um lote; refine a busca." };
+  return { id: Number(data[0].id), error: null };
 }
 
 function mapEdge(row: Record<string, unknown>): TraceEdge {

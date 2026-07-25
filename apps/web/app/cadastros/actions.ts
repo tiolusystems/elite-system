@@ -1043,6 +1043,61 @@ export async function createProdutoEmbalagemAction(formData: FormData) {
   redirectCadastroAction(formData, "item_vendavel_created", "#novo-item-vendavel");
 }
 
+export async function createVehicleAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?grupo=logistica&result=not_configured#novo-veiculo");
+  }
+
+  const description = field(formData, "descricao");
+  const plate = field(formData, "placa");
+  if (!description || !plate) {
+    redirect("/cadastros?grupo=logistica&result=missing_vehicle_required#novo-veiculo");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "create_cad_veiculo_governado", {
+    p_codigo_legado: optionalField(formData, "codigo_legado"),
+    p_descricao: description,
+    p_placa: plate
+  });
+  if (error) {
+    redirect(`/cadastros?grupo=logistica&result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-veiculo`);
+  }
+
+  revalidatePath("/cadastros");
+  revalidatePath("/romaneios");
+  redirect("/cadastros?grupo=logistica&result=vehicle_created");
+}
+
+export async function setVehicleActiveStateAction(formData: FormData) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    redirect("/cadastros?grupo=logistica&result=not_configured");
+  }
+
+  const vehicleId = optionalInteger(formData, "veiculo_id");
+  const reason = field(formData, "motivo");
+  if (!vehicleId || reason.length < 10) {
+    redirect("/cadastros?grupo=logistica&result=invalid_vehicle_status_reason");
+  }
+
+  const active = field(formData, "active") === "true";
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "set_cad_veiculo_active_state", {
+    p_active: active,
+    p_motivo: reason,
+    p_veiculo_id: vehicleId
+  });
+  if (error) {
+    redirect(`/cadastros?grupo=logistica&result=${encodeURIComponent(mapSupabaseError(error.message))}`);
+  }
+
+  revalidatePath("/cadastros");
+  revalidatePath("/romaneios");
+  redirect(`/cadastros?grupo=logistica&result=${active ? "vehicle_reactivated" : "vehicle_deactivated"}`);
+}
+
 export async function updateProdutoIdentityAction(formData: FormData) {
   const produtoId = requiredCatalogId(formData, "produto_id", "#editar-produto");
   const codigo = field(formData, "codigo_produto");

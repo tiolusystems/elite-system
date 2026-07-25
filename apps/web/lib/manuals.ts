@@ -22,7 +22,13 @@ export const ROUTE_MANUALS: RouteManual[] = [
     after: ["Nenhum dado e alterado nesta tela.", "A liberacao futura do modulo depende do rollout governado do ambiente."],
     blockers: ["Modulo suspenso, dependencia indisponivel ou rollout ainda nao autorizado impedem o acesso."],
   }),
-  manual("/cadastros", "Cadastros", "Central de Cadastros", "Consultar e manter dados mestres usados pela operacao."),
+  manual("/cadastros", "Cadastros", "Central de Cadastros", "Consultar e manter dados mestres usados pela operacao.", {
+    before: ["Pesquise o cadastro antes de criar um novo registro.", "Confirme se possui a alcada individual exigida pela operacao."],
+    steps: ["Escolha a area do cadastro.", "Use a busca para localizar registros existentes.", "Abra a acao de criacao ou manutencao.", "Revise a mensagem de confirmacao e o historico quando disponivel."],
+    after: ["Cadastros ativos passam a alimentar os respectivos fluxos operacionais.", "Veiculos ativos ficam disponiveis para atribuicao no Romaneio."],
+    blockers: ["Duplicidades e dados obrigatorios impedem a gravacao.", "Sem alcada, a consulta pode permanecer disponivel, mas os controles de escrita nao sao exibidos."],
+    records: ["Criacoes e mudancas de situacao governadas registram usuario, data e estado anterior ou posterior."]
+  }),
   manual("/cadastros/materias-primas", "Cadastros", "Materias-primas", "Cadastrar e revisar insumos, unidades e classificacoes governadas.", {
     before: ["Tenha SKU, nome, tipo de insumo e unidade de estoque.", "Confirme se ja existe material com nome ou codigo semelhante."],
     steps: ["Pesquise o material antes de criar.", "Abra Novo insumo e preencha identidade, unidade e classificacao.", "Revise os candidatos a duplicidade.", "Confirme e justifique somente quando for um cadastro realmente distinto."],

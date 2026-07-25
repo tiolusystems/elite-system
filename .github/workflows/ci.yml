@@ -120,6 +120,11 @@ jobs:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/staging_rollout_default_deny.sql
 
+      - name: Run governed vehicle registration smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/vehicle_registration_governance.sql
+
       - name: Run blocked order and exchange idempotency smoke
         env:
           PGPASSWORD: postgres

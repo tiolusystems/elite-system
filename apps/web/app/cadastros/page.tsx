@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ClientesSection } from "@/app/cadastros/clientes-section";
 import { PessoasSection } from "@/app/cadastros/pessoas-section";
+import { VehiclesSection } from "@/app/cadastros/vehicles-section";
 import { getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
@@ -28,7 +29,7 @@ const CADASTRO_GROUPS: Array<{
   { key: "materias-primas", title: "Materias-primas e insumos", description: "SKU, unidade, densidade, estoque e dados regulatorios.", action: "Nova materia-prima" },
   { key: "produtos", title: "Produtos e apresentacoes", description: "Produto-base, validade e combinacao produto + embalagem.", action: "Novo produto" },
   { key: "embalagens", title: "Embalagens e conversoes", description: "Volumes, insumos de embalagem e conversoes de unidade.", action: "Nova embalagem" },
-  { key: "logistica", title: "Veiculos e logistica", description: "Cadastros de apoio para entrega, carga e expedicao.", action: "Ver estrutura" },
+  { key: "logistica", title: "Veiculos e logistica", description: "Cadastros de apoio para entrega, carga e expedicao.", action: "Novo veiculo" },
   { key: "tecnicos", title: "Cadastros tecnicos", description: "Unidades, nutrientes, garantias e catalogos industriais.", action: "Abrir catalogos" },
   { key: "validacao", title: "Validacao e pendencias", description: "Duplicidades, revisoes e cadastros incompletos.", action: "Abrir fila" }
 ];
@@ -206,15 +207,12 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
         ) : null}
 
         {activeGroup?.key === "logistica" ? (
-          <section className="shell-state shell-state-empty cadastros-focused-state">
-            <span className="shell-state-label">Estrutura em preparacao</span>
-            <h2>Veiculos e logistica</h2>
-            <p>Os vinculos de entregadores ja pertencem ao cadastro de pessoas. Veiculos e demais recursos logisticos ainda nao possuem tela operacional nesta central.</p>
-            <div className="shell-state-actions">
-              <Link className="primary-button" href="/cadastros?grupo=pessoas">Ver entregadores</Link>
-              <Link className="secondary-button" href="/romaneios">Abrir romaneio</Link>
-            </div>
-          </section>
+          <VehiclesSection
+            busca={singleValue(params.busca) ?? ""}
+            canCreate={dashboard.vehicleCreateAvailable}
+            canManageStatus={dashboard.vehicleStatusManageAvailable}
+            vehicles={dashboard.vehicles}
+          />
         ) : null}
       </section>
     </main>
@@ -228,7 +226,7 @@ function actionHref(group: CadastroGroupKey): string {
     "materias-primas": "/cadastros/materias-primas#nova-mp",
     produtos: "/cadastros/produtos#novo-produto",
     embalagens: "/cadastros/embalagens#nova-embalagem",
-    logistica: "#",
+    logistica: "/cadastros?grupo=logistica#novo-veiculo",
     tecnicos: "/cadastros/tecnicos",
     validacao: "#validacao"
   };
@@ -265,7 +263,8 @@ function countForGroup(group: CadastroGroupKey, metrics: Array<{ moduleKey: stri
     pessoas: ["pessoas"],
     "materias-primas": ["materias-primas"],
     produtos: ["produtos", "produto-embalagens"],
-    embalagens: ["embalagens", "conversoes-mp"]
+    embalagens: ["embalagens", "conversoes-mp"],
+    logistica: ["veiculos"]
   };
   const counts = (moduleKeys[group] ?? []).map((key) => metrics.find((metric) => metric.moduleKey === key)?.count);
   if (counts.length === 0) return "Abrir";
@@ -433,6 +432,21 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Conversao salva",
       detail: "Conversao de unidade criada para entrada de MP em XML/NF e estoque base."
     },
+    vehicle_created: {
+      kind: "ok",
+      title: "Veiculo cadastrado",
+      detail: "O veiculo ja pode ser selecionado em novas atribuicoes de entrega."
+    },
+    vehicle_deactivated: {
+      kind: "ok",
+      title: "Veiculo inativado",
+      detail: "O historico foi preservado e o veiculo deixou de aparecer em novas atribuicoes."
+    },
+    vehicle_reactivated: {
+      kind: "ok",
+      title: "Veiculo reativado",
+      detail: "O mesmo cadastro voltou a ficar disponivel para novas atribuicoes."
+    },
     duplicated: {
       kind: "warning",
       title: "Cadastro duplicado",
@@ -477,6 +491,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Campos obrigatorios",
       detail: "Produto, embalagem e codigo do item sao obrigatorios."
+    },
+    missing_vehicle_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Descricao e placa sao obrigatorias para cadastrar o veiculo."
+    },
+    invalid_vehicle_status_reason: {
+      kind: "warning",
+      title: "Justificativa obrigatoria",
+      detail: "Informe uma justificativa com pelo menos dez caracteres para alterar a situacao."
     },
     missing_conversion_required: {
       kind: "warning",

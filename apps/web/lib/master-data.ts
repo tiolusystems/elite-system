@@ -115,6 +115,14 @@ export type MasterDataPersonArea = {
   vigenciaFim: string | null;
 };
 
+export type MasterDataVehicle = {
+  id: number;
+  legacyCode: string | null;
+  description: string;
+  plate: string | null;
+  status: string;
+};
+
 export type MasterDataDashboard = {
   modules: MasterDataModule[];
   metrics: MasterDataMetric[];
@@ -134,7 +142,10 @@ export type MasterDataDashboard = {
   pessoaPapeis: MasterDataPersonRole[];
   areasComerciais: MasterDataCommercialArea[];
   pessoaAreas: MasterDataPersonArea[];
+  vehicles: MasterDataVehicle[];
   creditoGravacaoDisponivel: boolean;
+  vehicleCreateAvailable: boolean;
+  vehicleStatusManageAvailable: boolean;
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -218,6 +229,15 @@ export const MASTER_DATA_MODULES: MasterDataModule[] = [
     requiredFields: ["cliente_id", "limite_disponivel", "status_credito"],
     audit: "Snapshot de limite, inadimplencia e aprovacao",
     status: "ready"
+  },
+  {
+    key: "veiculos",
+    title: "Veiculos",
+    table: "cad_veiculos",
+    owner: "Expedicao",
+    requiredFields: ["descricao", "placa", "status"],
+    audit: "Cadastro, situacao e uso em romaneios",
+    status: "ready"
   }
 ];
 
@@ -229,7 +249,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [metrics, validationResult, lookups, clientData, peopleData, creditPermission] = await Promise.all([
+    const [metrics, validationResult, lookups, clientData, peopleData, creditPermission, vehicleData] = await Promise.all([
       Promise.all(
         MASTER_DATA_MODULES.map(async (module) => {
           const { count, error } = await supabase.from(module.table).select("*", { count: "exact", head: true });
@@ -250,7 +270,8 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       getMasterDataLookups(supabase),
       getClientMasterData(supabase),
       getPeopleMasterData(supabase),
-      supabase.rpc("can_current_user", { p_action_key: "financeiro.credit_limits.adjust" })
+      supabase.rpc("can_current_user", { p_action_key: "financeiro.credit_limits.adjust" }),
+      getVehicleMasterData(supabase)
     ]);
 
     return {
@@ -272,13 +293,44 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       pessoaPapeis: peopleData.pessoaPapeis,
       areasComerciais: peopleData.areasComerciais,
       pessoaAreas: peopleData.pessoaAreas,
+      vehicles: vehicleData.vehicles,
       creditoGravacaoDisponivel: !creditPermission.error && creditPermission.data === true,
+      vehicleCreateAvailable: vehicleData.vehicleCreateAvailable,
+      vehicleStatusManageAvailable: vehicleData.vehicleStatusManageAvailable,
       source: "supabase",
       error: validationResult.error?.message ?? null
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
   }
+}
+
+async function getVehicleMasterData(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+): Promise<Pick<MasterDataDashboard, "vehicles" | "vehicleCreateAvailable" | "vehicleStatusManageAvailable">> {
+  const [vehiclesResult, createPermission, statusPermission] = await Promise.all([
+    supabase
+      .from("cad_veiculos")
+      .select("id,codigo_legado,descricao,placa,status")
+      .order("descricao", { ascending: true })
+      .limit(250),
+    supabase.rpc("can_current_user", { p_action_key: "cadastros.veiculos.create" }),
+    supabase.rpc("can_current_user", { p_action_key: "cadastros.veiculos.status.manage" })
+  ]);
+
+  return {
+    vehicles: vehiclesResult.error
+      ? []
+      : (vehiclesResult.data ?? []).map((item) => ({
+          id: Number(item.id),
+          legacyCode: item.codigo_legado,
+          description: item.descricao,
+          plate: item.placa,
+          status: item.status
+        })),
+    vehicleCreateAvailable: !createPermission.error && createPermission.data === true,
+    vehicleStatusManageAvailable: !statusPermission.error && statusPermission.data === true
+  };
 }
 
 async function getPeopleMasterData(
@@ -511,7 +563,10 @@ function emptyDashboard(source: MasterDataDashboard["source"], error: string | n
     pessoaPapeis: [],
     areasComerciais: [],
     pessoaAreas: [],
+    vehicles: [],
     creditoGravacaoDisponivel: false,
+    vehicleCreateAvailable: false,
+    vehicleStatusManageAvailable: false,
     source,
     error
   };

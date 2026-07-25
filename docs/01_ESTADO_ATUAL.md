@@ -311,6 +311,10 @@ reconciliacao e os cenarios negativos no mesmo ensaio sintetico.
 O commit `e7b9599` preserva os filtros relacionais da Rastreabilidade com
 valores apresentados ao operador para cliente, pedido, romaneio e lote. Os IDs
 continuam restritos ao contrato interno das consultas e nao sao campos de
-entrada da interface. O CI `30140598039` foi acionado com Python, web e banco
-descartavel; a confirmacao final do run permanece pendente no momento deste
-registro.
+entrada da interface. O CI `30140598039` passou em Python, web e banco
+descartavel. O commit documental `bf6c074` tambem passou no CI `30140733341`.
+
+O health-check do dominio estavel respondeu `status=ok` e
+`backendConfigured=true`, mas a pagina ainda serve o deployment anterior
+`9e56e15`; nao houve promocao dos novos commits porque a sessao nao possui CLI
+ou credencial Vercel verificavel.

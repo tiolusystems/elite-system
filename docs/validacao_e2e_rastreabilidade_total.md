@@ -232,7 +232,8 @@ sem expor IDs tecnicos na interface. A resolucao usa as tabelas submetidas a
 RLS antes de chamar as RPCs de leitura. Nenhuma migration ou alteracao de banco
 foi criada nesta revisao.
 
-O CI do commit `e7b9599` e o gate tecnico para esse ajuste. O deployment estavel
+O CI do commit `e7b9599` passou no run `30140598039`; o commit documental
+`bf6c074` passou no run `30140733341`. O deployment estavel
 continua no projeto de staging conhecido, com rollback preservado; o novo
 frontend ainda nao foi promovido porque nao ha deployment verificavel do SHA
 novo no projeto Vercel correto. A cadeia full-stack completa pelo navegador

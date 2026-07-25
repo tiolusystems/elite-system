@@ -69,7 +69,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
     steps: ["Consulte a garantia declarada do produto, sem confundi-la com análise de lote.", "Registre a garantia analisada e a densidade do lote de matéria-prima com fonte, documento e justificativa.", "Compare a base física dos lotes consumidos com o resultado calculado da OP.", "Abra as pendências quando faltar densidade, unidade ou garantia de lote."],
     after: ["A declaração permanece a referência documental do produto.", "A análise de MP permanece vinculada ao lote e à sua fonte.", "O cálculo fica vinculado aos insumos consumidos, ao CQ e ao lote produzido."],
     roles: ["Consulta depende da alçada de leitura de Produção.", "Registro e revisão dependem das alçadas atômicas do domínio."],
-    blockers: ["Dados técnicos ausentes geram resultado pendente; o sistema não estima valores.", "Histórico e fontes anteriores são somente leitura."],
+    blockers: ["Dados técnicos ausentes geram resultado pendente; o sistema nao estima valores.", "Histórico e fontes anteriores são somente leitura."],
     records: ["Garantias declaradas, análises de lote, parâmetros técnicos, cálculos e pendências permanecem versionados e auditáveis."]
   }),
   manual("/producao/ordens", "Producao", "Ordens e reservas", "Consultar OPs, planejar a produção e reservar lotes antes do consumo.", {
@@ -82,7 +82,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/producao/qualidade", "Producao", "CQ e finalizacao", "Registrar processo e CQ antes de finalizar a OP.", {
     before: ["A OP deve estar em producao e possuir reservas validas.", "Tenha volume produzido, perdas e resultados de CQ."],
-    steps: ["Selecione a OP em processo.", "Informe separador, conferente e formuladores.", "Registre pH, densidade, volume, massa e temperatura.", "Informe o resultado do CQ e revise a quantidade produzida.", "Finalize para consumir MP, liberar reservas excedentes e criar um único lote PI."],
+    steps: ["Selecione a OP em processo.", "Informe separador, conferente e formuladores.", "Registre pH, densidade, volume, massa e temperatura.", "Informe o resultado do CQ e revise a quantidade produzida.", "Finalize para consumir MP, liberar reservas excedentes e criar um unico lote PI."],
     after: ["CQ aprovado libera o PI para envase; reprovado preserva o lote bloqueado.", "Perdas ficam registradas separadamente do consumo normal."],
     blockers: ["Sem participantes, dados de processo, CQ ou saída única a OP não finaliza.", "A transação inteira é recusada quando houver inconsistência; não existe finalização parcial silenciosa."],
     records: ["Processo, participantes, CQ, consumo real, perdas, reservas liberadas, lote PI e auditoria ficam registrados."],

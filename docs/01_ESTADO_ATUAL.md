@@ -5,19 +5,19 @@ Atualizado em: 2026-07-24
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit funcional publicado: `58e30b9`;
+- commit funcional publicado: `9e56e15`;
 - Supabase de homologacao: ledger alinhado de `0001` a `0107`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_DK9R39zWNHshkQ9xPGwhqi2TvZDy`;
-- deployment anterior preservado para rollback: `dpl_5YgVQry2i3n531JmtN9PczMWUxP3`;
+- deployment estavel de staging: `dpl_G8XBztHpeaRjYzPSYVpcYYSLAZR4`;
+- deployment anterior preservado para rollback: `dpl_DK9R39zWNHshkQ9xPGwhqi2TvZDy`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
 ## Estado tecnico comprovado
 
-O pipeline integral do commit `58e30b9` esta aprovado na execucao
-`30133399869`:
+O pipeline integral do commit `9e56e15` esta aprovado na execucao
+`30138727879`:
 
 - ESLint, TypeScript e build Next.js;
 - testes Python e contratos estaticos;
@@ -53,7 +53,29 @@ nao alterou o ledger nem a disponibilidade do backend.
 
 ## Tarefa concluida mais recente
 
-UX-01E - Formulas:
+UX-01F - Ordens e reservas:
+
+- consulta, criacao, reservas e mudancas de estado possuem fluxos separados;
+- situacoes da OP, finalidades e mensagens operacionais aparecem em PT-BR;
+- a OP nasce exclusivamente de formula operacional vigente e revisada por
+  litro, sem expor IDs tecnicos;
+- cada componente mostra quantidade necessaria, reservada, pendente e
+  disponivel;
+- reserva automatica segue FIFO e pode distribuir a necessidade entre varios
+  lotes;
+- lote fora do FIFO exige alcada individual e justificativa;
+- reservas comprometem o saldo disponivel sem baixar o saldo fisico;
+- lote bloqueado, saldo insuficiente ou reserva incompleta impedem o inicio;
+- criacao, reserva, excecao ao FIFO, inicio e cancelamento usam alcadas
+  independentes, sem inferencia por cargo;
+- retries permanecem idempotentes e as mudancas de estado continuam auditadas;
+- manual contextual, desktop, tablet e celular foram validados;
+- nenhuma migration ou alteracao de banco foi necessaria.
+
+UX-01E tecnicamente validado; homologacao visual de Luciano pendente para
+revisao consolidada posterior.
+
+Formulas permanece tecnicamente concluido:
 
 - referencias vigentes aparecem antes do historico;
 - consulta por produto, finalidade e situacao permanece separada da criacao;
@@ -130,19 +152,31 @@ papeis da API.
 
 ## Validacao desta tarefa
 
-- CI integral do commit `58e30b9` aprovada nos jobs `database-contract`,
+- CI integral do commit `9e56e15` aprovada nos jobs `database-contract`,
   `python-tests` e `web-contract`;
+- ambiente descartavel `elite-validation-e2e-ux01f-012809` confirmou
+  instalacao limpa ate `0107`, smoke SQL FIFO e Playwright `10/10` nas
+  resolucoes de 1920, 1366, 768, 390 e 360 pixels;
+- 626 testes Python, ESLint, TypeScript, build Next.js, `git diff --check` e
+  varreduras de arquivos proibidos foram aprovados;
 - ambiente descartavel `elite-validation-prodnav-dd4aeab` confirmou todas as
   migrations, quatro cadeias SQL e Playwright `30/30` em cinco resolucoes;
 - instalacao limpa, upgrade `0102` para `0103`, concorrencia e smokes
   PostgreSQL executados em ambientes `elite-validation-*`;
 - ledger de staging confirmado ate `0107`;
 - health-check de staging com `status=ok` e `backendConfigured=true`;
-- deployment `dpl_DK9R39zWNHshkQ9xPGwhqi2TvZDy` promoveu exatamente o commit
-  `58e30b9` no projeto `elite-system-staging`;
+- deployment `dpl_G8XBztHpeaRjYzPSYVpcYYSLAZR4` promoveu exatamente o commit
+  `9e56e15` no projeto `elite-system-staging`;
 - smoke autenticado de Formulas confirmou busca, filtros, consulta de versoes,
   fluxo de criacao, componentes progressivos, separacao MAPA, aviso de revisao
   por litro, manual e ausencia de IDs tecnicos;
+- smoke autenticado de Ordens confirmou consulta, filtros, estados PT-BR,
+  cobertura por componente, saldo insuficiente, FIFO, criacao separada,
+  mudancas governadas e manual contextual;
+- a abertura de nova OP permaneceu corretamente indisponivel no staging sem
+  formula operacional vigente e revisada;
+- desktop de 1366 x 768 e celular de 390 x 844 foram comprovados online sem
+  rolagem horizontal; as cinco resolucoes foram cobertas no ensaio descartavel;
 - smoke autenticado confirmou Clientes em somente leitura, nova alcada
   bloqueada na Seguranca e ausencia do ajuste permanente em Pedidos;
 - grupo e produto sinteticos foram inativados pelo fluxo governado, sem apagar
@@ -223,17 +257,17 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
 
 ## Proxima tarefa
 
-1. UX-01F - homologar Ordens e reservas como proxima tela do fluxo visual oficial.
+1. UX-01G - Qualidade e finalizacao como proxima tela do fluxo visual oficial.
 2. Ampliar o ensaio de navegador para percorrer OP, CQ, PI, envase,
    PA, pedido, Romaneio, recebimento e comissao pela interface.
 3. Executar no staging o ensaio sintetico `HOM-E2E-*`, sem dados reais, e
    neutralizar seus efeitos pelo fluxo governado.
 4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
-UX-01E esta publicado e validado no staging: Formulas opera por consulta, busca
-e filtros, isola a criacao em fluxo proprio, preserva versoes imutaveis e
-diferencia base de 1 L, documento MAPA e historico que exige revisao. A entrega
-nao alterou o shell de Producao, contratos de banco ou exportacao Excel.
+UX-01F esta publicado e tecnicamente validado no staging: Ordens opera por
+consulta, criacao, reserva e transicao de estado separadas, preserva FIFO,
+multilote, alçadas atomicas, auditoria e idempotencia. UX-01E e UX-01F
+permanecem na fila de homologacao visual consolidada de Luciano.
 
 ## Tarefa seguinte
 

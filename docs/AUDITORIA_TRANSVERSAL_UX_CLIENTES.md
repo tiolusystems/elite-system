@@ -58,3 +58,26 @@
 
 PWA permanece adiada. A sequencia retorna a Formula, Garantias, OP, CQ, Envase,
 OP MAPA e Estoque, usando os contratos e manuais agora consolidados.
+
+## Atualizacao da revisao integral em 2026-07-25
+
+Esta auditoria foi revisitada a partir do bloco publicado na branch
+`feature/0044-production-module-release`. Os commits funcionais desta revisao
+sao `c860d49`, `28ef700` e `e7b9599`; os commits documentais e de contrato de
+manuais sao `8209dcf` e `7700287`.
+
+Foram confirmados:
+
+- shell unico e navegacao estavel nas rotas canonicas;
+- manuais registrados para as rotas operacionais publicadas;
+- estados de estoque e rastreabilidade sem exibicao deliberada de IDs;
+- filtros de cliente, pedido, romaneio e recolhimento por valores apresentados,
+  resolvidos internamente antes das RPCs governadas;
+- ausencia de migration, alteracao de banco, RLS, RPC ou regra de negocio nesta
+  revisao.
+
+O CI `30140598039` foi acionado para o commit `e7b9599`. A classificacao desta
+revisao permanece **aprovado com ressalvas** ate a publicacao do frontend no
+projeto correto `elite-system-staging` e a execucao da cadeia completa pelo
+navegador. Os smokes SQL e os contratos de banco existentes continuam sendo
+validacoes de contrato; nao substituem o ensaio operacional full-stack.

@@ -223,3 +223,19 @@ residuais.
 - dominio estavel: saudavel, sem promocao manual neste bloco;
 - dados reais: nenhum;
 - integracoes SEFAZ, banco, SMTP ou servicos externos: nenhuma.
+
+## Atualizacao da revisao integral em 2026-07-25
+
+O bloco posterior acrescentou o commit funcional `e7b9599`, que restaura os
+filtros de cliente, pedido, romaneio e recolhimento por valores apresentados,
+sem expor IDs tecnicos na interface. A resolucao usa as tabelas submetidas a
+RLS antes de chamar as RPCs de leitura. Nenhuma migration ou alteracao de banco
+foi criada nesta revisao.
+
+O CI do commit `e7b9599` e o gate tecnico para esse ajuste. O deployment estavel
+continua no projeto de staging conhecido, com rollback preservado; o novo
+frontend ainda nao foi promovido porque nao ha deployment verificavel do SHA
+novo no projeto Vercel correto. A cadeia full-stack completa pelo navegador
+continua pendente, assim como a reconciliacao operacional feita a partir da
+interface. Portanto, o resultado consolidado permanece **APROVADO COM
+RESSALVAS**, sem declarar homologacao visual de Luciano.

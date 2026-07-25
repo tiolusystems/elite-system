@@ -5,18 +5,19 @@ Atualizado em: 2026-07-24
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit funcional publicado: `dd4aeab`;
+- commit funcional publicado: `58e30b9`;
 - Supabase de homologacao: ledger alinhado de `0001` a `0107`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_5YgVQry2i3n531JmtN9PczMWUxP3`;
+- deployment estavel de staging: `dpl_DK9R39zWNHshkQ9xPGwhqi2TvZDy`;
+- deployment anterior preservado para rollback: `dpl_5YgVQry2i3n531JmtN9PczMWUxP3`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
 ## Estado tecnico comprovado
 
-O pipeline integral do commit `dd4aeab` esta aprovado na execucao
-`30127023435`:
+O pipeline integral do commit `58e30b9` esta aprovado na execucao
+`30133399869`:
 
 - ESLint, TypeScript e build Next.js;
 - testes Python e contratos estaticos;
@@ -51,6 +52,21 @@ aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
 nao alterou o ledger nem a disponibilidade do backend.
 
 ## Tarefa concluida mais recente
+
+UX-01E - Formulas:
+
+- referencias vigentes aparecem antes do historico;
+- consulta por produto, finalidade e situacao permanece separada da criacao;
+- componentes sao adicionados progressivamente;
+- formula operacional por 1 L e composicao documental MAPA possuem fluxos
+  inequivocos;
+- versoes anteriores permanecem somente leitura e podem originar uma nova
+  versao sem alterar o historico;
+- formulas antigas sem base por litro comprovada exibem revisao necessaria;
+- ativacao exige motivo e passa pela RPC auditada existente;
+- nenhum ID tecnico e exibido ao operador;
+- manual contextual e rotulos PT-BR foram validados no staging;
+- nenhuma migration, alteracao de banco ou exportacao Excel foi introduzida.
 
 Visao geral supervisoria de Producao e navegacao responsiva:
 
@@ -114,14 +130,19 @@ papeis da API.
 
 ## Validacao desta tarefa
 
-- CI integral do commit `dd4aeab` aprovada nos jobs `database-contract`,
+- CI integral do commit `58e30b9` aprovada nos jobs `database-contract`,
   `python-tests` e `web-contract`;
 - ambiente descartavel `elite-validation-prodnav-dd4aeab` confirmou todas as
   migrations, quatro cadeias SQL e Playwright `30/30` em cinco resolucoes;
 - instalacao limpa, upgrade `0102` para `0103`, concorrencia e smokes
   PostgreSQL executados em ambientes `elite-validation-*`;
 - ledger de staging confirmado ate `0107`;
-- health-check de staging saudavel depois da aplicacao;
+- health-check de staging com `status=ok` e `backendConfigured=true`;
+- deployment `dpl_DK9R39zWNHshkQ9xPGwhqi2TvZDy` promoveu exatamente o commit
+  `58e30b9` no projeto `elite-system-staging`;
+- smoke autenticado de Formulas confirmou busca, filtros, consulta de versoes,
+  fluxo de criacao, componentes progressivos, separacao MAPA, aviso de revisao
+  por litro, manual e ausencia de IDs tecnicos;
 - smoke autenticado confirmou Clientes em somente leitura, nova alcada
   bloqueada na Seguranca e ausencia do ajuste permanente em Pedidos;
 - grupo e produto sinteticos foram inativados pelo fluxo governado, sem apagar
@@ -209,10 +230,10 @@ bloqueiam entrada segura em producao real ou ativacao de saldos oficiais.
    neutralizar seus efeitos pelo fluxo governado.
 4. Preparar o corte fisico `DEC-012` antes de ativar saldos reais.
 
-UX-01E esta concluido no codigo: Formulas opera por consulta, busca e filtros,
-isola a criacao em fluxo proprio, preserva versoes imutaveis e diferencia base
-de 1 L, documento MAPA e historico que exige revisao. A entrega nao alterou o
-shell de Producao, contratos de banco ou exportacao Excel.
+UX-01E esta publicado e validado no staging: Formulas opera por consulta, busca
+e filtros, isola a criacao em fluxo proprio, preserva versoes imutaveis e
+diferencia base de 1 L, documento MAPA e historico que exige revisao. A entrega
+nao alterou o shell de Producao, contratos de banco ou exportacao Excel.
 
 ## Tarefa seguinte
 

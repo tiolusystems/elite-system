@@ -46,7 +46,7 @@ function PackagingOrderCard({ order, mpLots }: { order: PackagingOrder; mpLots: 
       {canPrepare && !reservationsComplete ? <div className="workflow-callout neutral" role="status"><strong>Conclua a separação das embalagens</strong><span>Reserve integralmente cada componente antes de iniciar o envase.</span></div> : null}
       {canPrepare && reservationsComplete ? <form action={startPackagingAction}><input type="hidden" name="ordem_envase_id" value={order.id} /><button className="primary-button" type="submit">Iniciar envase</button></form> : null}
     </div>
-    {order.status === "em_processo" ? <FinishForm order={order} /> : null}
+    {order.status === "em_envase" ? <FinishForm order={order} /> : null}
   </article>;
 }
 
@@ -59,6 +59,6 @@ function PackagingComponentRow({ component, mpLots, canReserve }: { component: P
 function FinishForm({ order }: { order: PackagingOrder }) {
   return <form className="packaging-finish-form" action={finishPackagingAction}><input type="hidden" name="ordem_envase_id" value={order.id} /><div className="panel-header"><h4>Gerar lote PA</h4><span className="pill">quantidade obrigatória: {number(order.plannedFinishedPackages)}</span></div><div className="form-grid"><div className="packaging-output-row"><label>Quantidade do lote PA<input name="lote_pa_quantidade" inputMode="decimal" defaultValue={inputNumber(order.plannedFinishedPackages)} required /></label><label>Identificação do lote<input name="lote_pa_observacao" placeholder="Referência operacional opcional" /></label></div><label className="full-field">Observação final<input name="observacao" /></label></div><div className="form-footer"><span>Esta ordem gera um único lote PA para a apresentação selecionada.</span><button className="primary-button" type="submit">Finalizar e gerar PA</button></div></form>;
 }
-function statusLabel(value: string): string { return ({ emitida: "Emitida", em_separacao: "Em separação", em_processo: "Em processo", finalizada: "Finalizada", cancelada: "Cancelada" } as Record<string, string>)[value] ?? "Estado não reconhecido"; }
+function statusLabel(value: string): string { return ({ emitida: "Emitida", em_separacao: "Em separação", em_envase: "Em envase", finalizada: "Finalizada", cancelada: "Cancelada" } as Record<string, string>)[value] ?? "Estado não reconhecido"; }
 function number(value: number): string { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value); }
 function inputNumber(value: number): string { return String(value).replace(".", ","); }

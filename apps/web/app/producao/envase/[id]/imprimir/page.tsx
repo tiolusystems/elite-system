@@ -33,4 +33,4 @@ export default async function PrintPackagingOrderPage({ params }: { params: Prom
 function PrintField({ label, value }: { label: string; value: string }) { return <div><span>{label}</span><strong>{value}</strong></div>; }
 function format(value: number): string { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value); }
 function dateTime(value: string): string { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium", timeZone: "America/Sao_Paulo" }).format(new Date(value)); }
-function statusLabel(value: string): string { return ({ emitida: "Emitida", em_separacao: "Em separação", em_processo: "Em processo", finalizada: "Finalizada", cancelada: "Cancelada" } as Record<string, string>)[value] ?? value; }
+function statusLabel(value: string): string { return ({ emitida: "Emitida", em_separacao: "Em separação", em_envase: "Em envase", finalizada: "Finalizada", cancelada: "Cancelada" } as Record<string, string>)[value] ?? "Estado não reconhecido"; }

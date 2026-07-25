@@ -119,6 +119,11 @@ class PcpMapaPackagingOrderContractTests(unittest.TestCase):
         self.assertIn("component.reservedQuantity >= component.plannedQuantity", workbench)
         self.assertIn("Conclua a separação das embalagens", workbench)
         self.assertIn("canPrepare && reservationsComplete", workbench)
+        self.assertIn('order.status === "em_envase"', workbench)
+        self.assertIn('em_envase: "Em envase"', workbench)
+        self.assertIn('em_envase: "Em envase"', printable)
+        self.assertNotIn('em_processo: "Em processo"', workbench)
+        self.assertNotIn('em_processo: "Em processo"', printable)
         self.assertIn("assinaturas dos operadores são físicas", printable)
         self.assertIn("Terminal:", printable)
 

@@ -46,6 +46,12 @@ const overrideStatements = accounts.map((account) => {
     `from public.permission_actions where ${predicate}\n` +
     `on conflict (user_id, action_key) do update set allowed = true, updated_by = excluded.updated_by;`;
 }).join("\n\n");
+const orderReadOnlyUser = accounts.find((account) => account.name === "order-reviewer");
+const orderReadOnlyDenials = `insert into public.user_permission_overrides(user_id, action_key, allowed, updated_by)\n` +
+  `select ${sqlLiteral(orderReadOnlyUser.id)}::uuid, action_key, false, ${sqlLiteral(orderReadOnlyUser.id)}::uuid\n` +
+  `from public.permission_actions\n` +
+  `where action_key in ('pcp.op.create', 'pcp.op.reserve_components', 'pcp.op.reserve_override_fifo', 'pcp.op.start', 'pcp.op.cancel')\n` +
+  `on conflict (user_id, action_key) do update set allowed = false, updated_by = excluded.updated_by;`;
 const bootstrapSql = `\\set ON_ERROR_STOP on
 begin;
 
@@ -58,6 +64,8 @@ on conflict (id) do update set
   status = excluded.status;
 
 ${overrideStatements}
+
+${orderReadOnlyDenials}
 
 select set_config('request.jwt.claim.sub', ${sqlLiteral(securityAdministrator.id)}, true);
 do $runtime$

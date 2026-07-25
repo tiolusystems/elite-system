@@ -11,6 +11,7 @@ PCP = ROOT / "apps/web/lib/pcp.ts"
 LABELS = ROOT / "apps/web/lib/production-labels.ts"
 MANUALS = ROOT / "apps/web/lib/manuals.ts"
 STYLES = ROOT / "apps/web/app/globals.css"
+E2E_BOOTSTRAP = ROOT / "apps/web/e2e/bootstrap-synthetic-users.mjs"
 
 
 class OrdersReservationsUxContractTests(unittest.TestCase):
@@ -121,6 +122,21 @@ class OrdersReservationsUxContractTests(unittest.TestCase):
         self.assertIn("@media (max-width: 900px)", text)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", text)
         self.assertNotIn("min-width: 1040px;\n}\n\n.order-status", text)
+
+    def test_read_only_e2e_actor_has_explicit_atomic_denials(self) -> None:
+        text = E2E_BOOTSTRAP.read_text(encoding="utf-8")
+
+        self.assertIn('account.name === "order-reviewer"', text)
+        self.assertIn("orderReadOnlyDenials", text)
+        self.assertIn("do update set allowed = false", text)
+        for action_key in (
+            "pcp.op.create",
+            "pcp.op.reserve_components",
+            "pcp.op.reserve_override_fifo",
+            "pcp.op.start",
+            "pcp.op.cancel",
+        ):
+            self.assertIn(action_key, text)
 
 
 if __name__ == "__main__":

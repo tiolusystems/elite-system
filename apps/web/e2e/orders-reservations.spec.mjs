@@ -13,14 +13,14 @@ test("operador autorizado consulta ordens e acessa a criação separada", async 
   await expect(page.getByRole("heading", { level: 1, name: "Ordens e reservas" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Situação das ordens" })).toBeVisible();
   await expect(page.getByLabel("Buscar OP")).toBeVisible();
-  await expect(page.getByLabel("Situação")).toBeVisible();
+  await expect(page.locator('select[name="status"]')).toBeVisible();
   await expect(page.getByLabel("Finalidade")).toBeVisible();
   await expect(page.getByRole("link", { name: "Abrir OP" })).toBeVisible();
   await assertNoInternalTerms(page);
   await assertNoHorizontalOverflow(page);
 
   await page.getByRole("button", { name: /abrir manual de ordens e reservas/i }).click();
-  await expect(page.getByRole("dialog", { name: "Ordens e reservas" })).toContainText("Sugestão FIFO");
+  await expect(page.getByRole("dialog", { name: "Ordens e reservas" })).toContainText("Reserve automaticamente por FIFO");
   await page.getByRole("button", { name: "Fechar manual" }).click();
 
   await page.getByRole("link", { name: "Abrir OP" }).click();

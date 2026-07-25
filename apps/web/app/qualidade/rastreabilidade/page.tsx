@@ -50,6 +50,7 @@ function parseFilters(params: SearchParams): TraceFilters {
   return { type: value(params.tipo).toUpperCase(), code: value(params.codigo), customerId: null, orderId: null, shipmentId: null, fiscalReference: value(params.referencia), direction: value(params.direcao) || "ambas" };
 }
 function value(raw: string | string[] | undefined) { return (Array.isArray(raw) ? raw[0] : raw ?? "").trim(); }
+function positiveInteger(raw: string) { const parsed = Number(raw); return Number.isInteger(parsed) && parsed > 0 ? parsed : null; }
 function formatQuantity(quantity: number | null, unit: string | null) { return quantity == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 6 }).format(quantity)}${unit ? ` ${unit}` : ""}`; }
 function formatDate(raw: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(raw)); }
 function nodeTypeLabel(type: string) { return ({ MP: "Matéria-prima", EMBALAGEM: "Embalagem", PI: "Produto intermediário", PA: "Produto acabado", OP: "Ordem de produção", ENVASE: "Ordem de envase", ROMANEIO: "Romaneio", PEDIDO: "Pedido", CLIENTE: "Cliente", PROPRIEDADE: "Propriedade", REFERENCIA_FISCAL: "Referência fiscal" } as Record<string, string>)[type] ?? "Registro operacional"; }

@@ -39,6 +39,10 @@ class SecurityAdminUiContractTests(unittest.TestCase):
         self.assertIn("Seguranca e alcadas", page)
         self.assertIn("getSecurityDashboard", page)
         self.assertIn("setSecurityPermissionOverrideAction", page)
+        self.assertIn("upsertSecurityUserProfileAction", page)
+        self.assertIn("Reativar usuÃ¡rio", page)
+        self.assertIn("Inativar usuÃ¡rio", page)
+        self.assertIn('name="status"', page)
         self.assertIn('href="/seguranca"', home)
         self.assertIn("Seguranca", home)
 

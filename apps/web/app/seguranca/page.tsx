@@ -3,6 +3,7 @@ import {
   inviteSecurityAuthUserAction,
   reviewSecurityEmailChangeAction,
   setSecurityPermissionOverrideAction,
+  upsertSecurityUserProfileAction,
 } from "@/app/seguranca/actions";
 import { getSecurityDashboard, type EffectivePermission, type SecurityProfile } from "@/lib/security";
 import { internalValueLabel } from "@/lib/labels-ptbr";
@@ -160,6 +161,24 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                 <span>Configure Supabase ou crie um perfil vinculado ao Auth.</span>
               </div>
             )}
+            {dashboard.selectedProfile && !dashboard.selectedProfile.isSystemActor ? (
+              <form action={upsertSecurityUserProfileAction}>
+                <input name="user_id" type="hidden" value={dashboard.selectedProfile.id} />
+                <input name="display_name" type="hidden" value={dashboard.selectedProfile.displayName} />
+                <input name="role" type="hidden" value={dashboard.selectedProfile.role} />
+                <input
+                  name="status"
+                  type="hidden"
+                  value={dashboard.selectedProfile.status === "active" ? "inactive" : "active"}
+                />
+                <div className="form-footer">
+                  <span>A mudanÃ§a preserva o perfil, as alÃ§adas e o histÃ³rico de auditoria.</span>
+                  <button className="secondary-button" type="submit">
+                    {dashboard.selectedProfile.status === "active" ? "Inativar usuÃ¡rio" : "Reativar usuÃ¡rio"}
+                  </button>
+                </div>
+              </form>
+            ) : null}
           </section>
         </section>
 

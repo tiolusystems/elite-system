@@ -175,6 +175,45 @@ export async function upsertSecurityUserProfileAction(formData: FormData) {
   redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=profile_saved#perfil`);
 }
 
+export async function linkSecurityUserCommercialPersonAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/seguranca?result=not_configured#vinculo-pessoa");
+  }
+
+  const userId = field(formData, "user_id");
+  const pessoaId = field(formData, "pessoa_id");
+  const motivo = field(formData, "motivo");
+
+  if (!UUID_PATTERN.test(userId) || !/^[1-9]\d*$/.test(pessoaId) || motivo.length < 10) {
+    redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=missing_person_link_required#vinculo-pessoa`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "link_security_user_commercial_person", {
+    p_motivo: motivo,
+    p_pessoa_id: Number(pessoaId),
+    p_user_id: userId
+  }, {
+    metadata: {
+      action_key: "security.identity.person.link",
+      axis: "change_type",
+      domain: "seguranca",
+      entity: "cad_pessoas_comerciais",
+      entity_id: pessoaId,
+      failure_action: "seguranca.conta_pessoa_vinculo_failed"
+    }
+  });
+
+  if (error) {
+    redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=${encodeURIComponent(mapSecurityError(error.message))}#vinculo-pessoa`);
+  }
+
+  revalidatePath("/cadastros");
+  revalidatePath("/pedidos");
+  revalidatePath("/seguranca");
+  redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=person_linked#vinculo-pessoa`);
+}
+
 export async function reviewSecurityEmailChangeAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
@@ -337,5 +376,9 @@ function mapSecurityError(message: string): string {
   if (normalized.includes("not pending administrator review")) return "email_change_request_not_pending";
   if (normalized.includes("email already belongs")) return "auth_user_exists";
   if (normalized.includes("matches current auth email")) return "email_unchanged";
+  if (normalized.includes("reason must have")) return "missing_person_link_required";
+  if (normalized.includes("already linked")) return "person_link_conflict";
+  if (normalized.includes("commercial person is not active")) return "person_inactive";
+  if (normalized.includes("commercial person not found")) return "person_not_found";
   return "security_error";
 }

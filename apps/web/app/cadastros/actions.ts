@@ -212,6 +212,76 @@ export async function createClienteAddressAction(formData: FormData) {
   }, "address_created", "enderecos");
 }
 
+export async function linkClienteCommercialPersonAction(formData: FormData) {
+  const clienteId = optionalInteger(formData, "cliente_id");
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const papelVinculoId = optionalInteger(formData, "papel_vinculo_id");
+  const propriedadeId = optionalInteger(formData, "propriedade_id");
+  const vigenciaInicio = field(formData, "vigencia_inicio");
+  const motivo = field(formData, "motivo");
+
+  if (
+    !getRuntimeStatus().supabaseConfigured ||
+    !clienteId ||
+    !pessoaId ||
+    !papelVinculoId ||
+    !vigenciaInicio ||
+    motivo.length < 10
+  ) {
+    redirect(`/cadastros?grupo=clientes&cliente=${clienteId ?? ""}&secao=comercial&result=missing_commercial_link_required`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "link_cad_cliente_commercial_person", {
+    p_cliente_id: clienteId,
+    p_motivo: motivo,
+    p_papel_vinculo_id: papelVinculoId,
+    p_pessoa_id: pessoaId,
+    p_propriedade_id: propriedadeId,
+    p_vigencia_inicio: vigenciaInicio
+  });
+
+  if (error) {
+    redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&secao=comercial&result=${encodeURIComponent(mapSupabaseError(error.message))}`);
+  }
+
+  revalidatePath("/cadastros");
+  revalidatePath("/pedidos");
+  redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&secao=comercial&result=client_commercial_link_created`);
+}
+
+export async function closeClienteCommercialPersonAction(formData: FormData) {
+  const clienteId = optionalInteger(formData, "cliente_id");
+  const vinculoId = optionalInteger(formData, "vinculo_id");
+  const vigenciaFim = field(formData, "vigencia_fim");
+  const motivo = field(formData, "motivo");
+
+  if (
+    !getRuntimeStatus().supabaseConfigured ||
+    !clienteId ||
+    !vinculoId ||
+    !vigenciaFim ||
+    motivo.length < 10
+  ) {
+    redirect(`/cadastros?grupo=clientes&cliente=${clienteId ?? ""}&secao=comercial&result=missing_commercial_link_required`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "close_cad_cliente_commercial_person", {
+    p_motivo: motivo,
+    p_vigencia_fim: vigenciaFim,
+    p_vinculo_id: vinculoId
+  });
+
+  if (error) {
+    redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&secao=comercial&result=${encodeURIComponent(mapSupabaseError(error.message))}`);
+  }
+
+  revalidatePath("/cadastros");
+  revalidatePath("/pedidos");
+  redirect(`/cadastros?grupo=clientes&cliente=${clienteId}&secao=comercial&result=client_commercial_link_closed`);
+}
+
 async function runClientRpc(formData: FormData, rpcName: string, payload: Record<string, unknown>, result: string, section: string) {
   const runtime = getRuntimeStatus();
   const clienteId = optionalInteger(formData, "cliente_id");

@@ -5588,6 +5588,12 @@ h1 {
 .client-record-section { display: grid; gap: 16px; }
 .client-record-list { display: grid; gap: 1px; overflow: hidden; border: 1px solid var(--brand-border); border-radius: 5px; background: var(--brand-border); }
 .client-record-list > div { padding: 12px 14px; background: #fff; overflow-wrap: anywhere; }
+.client-related-list { display: grid; gap: 10px; }
+.client-related-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; padding: 14px; border: 1px solid var(--brand-border); border-radius: 5px; background: #fff; }
+.client-related-item > div { display: grid; gap: 4px; min-width: 0; }
+.client-related-item > div span { color: var(--brand-text-muted); font-size: 12px; overflow-wrap: anywhere; }
+.client-inline-action { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(150px, .55fr) minmax(220px, 1fr) auto; align-items: end; gap: 10px; padding-top: 10px; border-top: 1px solid var(--brand-border); }
+.client-inline-action label { display: grid; gap: 5px; min-width: 0; color: var(--brand-text-muted); font-size: 12px; font-weight: 700; }
 .client-section-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-top: 16px; border-top: 1px solid var(--brand-border); }
 .client-section-form label { display: grid; gap: 6px; min-width: 0; color: var(--brand-text-muted); font-size: 13px; font-weight: 700; }
 .client-section-form .wide-field, .client-section-form > button { grid-column: 1 / -1; }
@@ -5875,6 +5881,8 @@ h1 {
   .cadastros-search > div { grid-template-columns: 1fr; }
   .cadastros-search button { width: 100%; }
   .cadastros-group-card { padding: 14px 12px; }
+  .client-related-item { grid-template-columns: 1fr; }
+  .client-inline-action { grid-column: auto; grid-template-columns: 1fr; }
 }
 
 /* UX-01C.2 - clientes e propriedades */

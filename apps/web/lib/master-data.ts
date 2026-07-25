@@ -75,10 +75,19 @@ export type MasterDataClientSeller = {
   id: number;
   clienteId: number;
   pessoaId: number;
+  papelVinculoId: number;
   propriedadeId: number | null;
   status: string;
   vigenciaInicio: string | null;
   vigenciaFim: string | null;
+};
+
+export type MasterDataClientLinkRole = {
+  id: number;
+  code: string;
+  name: string;
+  grantsVisibility: boolean;
+  status: string;
 };
 
 export type MasterDataPerson = {
@@ -138,12 +147,14 @@ export type MasterDataDashboard = {
   clienteEstabelecimentos: MasterDataClientEstablishment[];
   clienteEnderecos: MasterDataClientAddress[];
   clienteVendedores: MasterDataClientSeller[];
+  clienteVinculoPapeis: MasterDataClientLinkRole[];
   pessoas: MasterDataPerson[];
   pessoaPapeis: MasterDataPersonRole[];
   areasComerciais: MasterDataCommercialArea[];
   pessoaAreas: MasterDataPersonArea[];
   vehicles: MasterDataVehicle[];
   creditoGravacaoDisponivel: boolean;
+  clienteVinculosGravacaoDisponivel: boolean;
   vehicleCreateAvailable: boolean;
   vehicleStatusManageAvailable: boolean;
   source: "supabase" | "not_configured" | "error";
@@ -249,7 +260,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [metrics, validationResult, lookups, clientData, peopleData, creditPermission, vehicleData] = await Promise.all([
+    const [metrics, validationResult, lookups, clientData, peopleData, creditPermission, commercialLinksPermission, vehicleData] = await Promise.all([
       Promise.all(
         MASTER_DATA_MODULES.map(async (module) => {
           const { count, error } = await supabase.from(module.table).select("*", { count: "exact", head: true });
@@ -271,6 +282,7 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       getClientMasterData(supabase),
       getPeopleMasterData(supabase),
       supabase.rpc("can_current_user", { p_action_key: "financeiro.credit_limits.adjust" }),
+      supabase.rpc("can_current_user", { p_action_key: "cadastros.clientes.commercial_links.manage" }),
       getVehicleMasterData(supabase)
     ]);
 
@@ -289,12 +301,15 @@ export async function getMasterDataDashboard(): Promise<MasterDataDashboard> {
       clienteEstabelecimentos: clientData.clienteEstabelecimentos,
       clienteEnderecos: clientData.clienteEnderecos,
       clienteVendedores: clientData.clienteVendedores,
+      clienteVinculoPapeis: clientData.clienteVinculoPapeis,
       pessoas: peopleData.pessoas,
       pessoaPapeis: peopleData.pessoaPapeis,
       areasComerciais: peopleData.areasComerciais,
       pessoaAreas: peopleData.pessoaAreas,
       vehicles: vehicleData.vehicles,
       creditoGravacaoDisponivel: !creditPermission.error && creditPermission.data === true,
+      clienteVinculosGravacaoDisponivel:
+        !commercialLinksPermission.error && commercialLinksPermission.data === true,
       vehicleCreateAvailable: vehicleData.vehicleCreateAvailable,
       vehicleStatusManageAvailable: vehicleData.vehicleStatusManageAvailable,
       source: "supabase",
@@ -403,8 +418,8 @@ async function getPeopleMasterData(
 
 async function getClientMasterData(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
-): Promise<Pick<MasterDataDashboard, "clientes" | "propriedades" | "clienteVendedores" | "clienteDocumentos" | "clienteContatos" | "clienteCreditos" | "clienteCreditoEventos" | "clienteIdentificacoes" | "clienteEstabelecimentos" | "clienteEnderecos">> {
-  const [clientsResult, propertiesResult, sellersResult, documentsResult, contactsResult, creditsResult, creditEventsResult, identificationsResult, establishmentsResult, addressesResult] = await Promise.all([
+): Promise<Pick<MasterDataDashboard, "clientes" | "propriedades" | "clienteVendedores" | "clienteVinculoPapeis" | "clienteDocumentos" | "clienteContatos" | "clienteCreditos" | "clienteCreditoEventos" | "clienteIdentificacoes" | "clienteEstabelecimentos" | "clienteEnderecos">> {
+  const [clientsResult, propertiesResult, sellersResult, linkRolesResult, documentsResult, contactsResult, creditsResult, creditEventsResult, identificationsResult, establishmentsResult, addressesResult] = await Promise.all([
     supabase
       .from("cad_clientes")
       .select("id,codigo_legado,nome,cidade,uf,status,apelidos_json,valor_total_compras")
@@ -417,9 +432,14 @@ async function getClientMasterData(
       .limit(500),
     supabase
       .from("cad_cliente_vendedores")
-      .select("id,cliente_id,pessoa_id,propriedade_id,status,vigencia_inicio,vigencia_fim")
+      .select("id,cliente_id,pessoa_id,papel_vinculo_id,propriedade_id,status,vigencia_inicio,vigencia_fim")
       .order("vigencia_inicio", { ascending: false })
       .limit(500),
+    supabase
+      .from("cad_cliente_vinculo_papeis")
+      .select("id,codigo_norm,nome,concede_visibilidade,status")
+      .order("nome", { ascending: true })
+      .limit(100),
     supabase.from("cad_cliente_documentos").select("id,cliente_id,propriedade_id,tipo,numero").order("id", { ascending: false }).limit(1000),
     supabase.from("cad_cliente_contatos").select("id,cliente_id,propriedade_id,nome,papel,telefone,email,status").order("id", { ascending: false }).limit(1000),
     supabase.from("cad_limites_credito_cliente").select("id,cliente_id,limite_manual,limite_calculado,limite_disponivel,status_credito,motivo,updated_at").order("updated_at", { ascending: false }).limit(1000),
@@ -458,13 +478,23 @@ async function getClientMasterData(
     clienteVendedores: sellersResult.error
       ? []
       : (sellersResult.data ?? []).map((item) => ({
-          id: Number(item.id),
-          clienteId: Number(item.cliente_id),
-          pessoaId: Number(item.pessoa_id),
-          propriedadeId: item.propriedade_id === null ? null : Number(item.propriedade_id),
+        id: Number(item.id),
+        clienteId: Number(item.cliente_id),
+        pessoaId: Number(item.pessoa_id),
+        papelVinculoId: Number(item.papel_vinculo_id),
+        propriedadeId: item.propriedade_id === null ? null : Number(item.propriedade_id),
           status: item.status,
           vigenciaInicio: item.vigencia_inicio,
           vigenciaFim: item.vigencia_fim
+        })),
+    clienteVinculoPapeis: linkRolesResult.error
+      ? []
+      : (linkRolesResult.data ?? []).map((item) => ({
+          id: Number(item.id),
+          code: item.codigo_norm,
+          name: item.nome,
+          grantsVisibility: Boolean(item.concede_visibilidade),
+          status: item.status
         })),
     clienteDocumentos: documentsResult.error ? [] : (documentsResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), propriedadeId: item.propriedade_id === null ? null : Number(item.propriedade_id), tipo: item.tipo, numero: item.numero })),
     clienteContatos: contactsResult.error ? [] : (contactsResult.data ?? []).map((item) => ({ id: Number(item.id), clienteId: Number(item.cliente_id), propriedadeId: item.propriedade_id === null ? null : Number(item.propriedade_id), nome: item.nome, papel: item.papel, telefone: item.telefone, email: item.email, status: item.status })),
@@ -559,12 +589,14 @@ function emptyDashboard(source: MasterDataDashboard["source"], error: string | n
     clienteEstabelecimentos: [],
     clienteEnderecos: [],
     clienteVendedores: [],
+    clienteVinculoPapeis: [],
     pessoas: [],
     pessoaPapeis: [],
     areasComerciais: [],
     pessoaAreas: [],
     vehicles: [],
     creditoGravacaoDisponivel: false,
+    clienteVinculosGravacaoDisponivel: false,
     vehicleCreateAvailable: false,
     vehicleStatusManageAvailable: false,
     source,

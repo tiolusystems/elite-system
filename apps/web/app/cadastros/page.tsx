@@ -162,6 +162,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             busca={singleValue(params.busca) ?? ""}
             clienteSelecionadoId={selectedClientId}
             clientes={dashboard.clientes}
+            commercialLinksManageAvailable={dashboard.clienteVinculosGravacaoDisponivel}
             contatos={dashboard.clienteContatos}
             creditos={dashboard.clienteCreditos}
             creditoEventos={dashboard.clienteCreditoEventos}
@@ -171,6 +172,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
             estabelecimentos={dashboard.clienteEstabelecimentos}
             gravacaoDisponivel={runtime.supabaseConfigured}
             identificacoes={dashboard.clienteIdentificacoes}
+            linkRoles={dashboard.clienteVinculoPapeis}
             modoNovo={newClientMode}
             pessoas={lookups.pessoasComerciais}
             propriedades={dashboard.propriedades}
@@ -336,6 +338,21 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "ok",
       title: "Limite de crédito atualizado",
       detail: "O novo limite e a justificativa foram registrados no histórico financeiro auditado."
+    },
+    client_commercial_link_created: {
+      kind: "ok",
+      title: "Responsável vinculado",
+      detail: "A carteira comercial foi registrada por pessoa, papel e vigência."
+    },
+    client_commercial_link_closed: {
+      kind: "ok",
+      title: "Vínculo comercial encerrado",
+      detail: "A vigência foi encerrada sem excluir o histórico do cliente."
+    },
+    missing_commercial_link_required: {
+      kind: "warning",
+      title: "Dados do vínculo incompletos",
+      detail: "Selecione pessoa, papel e vigência e informe uma justificativa com pelo menos dez caracteres."
     },
     invalid_credit_limit: {
       kind: "warning",

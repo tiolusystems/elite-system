@@ -9,7 +9,9 @@ import {
   createClienteDocumentAction,
   createClienteEstablishmentAction,
   createClientePropertyAction,
+  closeClienteCommercialPersonAction,
   deactivateClienteAction,
+  linkClienteCommercialPersonAction,
   updateClienteAction,
   upsertClienteIdentificationAction,
 } from "@/app/cadastros/actions";
@@ -31,6 +33,7 @@ import type {
   MasterDataClientDocument,
   MasterDataClientEstablishment,
   MasterDataClientIdentification,
+  MasterDataClientLinkRole,
   MasterDataClientSeller,
   MasterDataProperty,
 } from "@/lib/master-data";
@@ -53,12 +56,14 @@ type Props = {
   clientes: MasterDataClient[];
   propriedades: MasterDataProperty[];
   vinculos: MasterDataClientSeller[];
+  linkRoles: MasterDataClientLinkRole[];
   pessoas: LookupOption[];
   documentos: MasterDataClientDocument[];
   contatos: MasterDataClientContact[];
   creditos: MasterDataClientCredit[];
   creditoEventos: MasterDataClientCreditEvent[];
   creditoGravacaoDisponivel: boolean;
+  commercialLinksManageAvailable: boolean;
   identificacoes: MasterDataClientIdentification[];
   estabelecimentos: MasterDataClientEstablishment[];
   enderecos: MasterDataClientAddress[];
@@ -292,7 +297,14 @@ function ClientDetail(
         />
       ) : null}
       {secao === "comercial" ? (
-        <Commercial vinculos={vinculos} pessoas={pessoas} />
+        <Commercial
+          cliente={cliente}
+          gravacaoDisponivel={props.commercialLinksManageAvailable}
+          linkRoles={props.linkRoles}
+          pessoas={pessoas}
+          propriedades={propriedades}
+          vinculos={vinculos}
+        />
       ) : null}
       {secao === "credito" ? (
         <Credit
@@ -734,24 +746,111 @@ function Addresses({
 }
 
 function Commercial({
+  cliente,
   vinculos,
   pessoas,
+  propriedades,
+  linkRoles,
+  gravacaoDisponivel,
 }: {
+  cliente: MasterDataClient;
   vinculos: MasterDataClientSeller[];
   pessoas: Map<number, LookupOption>;
+  propriedades: MasterDataProperty[];
+  linkRoles: MasterDataClientLinkRole[];
+  gravacaoDisponivel: boolean;
 }) {
+  const roles = new Map(linkRoles.map((role) => [role.id, role]));
   return (
     <Section
       title="Responsáveis comerciais"
-      rows={vinculos.map(
-        (item) =>
-          `${pessoas.get(item.pessoaId)?.label ?? "Pessoa não localizada"} · ${formatValidity(item.vigenciaInicio, item.vigenciaFim)}`,
-      )}
+      rows={[]}
     >
-      <p className="muted">
-        Novos vínculos são realizados pelo fluxo governado de Pessoas e áreas
-        comerciais.
-      </p>
+      {vinculos.length ? (
+        <div className="client-related-list" aria-label="Histórico de responsáveis comerciais">
+          {vinculos.map((item) => (
+            <article className="client-related-item" key={item.id}>
+              <div>
+                <strong>{pessoas.get(item.pessoaId)?.label ?? "Pessoa não localizada"}</strong>
+                <span>
+                  {roles.get(item.papelVinculoId)?.name ?? "Papel não localizado"} ·{" "}
+                  {formatValidity(item.vigenciaInicio, item.vigenciaFim)}
+                </span>
+              </div>
+              <span className={`status-chip status-${item.status}`}>
+                {cadastroStatusLabel(item.status)}
+              </span>
+              {item.status === "active" && gravacaoDisponivel ? (
+                <form action={closeClienteCommercialPersonAction} className="client-inline-action">
+                  <input name="cliente_id" type="hidden" value={cliente.id} />
+                  <input name="vinculo_id" type="hidden" value={item.id} />
+                  <label>
+                    Encerrar em
+                    <input name="vigencia_fim" type="date" defaultValue={currentDateValue()} required />
+                  </label>
+                  <label>
+                    Justificativa
+                    <input name="motivo" minLength={10} required />
+                  </label>
+                  <button className="secondary-button" type="submit">Encerrar vínculo</button>
+                </form>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="muted">Nenhum responsável comercial vinculado.</p>
+      )}
+
+      <form action={linkClienteCommercialPersonAction} className="client-section-form">
+        <input name="cliente_id" type="hidden" value={cliente.id} />
+        <label>
+          Pessoa responsável
+          <select name="pessoa_id" required>
+            <option value="">Selecione</option>
+            {[...pessoas.values()].map((person) => (
+              <option key={person.id} value={person.id}>{person.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Papel no cliente
+          <select name="papel_vinculo_id" required>
+            <option value="">Selecione</option>
+            {linkRoles.filter((role) => role.status === "active").map((role) => (
+              <option key={role.id} value={role.id}>{role.name}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Propriedade
+          <select name="propriedade_id">
+            <option value="">Todo o cliente</option>
+            {propriedades.filter((property) => property.status === "active").map((property) => (
+              <option key={property.id} value={property.id}>{property.nome}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Início da vigência
+          <input name="vigencia_inicio" type="date" defaultValue={currentDateValue()} required />
+        </label>
+        <label className="wide-field">
+          Justificativa
+          <input
+            name="motivo"
+            minLength={10}
+            placeholder="Explique a atribuição da carteira"
+            required
+          />
+        </label>
+        <button className="primary-button" disabled={!gravacaoDisponivel}>
+          Vincular responsável
+        </button>
+      </form>
+      {!gravacaoDisponivel ? (
+        <p className="field-help">Você pode consultar os vínculos, mas não possui alçada para alterá-los.</p>
+      ) : null}
     </Section>
   );
 }
@@ -1044,6 +1143,10 @@ function formatValidity(start: string | null, end: string | null) {
 function formatDate(value: string) {
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
+}
+
+function currentDateValue() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function formatDateTime(value: string) {

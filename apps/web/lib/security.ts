@@ -56,6 +56,13 @@ export type SecurityEmailChangeRequest = {
   completedAt: string | null;
 };
 
+export type SecurityCommercialPerson = {
+  id: number;
+  name: string;
+  status: string;
+  userProfileId: string | null;
+};
+
 export type SecurityDashboard = {
   metrics: {
     totalProfiles: number | null;
@@ -69,6 +76,8 @@ export type SecurityDashboard = {
   selectedProfile: SecurityProfile | null;
   emailChangeRequests: SecurityEmailChangeRequest[];
   permissions: EffectivePermission[];
+  commercialPeople: SecurityCommercialPerson[];
+  identityLinkAvailable: boolean;
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -97,15 +106,23 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
       profiles[0] ??
       null;
 
-    const permissionsResult = selectedProfile
-      ? await supabase.rpc("list_security_effective_permissions", { p_user_id: selectedProfile.id })
-      : { data: [], error: null };
-    const emailChangeResult = selectedProfile
-      ? await supabase.rpc("list_security_email_change_requests", {
-          p_include_closed: false,
-          p_user_id: selectedProfile.id
-        })
-      : { data: [], error: null };
+    const [permissionsResult, emailChangeResult, peopleResult, identityLinkPermission] = await Promise.all([
+      selectedProfile
+        ? supabase.rpc("list_security_effective_permissions", { p_user_id: selectedProfile.id })
+        : Promise.resolve({ data: [], error: null }),
+      selectedProfile
+        ? supabase.rpc("list_security_email_change_requests", {
+            p_include_closed: false,
+            p_user_id: selectedProfile.id
+          })
+        : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from("cad_pessoas_comerciais")
+        .select("id,nome,status,user_profile_id")
+        .order("nome", { ascending: true })
+        .limit(500),
+      supabase.rpc("can_current_user", { p_action_key: "security.identity.person.link" })
+    ]);
 
     const permissions = permissionsResult.error
       ? []
@@ -115,6 +132,14 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
     const emailChangeRequests = emailChangeResult.error
       ? []
       : ((emailChangeResult.data ?? []) as Array<Record<string, unknown>>).map(mapEmailChangeRequest);
+    const commercialPeople = peopleResult.error
+      ? []
+      : ((peopleResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+          id: Number(row.id),
+          name: String(row.nome),
+          status: String(row.status),
+          userProfileId: nullableString(row.user_profile_id)
+        }));
 
     return {
       metrics: {
@@ -131,12 +156,16 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
       selectedProfile,
       emailChangeRequests,
       permissions,
+      commercialPeople,
+      identityLinkAvailable: !identityLinkPermission.error && identityLinkPermission.data === true,
       source: "supabase",
       error:
         profilesResult.error?.message ??
         authDirectory.error ??
         permissionsResult.error?.message ??
         emailChangeResult.error?.message ??
+        peopleResult.error?.message ??
+        identityLinkPermission.error?.message ??
         null
     };
   } catch (error) {
@@ -158,6 +187,8 @@ function emptyDashboard(source: "not_configured" | "error", error: string | null
     selectedProfile: null,
     emailChangeRequests: [],
     permissions: [],
+    commercialPeople: [],
+    identityLinkAvailable: false,
     source,
     error
   };

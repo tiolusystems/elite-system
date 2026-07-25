@@ -1,6 +1,7 @@
 import {
   clearSecurityPermissionOverrideAction,
   inviteSecurityAuthUserAction,
+  linkSecurityUserCommercialPersonAction,
   reviewSecurityEmailChangeAction,
   setSecurityPermissionOverrideAction,
   upsertSecurityUserProfileAction,
@@ -17,11 +18,18 @@ const ROLES = ["admin", "comercial", "producao", "estoque", "expedicao", "audito
 export default async function SegurancaPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const selectedUserId = singleValue(params.user_id);
+  const requestedPersonId = positiveInteger(singleValue(params.pessoa_id));
   const result = singleValue(params.result);
   const dashboard = await getSecurityDashboard(selectedUserId);
   const formMessage = messageForResult(result);
   const selectedProfile = dashboard.selectedProfile;
   const selectedEmailChangeRequest = dashboard.emailChangeRequests[0] ?? null;
+  const linkedPerson = selectedProfile
+    ? dashboard.commercialPeople.find((person) => person.userProfileId === selectedProfile.id) ?? null
+    : null;
+  const availablePeople = dashboard.commercialPeople.filter(
+    (person) => person.status === "active" && (person.userProfileId === null || person.userProfileId === selectedProfile?.id)
+  );
 
   return (
     <main className="app-shell">
@@ -180,6 +188,73 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
               </form>
             ) : null}
           </section>
+        </section>
+
+        <section className="panel form-panel" id="vinculo-pessoa" aria-labelledby="vinculo-pessoa-title">
+          <div className="panel-header">
+            <div>
+              <h2 id="vinculo-pessoa-title">Identidade operacional</h2>
+              <p className="muted">Associe a conta à pessoa usada em carteira de clientes, pedidos e auditoria.</p>
+            </div>
+            <span className="pill">{linkedPerson ? "vínculo ativo" : "sem vínculo"}</span>
+          </div>
+
+          {!selectedProfile || selectedProfile.isSystemActor ? (
+            <div className="empty-state">
+              <strong>Selecione uma conta operacional</strong>
+              <span>Atores de sistema não participam dos vínculos comerciais.</span>
+            </div>
+          ) : linkedPerson ? (
+            <dl className="status-list">
+              <div className="status-row">
+                <dt>Conta</dt>
+                <dd>{selectedProfile.displayName}</dd>
+              </div>
+              <div className="status-row">
+                <dt>Pessoa vinculada</dt>
+                <dd>{linkedPerson.name}</dd>
+              </div>
+              <div className="status-row">
+                <dt>Situação</dt>
+                <dd>{internalValueLabel(linkedPerson.status)}</dd>
+              </div>
+            </dl>
+          ) : (
+            <form action={linkSecurityUserCommercialPersonAction}>
+              <input name="user_id" type="hidden" value={selectedProfile.id} />
+              <div className="form-grid">
+                <label className="wide-field">
+                  Pessoa comercial
+                  <select name="pessoa_id" defaultValue={requestedPersonId ?? ""} required>
+                    <option value="">Selecione uma pessoa sem conta</option>
+                    {availablePeople.map((person) => (
+                      <option value={person.id} key={person.id}>
+                        {person.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="wide-field">
+                  Justificativa
+                  <input
+                    name="motivo"
+                    minLength={10}
+                    placeholder="Explique por que esta conta representa a pessoa"
+                    required
+                  />
+                </label>
+              </div>
+              <div className="form-footer">
+                <span>O vínculo é individual, auditado e não concede alçadas automaticamente.</span>
+                <button className="primary-button" type="submit" disabled={!dashboard.identityLinkAvailable}>
+                  Vincular identidade
+                </button>
+              </div>
+              {!dashboard.identityLinkAvailable ? (
+                <p className="field-help">Sua conta não possui alçada para criar este vínculo.</p>
+              ) : null}
+            </form>
+          )}
         </section>
 
         <section className="panel form-panel" id="troca-email" aria-labelledby="troca-email-title">
@@ -462,10 +537,26 @@ function singleValue(value: string | string[] | undefined): string | null {
   return value ?? null;
 }
 
+function positiveInteger(value: string | null): number | null {
+  if (!value || !/^[1-9]\d*$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
 function messageForResult(result: string | null): { kind: "ok" | "warning"; title: string; detail: string } | null {
   switch (result) {
     case "profile_saved":
       return { kind: "ok", title: "Perfil salvo", detail: "O perfil operacional foi gravado com auditoria." };
+    case "person_linked":
+      return { kind: "ok", title: "Identidade vinculada", detail: "A conta agora representa a pessoa comercial selecionada." };
+    case "missing_person_link_required":
+      return { kind: "warning", title: "Dados incompletos", detail: "Selecione a pessoa e informe uma justificativa com pelo menos 10 caracteres." };
+    case "person_link_conflict":
+      return { kind: "warning", title: "Vínculo existente", detail: "A conta ou a pessoa já está vinculada a outra identidade operacional." };
+    case "person_inactive":
+      return { kind: "warning", title: "Pessoa inativa", detail: "Somente uma pessoa comercial ativa pode receber uma conta." };
+    case "person_not_found":
+      return { kind: "warning", title: "Pessoa não localizada", detail: "A pessoa selecionada não está mais disponível." };
     case "auth_invitation_sent":
       return { kind: "ok", title: "Convite enviado", detail: "A conta permanecerá pendente até o e-mail ser confirmado e a senha ser criada." };
     case "permission_saved":

@@ -289,3 +289,21 @@ Visao geral de Producao. O health-check esta saudavel e os smokes remotos
 terminaram em rollback sem dados sinteticos residuais. O resultado e
 **aprovado com ressalvas** ate que toda a cadeia seja tambem executada pelo
 navegador.
+
+## Revisao integral E2E-01 + TRACE-01 em andamento
+
+Os commits `c860d49` e `28ef700` corrigiram a exposicao de identificadores
+tecnicos nas telas de Estoque e Rastreabilidade, preservaram ausencia como
+“Nao informado” e ampliaram os manuais de Garantias, CQ, Envase, Estoque,
+Transformacoes e Rastreabilidade. A CI `30139897844` passou em Python, web e
+contratos de banco.
+
+O staging permanece no deployment estavel `dpl_G8XBztHpeaRjYzPSYVpcYYSLAZR4`,
+com rollback `dpl_DK9R39zWNHshkQ9xPGwhqi2TvZDy`, porque a promocao do novo SHA
+aguarda deployment criado no projeto correto `elite-system-staging`. Nao houve
+alteracao de migration, banco, Supabase, main, producao real ou PWA.
+
+Pendencias tecnicas reais desta revisao: publicar e validar o novo frontend no
+staging; executar a cadeia completa pelo navegador, incluindo CQ, PI, Envase,
+PA, pedido, Romaneio, recebimento, comissao e rastreabilidade; fechar a
+reconciliacao e os cenarios negativos no mesmo ensaio sintetico.

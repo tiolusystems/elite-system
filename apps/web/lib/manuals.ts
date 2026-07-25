@@ -66,9 +66,11 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/producao/garantias", "Producao", "Garantias", "Consultar garantias declaradas e calculadas por lote.", {
     before: ["Cadastre nutrientes, unidades e garantias das materias-primas.", "A garantia final depende dos lotes realmente consumidos e do CQ."],
-    steps: ["Selecione produto, formula, OP ou lote.", "Compare garantia declarada e resultado calculado.", "Abra as pendencias quando faltar densidade, unidade ou garantia de lote."],
-    after: ["O resultado fica vinculado aos insumos consumidos e ao lote produzido."],
-    blockers: ["Dados tecnicos ausentes geram resultado pendente; o sistema nao estima valores."],
+    steps: ["Consulte a garantia declarada do produto, sem confundi-la com análise de lote.", "Registre a garantia analisada e a densidade do lote de matéria-prima com fonte, documento e justificativa.", "Compare a base física dos lotes consumidos com o resultado calculado da OP.", "Abra as pendências quando faltar densidade, unidade ou garantia de lote."],
+    after: ["A declaração permanece a referência documental do produto.", "A análise de MP permanece vinculada ao lote e à sua fonte.", "O cálculo fica vinculado aos insumos consumidos, ao CQ e ao lote produzido."],
+    roles: ["Consulta depende da alçada de leitura de Produção.", "Registro e revisão dependem das alçadas atômicas do domínio."],
+    blockers: ["Dados técnicos ausentes geram resultado pendente; o sistema não estima valores.", "Histórico e fontes anteriores são somente leitura."],
+    records: ["Garantias declaradas, análises de lote, parâmetros técnicos, cálculos e pendências permanecem versionados e auditáveis."]
   }),
   manual("/producao/ordens", "Producao", "Ordens e reservas", "Consultar OPs, planejar a produção e reservar lotes antes do consumo.", {
     before: ["Use uma fórmula operacional vigente, revisada e com base de 1 litro.", "Confira o volume planejado e mantenha lotes disponíveis para cada componente."],
@@ -80,20 +82,31 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/producao/qualidade", "Producao", "CQ e finalizacao", "Registrar processo e CQ antes de finalizar a OP.", {
     before: ["A OP deve estar em producao e possuir reservas validas.", "Tenha volume produzido, perdas e resultados de CQ."],
-    steps: ["Selecione a OP.", "Registre processo, volume obtido, perdas e CQ.", "Revise o resultado.", "Finalize para consumir MP e criar um unico lote PI."],
+    steps: ["Selecione a OP em processo.", "Informe separador, conferente e formuladores.", "Registre pH, densidade, volume, massa e temperatura.", "Informe o resultado do CQ e revise a quantidade produzida.", "Finalize para consumir MP, liberar reservas excedentes e criar um único lote PI."],
     after: ["CQ aprovado libera o PI para envase; reprovado preserva o lote bloqueado.", "Perdas ficam registradas separadamente do consumo normal."],
+    blockers: ["Sem participantes, dados de processo, CQ ou saída única a OP não finaliza.", "A transação inteira é recusada quando houver inconsistência; não existe finalização parcial silenciosa."],
+    records: ["Processo, participantes, CQ, consumo real, perdas, reservas liberadas, lote PI e auditoria ficam registrados."],
   }),
   manual("/producao/envase", "Producao", "OP MAPA e envase", "Emitir a documentacao e controlar a transformacao de PI em PA.", {
     before: ["O lote PI precisa estar liberado.", "Apresentacao e composicao de embalagens devem estar ativas."],
-    steps: ["Selecione o lote PI e a apresentacao destino.", "Informe o volume de envase.", "Emita conjuntamente a OP MAPA e a Ordem de Envase.", "Imprima para assinaturas fisicas dos operadores.", "Finalize para baixar PI e embalagens e gerar o lote PA."],
+    steps: ["Selecione o lote PI e a apresentação destino.", "Informe o volume planejado.", "Emita conjuntamente o registro interno da OP MAPA e a Ordem de Envase.", "Reserve cada lote de embalagem previsto.", "Imprima a ordem para as assinaturas físicas dos operadores.", "Finalize para baixar PI e embalagens e gerar o lote PA."],
     after: ["O lote PA gerado alimenta estoque e romaneios.", "A OP MAPA permanece documental e nao baixa MP."],
+    blockers: ["Sem PI liberado, embalagem reservada ou distribuição completa a ordem não finaliza.", "O envase gera exatamente um lote PA por ordem."],
+    records: ["PI de origem, embalagens, quantidades, ordem MAPA, ordem de envase, lote PA, custos e auditoria ficam vinculados."],
   }),
   manual("/producao/estoque", "Estoque", "Lotes e estoque", "Registrar entradas valorizadas e consultar saldos e reservas por lote.", {
     before: ["Escolha primeiro a familia MP, PI ou PA e filtre o produto."],
-    steps: ["Pesquise o produto.", "Para MP, abra Registrar entrada e custo e informe lote, documento, quantidade e componentes do custo.", "Abra a apresentacao quando aplicavel.", "Consulte os lotes e seus saldos fisico, reservado e disponivel.", "Abra a rastreabilidade para conferir os movimentos."],
+    steps: ["Pesquise o produto antes de consultar lotes.", "Para MP, abra Registrar entrada e custo e informe lote, documento, quantidade e componentes do custo.", "Abra a apresentação quando aplicável.", "Consulte os lotes e seus saldos físico, reservado e disponível.", "Abra a rastreabilidade para conferir os movimentos, bloqueios e liberações."],
     after: ["A consulta nao altera saldo.", "A entrada cria lote, movimento fisico e camada de custo na mesma transacao.", "Correcoes de estoque exigem novo movimento auditado."],
   }),
-  manual("/producao/transformacoes", "Producao", "Transformacoes", "Acompanhar reprocessamentos e transformacoes de produto."),
+  manual("/producao/transformacoes", "Producao", "Transformacoes", "Acompanhar reprocessamentos e transformacoes de produto.", {
+    before: ["Tenha lote de origem liberado, fórmula compatível e justificativa operacional."],
+    steps: ["Consulte as transformações abertas e históricas.", "Selecione o lote de origem e informe a quantidade planejada.", "Escolha a finalidade operacional: PA para PI, PI para PA, reenvasamento ou reprocessamento.", "Reserve a origem e registre processo, CQ, perdas e lote de destino.", "Finalize somente quando origem, destino e quantidades estiverem conciliados."],
+    after: ["Cada transformação cria novos eventos de movimento, sem editar o fato de origem.", "O lote de destino permanece relacionado ao lote de origem para rastreabilidade."],
+    roles: ["Consulta, criação, reserva, início, finalização e revisão dependem de alçadas específicas; cargo não concede acesso automaticamente."],
+    blockers: ["Lote bloqueado, reserva insuficiente, CQ pendente ou distribuição incompleta impedem a conclusão."],
+    records: ["Origem, destino, quantidade, unidade, perdas, justificativa, CQ, usuário e auditoria permanecem registrados."],
+  }),
   manual("/romaneios", "Expedicao", "Romaneios", "Separar itens de pedidos por lote, registrar referência fiscal externa e confirmar a baixa física.", {
     before: ["O pedido deve estar liberado e possuir saldo a entregar.", "Produtos PA precisam ter lotes disponiveis e configuracao logistica."],
     steps: ["Abra a lista de pedidos com saldo.", "Selecione o pedido e os itens da entrega parcial ou total.", "Informe a quantidade de cada produto.", "Consulte e reserve os lotes do produto selecionado.", "Grave o romaneio.", "Informe entregador e veiculo.", "Registre somente o número da NF de remessa emitida no sistema fiscal externo.", "Confirme o Romaneio para baixar o estoque."],
@@ -102,7 +115,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/qualidade/rastreabilidade", "Qualidade", "Rastreabilidade total", "Consultar a genealogia de lotes, destinos e referências externas e simular recolhimento sem movimentar estoque.", {
     before: ["Tenha ao menos um código de lote, OP, pedido, Romaneio, cliente ou referência fiscal externa.", "A consulta depende de alçada individual de Qualidade."],
-    steps: ["Informe o ponto de partida e a direção da consulta.", "Revise cada elo da cadeia.", "Use Simular recolhimento para listar somente destinos ativos.", "Exporte CSV quando possuir a alçada específica."],
+    steps: ["Informe o tipo e o código apresentado do ponto de partida.", "Escolha a direção para frente, para trás ou ambas.", "Revise cada elo da cadeia, incluindo quantidades e eventos de estorno.", "Use Simular recolhimento para listar somente destinos ativos.", "Exporte CSV quando possuir a alçada específica."],
     after: ["A consulta e a simulação não alteram lotes, pedidos ou expedições.", "A exportação registra usuário, data e filtros na auditoria."],
     blockers: ["Falta de alçada ou genealogia operacional incompleta impedem o resultado.", "Divergências devem ser investigadas; a tela não as corrige silenciosamente."],
   }),

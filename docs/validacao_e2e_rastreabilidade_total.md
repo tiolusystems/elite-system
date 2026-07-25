@@ -1,5 +1,27 @@
 # Validacao E2E-01 + TRACE-01
 
+## Atualizacao da revisao integral em 2026-07-25
+
+- baseline funcional recuperado: `4a47ca4`;
+- correcoes publicadas para a revisao transversal: `c860d49` e `28ef700`;
+- CI do `28ef700`: `30139897844`, com `python-tests`, `web-contract` e
+  `database-contract` aprovados;
+- as correcoes retiram IDs tecnicos da consulta de rastreabilidade e deixam
+  valores ausentes como “Nao informado”, sem converter ausencia em zero;
+- o fallback de situacao de lote agora e “Situacao nao reconhecida”, sem
+  expor enum desconhecido;
+- manuais de Garantias, CQ, Envase, Estoque, Transformacoes e Rastreabilidade
+  foram ampliados em PT-BR;
+- nenhuma migration, RPC, view, RLS, banco ou dado operacional foi alterado
+  neste bloco;
+- o deployment estavel ainda e `dpl_G8XBztHpeaRjYzPSYVpcYYSLAZR4`, baseado no
+  `9e56e15`; nao foi substituido porque nao ha deployment Vercel criado para
+  `28ef700` nesta sessao;
+- a revisao integral permanece **APROVADA COM RESSALVAS**: os contratos SQL e
+  smokes descartaveis anteriores estao aprovados, mas a cadeia completa ainda
+  precisa percorrer toda a interface real e o novo frontend precisa ser
+  publicado no projeto `elite-system-staging`.
+
 ## Identificacao
 
 - `run_id`: `E2E-01-TRACE-01-20260724`;

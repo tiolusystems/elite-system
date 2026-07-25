@@ -71,6 +71,10 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
         self.assertIn("Antes da baixa de estoque", page)
         self.assertNotIn('placeholder="Observacao da atribuicao"', page)
         self.assertIn("p_motivo: null", actions)
+        self.assertIn('normalized.includes("module unavailable")', actions)
+        self.assertIn("Módulo responsável indisponível", page)
+        self.assertIn("Dados de entrega atualizados", page)
+        self.assertNotIn("Entregador e veiculo foram vinculados", page)
 
     def test_guided_ui_queries_stock_only_after_product_selection(self):
         page = PAGE.read_text(encoding="utf-8")

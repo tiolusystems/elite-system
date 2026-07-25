@@ -296,6 +296,9 @@ function uuid(formData: FormData, name: string): string | null {
 
 function mapRomaneioError(message: string): string {
   const normalized = message.toLowerCase();
+  if (normalized.includes("module unavailable")) {
+    return "module_unavailable";
+  }
   if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
   }

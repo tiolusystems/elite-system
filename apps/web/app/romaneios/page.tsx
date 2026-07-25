@@ -702,8 +702,8 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     },
     logistics_assigned: {
       kind: "ok",
-      title: "Entrega atribuida",
-      detail: "Entregador e veiculo foram vinculados ao romaneio com historico auditavel."
+      title: "Dados de entrega atualizados",
+      detail: "As informações selecionadas foram vinculadas ao romaneio com histórico auditável."
     },
     logistics_removed: {
       kind: "ok",
@@ -829,6 +829,11 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Alcada bloqueada",
       detail: "O usuario atual nao tem permissao para esta acao."
+    },
+    module_unavailable: {
+      kind: "warning",
+      title: "Módulo responsável indisponível",
+      detail: "Esta ação depende de um módulo que ainda não foi liberado no ambiente de homologação."
     },
     save_failed: {
       kind: "warning",

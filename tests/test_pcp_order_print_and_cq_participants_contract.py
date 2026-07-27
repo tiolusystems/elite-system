@@ -100,7 +100,7 @@ class PcpOrderPrintAndCqParticipantsContractTests(unittest.TestCase):
 
     def test_dashboard_reads_consumption_and_historical_participants(self) -> None:
         for expected in (
-            '.from("pcp_op_consumos")',
+            '.from("pcp_op_consumos_componentes")',
             '.from("pcp_op_cq_participantes")',
             "quantidadeUtilizada",
             "participants: participantsByOp.get(id) ?? []",

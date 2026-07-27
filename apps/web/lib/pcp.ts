@@ -444,7 +444,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         .order("created_at", { ascending: false })
         .limit(900),
       supabase
-        .from("pcp_op_consumos")
+        .from("pcp_op_consumos_componentes")
         .select("id,op_id,op_componente_id,reserva_id,quantidade_consumida,created_at")
         .order("created_at", { ascending: false })
         .limit(900),
@@ -836,7 +836,7 @@ export async function getPcpOrderPrintData(orderId: number): Promise<PcpRecentOp
           .eq("op_id", orderId)
           .order("created_at", { ascending: true }),
         supabase
-          .from("pcp_op_consumos")
+          .from("pcp_op_consumos_componentes")
           .select("id,op_id,op_componente_id,reserva_id,quantidade_consumida,created_at")
           .eq("op_id", orderId),
         supabase

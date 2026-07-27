@@ -49,6 +49,8 @@ class IdentityClientLinkGovernanceContractTests(unittest.TestCase):
         self.assertIn("closeClienteCommercialPersonAction", client_page)
         self.assertIn('name="papel_vinculo_id"', client_page)
         self.assertIn('name="propriedade_id"', client_page)
+        self.assertIn("count={vinculos.length}", client_page)
+        self.assertIn("showRows={false}", client_page)
         self.assertIn('"cadastros.clientes.commercial_links.manage"', master_data)
         self.assertNotIn('.from("cad_cliente_vendedores").insert', client_actions)
 

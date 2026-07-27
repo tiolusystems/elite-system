@@ -765,6 +765,8 @@ function Commercial({
     <Section
       title="Responsáveis comerciais"
       rows={[]}
+      count={vinculos.length}
+      showRows={false}
     >
       {vinculos.length ? (
         <div className="client-related-list" aria-label="Histórico de responsáveis comerciais">
@@ -1039,26 +1041,32 @@ function Section({
   title,
   rows,
   children,
+  count,
+  showRows = true,
 }: {
   title: string;
   rows: string[];
   children?: React.ReactNode;
+  count?: number;
+  showRows?: boolean;
 }) {
   return (
     <section className="panel client-record-section">
       <header className="panel-header">
         <h3>{title}</h3>
-        <span className="count-badge">{rows.length}</span>
+        <span className="count-badge">{count ?? rows.length}</span>
       </header>
-      {rows.length ? (
-        <div className="client-record-list">
-          {rows.map((row, index) => (
-            <div key={`${row}-${index}`}>{row}</div>
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state">Nenhum registro.</div>
-      )}
+      {showRows ? (
+        rows.length ? (
+          <div className="client-record-list">
+            {rows.map((row, index) => (
+              <div key={`${row}-${index}`}>{row}</div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">Nenhum registro.</div>
+        )
+      ) : null}
       {children}
     </section>
   );

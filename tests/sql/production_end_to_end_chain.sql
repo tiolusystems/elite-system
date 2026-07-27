@@ -27,8 +27,43 @@ declare
   v_packaging_order_id bigint;
   v_packaging_plan_id bigint;
   v_pa_lot_id bigint;
+  v_client_id bigint;
+  v_order_id bigint;
+  v_order_item_id bigint;
+  v_romaneio_id bigint;
+  v_romaneio_item_id bigint;
+  v_load record;
   v_cost numeric;
 begin
+  if not exists (
+    select 1
+      from pg_class relation
+     where relation.oid = 'public.exp_romaneio_carga_resumo'::regclass
+       and coalesce(relation.reloptions @> array['security_invoker=true'], false)
+  ) then
+    raise exception 'romaneio load summary is not security_invoker';
+  end if;
+  if not has_table_privilege(
+    'authenticated',
+    'public.exp_romaneio_carga_resumo',
+    'SELECT'
+  ) or has_table_privilege(
+    'anon',
+    'public.exp_romaneio_carga_resumo',
+    'SELECT'
+  ) or exists (
+    select 1
+      from pg_class relation
+      cross join lateral aclexplode(
+        coalesce(relation.relacl, acldefault('r', relation.relowner))
+      ) privilege
+     where relation.oid = 'public.exp_romaneio_carga_resumo'::regclass
+       and privilege.grantee = 0
+       and privilege.privilege_type = 'SELECT'
+  ) then
+    raise exception 'romaneio load summary privileges are broader than authenticated read';
+  end if;
+
   if has_function_privilege('authenticated', 'public.create_pcp_formula_versao(bigint,text,text,jsonb,text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.create_pcp_formula_versao_idempotente(uuid,bigint,text,text,jsonb,text)', 'EXECUTE')
      or not has_function_privilege('authenticated', 'public.create_pcp_formula_versao_idempotente(uuid,bigint,text,text,jsonb,text)', 'EXECUTE') then
@@ -204,6 +239,70 @@ begin
     select 1 from public.pcp_ordem_envase_reservas
      where ordem_envase_id = v_packaging_order_id and status = 'ativa'
   ) then raise exception 'packaging reservations remained active after completion'; end if;
+
+  insert into public.cad_clientes(
+    nome, nome_norm, cidade, uf, status, apelidos_json, payload_origem_json,
+    created_by, updated_by, origem_dados
+  ) values (
+    'Cliente carga integrada 0112', 'cliente carga integrada 0112', 'Campinas', 'SP',
+    'active', '[]'::jsonb, '{}'::jsonb, v_actor, v_actor, 'sistema'
+  ) returning id into v_client_id;
+
+  insert into public.com_pedidos(
+    codigo_pedido, cliente_id, tipo_pedido, status, data_pedido,
+    origem_canal, valor_total, created_by, updated_by, origem_dados
+  ) values (
+    'SMOKE-0112-PED', v_client_id, 'venda', 'open', current_date,
+    'interno', 0, v_actor, v_actor, 'sistema'
+  ) returning id into v_order_id;
+
+  insert into public.com_pedido_itens(
+    pedido_id, produto_embalagem_id, tipo_item, quantidade, valor_unitario,
+    percentual_desconto, valor_total, status, created_by, updated_by, origem_dados
+  ) values (
+    v_order_id, v_sale_item_id, 'venda', 1, 0, 0, 0, 'active',
+    v_actor, v_actor, 'sistema'
+  ) returning id into v_order_item_id;
+
+  insert into public.exp_romaneios(
+    codigo_romaneio, pedido_id, tipo_separacao, status, data_romaneio,
+    created_by, updated_by, origem_dados
+  ) values (
+    'SMOKE-0112-ROM', v_order_id, 'total', 'separacao', current_date,
+    v_actor, v_actor, 'sistema'
+  ) returning id into v_romaneio_id;
+
+  insert into public.exp_romaneio_itens(
+    romaneio_id, pedido_id, pedido_item_id, produto_embalagem_id,
+    quantidade_romaneada, quantidade_reservada, status,
+    created_by, updated_by, origem_dados
+  ) values (
+    v_romaneio_id, v_order_id, v_order_item_id, v_sale_item_id,
+    1, 1, 'reservado', v_actor, v_actor, 'sistema'
+  ) returning id into v_romaneio_item_id;
+
+  insert into public.est_reservas_pa(
+    lote_pa_id, romaneio_id, romaneio_item_id, produto_embalagem_id,
+    quantidade_reservada, status, created_by, updated_by
+  ) values (
+    v_pa_lot_id, v_romaneio_id, v_romaneio_item_id, v_sale_item_id,
+    1, 'ativa', v_actor, v_actor
+  );
+
+  select *
+    into v_load
+    from public.exp_romaneio_carga_resumo
+   where romaneio_id = v_romaneio_id;
+
+  if v_load.volume_liquido_l <> 5
+     or v_load.volumes_logisticos <> 1
+     or v_load.peso_liquido_kg <> 5
+     or v_load.peso_bruto_kg <> 5.25
+     or v_load.itens_sem_volume_configurado <> 0
+     or v_load.itens_sem_densidade <> 0
+     or v_load.itens_sem_tara <> 0 then
+    raise exception 'envase PA load did not use the operational PI CQ density: %', to_jsonb(v_load);
+  end if;
 
   select sum(component.custo_total) into v_cost
     from public.est_lotes_pa_custo_camadas layer

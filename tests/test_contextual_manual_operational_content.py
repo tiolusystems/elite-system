@@ -12,7 +12,7 @@ class ContextualManualOperationalContentTests(unittest.TestCase):
             "Todo pedido nasce bloqueado",
             "Exportar PDF",
             "formula operacional usa base de 1 litro",
-            "criar um unico lote PI",
+            "criar um único lote PI",
             "OP MAPA permanece documental",
             "Abra a lista de pedidos com saldo",
             "SKU repetido",

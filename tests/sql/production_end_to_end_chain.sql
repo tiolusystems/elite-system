@@ -32,6 +32,7 @@ declare
   v_order_item_id bigint;
   v_romaneio_id bigint;
   v_romaneio_item_id bigint;
+  v_fiscal_reference_id bigint;
   v_load record;
   v_cost numeric;
 begin
@@ -302,6 +303,67 @@ begin
      or v_load.itens_sem_densidade <> 0
      or v_load.itens_sem_tara <> 0 then
     raise exception 'envase PA load did not use the operational PI CQ density: %', to_jsonb(v_load);
+  end if;
+
+  insert into public.exp_romaneio_movimentos_pa(
+    romaneio_id, romaneio_item_id, pedido_id, pedido_item_id,
+    produto_embalagem_id, lote_pa_ref, lote_pa_id,
+    tipo_movimento, quantidade, observacao, created_by
+  ) values (
+    v_romaneio_id, v_romaneio_item_id, v_order_id, v_order_item_id,
+    v_sale_item_id,
+    (select codigo_lote from public.est_lotes_pa where id = v_pa_lot_id),
+    v_pa_lot_id,
+    'baixa', 1, 'Smoke transacional da rastreabilidade 0113', v_actor
+  );
+
+  update public.exp_romaneios
+     set status = 'confirmado', updated_by = v_actor
+   where id = v_romaneio_id;
+  update public.exp_romaneio_itens
+     set status = 'confirmado', updated_by = v_actor
+   where id = v_romaneio_item_id;
+
+  insert into public.fat_notas_fiscais(
+    pedido_id, romaneio_id, chave_nfe, numero, serie, data_emissao,
+    valor_nf, tipo, status_atual, observacao, origem_registro,
+    created_by, updated_by
+  ) values (
+    v_order_id, v_romaneio_id, null, 'SMOKE-0113-REM', 'HOM', current_date,
+    0, 'remessa_total', 'emitida', 'Referencia externa sintetica',
+    'externa', v_actor, v_actor
+  ) returning id into v_fiscal_reference_id;
+
+  if not exists (
+    select 1
+      from public.consultar_rel_rastreabilidade(
+        'MP', v_formula_lot_code, null, null, null, null, 'frente', 500
+      ) trace
+     where trace.destino_tipo = 'REFERENCIA_FISCAL'
+       and trace.destino_id = v_fiscal_reference_id
+  ) then
+    raise exception 'traceability did not reach external fiscal reference';
+  end if;
+
+  if not exists (
+    select 1
+      from public.consultar_rel_rastreabilidade(
+        null, null, null, null, null, 'SMOKE-0113-REM-HOM', 'tras', 500
+      ) trace
+     where trace.origem_tipo = 'PA'
+       and trace.origem_id = v_pa_lot_id
+  ) then
+    raise exception 'external fiscal reference did not trace back to PA';
+  end if;
+
+  if not exists (
+    select 1
+      from public.simular_rel_recolhimento('PA', v_pa_lot_id) recall
+     where recall.romaneio_id = v_romaneio_id
+       and recall.referencia_fiscal_id = v_fiscal_reference_id
+       and recall.quantidade = 1
+  ) then
+    raise exception 'recall simulation did not return the active shipment';
   end if;
 
   select sum(component.custo_total) into v_cost

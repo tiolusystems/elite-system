@@ -21,6 +21,11 @@ declare
   v_packaging_lot_code text;
   v_formula_entry_id bigint;
   v_packaging_entry_id bigint;
+  v_separador_id bigint;
+  v_conferente_id bigint;
+  v_formulador_id bigint;
+  v_responsavel_cq_id bigint;
+  v_responsavel_liberacao_id bigint;
   v_op_id bigint;
   v_component_id bigint;
   v_pi_lot_id bigint;
@@ -84,6 +89,22 @@ begin
   select v_actor, action_key, true, v_actor from public.permission_actions
   on conflict (user_id, action_key) do update set allowed = true, updated_by = excluded.updated_by;
   perform set_config('request.jwt.claim.sub', v_actor::text, true);
+
+  insert into public.cad_pessoas_comerciais(nome, nome_norm, papeis_json, status)
+  values ('Separador cadeia 0087', 'SEPARADOR CADEIA 0087', '["funcionario"]'::jsonb, 'active')
+  returning id into v_separador_id;
+  insert into public.cad_pessoas_comerciais(nome, nome_norm, papeis_json, status)
+  values ('Conferente cadeia 0087', 'CONFERENTE CADEIA 0087', '["funcionario"]'::jsonb, 'active')
+  returning id into v_conferente_id;
+  insert into public.cad_pessoas_comerciais(nome, nome_norm, papeis_json, status)
+  values ('Formulador cadeia 0087', 'FORMULADOR CADEIA 0087', '["funcionario"]'::jsonb, 'active')
+  returning id into v_formulador_id;
+  insert into public.cad_pessoas_comerciais(nome, nome_norm, papeis_json, status)
+  values ('Responsavel CQ cadeia 0087', 'RESPONSAVEL CQ CADEIA 0087', '["funcionario"]'::jsonb, 'active')
+  returning id into v_responsavel_cq_id;
+  insert into public.cad_pessoas_comerciais(nome, nome_norm, papeis_json, status)
+  values ('Responsavel liberacao cadeia 0087', 'RESPONSAVEL LIBERACAO CADEIA 0087', '["funcionario"]'::jsonb, 'active')
+  returning id into v_responsavel_liberacao_id;
 
   if public.current_system_environment() = 'unconfigured' then
     perform public.set_system_runtime_environment('test', 'test_reset', 'Cadeia industrial integrada descartavel');
@@ -187,15 +208,35 @@ begin
     v_component_id, v_formula_lot_id, null, null, 10, 'Reserva completa da formula'
   );
   perform public.iniciar_pcp_op(v_op_id, 'Inicio da producao integrada');
-  perform public.finalizar_pcp_op(
+  perform public.finalizar_pcp_op_relacional(
     v_op_id,
     jsonb_build_array(jsonb_build_object(
       'tipo_produto', 'PI', 'produto_id', v_product_id, 'quantidade', 9,
       'observacao', 'Lote PI unico da cadeia integrada'
     )),
-    'aprovado', 6.5, 1, 9, 9, 25, 'Separador sintetico', 'Conferente sintetico',
-    '["Formulador sintetico"]'::jsonb, 'Perda de processo de um litro'
+    'aprovado', 6.5, 1, 9, 9, 25,
+    v_separador_id,
+    v_conferente_id,
+    array[v_formulador_id],
+    v_responsavel_cq_id,
+    v_responsavel_liberacao_id,
+    'Perda de processo de um litro'
   );
+
+  if (
+    select count(*)
+      from public.pcp_op_cq_participantes
+     where op_id = v_op_id
+       and pessoa_comercial_id in (
+         v_separador_id,
+         v_conferente_id,
+         v_formulador_id,
+         v_responsavel_cq_id,
+         v_responsavel_liberacao_id
+       )
+  ) <> 5 then
+    raise exception 'relational CQ participants were not preserved';
+  end if;
 
   select lote_pi_id into v_pi_lot_id from public.pcp_op_produtos_gerados where op_id = v_op_id;
   if v_pi_lot_id is null or (select count(*) from public.pcp_op_produtos_gerados where op_id = v_op_id) <> 1 then

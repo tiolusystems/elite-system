@@ -4635,6 +4635,10 @@ h1 {
   margin-top: 12px;
 }
 
+.quality-history-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .quality-op-card {
   border-left: 4px solid #2f6fd6;
 }
@@ -4643,7 +4647,26 @@ h1 {
   align-content: start;
 }
 
+.quality-history-card .module-card-main {
+  min-width: 0;
+}
+
+.quality-history-card .module-card-main h3,
+.quality-history-card .module-card-main span {
+  overflow-wrap: anywhere;
+}
+
+.quality-history-card > .notice-panel {
+  grid-column: 1 / -1;
+}
+
+.quality-history-card .guarantee-result-grid,
+.quality-history-card .guarantee-calculate-form {
+  grid-column: 1 / -1;
+}
+
 .quality-history-card .guarantee-result-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 4px;
 }
 
@@ -4902,6 +4925,10 @@ h1 {
 
   .operation-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quality-history-grid {
+    grid-template-columns: 1fr;
   }
 
   .inventory-lot-grid {
@@ -6619,6 +6646,77 @@ h1 {
 .packaging-signatures div { display: grid; gap: 6px; }
 .packaging-print-footer { margin-top: 30px; border-top: 1px solid #9aaab3; padding-top: 12px; font-size: 11px; }
 
+.production-order-print-sheet {
+  width: min(100% - 32px, 297mm);
+  min-height: 210mm;
+  margin: 24px auto;
+  padding: 12mm;
+  background: #fff;
+  box-shadow: 0 8px 28px rgb(30 52 66 / 14%);
+  color: #171717;
+}
+
+.production-order-print-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.production-order-print-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 3px solid #1ca7d7;
+  padding-bottom: 10px;
+}
+
+.production-order-print-header > div { display: grid; gap: 3px; }
+.production-order-print-header > div:last-child { text-align: right; }
+.production-order-print-header h1 { margin: 0; font-size: 24px; letter-spacing: 0; }
+.production-order-print-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid #9aaab3; margin-top: 14px; }
+.production-order-print-grid > div { display: grid; gap: 3px; min-height: 52px; padding: 7px 9px; border-right: 1px solid #c9d2d7; border-bottom: 1px solid #c9d2d7; }
+.production-order-print-grid > div:nth-child(3n) { border-right: 0; }
+.production-order-print-grid span { color: #56656d; font-size: 10px; text-transform: uppercase; }
+.production-order-print-section { margin-top: 16px; }
+.production-order-print-section h2 { margin: 0 0 7px; font-size: 14px; }
+.production-order-print-note { margin: 0 0 26px; color: #56656d; font-size: 10px; }
+.production-order-material-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.production-order-material-table th,
+.production-order-material-table td { padding: 5px; border: 1px solid #8f9da5; font-size: 9px; text-align: left; overflow-wrap: anywhere; }
+.production-order-material-table th { background: #edf6fa; font-size: 8px; text-transform: uppercase; }
+.production-order-material-table th:nth-child(1) { width: 19%; }
+.production-order-material-table th:nth-child(2) { width: 9%; }
+.production-order-material-table th:nth-child(3) { width: 9%; }
+.production-order-material-table th:nth-child(4) { width: 7%; }
+.production-order-material-table th:nth-child(5) { width: 16%; }
+.production-order-material-table th:nth-child(6),
+.production-order-material-table th:nth-child(7),
+.production-order-material-table th:nth-child(8) { width: 10%; }
+.production-order-material-table th:nth-child(9) { width: 10%; }
+.production-order-component-main td:first-child,
+.production-order-component-main td:nth-child(2),
+.production-order-component-main td:nth-child(3),
+.production-order-component-main td:nth-child(4) { font-weight: 750; }
+.production-order-component-lot td:first-child { border-left-width: 3px; }
+.production-order-signatures { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; text-align: center; }
+.production-order-signatures > div { display: grid; gap: 4px; align-content: end; min-width: 0; }
+.production-order-signatures strong { font-size: 10px; }
+.production-order-signatures small { min-height: 24px; overflow-wrap: anywhere; }
+.production-order-print-footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 20px; padding-top: 8px; border-top: 1px solid #9aaab3; font-size: 9px; }
+
+.quality-participant-history {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid var(--brand-border);
+  background: #f7fbfd;
+  font-size: 12px;
+}
+
 /* Pedidos: carteira do vendedor e fila gerencial. */
 .orders-workspace { display: grid; gap: 18px; width: min(1480px, 100%); margin: 0 auto; padding: 28px clamp(18px, 3vw, 48px) 48px; }
 .orders-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
@@ -6830,13 +6928,40 @@ h1 {
   .packaging-print-sheet { width: 100%; margin: 0; padding: 18px; box-shadow: none; }
   .packaging-print-header { flex-direction: column; }
   .packaging-print-header > div:last-child { text-align: left; }
+  .production-order-print-sheet { width: 100%; min-height: 0; margin: 0; padding: 16px; box-shadow: none; }
+  .production-order-print-header { flex-direction: column; }
+  .production-order-print-header > div:last-child { text-align: left; }
+  .production-order-print-grid,
+  .production-order-signatures,
+  .quality-participant-history { grid-template-columns: 1fr; }
+  .production-order-print-grid > div { border-right: 0; }
+  .production-order-material-table,
+  .production-order-material-table tbody { display: grid; gap: 12px; }
+  .production-order-material-table thead { display: none; }
+  .production-order-material-table tr { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #8f9da5; }
+  .production-order-material-table td { display: grid; gap: 2px; border: 0; border-bottom: 1px solid #d1d9dd; font-size: 11px; }
+  .production-order-material-table td::before { color: #56656d; font-size: 8px; font-weight: 750; text-transform: uppercase; }
+  .production-order-material-table td:nth-child(1)::before { content: "Matéria-prima"; }
+  .production-order-material-table td:nth-child(2)::before { content: "Código"; }
+  .production-order-material-table td:nth-child(3)::before { content: "Total previsto"; }
+  .production-order-material-table td:nth-child(4)::before { content: "Unidade"; }
+  .production-order-material-table td:nth-child(5)::before { content: "Lote separado"; }
+  .production-order-material-table td:nth-child(6)::before { content: "Quantidade separada"; }
+  .production-order-material-table td:nth-child(7)::before { content: "Quantidade utilizada"; }
+  .production-order-material-table td:nth-child(8)::before { content: "Desvio"; }
+  .production-order-material-table td:nth-child(9)::before { content: "Rubrica"; }
+  .production-order-material-table td:nth-child(1),
+  .production-order-material-table td:nth-child(5),
+  .production-order-material-table td:nth-child(9) { grid-column: 1 / -1; }
 }
 
 @media print {
   @page packaging-order { size: A4 portrait; margin: 10mm; }
+  @page production-order { size: A4 landscape; margin: 7mm; }
   body { background: #fff !important; }
   .print-hidden { display: none !important; }
   .packaging-print-sheet { page: packaging-order; width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+  .production-order-print-sheet { page: production-order; width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
 }
 .production-history-grid {
   display: grid;

@@ -104,6 +104,35 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn("opTypeLabel(op.tipoOp)", component)
         self.assertIn("cqStatusLabel(op.cqStatus)", component)
 
+    def test_quality_history_flags_incomplete_legacy_records(self) -> None:
+        component = QUALITY_COMPONENT.read_text(encoding="utf-8")
+
+        self.assertIn("qualityHistoryState(op)", component)
+        self.assertIn("op.outputs.length !== 1", component)
+        self.assertIn('"Revisão necessária"', component)
+        self.assertIn("Registro histórico preservado", component)
+        self.assertIn("Sem lote de saída registrado", component)
+
+    def test_quality_surface_uses_accented_operational_ptbr(self) -> None:
+        page = QUALITY_PAGE.read_text(encoding="utf-8")
+        component = QUALITY_COMPONENT.read_text(encoding="utf-8")
+        manuals = (ROOT / "apps/web/lib/manuals.ts").read_text(encoding="utf-8")
+
+        for expected in (
+            "CQ e finalização",
+            "Resultado físico preservado",
+            "Finalizações recentes",
+            "Observação final",
+            "Motivo do cálculo ou recálculo",
+        ):
+            self.assertIn(expected, page + component)
+
+        for obsolete in ("CQ e finalizacao", "Resultado fisico preservado", "Finalizacoes recentes"):
+            self.assertNotIn(obsolete, page + component)
+
+        self.assertIn('"CQ e finalização"', manuals)
+        self.assertIn("criar um único lote PI", manuals)
+
     def test_stock_route_uses_derived_balances_and_audited_release(self) -> None:
         page = STOCK_PAGE.read_text(encoding="utf-8")
         component = STOCK_COMPONENT.read_text(encoding="utf-8")
@@ -204,6 +233,9 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr))", styles)
         self.assertIn("grid-template-columns: 1fr", styles)
         self.assertIn(".production-tabs", styles)
+        self.assertIn(".quality-history-grid", styles)
+        self.assertIn(".quality-history-card > .notice-panel", styles)
+        self.assertIn(".quality-history-card .guarantee-calculate-form", styles)
         self.assertIn(".inventory-lot-grid", styles)
         self.assertIn(".inventory-filter", styles)
         self.assertIn(".transformation-steps", styles)

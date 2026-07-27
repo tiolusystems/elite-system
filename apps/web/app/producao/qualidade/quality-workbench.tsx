@@ -7,8 +7,8 @@ export function QualityWorkbench({ inProcess, completed, lookups }: { inProcess:
   return (
     <>
       <section className="notice-panel quality-rule-panel">
-        <strong>Resultado fisico preservado</strong>
-        <span>CQ bloqueado ou reprovado finaliza o fato produtivo e gera lote bloqueado para decisao auditada posterior.</span>
+        <strong>Resultado físico preservado</strong>
+        <span>CQ bloqueado ou reprovado finaliza o fato produtivo e gera lote bloqueado para decisão auditada posterior.</span>
       </section>
 
       <section className="panel" id="cq-pendente" aria-labelledby="quality-pending-title">
@@ -25,14 +25,14 @@ export function QualityWorkbench({ inProcess, completed, lookups }: { inProcess:
         ) : (
           <div className="empty-state">
             <strong>Nenhuma OP aguardando CQ</strong>
-            <span>As ordens iniciadas aparecem aqui para registro e finalizacao.</span>
+            <span>As ordens iniciadas aparecem aqui para registro e finalização.</span>
           </div>
         )}
       </section>
 
       <section className="panel" id="historico-cq" aria-labelledby="quality-history-title">
         <div className="panel-header">
-          <h2 id="quality-history-title">Finalizacoes recentes</h2>
+          <h2 id="quality-history-title">Finalizações recentes</h2>
           <span className="pill">{completed.length} registro(s)</span>
         </div>
         {completed.length > 0 ? (
@@ -41,8 +41,8 @@ export function QualityWorkbench({ inProcess, completed, lookups }: { inProcess:
           </div>
         ) : (
           <div className="empty-state">
-            <strong>Sem finalizacoes recentes</strong>
-            <span>O historico de produto gerado e garantias calculadas aparecera aqui.</span>
+            <strong>Sem finalizações recentes</strong>
+            <span>O histórico de produto gerado e garantias calculadas aparecerá aqui.</span>
           </div>
         )}
       </section>
@@ -67,11 +67,11 @@ function QualityOrderCard({ op, lookups }: { op: PcpRecentOp; lookups: PcpLookup
         </div>
       </div>
       <div className="tag-row">
-        <span className="tag">produto: {op.produtoLabel}</span>
-        <span className="tag">componentes: {op.components.length}</span>
-        <span className="tag">planejado: {formatNumber(planned)}</span>
-        <span className="tag">reservado: {formatNumber(reserved)}</span>
-        <span className="tag">iniciada: {shortDate(op.startedAt)}</span>
+        <span className="tag">Produto: {op.produtoLabel}</span>
+        <span className="tag">Componentes: {op.components.length}</span>
+        <span className="tag">Planejado: {formatNumber(planned)}</span>
+        <span className="tag">Reservado: {formatNumber(reserved)}</span>
+        <span className="tag">Iniciada: {shortDate(op.startedAt)}</span>
       </div>
       <QualityFinishForm op={op} lookups={lookups} />
     </article>
@@ -150,9 +150,23 @@ export function QualityFinishForm({ op, lookups }: { op: PcpRecentOp; lookups: P
             {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
           </select>
         </label>
+        <label>
+          Responsável pelo CQ
+          <select name="responsavel_cq_pessoa_id" defaultValue="" required>
+            <option value="">Selecione</option>
+            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
+        </label>
+        <label>
+          Responsável pela liberação
+          <select name="responsavel_liberacao_pessoa_id" defaultValue="" required>
+            <option value="">Selecione</option>
+            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
+        </label>
         <label className="wide-field">
-          Observacao final
-          <input name="observacao_finalizacao" placeholder="Ocorrencias, desvios ou informacao complementar" />
+          Observação final
+          <input name="observacao_finalizacao" placeholder="Ocorrências, desvios ou informação complementar" />
         </label>
       </div>
       <OutputRows
@@ -169,6 +183,8 @@ export function QualityFinishForm({ op, lookups }: { op: PcpRecentOp; lookups: P
 }
 
 function CompletedQualityCard({ op }: { op: PcpRecentOp }) {
+  const historyState = qualityHistoryState(op);
+
   return (
     <article className="module-card quality-history-card">
       <div className="module-card-main">
@@ -176,15 +192,30 @@ function CompletedQualityCard({ op }: { op: PcpRecentOp }) {
         <span>{op.produtoLabel} / {shortDate(op.completedAt)}</span>
       </div>
       <div className="module-card-meta">
-        <span className={`status-chip ${op.cqStatus ?? "completed"}`}>{cqStatusLabel(op.cqStatus)}</span>
-        <strong>{op.outputs.length} lote(s)</strong>
+        <span className={`status-chip ${historyState.className}`}>{historyState.label}</span>
+        <strong>{lotCountLabel(op.outputs.length)}</strong>
       </div>
       <div className="tag-row">
         {op.outputs.map((output) => (
           <span className="tag" key={output.id}>{output.tipoProduto} {formatNumber(output.quantidade)} - {output.loteLabel} / {productionStatusLabel(output.statusLote)}</span>
         ))}
-        {op.outputs.length === 0 ? <span className="tag">sem saida fisica</span> : null}
+        {op.outputs.length === 0 ? <span className="tag">Sem lote de saída registrado</span> : null}
       </div>
+      {op.participants.length > 0 ? (
+        <div className="quality-participant-history" aria-label="Participantes registrados">
+          {op.participants.map((participant) => (
+            <span key={participant.id}>
+              <strong>{participantRoleLabel(participant.papel, participant.ordem)}:</strong> {participant.nome}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {historyState.needsReview ? (
+        <div className="notice-panel warning compact" role="status">
+          <strong>Registro histórico preservado</strong>
+          <span>Esta OP não possui CQ e um único lote de saída conforme o contrato atual. Consulte a auditoria antes de qualquer decisão.</span>
+        </div>
+      ) : null}
       {op.guaranteeResults.length > 0 ? (
         <div className="guarantee-result-grid">
           {op.guaranteeResults.map((result) => (
@@ -199,7 +230,7 @@ function CompletedQualityCard({ op }: { op: PcpRecentOp }) {
       {op.tipoOp !== "mapa_documental" ? (
         <form className="compact-action-form guarantee-calculate-form" action={calculateOpGuaranteesAction}>
           <input type="hidden" name="op_id" value={op.id} />
-          <input name="justificativa" placeholder="Motivo do calculo ou recalculo" required />
+          <input name="justificativa" placeholder="Motivo do cálculo ou recálculo" required />
           <button className="secondary-button" type="submit">Calcular garantias</button>
         </form>
       ) : null}
@@ -227,7 +258,30 @@ function opTypeLabel(value: string): string {
 }
 
 function cqStatusLabel(value: string | null): string {
-  if (!value) return "Finalizada";
+  if (!value) return "Revisão necessária";
   return ({ aprovado: "Aprovado", bloqueado: "Bloqueado", reprovado: "Reprovado" } as Record<string, string>)[value]
     ?? "Situação não reconhecida";
+}
+
+function qualityHistoryState(op: PcpRecentOp): { className: string; label: string; needsReview: boolean } {
+  if (!op.cqStatus || op.outputs.length !== 1) {
+    return { className: "pending_review", label: "Revisão necessária", needsReview: true };
+  }
+  return { className: op.cqStatus, label: cqStatusLabel(op.cqStatus), needsReview: false };
+}
+
+function lotCountLabel(count: number): string {
+  if (count === 0) return "Nenhum lote";
+  if (count === 1) return "1 lote";
+  return `${count} lotes`;
+}
+
+function participantRoleLabel(role: string, order: number): string {
+  return ({
+    separador_mp: "Separador",
+    conferente_mp: "Conferente",
+    formulador: order === 1 ? "Formulador principal" : `Formulador ${order}`,
+    responsavel_cq: "Responsável pelo CQ",
+    responsavel_liberacao: "Responsável pela liberação"
+  } as Record<string, string>)[role] ?? "Participante";
 }

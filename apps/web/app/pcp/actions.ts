@@ -245,9 +245,19 @@ export async function finishPcpOpAction(formData: FormData) {
   const formuladorIds = Array.from({ length: 3 }, (_, index) =>
     optionalInteger(formData, `formulador_${index + 1}_pessoa_id`)
   ).filter((value): value is number => value !== null);
+  const responsavelCqPessoaId = optionalInteger(formData, "responsavel_cq_pessoa_id");
+  const responsavelLiberacaoPessoaId = optionalInteger(formData, "responsavel_liberacao_pessoa_id");
   const parsedOutputs = parseOutputs(formData);
 
-  if (!opId || opId <= 0 || !separadorPessoaId || !conferentePessoaId || formuladorIds.length === 0) {
+  if (
+    !opId
+    || opId <= 0
+    || !separadorPessoaId
+    || !conferentePessoaId
+    || formuladorIds.length === 0
+    || !responsavelCqPessoaId
+    || !responsavelLiberacaoPessoaId
+  ) {
     redirect("/producao/qualidade?result=missing_finish_required#cq-pendente");
   }
   if (!ALLOWED_CQ_STATUS.has(cqStatus)) {
@@ -264,35 +274,36 @@ export async function finishPcpOpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const participantIds = [...new Set([separadorPessoaId, conferentePessoaId, ...formuladorIds])];
+  const participantIds = [...new Set([
+    separadorPessoaId,
+    conferentePessoaId,
+    ...formuladorIds,
+    responsavelCqPessoaId,
+    responsavelLiberacaoPessoaId
+  ])];
   const participants = await supabase
     .from("cad_pessoas_comerciais")
-    .select("id,nome,status")
+    .select("id,status")
     .in("id", participantIds)
     .eq("status", "active");
   if (participants.error || (participants.data ?? []).length !== participantIds.length) {
     redirect("/producao/qualidade?result=invalid_participants#cq-pendente");
   }
-  const participantNames = new Map((participants.data ?? []).map((person) => [Number(person.id), String(person.nome)]));
-  const separadorMp = participantNames.get(separadorPessoaId);
-  const conferenteMp = participantNames.get(conferentePessoaId);
-  const formuladores = formuladorIds.map((id) => participantNames.get(id)).filter((name): name is string => Boolean(name));
-  if (!separadorMp || !conferenteMp || formuladores.length !== formuladorIds.length) {
-    redirect("/producao/qualidade?result=invalid_participants#cq-pendente");
-  }
   const correlationId = `pcp_op:${opId}:finish`;
   const outputs = parsedOutputs.map((output) => ({ ...output, quantidade: volume }));
-  const { error } = await auditedRpc(supabase, "finalizar_pcp_op", {
-    p_conferente_mp: conferenteMp,
+  const { error } = await auditedRpc(supabase, "finalizar_pcp_op_relacional", {
+    p_conferente_pessoa_id: conferentePessoaId,
     p_cq_status: cqStatus,
     p_densidade_kg_l: densidade,
-    p_formuladores_jsonb: formuladores,
+    p_formulador_pessoa_ids: formuladorIds,
     p_massa_kg: massa,
     p_observacao: optionalField(formData, "observacao_finalizacao"),
     p_op_id: opId,
     p_outputs_jsonb: outputs,
     p_ph: ph,
-    p_separador_mp: separadorMp,
+    p_responsavel_cq_pessoa_id: responsavelCqPessoaId,
+    p_responsavel_liberacao_pessoa_id: responsavelLiberacaoPessoaId,
+    p_separador_pessoa_id: separadorPessoaId,
     p_temperatura_c: temperatura,
     p_volume_l: volume
   }, {

@@ -143,8 +143,19 @@ export type PcpOpReservation = {
   loteId: number;
   loteLabel: string;
   quantidadeReservada: number;
+  quantidadeUtilizada: number | null;
   status: string;
   createdAt: string;
+};
+
+export type PcpOpParticipant = {
+  id: number;
+  opId: number;
+  pessoaId: number | null;
+  papel: string;
+  ordem: number;
+  nome: string;
+  registradoEm: string;
 };
 
 export type PcpOpComponent = {
@@ -188,6 +199,7 @@ export type PcpRecentOp = {
   startedAt: string | null;
   completedAt: string | null;
   components: PcpOpComponent[];
+  participants: PcpOpParticipant[];
   outputs: PcpOpOutput[];
   guaranteeResults: PcpOpGuaranteeResult[];
 };
@@ -361,6 +373,8 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       ops,
       opComponents,
       opReservations,
+      opConsumptions,
+      opParticipants,
       opOutputs,
       lotesMp,
       lotesPa,
@@ -429,6 +443,16 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         )
         .order("created_at", { ascending: false })
         .limit(900),
+      supabase
+        .from("pcp_op_consumos")
+        .select("id,op_id,op_componente_id,reserva_id,quantidade_consumida,created_at")
+        .order("created_at", { ascending: false })
+        .limit(900),
+      supabase
+        .from("pcp_op_cq_participantes")
+        .select("id,op_id,papel,ordem,nome_snapshot,pessoa_comercial_id,created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
       supabase
         .from("pcp_op_produtos_gerados")
         .select(
@@ -520,6 +544,8 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     const opRows = rows(ops);
     const opComponentRows = rows(opComponents);
     const opReservationRows = rows(opReservations);
+    const opConsumptionRows = rows(opConsumptions);
+    const opParticipantRows = rows(opParticipants);
     const opOutputRows = rows(opOutputs);
     const personRows = rows(pessoas);
     const nutrientRows = rows(nutrientes);
@@ -593,9 +619,24 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       } satisfies PcpActiveFormula;
     });
 
+    const consumedByReservation = new Map<number, number>(
+      opConsumptionRows.map((row) => [Number(row.reserva_id), Number(row.quantidade_consumida ?? 0)])
+    );
     const reservationsByComponent = groupBy(
-      opReservationRows.map((row) => mapReservation(row, lotMap)),
+      opReservationRows.map((row) => mapReservation(row, lotMap, consumedByReservation)),
       (reservation) => reservation.opComponentId
+    );
+    const participantsByOp = groupBy(
+      opParticipantRows.map((row) => ({
+        id: Number(row.id),
+        opId: Number(row.op_id),
+        pessoaId: nullableNumber(row.pessoa_comercial_id),
+        papel: String(row.papel),
+        ordem: Number(row.ordem),
+        nome: String(row.nome_snapshot),
+        registradoEm: String(row.created_at)
+      } satisfies PcpOpParticipant)),
+      (participant) => participant.opId
     );
 
     const componentsByOp = groupBy(
@@ -635,6 +676,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         startedAt: nullableString(row.started_at),
         completedAt: nullableString(row.completed_at),
         components: componentsByOp.get(id) ?? [],
+        participants: participantsByOp.get(id) ?? [],
         outputs: outputsByOp.get(id) ?? [],
         guaranteeResults: guaranteeResultsByOp.get(id) ?? []
       } satisfies PcpRecentOp;
@@ -693,6 +735,8 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       ops,
       opComponents,
       opReservations,
+      opConsumptions,
+      opParticipants,
       opOutputs,
       lotesMp,
       lotesPa,
@@ -749,6 +793,185 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
+  }
+}
+
+export async function getPcpOrderPrintData(orderId: number): Promise<PcpRecentOp | null> {
+  if (!Number.isInteger(orderId) || orderId <= 0 || !getRuntimeStatus().supabaseConfigured) {
+    return null;
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const orderResponse = await supabase
+      .from("pcp_ordens_producao")
+      .select(
+        "id,codigo_op,formula_versao_id,tipo_op,status,quantidade_planejada,observacao,cq_status,created_at,started_at,completed_at"
+      )
+      .eq("id", orderId)
+      .limit(1);
+    const order = rows(orderResponse)[0];
+    if (orderResponse.error || !order) return null;
+
+    const formulaVersionId = Number(order.formula_versao_id);
+    const [formulaResponse, componentResponse, reservationResponse, consumptionResponse, participantResponse] =
+      await Promise.all([
+        supabase
+          .from("pcp_formula_versoes")
+          .select("id,produto_id,tipo_receita,versao")
+          .eq("id", formulaVersionId)
+          .limit(1),
+        supabase
+          .from("pcp_op_componentes_planejados")
+          .select(
+            "id,op_id,tipo_componente,materia_prima_id,produto_embalagem_id,produto_id,quantidade_planejada,unidade,status"
+          )
+          .eq("op_id", orderId)
+          .order("id", { ascending: true }),
+        supabase
+          .from("pcp_op_reservas_componentes")
+          .select(
+            "id,op_id,op_componente_id,tipo_componente,lote_mp_id,lote_pa_id,lote_pi_id,quantidade_reservada,status,created_at"
+          )
+          .eq("op_id", orderId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("pcp_op_consumos")
+          .select("id,op_id,op_componente_id,reserva_id,quantidade_consumida,created_at")
+          .eq("op_id", orderId),
+        supabase
+          .from("pcp_op_cq_participantes")
+          .select("id,op_id,papel,ordem,nome_snapshot,pessoa_comercial_id,created_at")
+          .eq("op_id", orderId)
+          .order("papel", { ascending: true })
+          .order("ordem", { ascending: true })
+      ]);
+    if (firstResponseError([
+      formulaResponse,
+      componentResponse,
+      reservationResponse,
+      consumptionResponse,
+      participantResponse
+    ])) return null;
+
+    const formula = rows(formulaResponse)[0];
+    if (!formula) return null;
+
+    const componentRows = rows(componentResponse);
+    const reservationRows = rows(reservationResponse);
+    const materiaPrimaIds = uniqueNumbers(componentRows.map((row) => row.materia_prima_id));
+    const produtoEmbalagemIds = uniqueNumbers(componentRows.map((row) => row.produto_embalagem_id));
+    const produtoIds = uniqueNumbers([formula.produto_id, ...componentRows.map((row) => row.produto_id)]);
+    const loteMpIds = uniqueNumbers(reservationRows.map((row) => row.lote_mp_id));
+    const lotePaIds = uniqueNumbers(reservationRows.map((row) => row.lote_pa_id));
+    const lotePiIds = uniqueNumbers(reservationRows.map((row) => row.lote_pi_id));
+
+    const [produtoResponse, materiaPrimaResponse, produtoEmbalagemResponse, loteMpResponse, lotePaResponse, lotePiResponse] =
+      await Promise.all([
+        supabase
+          .from("cad_produtos_base")
+          .select("id,codigo_produto,nome")
+          .in("id", produtoIds.length > 0 ? produtoIds : [-1]),
+        supabase
+          .from("cad_materias_primas")
+          .select("id,sku_corrigido,nome")
+          .in("id", materiaPrimaIds.length > 0 ? materiaPrimaIds : [-1]),
+        supabase
+          .from("cad_produto_embalagens")
+          .select("id,codigo_item,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)")
+          .in("id", produtoEmbalagemIds.length > 0 ? produtoEmbalagemIds : [-1]),
+        supabase
+          .from("est_lotes_mp_saldos")
+          .select(
+            "lote_mp_id,materia_prima_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
+          )
+          .in("lote_mp_id", loteMpIds.length > 0 ? loteMpIds : [-1]),
+        supabase
+          .from("est_lotes_pa_saldos")
+          .select(
+            "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
+          )
+          .in("lote_pa_id", lotePaIds.length > 0 ? lotePaIds : [-1]),
+        supabase
+          .from("est_lotes_pi_saldos")
+          .select(
+            "lote_pi_id,produto_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
+          )
+          .in("lote_pi_id", lotePiIds.length > 0 ? lotePiIds : [-1])
+      ]);
+    if (firstResponseError([
+      produtoResponse,
+      materiaPrimaResponse,
+      produtoEmbalagemResponse,
+      loteMpResponse,
+      lotePaResponse,
+      lotePiResponse
+    ])) return null;
+
+    const produtoMap = new Map<number, string>(
+      rows(produtoResponse).map((row) => [Number(row.id), productLabel(row)])
+    );
+    const materiaPrimaMap = new Map<number, string>(
+      rows(materiaPrimaResponse).map((row) => [Number(row.id), materialLabel(row)])
+    );
+    const produtoEmbalagemMap = new Map<number, string>(
+      rows(produtoEmbalagemResponse).map((row) => [Number(row.id), packageLabel(row)])
+    );
+    const lotMap = new Map<string, string>();
+    for (const row of rows(loteMpResponse)) {
+      lotMap.set(`MP:${Number(row.lote_mp_id)}`, `${row.codigo_lote} - ${materiaPrimaMap.get(Number(row.materia_prima_id)) ?? "Matéria-prima"}`);
+    }
+    for (const row of rows(lotePaResponse)) {
+      lotMap.set(`PA:${Number(row.lote_pa_id)}`, `${row.codigo_lote} - ${produtoEmbalagemMap.get(Number(row.produto_embalagem_id)) ?? "Produto acabado"}`);
+    }
+    for (const row of rows(lotePiResponse)) {
+      lotMap.set(`PI:${Number(row.lote_pi_id)}`, `${row.codigo_lote} - ${produtoMap.get(Number(row.produto_id)) ?? "Produto intermediário"}`);
+    }
+
+    const consumedByReservation = new Map<number, number>(
+      rows(consumptionResponse).map((row) => [Number(row.reserva_id), Number(row.quantidade_consumida ?? 0)])
+    );
+    const reservationsByComponent = groupBy(
+      reservationRows.map((row) => mapReservation(row, lotMap, consumedByReservation)),
+      (reservation) => reservation.opComponentId
+    );
+    const components = componentRows.map((row) =>
+      mapOpComponent(row, reservationsByComponent, materiaPrimaMap, produtoEmbalagemMap, produtoMap)
+    );
+    const participants = rows(participantResponse).map((row) => ({
+      id: Number(row.id),
+      opId: Number(row.op_id),
+      pessoaId: nullableNumber(row.pessoa_comercial_id),
+      papel: String(row.papel),
+      ordem: Number(row.ordem),
+      nome: String(row.nome_snapshot),
+      registradoEm: String(row.created_at)
+    } satisfies PcpOpParticipant));
+    const produtoId = Number(formula.produto_id);
+    const produtoLabelValue = produtoMap.get(produtoId) ?? "Produto não carregado";
+
+    return {
+      id: Number(order.id),
+      codigoOp: String(order.codigo_op),
+      formulaVersionId,
+      formulaLabel: `${produtoLabelValue} / ${String(formula.tipo_receita)} v${Number(formula.versao)}`,
+      produtoId,
+      produtoLabel: produtoLabelValue,
+      tipoOp: String(order.tipo_op),
+      status: String(order.status),
+      quantidadePlanejada: nullableNumber(order.quantidade_planejada),
+      observacao: nullableString(order.observacao),
+      cqStatus: nullableString(order.cq_status),
+      createdAt: String(order.created_at),
+      startedAt: nullableString(order.started_at),
+      completedAt: nullableString(order.completed_at),
+      components,
+      participants,
+      outputs: [],
+      guaranteeResults: []
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -879,17 +1102,23 @@ function mapOpComponent(
   };
 }
 
-function mapReservation(row: Record<string, unknown>, lotMap: Map<string, string>): PcpOpReservation {
+function mapReservation(
+  row: Record<string, unknown>,
+  lotMap: Map<string, string>,
+  consumedByReservation: Map<number, number>
+): PcpOpReservation {
   const type = componentType(row.tipo_componente);
   const loteId =
     type === "MP" ? Number(row.lote_mp_id) : type === "PA" ? Number(row.lote_pa_id) : Number(row.lote_pi_id);
+  const id = Number(row.id);
   return {
-    id: Number(row.id),
+    id,
     opComponentId: Number(row.op_componente_id),
     tipoComponente: type,
     loteId,
     loteLabel: lotMap.get(`${type}:${loteId}`) ?? `lote ${loteId}`,
     quantidadeReservada: Number(row.quantidade_reservada ?? 0),
+    quantidadeUtilizada: consumedByReservation.has(id) ? consumedByReservation.get(id) ?? 0 : null,
     status: String(row.status),
     createdAt: String(row.created_at)
   };
@@ -993,6 +1222,14 @@ function componentType(value: unknown): PcpComponentType {
 
 function rows(response: { data: unknown[] | null; error: { message: string } | null }): Array<Record<string, unknown>> {
   return response.error ? [] : ((response.data ?? []) as Array<Record<string, unknown>>);
+}
+
+function uniqueNumbers(values: unknown[]): number[] {
+  return [...new Set(
+    values
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0)
+  )];
 }
 
 function firstResponseError(responses: Array<{ error: { message: string } | null }>): string | null {

@@ -294,6 +294,13 @@ export function PlanningOrderCard({
         ) : null}
 
         <div className="pcp-op-actions planning-actions">
+          <Link
+            className="secondary-button"
+            href={`/producao/ordens/${op.id}/imprimir`}
+            target="_blank"
+          >
+            Imprimir OP
+          </Link>
           {(op.status === "draft" || op.status === "planned") && !reservationComplete ? (
             <div className="workflow-callout neutral" role="status">
               <strong>Conclua as reservas antes de iniciar</strong>

@@ -18,7 +18,7 @@ export default async function ProductionQualityPage({ searchParams }: { searchPa
   return (
     <ProductionShell
       active="qualidade"
-      title="CQ e finalizacao"
+      title="CQ e finalização"
       description="Registro de processo, participantes, resultado do controle de qualidade e lotes gerados."
       source={dashboard.source}
       error={dashboard.error}
@@ -31,9 +31,9 @@ export default async function ProductionQualityPage({ searchParams }: { searchPa
     >
       <ProductionFeedback result={singleProductionParam(params.result)} />
       <section className="technical-kpis quality-kpis" aria-label="Resumo do controle de qualidade">
-        <article><span>Em processo</span><strong>{inProcess.length}</strong><small>Aguardando dados e finalizacao.</small></article>
+        <article><span>Em processo</span><strong>{inProcess.length}</strong><small>Aguardando dados e finalização.</small></article>
         <article><span>Finalizadas recentes</span><strong>{completed.length}</strong><small>Com fato produtivo preservado.</small></article>
-        <article><span>Lotes bloqueados</span><strong>{dashboard.metrics.lotesBloqueados ?? "-"}</strong><small>Dependem de decisao posterior.</small></article>
+        <article><span>Lotes bloqueados</span><strong>{dashboard.metrics.lotesBloqueados ?? "-"}</strong><small>Dependem de decisão posterior.</small></article>
         <article><span>Garantias vigentes</span><strong>{dashboard.metrics.garantiasVigentes ?? "-"}</strong><small>Produto e lotes de MP.</small></article>
       </section>
       <QualityWorkbench inProcess={inProcess} completed={completed} lookups={dashboard.lookups} />

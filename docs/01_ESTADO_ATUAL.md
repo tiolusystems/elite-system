@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-25
+Atualizado em: 2026-07-27
 
 ## Referencia vigente
 
@@ -82,6 +82,41 @@ aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
 nao alterou o ledger nem a disponibilidade do backend.
 
 ## Tarefa concluida mais recente
+
+UX-01G - Qualidade, participantes e Ordem de Producao:
+
+- esquema visual de CQ e Ordem de Producao homologado por Luciano;
+- separador, conferente, formuladores, responsavel pelo CQ e responsavel pela
+  liberacao sao pessoas ativas cadastradas e vinculadas por ID;
+- nomes livres, JSON e listas textuais deixaram de ser fonte operacional para
+  os participantes da finalizacao;
+- a finalizacao relacional preserva snapshots historicos, exige os cinco papeis
+  operacionais e gera um unico lote PI na mesma transacao;
+- a OP impressa mostra quantidades totais, separacao multilote, consumo real,
+  desvio, rubrica e assinaturas fisicas;
+- dose por litro e validade do lote permanecem nos contratos internos de
+  formula e estoque, sem poluir o documento operacional;
+- a rota de impressao consulta diretamente a OP solicitada e nao depende do
+  limite das ordens recentes;
+- migration `0114_govern_pcp_cq_participants.sql` criada e validada somente em
+  ambiente descartavel `elite-validation-*`; aplicacao no staging depende de
+  CI e dry-run unitario.
+
+Decisao arquitetural de POPs:
+
+- POPs pertencem ao PCP/Controle de Qualidade e nao criam novo modulo;
+- localizacao funcional futura: `Controle -> Qualidade -> POPs e documentos
+  controlados`;
+- versoes publicadas serao imutaveis, auditadas e vinculaveis em relacao
+  muitos-para-muitos aos processos aplicaveis;
+- a OP congelara codigo, titulo, revisao e vigencia dos POPs aplicaveis;
+- a impressao mostrara somente referencias, sem reproduzir o conteudo integral;
+- manual contextual e POP permanecem documentos distintos;
+- implementacao condicionada a inventario tecnico e pacote estrutural proprio,
+  sem reabrir o UX-01G.
+
+Proxima etapa visual: `UX-01H - Romaneio`. O catalogo de POPs nao integra esse
+escopo.
 
 Promocao controlada e ensaio online `HOM-E2E-20260725-MS08GPR2`:
 

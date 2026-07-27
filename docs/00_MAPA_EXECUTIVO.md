@@ -37,7 +37,7 @@ O mapa detalhado continua sendo
 | manuais por processo e tela | modulo proprietario do fluxo | `docs/manuais/README.md` |
 | pedido, credito, Kanban | `pedidos` | `apps/web/app/pedidos` |
 | lotes, movimentos e saldos | `estoque` | RPCs e migrations `est_*` |
-| formula, OP, CQ, transformacao | `pcp` | `apps/web/app/pcp`, `apps/web/app/producao` |
+| formula, OP, CQ, POP e transformacao | `pcp` | `apps/web/app/pcp`, `apps/web/app/producao`; `docs/decisao_pops_documentos_controlados.md` |
 | romaneio e expedicao | `expedicao` | `apps/web/app/romaneios` |
 | NF XML de entrada | `importacao` | `apps/web/app/importacao-xml` |
 | historico do Excel | `auditoria` | `/importacao-historica/mp`; `elite_system/services/historical_workbook.py` |

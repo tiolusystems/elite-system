@@ -130,6 +130,11 @@ jobs:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/identity_client_link_governance.sql
 
+      - name: Run governed stock adjustment access smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/stock_adjustment_rpc_access.sql
+
       - name: Run blocked order and exchange idempotency smoke
         env:
           PGPASSWORD: postgres

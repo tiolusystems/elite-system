@@ -1,5 +1,123 @@
 # Validacao E2E-01 + TRACE-01
 
+## Fechamento governado HOM-E2E-20260727-RG01
+
+### Resultado final
+
+**APROVADO.**
+
+O rollout controlado de Faturamento, Financeiro e Relatorios foi validado no
+Supabase de staging. Faturamento e Financeiro permaneceram em
+`business_validation` com leitura e escrita; Relatorios permaneceu em
+`business_validation` e somente leitura. A disponibilidade dos modulos nao
+concedeu alçadas por cargo: o usuario tecnico recebeu somente overrides
+individuais, e uma conta sem a alçada de rastreabilidade continuou bloqueada
+com mensagem operacional em PT-BR.
+
+O frontend permaneceu no deployment
+`dpl_F9kRyxh3DsnDTmMWMqPJdjZxhpnM`, commit funcional `5d94325`. Nao houve
+alteracao visual ou deployment desnecessario. O health-check final respondeu
+HTTP 200, `status=ok` e `backendConfigured=true`.
+
+As migrations aditivas publicadas durante o fechamento foram:
+
+- `0112_use_envase_density_for_romaneio_load.sql`: calcula peso e carga do
+  Romaneio com a densidade efetiva do envase;
+- `0113_fix_traceability_fiscal_direction_and_recall.sql`: corrige o sentido
+  da referencia fiscal externa na genealogia e a travessia recursiva da
+  simulacao de recolhimento.
+
+O dry-run remoto listou somente a `0113` antes da aplicacao, e o ledger do
+staging terminou em `0113`. A CI `30271650035` aprovou `database-contract`,
+`python-tests` e `web-contract`, reconstruindo todas as migrations e executando
+as cadeias integradas de producao e rastreabilidade.
+
+### Cadeia executada pela interface
+
+O ensaio integral usou apenas entidades identificadas por
+`HOM-E2E-20260727-RG01`:
+
+`MP -> formula operacional -> OP -> FIFO multilote -> CQ -> PI ->`
+`formula MAPA -> envase -> embalagem -> PA -> pedido -> Romaneio ->`
+`referencia fiscal externa -> expedicao -> recebimento -> comissao ->`
+`rastreabilidade -> recolhimento -> reconciliacao`.
+
+Evidencias quantitativas:
+
+| Etapa | Registro | Resultado |
+| --- | --- | --- |
+| OP | `OP-20260727-0000004` | 6 + 4 unidades de dois lotes de MP consumidas |
+| PI | `PI-20260727-0000014` | 10 L produzidos |
+| Envase | `ENV-00000002` | 10 L de PI e 2 unidades de embalagem consumidos |
+| PA | `PA-20260727-0000015` | 2 unidades produzidas |
+| Pedido | `PED-C9-000001` | R$ 200,00 |
+| Romaneio | `ROM-20260727114633877-1BA7` | 2 unidades expedidas e depois estornadas |
+| Recebimento | pedido sintetico | R$ 200,00 recebido; saldo aberto R$ 0,00 |
+| Comissao | pedido sintetico | R$ 10,00 liberados e R$ 10,00 pagos |
+
+Foram registradas somente referencias fiscais externas:
+
+- `HOM-E2E-20260727-RG01-SF-001-HOM`, no pedido;
+- `HOM-E2E-20260727-RG01-REM-001-HOM`, no Romaneio.
+
+Registrar essas referencias nao movimentou estoque, nao confirmou expedicao e
+nao liberou comissao. O Elite System nao emitiu nem transmitiu NF-e.
+
+### Rastreabilidade, recolhimento e reconciliacao
+
+A consulta para frente do lote PA alcancou Romaneio, pedido, cliente e
+referencias fiscais. A consulta para tras da referencia de remessa alcancou o
+lote PA, envase, PI, OP, formula, lotes de MP e lote de embalagem. A simulacao
+de recolhimento listou o destino ativo antes da neutralizacao e passou a
+retornar zero destino ativo depois do estorno governado do Romaneio.
+
+As conciliacoes fecharam:
+
+- MP: `6 + 4 = 10` consumidas para `10 L` de PI;
+- PI: `10 L` produzidos e `10 L` consumidos no envase;
+- embalagem: `2` unidades consumidas;
+- PA antes do estorno: `2 produzidas = 2 expedidas + 0 em estoque`;
+- PA depois do estorno: `2 produzidas = 0 expedidas ativas + 2 em estoque`;
+- recebimento: `R$ 200,00 recebido = R$ 200,00 alocado + R$ 0,00 aberto`;
+- comissao: `R$ 10,00 liberados - R$ 10,00 pagos = R$ 0,00`.
+
+Reservas permaneceram separadas de consumo e nao foram somadas duas vezes ao
+saldo fisico.
+
+### Negativas, responsividade e seguranca
+
+O navegador e as cadeias SQL/CI comprovaram conjuntamente:
+
+- consulta de rastreabilidade sem alçada negada em PT-BR;
+- escrita direta e alteracao de fatos append-only negadas;
+- retry idempotente sem duplicar referencia fiscal, recebimento ou comissao;
+- payload divergente com a mesma chave recusado;
+- recebimento, pagamento e Romaneio acima do saldo recusados sem efeito
+  parcial;
+- Romaneio finalizado nao pode ser confirmado novamente;
+- usuario sem alçada individual nao recebe acesso pela simples habilitacao do
+  modulo.
+
+As rotas `/pedidos/financeiro`, `/relatorios`,
+`/qualidade/rastreabilidade`, `/pedidos` e `/romaneios` foram validadas em
+1920 x 1080, 1366 x 768, 768 x 1024, 390 x 844 e 360 x 800. As 25
+combinacoes ficaram sem rolagem horizontal e sem erro tecnico exposto.
+
+### Neutralizacao e residuos auditaveis
+
+- o Romaneio foi estornado pelo fluxo governado;
+- o lote PA retornou a 2 unidades fisicas e 2 disponiveis;
+- a simulacao de recolhimento passou a mostrar zero destino ativo;
+- o perfil tecnico `Operador fiscal HOM-E2E-1784979584` foi inativado por RPC
+  governada, preservando as alçadas e o evento antes/depois;
+- recebimento, liberacao e pagamento de comissao permanecem como fatos
+  append-only balanceados em zero;
+- formulas, OP, PI, envase, PA e referencias externas permanecem como
+  evidencias sinteticas historicas.
+
+Nenhum fato foi apagado ou reescrito. Producao real, `main` e PWA permaneceram
+inalteradas.
+
 ## Execucao online HOM-E2E-20260725-MS08GPR2
 
 ### Resultado

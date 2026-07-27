@@ -5,14 +5,44 @@ Atualizado em: 2026-07-25
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- commit funcional publicado: `5d94325`;
-- Supabase de homologacao: ledger alinhado de `0001` a `0107`;
+- HEAD funcional publicado: `3f18eb6`;
+- frontend funcional ativo: `5d94325`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0113`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
 - deployment estavel de staging: `dpl_F9kRyxh3DsnDTmMWMqPJdjZxhpnM`;
 - deployment anterior preservado para rollback: `dpl_G2kFxfxcgaq9s76CHBd59mWcZS2r`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
+
+## Fechamento mais recente
+
+Rollout governado e ensaio total `HOM-E2E-20260727-RG01`:
+
+- Faturamento e Financeiro disponiveis em `business_validation` com
+  `read_write`;
+- Relatorios disponivel em `business_validation` com `read_only`;
+- a habilitacao dos modulos nao concedeu alçada por cargo ou perfil;
+- o usuario tecnico recebeu somente as alçadas individuais necessarias e foi
+  inativado ao final, com auditoria antes/depois;
+- a cadeia completa foi executada pela interface ate referencia fiscal
+  externa, expedicao, recebimento, liberacao e pagamento de comissao;
+- `0112` corrigiu o calculo de carga do Romaneio pela densidade do envase;
+- `0113` corrigiu a direcao fiscal e a travessia recursiva do recolhimento;
+- o ledger do staging terminou em `0113`;
+- a CI `30271650035` aprovou os tres jobs;
+- o Romaneio sintetico foi estornado, o PA retornou ao estoque e o recall
+  passou a mostrar zero destino ativo;
+- os fatos financeiros append-only ficaram conciliados: R$ 200,00 recebidos e
+  R$ 10,00 de comissao liberados/pagos, ambos sem saldo;
+- cinco rotas afetadas foram validadas nas cinco resolucoes, totalizando 25
+  combinacoes sem rolagem horizontal ou erro tecnico;
+- nao houve novo deployment porque o frontend nao foi alterado;
+- nenhum dado real, `main`, producao real ou PWA foi alterado.
+
+O resultado consolidado e **APROVADO** para o staging. Os registros
+`HOM-E2E-*` permanecem apenas como evidencias sinteticas auditaveis; nenhuma
+linha append-only foi apagada ou reescrita.
 
 ## Estado tecnico comprovado
 

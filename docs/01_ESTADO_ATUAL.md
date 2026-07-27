@@ -6,12 +6,13 @@ Atualizado em: 2026-07-27
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
 - HEAD funcional publicado: `3f18eb6`;
-- frontend funcional ativo: `5d94325`;
-- Supabase de homologacao: ledger alinhado de `0001` a `0113`;
+- frontend funcional ativo: `098b5ea`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0114`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_F9kRyxh3DsnDTmMWMqPJdjZxhpnM`;
-- deployment anterior preservado para rollback: `dpl_G2kFxfxcgaq9s76CHBd59mWcZS2r`;
+- deployment estavel de staging: `dpl_BRHbYKEDG4BM3L7WLVUyAQUoyuDg`;
+- deployment anterior ao UX-01G preservado para rollback:
+  `dpl_DFW1RKDuyWi5Ks1UnZg4fDoGDex2`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
@@ -98,9 +99,17 @@ UX-01G - Qualidade, participantes e Ordem de Producao:
   formula e estoque, sem poluir o documento operacional;
 - a rota de impressao consulta diretamente a OP solicitada e nao depende do
   limite das ordens recentes;
-- migration `0114_govern_pcp_cq_participants.sql` criada e validada somente em
-  ambiente descartavel `elite-validation-*`; aplicacao no staging depende de
-  CI e dry-run unitario.
+- migration `0114_govern_pcp_cq_participants.sql` validada em ambiente
+  descartavel `elite-validation-*` e aplicada unitariamente no staging depois
+  de CI verde e dry-run exclusivo;
+- CI `30312513428` aprovou frontend, 659 testes Python e instalacao limpa do
+  banco; a correcao objetiva da leitura de consumos passou novamente na CI
+  `30314290949`;
+- o smoke autenticado confirmou Ordens, CQ e impressao da OP sem erro tecnico,
+  com totais por componente, lotes separados, participantes digitais e campos
+  de assinatura fisica;
+- o deployment `dpl_BRHbYKEDG4BM3L7WLVUyAQUoyuDg` publica o commit `098b5ea`
+  no projeto `elite-system-staging`, com health-check saudavel.
 
 Decisao arquitetural de POPs:
 

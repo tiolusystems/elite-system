@@ -20,6 +20,42 @@ type Props = {
   orderDate: string;
 };
 
+type LocationSelectorProps = {
+  locations: DeliveryLocation[];
+  value: string;
+  onChange: (locationKey: string) => void;
+};
+
+export function DeliveryLocationSelector({ locations, value, onChange }: LocationSelectorProps) {
+  const selected = locations.find((location) => location.key === value) ?? null;
+
+  return (
+    <fieldset className="delivery-location-editor">
+      <legend>2. Local de entrega</legend>
+      <p className="section-intro">Escolha o destino principal antes de incluir os itens do pedido.</p>
+      {!locations.length ? (
+        <div className="notice-panel warning">
+          <strong>Cliente sem local de entrega ativo</strong>
+          <span>Cadastre uma propriedade, estabelecimento ou endereço de entrega antes de enviar o pedido.</span>
+        </div>
+      ) : (
+        <label>
+          <span>Destino principal</span>
+          <select value={value} onChange={(event) => onChange(event.target.value)} required>
+            <option value="" disabled>Selecione o local</option>
+            {locations.map((location) => (
+              <option key={location.key} value={location.key}>
+                {locationType(location.type)} - {location.name} - {location.city ?? "Município não informado"}{location.state ? `/${location.state}` : ""}
+              </option>
+            ))}
+          </select>
+          {selected ? <small>{locationDetail(selected)}</small> : null}
+        </label>
+      )}
+    </fieldset>
+  );
+}
+
 export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onChange, orderDate }: Props) {
   function change(key: number, field: "date" | "locationKey", value: string) {
     onChange(deliveries.map((delivery) => delivery.key === key ? { ...delivery, [field]: value } : delivery));
@@ -36,7 +72,7 @@ export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onC
     onChange([...deliveries, {
       key: Math.max(...deliveries.map((delivery) => delivery.key), 0) + 1,
       date: orderDate,
-      locationKey: locations[0]?.key ?? "",
+      locationKey: deliveries[0]?.locationKey ?? "",
       allocations: Object.fromEntries(rows.map((row) => [row.key, ""]))
     }]);
   }
@@ -47,17 +83,12 @@ export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onC
 
   return (
     <fieldset className="delivery-schedule-editor">
-      <legend>2. Local e entrega</legend>
-      <p className="section-intro">A programação orienta a operação futura. Ela não reserva nem baixa estoque.</p>
-      {!locations.length ? (
-        <div className="notice-panel warning">
-          <strong>Cliente sem local de entrega ativo</strong>
-          <span>Cadastre uma propriedade, estabelecimento ou endereço de entrega antes de enviar o pedido.</span>
-        </div>
-      ) : null}
+      <legend>4. Programação das entregas</legend>
+      <p className="section-intro">Distribua cada item entre uma ou mais entregas. A programação não reserva nem baixa estoque.</p>
       <div className="delivery-schedule-list">
         {deliveries.map((delivery, deliveryIndex) => {
           const totalLiters = deliveryVolumeLiters(delivery, rows, items);
+          const selectedLocation = locations.find((location) => location.key === delivery.locationKey) ?? null;
           return (
             <article className="delivery-schedule-card" key={delivery.key}>
             <div className="delivery-schedule-heading">
@@ -66,21 +97,29 @@ export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onC
                 <span>Distribua abaixo as quantidades desta entrega.</span>
                 <small>{totalLiters === null ? "Volume programado indisponível" : `Volume programado: ${number(totalLiters)} L`}</small>
               </div>
-              {deliveries.length > 1 ? <button type="button" className="secondary-button" onClick={() => remove(delivery.key)}>Remover entrega</button> : null}
+              {deliveryIndex > 0 ? <button type="button" className="secondary-button" onClick={() => remove(delivery.key)}>Remover entrega</button> : null}
             </div>
             <div className="delivery-schedule-fields">
-              <label>
-                <span>Local de entrega</span>
-                <select value={delivery.locationKey} onChange={(event) => change(delivery.key, "locationKey", event.target.value)} required>
-                  <option value="" disabled>Selecione o local</option>
-                  {locations.map((location) => (
-                    <option key={location.key} value={location.key}>
-                      {locationType(location.type)} - {location.name} - {location.city ?? "Município não informado"}{location.state ? `/${location.state}` : ""}
-                    </option>
-                  ))}
-                </select>
-                {delivery.locationKey ? <small>{locationDetail(locations.find((location) => location.key === delivery.locationKey) ?? null)}</small> : null}
-              </label>
+              {deliveryIndex === 0 ? (
+                <div className="delivery-primary-location">
+                  <span>Local desta entrega</span>
+                  <strong>{selectedLocation?.name ?? "Selecione o local na etapa 2"}</strong>
+                  {selectedLocation ? <small>{locationDetail(selectedLocation)}</small> : null}
+                </div>
+              ) : (
+                <label>
+                  <span>Local desta entrega</span>
+                  <select value={delivery.locationKey} onChange={(event) => change(delivery.key, "locationKey", event.target.value)} required>
+                    <option value="" disabled>Selecione o local</option>
+                    {locations.map((location) => (
+                      <option key={location.key} value={location.key}>
+                        {locationType(location.type)} - {location.name} - {location.city ?? "Município não informado"}{location.state ? `/${location.state}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedLocation ? <small>{locationDetail(selectedLocation)}</small> : null}
+                </label>
+              )}
               <label>
                 <span>Previsão de entrega</span>
                 <input type="date" min={orderDate} value={delivery.date} onChange={(event) => change(delivery.key, "date", event.target.value)} required />
@@ -125,7 +164,7 @@ export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onC
         })}
       </div>
       <div className="delivery-schedule-footer">
-        <button type="button" className="secondary-button" onClick={add} disabled={!locations.length}>Adicionar outra entrega</button>
+        <button type="button" className="secondary-button" onClick={add} disabled={!deliveries[0]?.locationKey}>Adicionar outra entrega</button>
         <div className="delivery-coverage">
           {rows.map((row, index) => {
             const planned = deliveries.reduce((sum, delivery) => sum + decimal(delivery.allocations[row.key] ?? ""), 0);

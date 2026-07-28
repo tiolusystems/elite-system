@@ -13,16 +13,18 @@
    **Troca**. Troca exige o item do pedido original. Bonificação exige
    justificativa do vendedor.
 6. Em venda, selecione o **Local de entrega** entre propriedades,
-   estabelecimentos ou endereços ativos do cliente e informe a previsão.
-7. Use **Adicionar outra entrega** para programar mais de uma entrega quando
-   datas ou destinos forem diferentes.
-   Distribua integralmente a quantidade de cada item entre as entregas.
-8. Escolha primeiro o produto e depois a apresentação/embalagem cadastrada.
+   estabelecimentos ou endereços ativos do cliente.
+7. Escolha primeiro o produto e depois a apresentação/embalagem cadastrada.
+8. Informe quantidade e valor. O sistema calcula os litros do pedido depois
+   que houver pelo menos um item válido.
 9. Use **Adicionar item** para incluir outros produtos no mesmo pedido.
-10. Confira o resumo de cliente, documento, vendedor, locais, datas, itens,
+10. Na **Programação das entregas**, informe a previsão. Use **Adicionar outra
+    entrega** quando houver mais de uma entrega, data ou destino e distribua
+    integralmente a quantidade de cada item entre as entregas.
+11. Confira o resumo de cliente, documento, vendedor, locais, datas, itens,
     quantidades, valores e limite.
-11. Marque a confirmação e clique em **Enviar para liberação**.
-12. Consulte, na mesma tela, o histórico do cliente selecionado.
+12. Marque a confirmação e clique em **Enviar para liberação**.
+13. Consulte, na mesma tela, o histórico do cliente selecionado.
 
 Todo pedido fica como **Aguardando liberação**. Bonificação e mostruário não
 geram comissão. O vendedor não escolhe outro vendedor, não aumenta limite e

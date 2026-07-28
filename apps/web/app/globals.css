@@ -6752,7 +6752,7 @@ h1 {
 .orders-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
 .orders-heading h1 { margin: 3px 0 5px; }
 .orders-heading p, .panel-header p { margin: 4px 0 0; color: var(--brand-text-muted); }
-.orders-flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--brand-border); border-radius: 6px; background: var(--surface); }
+.orders-flow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--brand-border); border-radius: 6px; background: var(--surface); }
 .orders-flow span { padding: 11px 14px; border-right: 1px solid var(--brand-border); color: var(--brand-text-muted); font-size: 12px; font-weight: 750; }
 .orders-flow span:last-child { border-right: 0; }
 .orders-flow .is-active { border-top: 3px solid var(--brand-primary); color: var(--brand-text); }
@@ -6774,8 +6774,10 @@ h1 {
 .orders-credit-strip span { color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
 .orders-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 18px; border-bottom: 1px solid var(--brand-border); }
 .orders-form-grid textarea { resize: vertical; }
-.order-items-editor, .delivery-schedule-editor { display: grid; gap: 12px; margin: 0; padding: 18px; border: 0; border-bottom: 1px solid var(--brand-border); }
-.order-items-editor legend, .delivery-schedule-editor legend { padding: 0; font-size: 17px; font-weight: 800; }
+.order-items-editor, .delivery-location-editor, .delivery-schedule-editor { display: grid; gap: 12px; margin: 0; padding: 18px; border: 0; border-bottom: 1px solid var(--brand-border); }
+.order-items-editor legend, .delivery-location-editor legend, .delivery-schedule-editor legend { padding: 0; font-size: 17px; font-weight: 800; }
+.delivery-location-editor label { display: grid; gap: 5px; max-width: 720px; color: var(--brand-text-muted); font-size: 12px; font-weight: 750; }
+.delivery-location-editor small { overflow-wrap: anywhere; font-weight: 500; }
 .section-intro { margin: 0; color: var(--brand-text-muted); }
 .order-item-head, .order-item-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.15fr) minmax(100px, .45fr) minmax(120px, .5fr) minmax(115px, .48fr) 40px; gap: 10px; align-items: end; }
 .order-item-head { color: var(--brand-text-muted); font-size: 11px; font-weight: 800; }
@@ -6798,6 +6800,9 @@ h1 {
 .delivery-schedule-fields { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(180px, .5fr); gap: 12px; }
 .delivery-schedule-fields label, .delivery-allocation-list label { display: grid; gap: 5px; min-width: 0; color: var(--brand-text-muted); font-size: 12px; font-weight: 750; }
 .delivery-schedule-fields small { overflow-wrap: anywhere; font-weight: 500; }
+.delivery-primary-location { display: grid; gap: 5px; min-width: 0; align-content: start; }
+.delivery-primary-location > span { color: var(--brand-text-muted); font-size: 12px; font-weight: 750; }
+.delivery-primary-location > small { color: var(--brand-text-muted); }
 .delivery-allocation-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; padding-top: 12px; border-top: 1px solid var(--brand-border); }
 .delivery-allocation-copy { display: grid; gap: 3px; color: var(--brand-text); }
 .delivery-allocation-copy small, .delivery-allocation-result { color: var(--brand-text-muted); font-weight: 550; }
@@ -6990,7 +6995,6 @@ h1 {
   .orders-flow span { min-width: 0; border-top: 1px solid var(--brand-border); }
   .orders-flow span:nth-child(-n + 2) { border-top: 0; }
   .orders-flow span:nth-child(even) { border-right: 0; }
-  .orders-flow span:last-child { grid-column: 1 / -1; }
   .orders-search { grid-template-columns: 1fr; }
   .orders-credit-strip, .orders-form-grid { grid-template-columns: 1fr; }
   .finance-kpis, .finance-form-grid, .finance-adjust-grid { grid-template-columns: 1fr; }

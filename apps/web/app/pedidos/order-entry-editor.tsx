@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { DeliveryScheduleEditor, deliveriesCoverItems, deliveryScheduleIssues, type DeliveryDraft } from "@/app/pedidos/delivery-schedule-editor";
+import {
+  DeliveryLocationSelector,
+  DeliveryScheduleEditor,
+  deliveriesCoverItems,
+  deliveryScheduleIssues,
+  type DeliveryDraft
+} from "@/app/pedidos/delivery-schedule-editor";
 import { OrderItemsEditor, decimal, orderVolumeLiters, type OrderItemDraft } from "@/app/pedidos/order-items-editor";
 import type { DeliveryLocation, ExchangeSourceItem, PortfolioClient, SalesItem } from "@/lib/orders";
 
@@ -26,7 +32,7 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
   const [deliveries, setDeliveries] = useState<DeliveryDraft[]>([{
     key: 1,
     date: today,
-    locationKey: locations[0]?.key ?? "",
+    locationKey: "",
     allocations: { 1: "" }
   }]);
   const [observation, setObservation] = useState("");
@@ -93,8 +99,10 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
     row.presentationId && rows.findIndex((candidate) => candidate.presentationId === row.presentationId) !== index
   );
   const itemIssues = orderItemIssues(rows, duplicatedPresentation);
-  const scheduleComplete = deliveriesCoverItems(rows, deliveries);
-  const scheduleIssues = deliveryScheduleIssues(rows, deliveries, items);
+  const validRows = rows.filter(isValidOrderItem);
+  const hasValidItem = validRows.length > 0;
+  const scheduleComplete = itemIssues.length === 0 && deliveriesCoverItems(rows, deliveries);
+  const scheduleIssues = hasValidItem ? deliveryScheduleIssues(validRows, deliveries, items) : [];
   const submissionIssues = [...new Set([
     ...(!orderDate ? ["Informe a data do pedido."] : []),
     ...itemIssues,
@@ -104,7 +112,7 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
           ...scheduleIssues.filter((issue) => !issue.startsWith("Selecione o local da entrega"))
         ]
       : scheduleIssues),
-    ...(!confirmed ? ["Marque a confirmação da revisão do pedido."] : [])
+    ...(hasValidItem && !confirmed ? ["Marque a confirmação da revisão do pedido."] : [])
   ])];
   const saleReady = submissionIssues.length === 0;
 
@@ -123,12 +131,32 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
         <>
           <input type="hidden" name="itens_json" value={itemsPayload} />
           <input type="hidden" name="entregas_json" value={deliveriesPayload} />
-          <DeliveryScheduleEditor locations={locations} items={items} rows={rows} deliveries={deliveries} onChange={setDeliveries} orderDate={orderDate} />
+          <DeliveryLocationSelector
+            locations={locations}
+            value={deliveries[0]?.locationKey ?? ""}
+            onChange={(locationKey) => {
+              setDeliveries((current) => synchronizePrimaryLocation(current, rows, orderDate, locationKey));
+              setConfirmed(false);
+            }}
+          />
           <OrderItemsEditor items={items} rows={rows} onChange={(nextRows) => {
             setRows(nextRows);
             setDeliveries((current) => synchronizeDeliveries(current, nextRows, orderDate));
             setConfirmed(false);
           }} />
+          {hasValidItem ? (
+            <DeliveryScheduleEditor
+              locations={locations}
+              items={items}
+              rows={validRows}
+              deliveries={deliveries}
+              onChange={(nextDeliveries) => {
+                setDeliveries(nextDeliveries);
+                setConfirmed(false);
+              }}
+              orderDate={orderDate}
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -150,11 +178,11 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
         <p className="field-note wide-field">O banco verifica novamente a quantidade já trocada antes de gravar.</p>
       </div> : null}
 
-      {type === "venda" ? (
+      {type === "venda" && hasValidItem ? (
         <>
           <label className="wide-field orders-observation"><span>Observação comercial</span><textarea name="observacao" rows={3} value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Condição ou informação relevante" /></label>
           <section className="order-review-summary" aria-labelledby="order-review-title">
-            <div className="panel-header"><div><h3 id="order-review-title">4. Revisão</h3><p>Confira antes de enviar para liberação.</p></div><strong>{money(total)}</strong></div>
+            <div className="panel-header"><div><h3 id="order-review-title">5. Revisão</h3><p>Confira antes de enviar para liberação.</p></div><strong>{money(total)}</strong></div>
             <dl>
               <div><dt>Cliente</dt><dd>{client.clientName}</dd></div>
               <div><dt>Documento</dt><dd>{client.document ?? "Não informado"}</dd></div>
@@ -185,7 +213,7 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
       ) : null}
 
       <div className="form-footer">
-        <span>{type === "venda" ? "5. O pedido será criado bloqueado. O vendedor não altera limite nem libera o próprio pedido." : "A operação será registrada e ficará sujeita às alçadas existentes."}</span>
+        <span>{type === "venda" ? "6. O pedido será criado bloqueado. O vendedor não altera limite nem libera o próprio pedido." : "A operação será registrada e ficará sujeita às alçadas existentes."}</span>
         <button
           className="primary-button"
           type="submit"
@@ -234,6 +262,16 @@ function isNonNegativeDecimal(value: string) {
   return Number.isFinite(parsed) && parsed >= 0;
 }
 
+function isValidOrderItem(row: OrderItemDraft) {
+  return Boolean(
+    row.productId
+    && row.presentationId
+    && decimal(row.quantity) > 0
+    && row.unitPrice.trim()
+    && isNonNegativeDecimal(row.unitPrice)
+  );
+}
+
 function dateLabel(value: string) {
   if (!value) return "Data pendente";
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
@@ -251,4 +289,21 @@ function synchronizeDeliveries(current: DeliveryDraft[], rows: OrderItemDraft[],
       allocations
     };
   });
+}
+
+function synchronizePrimaryLocation(
+  current: DeliveryDraft[],
+  rows: OrderItemDraft[],
+  orderDate: string,
+  locationKey: string
+) {
+  if (!current.length) {
+    return [{
+      key: 1,
+      date: orderDate,
+      locationKey,
+      allocations: Object.fromEntries(rows.map((row) => [row.key, row.quantity]))
+    }];
+  }
+  return current.map((delivery, index) => index === 0 ? { ...delivery, locationKey } : delivery);
 }

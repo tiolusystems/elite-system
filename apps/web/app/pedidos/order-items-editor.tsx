@@ -30,6 +30,7 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
   }, [items]);
   const total = rows.reduce((sum, row) => sum + decimal(row.quantity) * decimal(row.unitPrice), 0);
   const totalVolumeLiters = orderVolumeLiters(rows, items);
+  const hasVolumeInput = rows.some((row) => row.presentationId && decimal(row.quantity) > 0);
 
   function change(key: number, field: keyof Omit<OrderItemDraft, "key">, value: string) {
     onChange(rows.map((row) => {
@@ -117,7 +118,9 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
         <div>
           <span>Total do pedido</span>
           <strong>{money(total)}</strong>
-          <small>{totalVolumeLiters === null ? "Litros pendentes de configuração" : `${number(totalVolumeLiters)} L no pedido`}</small>
+          {hasVolumeInput ? (
+            <small>{totalVolumeLiters === null ? "Volume da apresentação pendente no cadastro" : `${number(totalVolumeLiters)} L no pedido`}</small>
+          ) : null}
         </div>
       </div>
     </fieldset>

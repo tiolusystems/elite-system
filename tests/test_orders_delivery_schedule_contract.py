@@ -40,8 +40,11 @@ class OrdersDeliveryScheduleContractTest(unittest.TestCase):
         action = (ROOT / "apps/web/app/pedidos/actions.ts").read_text(encoding="utf-8")
         css = (ROOT / "apps/web/app/globals.css").read_text(encoding="utf-8")
         self.assertIn("Sua carteira", page)
-        self.assertIn("2. Local e entrega", page)
-        self.assertIn("Local de entrega", deliveries)
+        self.assertIn("2. Local de entrega", page)
+        self.assertIn("4. Entregas", page)
+        self.assertIn("6. Liberação", page)
+        self.assertIn("DeliveryLocationSelector", deliveries)
+        self.assertIn("4. Programação das entregas", deliveries)
         self.assertIn("Adicionar outra entrega", deliveries)
         self.assertIn("Selecione o produto", items)
         self.assertIn("Selecione a apresentação", items)
@@ -53,7 +56,18 @@ class OrdersDeliveryScheduleContractTest(unittest.TestCase):
         self.assertIn("Nesta entrega:", deliveries)
         self.assertIn("Volume programado:", deliveries)
         self.assertIn("volumeLiters", deliveries)
-        self.assertIn("Litros pendentes de configuração", items)
+        self.assertIn("hasVolumeInput", items)
+        self.assertNotIn("Litros pendentes de configuração", items)
+        self.assertIn("const validRows = rows.filter(isValidOrderItem)", entry)
+        self.assertIn("{hasValidItem ? (", entry)
+        self.assertLess(
+            entry.index("          <DeliveryLocationSelector"),
+            entry.index("          <OrderItemsEditor")
+        )
+        self.assertLess(
+            entry.index("          <OrderItemsEditor"),
+            entry.index("            <DeliveryScheduleEditor")
+        )
         self.assertIn("@media (max-width: 1100px)", css)
         self.assertIn(".order-item-head { display: none; }", css)
         self.assertIn("repeat(2, minmax(0, 1fr)) 40px", css)
@@ -64,6 +78,13 @@ class OrdersDeliveryScheduleContractTest(unittest.TestCase):
         self.assertIn('query.set("pagina"', action)
         self.assertIn("create_com_pedido_vendedor_programado_idempotente", action)
         self.assertNotIn('name="propriedade"', entry)
+
+    def test_delivery_schedule_stays_hidden_until_an_item_is_valid(self):
+        entry = (ROOT / "apps/web/app/pedidos/order-entry-editor.tsx").read_text(encoding="utf-8")
+        self.assertIn("const hasValidItem = validRows.length > 0", entry)
+        self.assertIn("rows={validRows}", entry)
+        self.assertIn('type === "venda" && hasValidItem', entry)
+        self.assertIn("hasValidItem && !confirmed", entry)
 
     def test_manual_explains_operational_effects(self):
         manual = (ROOT / "docs/manuais/pedidos/PEDIDOS_E_APROVACAO.md").read_text(encoding="utf-8")

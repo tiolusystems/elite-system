@@ -33,7 +33,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
       {workspace.error ? <div className="notice-panel warning"><strong>Não foi possível carregar</strong><span>{workspace.error}</span></div> : null}
 
       <section className="orders-flow" aria-label="Fluxo do pedido">
-        <span className="is-active">1. Cliente</span><span>2. Local e entrega</span><span>3. Itens</span><span>4. Revisão</span><span>5. Liberação</span>
+        <span className="is-active">1. Cliente</span><span>2. Local de entrega</span><span>3. Itens</span><span>4. Entregas</span><span>5. Revisão</span><span>6. Liberação</span>
       </section>
 
       <section className="orders-seller-layout">

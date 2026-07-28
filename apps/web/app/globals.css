@@ -2129,8 +2129,18 @@ h1 {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .order-record-volume,
+  .order-record-identity {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .order-record-volume {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
   .order-record-reservation {
+    grid-column: 2;
     grid-row: 2;
   }
 
@@ -2140,8 +2150,9 @@ h1 {
   }
 
   .order-record-expand {
-    grid-column: 2;
-    grid-row: 2;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: end;
   }
 
   .order-record-context,
@@ -7632,6 +7643,78 @@ h1 {
   gap: 18px;
 }
 
+.controlled-procedures-workspace .catalog-record-list {
+  gap: 1px;
+}
+
+.controlled-procedures-workspace .catalog-record {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.controlled-procedures-workspace .catalog-record:first-child {
+  border-top: 0;
+}
+
+.controlled-procedures-workspace .catalog-record > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.controlled-procedures-workspace .catalog-record > div:first-child > span:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.controlled-procedures-workspace .catalog-record p {
+  margin: 0;
+}
+
+.controlled-procedures-workspace .catalog-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.controlled-procedures-workspace .catalog-record-actions a {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.controlled-procedure-detail .detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.controlled-procedure-detail .detail-grid > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 16px;
+  border-right: 1px solid var(--border);
+}
+
+.controlled-procedure-detail .detail-grid > div:last-child {
+  border-right: 0;
+}
+
+.controlled-procedure-detail .detail-grid span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.controlled-procedure-detail .detail-grid strong {
+  overflow-wrap: anywhere;
+}
+
 .controlled-procedure-content {
   display: grid;
   gap: 8px;
@@ -7644,6 +7727,35 @@ h1 {
 .controlled-procedure-content p {
   margin: 0 0 10px;
   white-space: pre-wrap;
+}
+
+.controlled-procedures-workspace .record-history {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.controlled-procedures-workspace .record-history h3 {
+  margin: 0;
+}
+
+.controlled-procedures-workspace .record-history a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+}
+
+.controlled-procedures-workspace .record-history a:hover {
+  background: var(--surface-muted);
+}
+
+.controlled-procedures-workspace .record-history small {
+  color: var(--muted);
 }
 
 .controlled-procedure-actions {
@@ -7732,6 +7844,36 @@ h1 {
   .controlled-procedure-unlink,
   .quality-procedure-check {
     grid-template-columns: 1fr;
+  }
+
+  .controlled-procedures-workspace .catalog-record > div:first-child,
+  .controlled-procedures-workspace .catalog-record-actions {
+    align-items: flex-start;
+  }
+
+  .controlled-procedures-workspace .catalog-record-actions {
+    flex-direction: column;
+  }
+
+  .controlled-procedure-detail .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .controlled-procedure-detail .detail-grid > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .controlled-procedure-detail .detail-grid > div:last-child {
+    border-bottom: 0;
+  }
+
+  .controlled-procedures-workspace .record-history a {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .controlled-procedures-workspace .record-history small {
+    grid-column: 1 / -1;
   }
 
   .controlled-procedure-actions form,

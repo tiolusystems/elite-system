@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getAuthStatus } from "@/lib/auth";
 import { getRomaneioDashboard } from "@/lib/romaneios";
 
 export default async function ImprimirRomaneioPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const dashboard = await getRomaneioDashboard();
+  const [auth, dashboard] = await Promise.all([getAuthStatus(), getRomaneioDashboard()]);
   const romaneio = dashboard.romaneios.find((entry) => entry.id === Number(id));
   if (!romaneio) notFound();
+  const printedBy = auth.profile?.displayName ?? auth.email ?? "Sessão não identificada";
 
   return (
     <main className="print-document">
@@ -34,7 +36,8 @@ export default async function ImprimirRomaneioPage({ params }: { params: Promise
       {romaneio.carga?.pendencias.length ? <p><strong>Cálculo pendente:</strong> {romaneio.carga.pendencias.join(", ")}.</p> : null}
       <p className="print-hidden">Use a opção Imprimir do navegador. O documento pode ser emitido antes ou depois da NF.</p>
       <footer className="print-document-footer">
-        <p><strong>Emitido no sistema por:</strong> {romaneio.emissorNome}</p>
+        <p><strong>Impresso por:</strong> {printedBy}</p>
+        <p><strong>Registrado por:</strong> {romaneio.emissorNome}</p>
         <p><strong>Registro original:</strong> {formatDateTime(romaneio.createdAt)}</p>
         <p><strong>Impresso em:</strong> {formatDateTime(new Date().toISOString())}</p>
         <p>Elite System · documento gerado eletronicamente</p>

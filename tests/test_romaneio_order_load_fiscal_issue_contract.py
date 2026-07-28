@@ -126,6 +126,9 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
         manual = MANUAL_PAGE.read_text(encoding="utf-8")
         self.assertIn("RomaneioStatusGroups", page)
         self.assertIn("Como fazer um Romaneio", manual)
+        self.assertIn("getAuthStatus", print_page)
+        self.assertIn("Impresso por:", print_page)
+        self.assertIn("Registrado por:", print_page)
         self.assertIn("romaneio.emissorNome", print_page)
         self.assertIn("print-document-footer", print_page)
 

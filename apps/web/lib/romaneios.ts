@@ -387,7 +387,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         canceladoAt: nullableString(row.cancelado_at),
         estornadoAt: nullableString(row.estornado_at),
         createdAt: String(row.created_at),
-        emissorNome: userNameById.get(String(row.created_by)) ?? "Usuario nao identificado",
+        emissorNome: userNameById.get(String(row.created_by)) ?? "Não informado no registro original",
         items: itemsByRomaneio.get(id) ?? [],
         movements: movementsByRomaneio.get(id) ?? [],
         logistics: logisticsByRomaneio.get(id) ?? null,

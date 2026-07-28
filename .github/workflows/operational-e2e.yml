@@ -2,9 +2,6 @@ name: Operational E2E and traceability
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/0044-production-module-release
 
 jobs:
   elite-validation-e2e:

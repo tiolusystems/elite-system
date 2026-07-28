@@ -5,14 +5,14 @@ Atualizado em: 2026-07-28
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `cfab4d1`;
-- frontend funcional ativo: `cfab4d1`;
+- HEAD funcional publicado: `8463494`;
+- frontend funcional ativo: `8463494`;
 - Supabase de homologacao: ledger alinhado de `0001` a `0116`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_CtRjmDcYBNEVRwTMQMaZjzxgECra`;
+- deployment estavel de staging: `dpl_EXeuP2CQGXAbP6xdShyijtbahAFr`;
 - deployment funcional anterior preservado para rollback:
-  `dpl_5x84zyyEr516bhPo5fHhz86DbgBG`;
+  `dpl_D1iF1xVjLgS8UcDRoAcfU1HFysC8`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
@@ -37,6 +37,9 @@ UX-01I - Pedidos, itens e programacao de entregas:
   governados, sem carregar todos os clientes no navegador;
 - o rascunho permanece no navegador quando uma validacao falha, e a consulta
   preserva pagina, busca e cliente selecionado;
+- `8463494` passou a exibir o volume total do pedido e de cada entrega em
+  litros, a cobertura por item e os impedimentos objetivos antes do envio para
+  liberacao, sem alterar a transacao ou as regras de negocio;
 - a CI `30380140238` aprovou `database-contract`, `python-tests` e
   `web-contract`; a instalacao limpa incluiu a `0116`;
 - o dry-run remoto listou somente a `0116`, aplicada exclusivamente no
@@ -51,10 +54,18 @@ UX-01I - Pedidos, itens e programacao de entregas:
 - o E2E descartavel `30381872116`, tentativa 2, reconstruiu `0001` a `0116`,
   aprovou as quatro cadeias SQL, criou 11 usuarios sinteticos, executou login
   real e aprovou 40 testes Playwright nas cinco resolucoes;
+- a CI `30394990679` aprovou `database-contract`, `python-tests` e
+  `web-contract` para a correcao final;
+- o deployment `dpl_EXeuP2CQGXAbP6xdShyijtbahAFr` publicou `8463494` no
+  dominio estavel; o rodape confirmou o SHA e `/api/health` respondeu
+  `status=ok` e `backendConfigured=true`;
+- a correcao final foi conferida em notebook, `390x844` e `360x800`, sem
+  rolagem horizontal, com volumes e motivos de bloqueio legiveis;
 - nenhuma conta, senha ou dado operacional foi criado no staging para
   contornar a autenticacao; o ambiente descartavel foi encerrado sem backup;
-- UX-01I esta tecnicamente validado no staging. Nenhuma homologacao visual foi
-  atribuida a Luciano.
+- Luciano homologou explicitamente a correcao visual da programacao de
+  entregas; UX-01I esta tecnicamente validado, publicado e encerrado no
+  staging.
 
 Macrociclo noturno PROD-UX-03 -> UX-01H:
 

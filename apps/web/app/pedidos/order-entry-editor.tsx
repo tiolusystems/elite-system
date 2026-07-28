@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { DeliveryScheduleEditor, deliveriesCoverItems, type DeliveryDraft } from "@/app/pedidos/delivery-schedule-editor";
-import { OrderItemsEditor, decimal, type OrderItemDraft } from "@/app/pedidos/order-items-editor";
+import { DeliveryScheduleEditor, deliveriesCoverItems, deliveryScheduleIssues, type DeliveryDraft } from "@/app/pedidos/delivery-schedule-editor";
+import { OrderItemsEditor, decimal, orderVolumeLiters, type OrderItemDraft } from "@/app/pedidos/order-items-editor";
 import type { DeliveryLocation, ExchangeSourceItem, PortfolioClient, SalesItem } from "@/lib/orders";
 
 type Props = {
@@ -88,14 +88,25 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
     };
   }));
   const total = rows.reduce((sum, row) => sum + decimal(row.quantity) * decimal(row.unitPrice), 0);
+  const totalVolumeLiters = orderVolumeLiters(rows, items);
   const duplicatedPresentation = rows.some((row, index) =>
     row.presentationId && rows.findIndex((candidate) => candidate.presentationId === row.presentationId) !== index
   );
-  const validItems = rows.length > 0 && rows.every((row) =>
-    row.productId && row.presentationId && decimal(row.quantity) > 0 && decimal(row.unitPrice) >= 0
-  ) && !duplicatedPresentation;
+  const itemIssues = orderItemIssues(rows, duplicatedPresentation);
   const scheduleComplete = deliveriesCoverItems(rows, deliveries);
-  const saleReady = validItems && scheduleComplete && locations.length > 0 && confirmed;
+  const scheduleIssues = deliveryScheduleIssues(rows, deliveries, items);
+  const submissionIssues = [...new Set([
+    ...(!orderDate ? ["Informe a data do pedido."] : []),
+    ...itemIssues,
+    ...(!locations.length
+      ? [
+          "Cadastre um local de entrega ativo para este cliente.",
+          ...scheduleIssues.filter((issue) => !issue.startsWith("Selecione o local da entrega"))
+        ]
+      : scheduleIssues),
+    ...(!confirmed ? ["Marque a confirmação da revisão do pedido."] : [])
+  ])];
+  const saleReady = submissionIssues.length === 0;
 
   return (
     <>
@@ -151,6 +162,7 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
               <div><dt>Limite disponível</dt><dd>{moneyNullable(client.availableLimit)}</dd></div>
               <div><dt>Itens</dt><dd>{rows.length}</dd></div>
               <div><dt>Entregas</dt><dd>{deliveries.length}</dd></div>
+              <div><dt>Volume total</dt><dd>{totalVolumeLiters === null ? "Pendente de configuração" : `${number(totalVolumeLiters)} L`}</dd></div>
             </dl>
             <div className="order-review-deliveries">
               {deliveries.map((delivery, index) => {
@@ -161,12 +173,28 @@ export function OrderEntryEditor({ client, items, exchangeItems, locations, resu
             {!scheduleComplete ? <p className="field-error">Distribua integralmente a quantidade de cada item entre as entregas.</p> : null}
             <label className="order-confirmation"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>Conferi cliente, locais, datas, itens, quantidades e valores.</span></label>
           </section>
+          <section className={`order-submit-readiness ${saleReady ? "is-ready" : "is-blocked"}`} id="order-submit-status" aria-live="polite">
+            <strong>{saleReady ? "Pedido pronto para envio" : "Antes de enviar para liberação"}</strong>
+            {saleReady ? (
+              <span>Todos os dados obrigatórios e a programação de entrega foram conferidos.</span>
+            ) : (
+              <ul>{submissionIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
+            )}
+          </section>
         </>
       ) : null}
 
       <div className="form-footer">
         <span>{type === "venda" ? "5. O pedido será criado bloqueado. O vendedor não altera limite nem libera o próprio pedido." : "A operação será registrada e ficará sujeita às alçadas existentes."}</span>
-        <button className="primary-button" type="submit" disabled={type === "troca" ? !sourceItem : type === "venda" ? !saleReady : false}>Enviar para liberação</button>
+        <button
+          className="primary-button"
+          type="submit"
+          disabled={type === "troca" ? !sourceItem : type === "venda" ? !saleReady : false}
+          aria-describedby={type === "venda" ? "order-submit-status" : undefined}
+          title={type === "venda" && !saleReady ? submissionIssues[0] : undefined}
+        >
+          Enviar para liberação
+        </button>
       </div>
     </>
   );
@@ -178,6 +206,32 @@ function money(value: number) {
 
 function moneyNullable(value: number | null) {
   return value === null ? "Não informado" : money(value);
+}
+
+function number(value: number) {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value);
+}
+
+function orderItemIssues(rows: OrderItemDraft[], duplicatedPresentation: boolean) {
+  const issues: string[] = [];
+  if (!rows.length) return ["Adicione ao menos um item ao pedido."];
+  rows.forEach((row, index) => {
+    const label = `item ${index + 1}`;
+    if (!row.productId) issues.push(`Selecione o produto do ${label}.`);
+    if (!row.presentationId) issues.push(`Selecione a apresentação do ${label}.`);
+    if (decimal(row.quantity) <= 0) issues.push(`Informe uma quantidade maior que zero no ${label}.`);
+    if (!row.unitPrice.trim()) issues.push(`Informe o valor unitário do ${label}.`);
+    else if (!isNonNegativeDecimal(row.unitPrice)) issues.push(`Informe um valor unitário válido no ${label}.`);
+  });
+  if (duplicatedPresentation) issues.push("Remova a apresentação repetida e ajuste a quantidade no item existente.");
+  return issues;
+}
+
+function isNonNegativeDecimal(value: string) {
+  const trimmed = value.trim();
+  const normalized = trimmed.includes(",") ? trimmed.replace(/\./g, "").replace(",", ".") : trimmed;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 0;
 }
 
 function dateLabel(value: string) {

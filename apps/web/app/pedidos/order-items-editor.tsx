@@ -29,6 +29,7 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
     return [...unique.values()].sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
   }, [items]);
   const total = rows.reduce((sum, row) => sum + decimal(row.quantity) * decimal(row.unitPrice), 0);
+  const totalVolumeLiters = orderVolumeLiters(rows, items);
 
   function change(key: number, field: keyof Omit<OrderItemDraft, "key">, value: string) {
     onChange(rows.map((row) => {
@@ -113,7 +114,11 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
       })}
       <div className="order-items-footer">
         <button type="button" className="secondary-button" onClick={add}>Adicionar item</button>
-        <div><span>Total do pedido</span><strong>{money(total)}</strong></div>
+        <div>
+          <span>Total do pedido</span>
+          <strong>{money(total)}</strong>
+          <small>{totalVolumeLiters === null ? "Litros pendentes de configuração" : `${number(totalVolumeLiters)} L no pedido`}</small>
+        </div>
       </div>
     </fieldset>
   );
@@ -124,6 +129,18 @@ export function decimal(value: string) {
   const normalized = trimmed.includes(",") ? trimmed.replace(/\./g, "").replace(",", ".") : trimmed;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function orderVolumeLiters(rows: OrderItemDraft[], items: SalesItem[]) {
+  if (!rows.length) return null;
+  let total = 0;
+  for (const row of rows) {
+    const item = items.find((candidate) => candidate.id === Number(row.presentationId)) ?? null;
+    const quantity = decimal(row.quantity);
+    if (!item || item.volumeLiters === null || quantity <= 0) return null;
+    total += quantity * item.volumeLiters;
+  }
+  return total;
 }
 
 function money(value: number) {

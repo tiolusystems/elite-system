@@ -56,10 +56,16 @@ export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onC
         </div>
       ) : null}
       <div className="delivery-schedule-list">
-        {deliveries.map((delivery, deliveryIndex) => (
-          <article className="delivery-schedule-card" key={delivery.key}>
+        {deliveries.map((delivery, deliveryIndex) => {
+          const totalLiters = deliveryVolumeLiters(delivery, rows, items);
+          return (
+            <article className="delivery-schedule-card" key={delivery.key}>
             <div className="delivery-schedule-heading">
-              <div><strong>Entrega {deliveryIndex + 1}</strong><span>Distribua abaixo as quantidades desta entrega.</span></div>
+              <div>
+                <strong>Entrega {deliveryIndex + 1}</strong>
+                <span>Distribua abaixo as quantidades desta entrega.</span>
+                <small>{totalLiters === null ? "Volume programado indisponível" : `Volume programado: ${number(totalLiters)} L`}</small>
+              </div>
               {deliveries.length > 1 ? <button type="button" className="secondary-button" onClick={() => remove(delivery.key)}>Remover entrega</button> : null}
             </div>
             <div className="delivery-schedule-fields">
@@ -83,9 +89,19 @@ export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onC
             <div className="delivery-allocation-list">
               {rows.map((row, itemIndex) => {
                 const item = items.find((candidate) => candidate.id === Number(row.presentationId)) ?? null;
+                const ordered = decimal(row.quantity);
+                const allocated = decimal(delivery.allocations[row.key] ?? "");
                 return (
                   <label key={row.key}>
-                    <span>{item ? `${item.productName} - ${item.packaging}` : `Item ${itemIndex + 1}`}</span>
+                    <span className="delivery-allocation-copy">
+                      <strong>{item ? `${item.productName} - ${item.packaging}` : `Item ${itemIndex + 1}`}</strong>
+                      <small>
+                        Pedido: {number(ordered)} un.
+                        {item?.volumeLiters === null || item?.volumeLiters === undefined
+                          ? " · Litros não configurados"
+                          : ` · ${number(ordered * item.volumeLiters)} L`}
+                      </small>
+                    </span>
                     <input
                       inputMode="decimal"
                       min="0"
@@ -94,12 +110,19 @@ export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onC
                       aria-label={`Quantidade do item ${itemIndex + 1} na entrega ${deliveryIndex + 1}`}
                       placeholder="0"
                     />
+                    <small className="delivery-allocation-result">
+                      Nesta entrega: {number(allocated)} un.
+                      {item?.volumeLiters === null || item?.volumeLiters === undefined
+                        ? " · Litros não configurados"
+                        : ` · ${number(allocated * item.volumeLiters)} L`}
+                    </small>
                   </label>
                 );
               })}
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
       <div className="delivery-schedule-footer">
         <button type="button" className="secondary-button" onClick={add} disabled={!locations.length}>Adicionar outra entrega</button>
@@ -108,9 +131,16 @@ export function DeliveryScheduleEditor({ locations, items, rows, deliveries, onC
             const planned = deliveries.reduce((sum, delivery) => sum + decimal(delivery.allocations[row.key] ?? ""), 0);
             const ordered = decimal(row.quantity);
             const difference = ordered - planned;
+            const item = items.find((candidate) => candidate.id === Number(row.presentationId)) ?? null;
             return (
               <span className={Math.abs(difference) < 0.000001 && ordered > 0 ? "is-complete" : "is-pending"} key={row.key}>
-                Item {index + 1}: {number(planned)} de {number(ordered)}
+                <strong>{item?.productName ?? `Item ${index + 1}`}</strong>
+                <small>{number(planned)} de {number(ordered)} un.</small>
+                <small>
+                  {item?.volumeLiters === null || item?.volumeLiters === undefined
+                    ? "Litros não configurados"
+                    : `${number(planned * item.volumeLiters)} de ${number(ordered * item.volumeLiters)} L`}
+                </small>
               </span>
             );
           })}
@@ -128,6 +158,42 @@ export function deliveriesCoverItems(rows: OrderItemDraft[], deliveries: Deliver
     const planned = deliveries.reduce((sum, delivery) => sum + decimal(delivery.allocations[row.key] ?? ""), 0);
     return ordered > 0 && Math.abs(ordered - planned) < 0.000001;
   });
+}
+
+export function deliveryScheduleIssues(rows: OrderItemDraft[], deliveries: DeliveryDraft[], items: SalesItem[] = []) {
+  const issues: string[] = [];
+  if (!rows.length) issues.push("Adicione ao menos um item ao pedido.");
+  if (!deliveries.length) issues.push("Adicione ao menos uma entrega.");
+  deliveries.forEach((delivery, index) => {
+    if (!delivery.locationKey) issues.push(`Selecione o local da entrega ${index + 1}.`);
+    if (!delivery.date) issues.push(`Informe a previsão da entrega ${index + 1}.`);
+  });
+  rows.forEach((row, index) => {
+    const ordered = decimal(row.quantity);
+    const planned = deliveries.reduce((sum, delivery) => sum + decimal(delivery.allocations[row.key] ?? ""), 0);
+    if (ordered <= 0) return;
+    const difference = ordered - planned;
+    if (Math.abs(difference) < 0.000001) return;
+    const item = items.find((candidate) => candidate.id === Number(row.presentationId)) ?? null;
+    const label = item ? `${item.productName} - ${item.packaging}` : `item ${index + 1}`;
+    issues.push(difference > 0
+      ? `Distribua mais ${number(difference)} un. de ${label}.`
+      : `Reduza ${number(Math.abs(difference))} un. de ${label} nas entregas.`
+    );
+  });
+  return issues;
+}
+
+export function deliveryVolumeLiters(delivery: DeliveryDraft, rows: OrderItemDraft[], items: SalesItem[]) {
+  let total = 0;
+  for (const row of rows) {
+    const allocated = decimal(delivery.allocations[row.key] ?? "");
+    if (allocated <= 0) continue;
+    const item = items.find((candidate) => candidate.id === Number(row.presentationId)) ?? null;
+    if (!item || item.volumeLiters === null) return null;
+    total += allocated * item.volumeLiters;
+  }
+  return total;
 }
 
 function locationType(value: string) {

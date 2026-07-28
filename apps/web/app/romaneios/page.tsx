@@ -402,7 +402,7 @@ function numberOrDash(value: number | null): string {
 }
 
 function labelFromMap(value: string, labels: Record<string, string>): string {
-  return labels[value] ?? "Estado nao reconhecido";
+  return labels[value] ?? "Estado não reconhecido";
 }
 
 function romaneioStatusLabel(value: string): string {
@@ -430,7 +430,12 @@ function romaneioItemStatusLabel(value: string): string {
 }
 
 function reservationStatusLabel(value: string): string {
-  return labelFromMap(value, { ativa: "Ativa", baixada: "Baixada", liberada: "Liberada" });
+  return labelFromMap(value, {
+    ativa: "Ativa",
+    baixada: "Baixada",
+    liberada: "Liberada",
+    estornada: "Estornada"
+  });
 }
 
 function fiscalStatusLabel(value: string): string {
@@ -448,7 +453,12 @@ function fiscalDocumentTypeLabel(value: string): string {
 }
 
 function movementTypeLabel(value: string): string {
-  return labelFromMap(value, { saida_romaneio: "Saida por romaneio", estorno_saida: "Estorno de saida" });
+  return labelFromMap(value, {
+    baixa: "Baixa física",
+    estorno: "Estorno da baixa",
+    saida_romaneio: "Saída por Romaneio",
+    estorno_saida: "Estorno da saída"
+  });
 }
 
 function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {

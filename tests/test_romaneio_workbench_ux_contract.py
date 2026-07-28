@@ -55,6 +55,11 @@ class RomaneioWorkbenchUxContractTests(unittest.TestCase):
         self.assertIn("Registrar a referência fiscal não baixa estoque", self.manuals)
         self.assertIn("Confirme o Romaneio para registrar a saída física", self.manuals)
 
+    def test_historical_reservations_and_movements_have_pt_br_labels(self) -> None:
+        self.assertIn('estornada: "Estornada"', self.page)
+        self.assertIn('baixa: "Baixa física"', self.page)
+        self.assertIn('estorno: "Estorno da baixa"', self.page)
+
 
 if __name__ == "__main__":
     unittest.main()

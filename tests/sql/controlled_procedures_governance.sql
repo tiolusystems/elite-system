@@ -121,6 +121,8 @@ declare
   v_pop_version bigint;
   v_pop_id bigint;
   v_product_id bigint;
+  v_unit_id bigint;
+  v_mp_id bigint;
   v_formula_id bigint;
   v_op_id bigint;
   v_snapshot record;
@@ -157,17 +159,34 @@ begin
     p_status => 'active',
     p_prazo_validade_meses => 12
   );
+  select id into v_unit_id
+    from public.cad_unidades_medida
+   where codigo = 'kg_l_produzido'
+     and status = 'active';
+  v_mp_id := public.create_cad_materia_prima_governada(
+    p_nome => 'Materia-prima sintetica POP 0115',
+    p_nome_norm => 'MATERIA PRIMA SINTETICA POP 0115',
+    p_sku_corrigido => 'MP-POP-0115',
+    p_unidade_base_estoque_id => v_unit_id,
+    p_status => 'active'
+  );
   v_formula_id := public.create_pcp_formula_versao_idempotente(
     '11500000-0000-4000-8000-000000000010',
     v_product_id,
-    'mapa',
-    'Formula documental sintetica POP 0115',
-    '[]'::jsonb,
-    'Formula documental sem movimento de estoque'
+    'producao',
+    'Formula operacional sintetica POP 0115',
+    jsonb_build_array(jsonb_build_object(
+      'tipo_componente', 'MP',
+      'materia_prima_id', v_mp_id,
+      'quantidade', 1,
+      'unidade_id', v_unit_id,
+      'unidade', 'kg_l_produzido'
+    )),
+    'Formula de um litro para testar o congelamento'
   );
   perform public.activate_pcp_formula_versao(
     v_formula_id,
-    'Ativacao sintetica da formula documental'
+    'Ativacao sintetica da formula operacional'
   );
   perform public.set_pcp_pop_applicability(
     v_pop_version,
@@ -180,9 +199,9 @@ begin
   v_op_id := public.create_pcp_op_idempotente(
     '11500000-0000-4000-8000-000000000011',
     v_formula_id,
-    'mapa_documental',
+    'estoque',
     1,
-    'OP documental sintetica para congelamento de POP'
+    'OP operacional sintetica para congelamento de POP'
   );
 
   select * into v_snapshot

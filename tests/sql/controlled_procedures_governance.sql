@@ -151,7 +151,7 @@ begin
   );
 
   v_product_id := public.create_cad_produto_base_governado(
-    p_codigo_produto => 'POP-PA-0115',
+    p_codigo_produto => '9115',
     p_nome => 'Produto sintetico POP 0115',
     p_grupo_id => null,
     p_status => 'active',

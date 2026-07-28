@@ -1,22 +1,59 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-27
+Atualizado em: 2026-07-28
 
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `3f18eb6`;
-- frontend funcional ativo: `098b5ea`;
-- Supabase de homologacao: ledger alinhado de `0001` a `0114`;
+- HEAD funcional publicado: `ae091b9`;
+- frontend funcional ativo: `ae091b9`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0115`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_BRHbYKEDG4BM3L7WLVUyAQUoyuDg`;
-- deployment anterior ao UX-01G preservado para rollback:
-  `dpl_DFW1RKDuyWi5Ks1UnZg4fDoGDex2`;
+- deployment estavel de staging: `dpl_4KAcP1iz9B3XbFzfx8WvvQn2Py4L`;
+- deployment funcional anterior preservado para rollback:
+  `dpl_CzhRWnV2KARsvoFJF3LuFFwrF5rV`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
-## Fechamento mais recente
+## Tarefa concluida mais recente
+
+Macrociclo noturno PROD-UX-03 -> UX-01H:
+
+- a migration `0115_govern_controlled_procedures.sql` criou o catalogo
+  controlado de POPs no dominio PCP/Controle de Qualidade, sem novo modulo;
+- versoes publicadas sao imutaveis, alteracoes geram nova revisao e as
+  transicoes de estado e aplicabilidade sao auditadas;
+- uma OP nova congela codigo, titulo, revisao e vigencia dos POPs aplicaveis;
+- a impressao da OP apresenta somente as referencias dos procedimentos, sem
+  reproduzir o seu conteudo integral;
+- o CQ consulta as referencias congeladas e registra conformidade, desvio ou
+  nao conformidade sem incorporar um editor de POP;
+- participantes digitais permanecem vinculados a pessoas cadastradas por ID e
+  as assinaturas operacionais da impressao continuam fisicas;
+- `UX-01H - Romaneio` permanece na rota canonica: parte do pedido com saldo,
+  permite consulta previa de carga, reserva por item/lote, gravacao explicita e
+  impressao antes ou depois da referencia fiscal externa;
+- a correcao `ae091b9` eliminou o estouro horizontal das linhas de assinatura
+  da OP impressa;
+- OP impressa e Romaneio foram validados em `1920x1080`, `1366x768`,
+  `768x1024`, `390x844` e `360x800`, sem rolagem horizontal;
+- a CI `30357962313` aprovou `database-contract`, `python-tests` e
+  `web-contract`, incluindo instalacao limpa de `0001` a `0115`;
+- o ledger remoto confirmou `0115` e o deployment
+  `dpl_4KAcP1iz9B3XbFzfx8WvvQn2Py4L` publicou `ae091b9` no dominio estavel;
+- `/api/health` respondeu `status=ok` e `backendConfigured=true`;
+- o ensaio governado criou um POP e uma OP sinteticos: a OP foi cancelada, a
+  aplicabilidade foi encerrada, o POP foi inativado, as seis alçadas temporarias
+  foram removidas e o perfil tecnico foi inativado;
+- POP, versao publicada, OP cancelada e eventos permanecem como evidencias
+  sinteticas append-only; nenhum fato historico foi apagado;
+- a execucao manual completa do workflow Playwright nao foi disparada porque o
+  `workflow_dispatch` nao esta disponivel na branch fora do ramo padrao e o
+  Docker local estava indisponivel; CI descartavel, contratos SQL e o smoke
+  autenticado online cobriram o bloco alterado;
+- PROD-UX-03, POPs e UX-01H estao tecnicamente validados no staging. Nenhuma
+  homologacao visual foi atribuida a Luciano.
 
 Rollout governado e ensaio total `HOM-E2E-20260727-RG01`:
 
@@ -82,7 +119,7 @@ O ledger remoto confirmou `0107` e o health-check permaneceu saudavel depois da
 aplicacao. O aviso de cache `pg-delta` da CLI ocorreu depois da execucao SQL e
 nao alterou o ledger nem a disponibilidade do backend.
 
-## Tarefa concluida mais recente
+## Tarefa concluida anteriormente
 
 UX-01G - Qualidade, participantes e Ordem de Producao:
 
@@ -111,21 +148,21 @@ UX-01G - Qualidade, participantes e Ordem de Producao:
 - o deployment `dpl_BRHbYKEDG4BM3L7WLVUyAQUoyuDg` publica o commit `098b5ea`
   no projeto `elite-system-staging`, com health-check saudavel.
 
-Decisao arquitetural de POPs:
+Implementacao da decisao arquitetural de POPs:
 
 - POPs pertencem ao PCP/Controle de Qualidade e nao criam novo modulo;
-- localizacao funcional futura: `Controle -> Qualidade -> POPs e documentos
+- localizacao funcional: `Controle -> Qualidade -> POPs e documentos
   controlados`;
-- versoes publicadas serao imutaveis, auditadas e vinculaveis em relacao
+- versoes publicadas sao imutaveis, auditadas e vinculaveis em relacao
   muitos-para-muitos aos processos aplicaveis;
-- a OP congelara codigo, titulo, revisao e vigencia dos POPs aplicaveis;
-- a impressao mostrara somente referencias, sem reproduzir o conteudo integral;
+- a OP congela codigo, titulo, revisao e vigencia dos POPs aplicaveis;
+- a impressao mostra somente referencias, sem reproduzir o conteudo integral;
 - manual contextual e POP permanecem documentos distintos;
-- implementacao condicionada a inventario tecnico e pacote estrutural proprio,
-  sem reabrir o UX-01G.
+- a implementacao foi entregue em pacote estrutural proprio, sem reabrir o
+  UX-01G.
 
-Proxima etapa visual: `UX-01H - Romaneio`. O catalogo de POPs nao integra esse
-escopo.
+O catalogo de POPs nao integra esse escopo interno do Romaneio; os dois blocos
+compartilham apenas o shell, as alçadas e os contratos transversais vigentes.
 
 Promocao controlada e ensaio online `HOM-E2E-20260725-MS08GPR2`:
 

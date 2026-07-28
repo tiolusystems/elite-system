@@ -2385,20 +2385,20 @@ h1 {
   padding: 14px;
 }
 
-.romaneio-card.romaneio-draft {
+.romaneio-record.romaneio-draft {
   border-left-color: var(--amber-accent);
 }
 
-.romaneio-card.romaneio-separacao {
+.romaneio-record.romaneio-separacao {
   border-left-color: var(--blue-accent);
 }
 
-.romaneio-card.romaneio-confirmado {
+.romaneio-record.romaneio-confirmado {
   border-left-color: var(--green-accent);
 }
 
-.romaneio-card.romaneio-cancelado,
-.romaneio-card.romaneio-estornado {
+.romaneio-record.romaneio-cancelado,
+.romaneio-record.romaneio-estornado {
   border-left-color: var(--red-accent);
 }
 
@@ -3935,21 +3935,20 @@ h1 {
   gap: 0.25rem;
 }
 
-.legacy-romaneio-ui { display: none !important; }
 .romaneio-preparation { display: grid; gap: 1rem; }
 .romaneio-preparation > .panel > label,
 .romaneio-preparation form label { display: grid; gap: 0.35rem; }
-.romaneio-mode-navigation { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.romaneio-kpi { color: inherit; text-decoration: none; transition: border-color 160ms ease, box-shadow 160ms ease; }
-.romaneio-kpi:hover { border-color: #8bbbd0; box-shadow: 0 8px 22px rgba(31, 76, 104, 0.12); }
-.romaneio-kpi:focus-visible { outline: 3px solid rgba(22, 150, 197, 0.28); outline-offset: 2px; }
-.contextual-help-link > span { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; border: 1px solid currentColor; border-radius: 50%; font-size: 0.78rem; }
+.romaneio-workflow-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+.romaneio-workflow-tabs a { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 44px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); padding: 0.65rem 0.8rem; color: var(--muted); text-decoration: none; }
+.romaneio-workflow-tabs a:hover,
+.romaneio-workflow-tabs a[aria-current="page"] { border-color: #7caec9; background: #eef7fb; color: #174f70; }
+.romaneio-workflow-tabs a:focus-visible { outline: 3px solid rgba(22, 150, 197, 0.28); outline-offset: 2px; }
+.romaneio-workflow-tabs strong { color: #17212b; font-size: 1rem; }
 .romaneio-load-preview { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; margin: 1rem; padding: 1rem; border: 1px solid #cbd9e3; border-radius: 6px; background: #f7fafc; }
 .romaneio-load-preview > div { display: grid; gap: 0.25rem; }
 .romaneio-load-preview span { color: #596b78; font-size: 0.78rem; }
 .romaneio-load-preview strong { font-size: 1.05rem; }
 .romaneio-load-preview > p { grid-column: 1 / -1; margin: 0; color: #596b78; font-size: 0.82rem; }
-.dashboard-header:has(+ .kpi-grid) .toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
 .romaneio-order-item.is-unavailable { background: #f5f7f8; color: #66737d; }
 .field-warning { color: #9a5b00; }
 .romaneio-status-groups { display: grid; gap: 0.75rem; }
@@ -3957,6 +3956,11 @@ h1 {
 .romaneio-status-group > summary { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem; cursor: pointer; background: #f7fafc; }
 .romaneio-status-group > .romaneio-list,
 .romaneio-status-group > .empty-state { margin: 1rem; }
+.romaneio-record { border: 1px solid var(--border); border-left: 4px solid var(--border-strong); border-radius: 7px; overflow: clip; background: var(--surface); }
+.romaneio-record > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.75rem; align-items: center; min-height: 50px; padding: 0.75rem; cursor: pointer; }
+.romaneio-record > summary > span:first-child { display: grid; gap: 0.2rem; min-width: 0; }
+.romaneio-record > summary small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.romaneio-record > .romaneio-card { border: 0; border-top: 1px solid var(--border); border-radius: 0; }
 .manual-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .manual-step { display: flex; gap: 1rem; align-items: flex-start; }
 .manual-step > span { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: #147cb3; color: white; font-weight: 800; flex: 0 0 auto; }
@@ -3964,6 +3968,10 @@ h1 {
 .manual-step p { margin: 0; color: #52616d; }
 
 @media (max-width: 640px) {
+  .romaneio-workflow-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .romaneio-order > summary,
   .romaneio-order-item {
     grid-template-columns: 1.5rem 1fr;
@@ -3978,11 +3986,14 @@ h1 {
     grid-column: 2;
     width: 100%;
   }
-}
 
-@media (max-width: 1100px) {
-  .dashboard-header:has(+ .kpi-grid) { grid-template-columns: 1fr; align-items: start; }
-  .dashboard-header:has(+ .kpi-grid) .toolbar-actions { justify-content: flex-start; }
+  .romaneio-record > summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .romaneio-record > summary > strong {
+    grid-column: 2;
+  }
 }
 
 .print-document {

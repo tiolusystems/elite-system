@@ -124,7 +124,6 @@ export type RomaneioLookups = {
   pendingItems: RomaneioLookupOption[];
   romaneiosAbertos: RomaneioLookupOption[];
   romaneioItemsAbertos: RomaneioLookupOption[];
-  lotesPa: RomaneioLookupOption[];
   entregadores: RomaneioLookupOption[];
   veiculos: RomaneioLookupOption[];
 };
@@ -142,7 +141,6 @@ export type RomaneioDashboard = {
   lookups: RomaneioLookups;
   pendingItems: RomaneioPendingItem[];
   romaneios: RomaneioRecord[];
-  availableLots: RomaneioAvailableLot[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -151,7 +149,6 @@ const EMPTY_LOOKUPS: RomaneioLookups = {
   pendingItems: [],
   romaneiosAbertos: [],
   romaneioItemsAbertos: [],
-  lotesPa: [],
   entregadores: [],
   veiculos: []
 };
@@ -207,7 +204,6 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       romaneioItems,
       reservas,
       movimentos,
-      lotesPa,
       logisticaAtual,
       pessoasComerciais,
       papeisAtivos,
@@ -260,13 +256,6 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         .order("created_at", { ascending: false })
         .limit(600),
       supabase
-        .from("est_lotes_pa_saldos")
-        .select(
-          "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,updated_at"
-        )
-        .order("updated_at", { ascending: false })
-        .limit(400),
-      supabase
         .from("exp_romaneio_logistica_atual")
         .select("romaneio_id,entregador_id,veiculo_id,ocorrido_em,evento_id")
         .limit(200),
@@ -297,6 +286,20 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       supabase.from("user_profiles").select("id,display_name").limit(500)
     ]);
 
+    const referencedLotIds = [
+      ...rows(reservas).map((row) => Number(row.lote_pa_id)),
+      ...rows(movimentos).map((row) => Number(row.lote_pa_id))
+    ].filter((id, index, values) => Number.isInteger(id) && id > 0 && values.indexOf(id) === index);
+    const lotesPa = referencedLotIds.length
+      ? await supabase
+          .from("est_lotes_pa_saldos")
+          .select(
+            "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,updated_at"
+          )
+          .in("lote_pa_id", referencedLotIds)
+          .limit(600)
+      : { data: [], error: null };
+
     const orderRows = rows(orders);
     const clienteMap = new Map(rows(clientes).map((row) => [Number(row.id), String(row.nome)]));
     const orderMap = new Map(orderRows.map((row) => [Number(row.id), mapOrder(row, clienteMap)]));
@@ -313,8 +316,8 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       }] as const;
     }));
     const lotRows = rows(lotesPa);
-    const availableLots = lotRows.map((row) => mapLot(row, productPackageMap));
-    const lotMap = new Map(availableLots.map((lot) => [lot.id, `${lot.codigoLote} - ${lot.itemLabel}`]));
+    const referencedLots = lotRows.map((row) => mapLot(row, productPackageMap));
+    const lotMap = new Map(referencedLots.map((lot) => [lot.id, `${lot.codigoLote} - ${lot.itemLabel}`]));
     const personRows = rows(pessoasComerciais);
     const personMap = new Map(personRows.map((row) => [Number(row.id), String(row.nome)]));
     const courierIds = new Set(rows(papeisAtivos).map((row) => Number(row.pessoa_id)));
@@ -459,13 +462,6 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
           label: `${item.itemLabel}`,
           detail: `romaneio ${item.romaneioId} / romaneado ${numberText(item.quantidadeRomaneada)} / reservado ${numberText(item.quantidadeReservada)}`
         })),
-        lotesPa: availableLots
-          .filter((lot) => lot.status === "disponivel" && lot.saldoDisponivel > 0)
-          .map((lot) => ({
-            id: lot.id,
-            label: `${lot.codigoLote} - ${lot.itemLabel}`,
-            detail: `disp ${numberText(lot.saldoDisponivel)} / val ${lot.dataValidade ?? "-"}`
-          })),
         entregadores: personRows
           .filter((row) => courierIds.has(Number(row.id)))
           .map((row) => ({
@@ -484,7 +480,6 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       },
       pendingItems,
       romaneios: romaneioRecords,
-      availableLots,
       source: firstError ? "error" : "supabase",
       error: firstError
     };
@@ -694,7 +689,6 @@ function emptyDashboard(source: RomaneioDashboard["source"], error: string | nul
     lookups: EMPTY_LOOKUPS,
     pendingItems: [],
     romaneios: [],
-    availableLots: [],
     source,
     error
   };

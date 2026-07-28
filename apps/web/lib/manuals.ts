@@ -115,7 +115,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/romaneios", "Expedicao", "Romaneios", "Separar itens de pedidos por lote, registrar referência fiscal externa e confirmar a baixa física.", {
     before: ["O pedido deve estar liberado e possuir saldo a entregar.", "Produtos PA precisam ter lotes disponiveis e configuracao logistica."],
-    steps: ["Abra a lista de pedidos com saldo.", "Selecione o pedido e os itens da entrega parcial ou total.", "Informe a quantidade de cada produto.", "Consulte e reserve os lotes do produto selecionado.", "Grave o romaneio.", "Informe entregador e veiculo.", "Registre somente o número da NF de remessa emitida no sistema fiscal externo.", "Confirme o Romaneio para baixar o estoque."],
+    steps: ["Abra a lista de pedidos com saldo.", "Selecione o pedido, os itens da entrega parcial ou total e a quantidade de cada produto.", "Confira a prévia de litros, volumes e pesos; consultar não grava.", "Grave o rascunho do Romaneio.", "Escolha cada produto gravado e reserve somente seus lotes compatíveis.", "Informe entregador e veículo.", "Registre somente o número da NF de remessa emitida no sistema fiscal externo.", "Confirme o Romaneio para registrar a saída física do estoque."],
     after: ["A reserva reduz o disponivel sem baixar o fisico.", "Registrar a referência fiscal não baixa estoque nem libera comissão.", "A confirmação do Romaneio consolida a saida de estoque.", "O Romaneio pode ser impresso antes ou depois da referência externa."],
     blockers: ["Quantidade acima do saldo do pedido ou do lote e recusada.", "Falta de referência de remessa, entregador, veiculo ou dados logisticos impede a baixa final."],
   }),

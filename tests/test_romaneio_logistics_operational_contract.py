@@ -8,6 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0059_romaneio_logistics_operational_contract.sql"
 PAGE = ROOT / "apps" / "web" / "app" / "romaneios" / "page.tsx"
+PREPARATION = ROOT / "apps" / "web" / "app" / "romaneios" / "romaneio-preparation.tsx"
 ACTIONS = ROOT / "apps" / "web" / "app" / "romaneios" / "actions.ts"
 READ_MODEL = ROOT / "apps" / "web" / "lib" / "romaneios.ts"
 STYLES = ROOT / "apps" / "web" / "app" / "globals.css"
@@ -23,6 +24,7 @@ class RomaneioLogisticsOperationalContractTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.sql = MIGRATION.read_text(encoding="utf-8").lower()
         cls.page = PAGE.read_text(encoding="utf-8")
+        cls.preparation = PREPARATION.read_text(encoding="utf-8")
         cls.actions = ACTIONS.read_text(encoding="utf-8")
         cls.read_model = READ_MODEL.read_text(encoding="utf-8")
 
@@ -82,10 +84,11 @@ class RomaneioLogisticsOperationalContractTests(unittest.TestCase):
         self.assertIsNone(re.search(r"grant\s+execute.*?\s+to\s+(public|anon)\b", self.sql, re.DOTALL))
 
     def test_web_uses_structured_ids_and_audited_server_actions(self) -> None:
-        self.assertNotIn("<datalist", self.page)
-        self.assertNotIn("lookupValue", self.page)
+        web = self.page + self.preparation
+        self.assertNotIn("<datalist", web)
+        self.assertNotIn("lookupValue", web)
         for field in ("pedido_item_id", "romaneio_id", "romaneio_item_id", "lote_pa_id"):
-            self.assertIn(f'name="{field}"', self.page)
+            self.assertIn(f'name="{field}"', web)
         for rpc in (
             "registrar_exp_romaneio_logistica_atribuicao",
             "registrar_exp_romaneio_logistica_remocao",

@@ -37,7 +37,7 @@ export async function createRomaneioAction(formData: FormData) {
   }
 
   revalidatePath("/romaneios");
-  redirect("/romaneios?result=romaneio_created#romaneios");
+  redirect("/romaneios?result=romaneio_created#reservar-lote");
 }
 
 export async function reserveRomaneioPaLotAction(formData: FormData) {
@@ -70,12 +70,12 @@ export async function reserveRomaneioPaLotAction(formData: FormData) {
 
   revalidatePath("/romaneios");
   revalidatePath("/relatorios");
-  redirect("/romaneios?result=lot_reserved#romaneios");
+  redirect("/romaneios?result=lot_reserved#reservar-lote");
 }
 
 export async function assignRomaneioLogisticsAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/romaneios?result=not_configured#romaneios");
+    redirect("/romaneios?modo=consulta&result=not_configured#romaneios");
   }
 
   const romaneioId = optionalInteger(formData, "romaneio_id");
@@ -83,7 +83,7 @@ export async function assignRomaneioLogisticsAction(formData: FormData) {
   const veiculoId = optionalInteger(formData, "veiculo_id");
 
   if (!romaneioId || romaneioId <= 0 || (!entregadorId && !veiculoId)) {
-    redirect("/romaneios?result=missing_logistics_required#romaneios");
+    redirect("/romaneios?modo=consulta&result=missing_logistics_required#romaneios");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -95,22 +95,22 @@ export async function assignRomaneioLogisticsAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+    redirect(`/romaneios?modo=consulta&result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
   }
 
   revalidatePath("/romaneios");
-  redirect("/romaneios?result=logistics_assigned#romaneios");
+  redirect("/romaneios?modo=consulta&result=logistics_assigned#romaneios");
 }
 
 export async function removeRomaneioLogisticsAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/romaneios?result=not_configured#romaneios");
+    redirect("/romaneios?modo=consulta&result=not_configured#romaneios");
   }
 
   const romaneioId = optionalInteger(formData, "romaneio_id");
   const motivo = field(formData, "motivo");
   if (!romaneioId || romaneioId <= 0 || !motivo) {
-    redirect("/romaneios?result=missing_logistics_removal_required#romaneios");
+    redirect("/romaneios?modo=consulta&result=missing_logistics_removal_required#romaneios");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -120,22 +120,22 @@ export async function removeRomaneioLogisticsAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+    redirect(`/romaneios?modo=consulta&result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
   }
 
   revalidatePath("/romaneios");
-  redirect("/romaneios?result=logistics_removed#romaneios");
+  redirect("/romaneios?modo=consulta&result=logistics_removed#romaneios");
 }
 
 export async function confirmRomaneioAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/romaneios?result=not_configured#romaneios");
+    redirect("/romaneios?modo=consulta&result=not_configured#romaneios");
   }
 
   const romaneioId = optionalInteger(formData, "romaneio_id");
   const notaFiscalId = optionalInteger(formData, "nota_fiscal_id");
   if (!romaneioId || romaneioId <= 0 || !notaFiscalId || notaFiscalId <= 0) {
-    redirect("/romaneios?result=missing_romaneio_id#romaneios");
+    redirect("/romaneios?modo=consulta&result=missing_romaneio_id#romaneios");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -145,17 +145,17 @@ export async function confirmRomaneioAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+    redirect(`/romaneios?modo=consulta&result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
   }
 
   revalidatePath("/romaneios");
   revalidatePath("/kanban");
   revalidatePath("/relatorios");
-  redirect("/romaneios?result=romaneio_confirmed#romaneios");
+  redirect("/romaneios?modo=consulta&result=romaneio_confirmed#romaneios");
 }
 
 export async function registerExternalFiscalReferenceAction(formData: FormData) {
-  if (!getRuntimeStatus().supabaseConfigured) redirect("/romaneios?result=not_configured#romaneios");
+  if (!getRuntimeStatus().supabaseConfigured) redirect("/romaneios?modo=consulta&result=not_configured#romaneios");
   const idempotencyKey = uuid(formData, "idempotency_key");
   const pedidoId = optionalInteger(formData, "pedido_id");
   const romaneioId = optionalInteger(formData, "romaneio_id");
@@ -165,10 +165,10 @@ export async function registerExternalFiscalReferenceAction(formData: FormData) 
   const reason = field(formData, "motivo");
   if (!idempotencyKey || !pedidoId || !number || reason.length < 5
       || !["simples_faturamento", "remessa_total", "remessa_vinculada"].includes(type)) {
-    redirect("/romaneios?result=missing_external_reference#romaneios");
+    redirect("/romaneios?modo=consulta&result=missing_external_reference#romaneios");
   }
-  if (type !== "simples_faturamento" && !romaneioId) redirect("/romaneios?result=missing_external_reference#romaneios");
-  if (type === "remessa_vinculada" && !parentId) redirect("/romaneios?result=missing_external_reference_parent#romaneios");
+  if (type !== "simples_faturamento" && !romaneioId) redirect("/romaneios?modo=consulta&result=missing_external_reference#romaneios");
+  if (type === "remessa_vinculada" && !parentId) redirect("/romaneios?modo=consulta&result=missing_external_reference_parent#romaneios");
 
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "registrar_fat_referencia_externa_idempotente", {
@@ -182,20 +182,20 @@ export async function registerExternalFiscalReferenceAction(formData: FormData) 
     p_serie: optionalField(formData, "serie"),
     p_tipo: type
   });
-  if (error) redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+  if (error) redirect(`/romaneios?modo=consulta&result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
   revalidatePath("/romaneios");
   revalidatePath("/pedidos");
-  redirect("/romaneios?result=external_reference_registered#romaneios");
+  redirect("/romaneios?modo=consulta&result=external_reference_registered#romaneios");
 }
 
 export async function correctExternalFiscalReferenceAction(formData: FormData) {
-  if (!getRuntimeStatus().supabaseConfigured) redirect("/romaneios?result=not_configured#romaneios");
+  if (!getRuntimeStatus().supabaseConfigured) redirect("/romaneios?modo=consulta&result=not_configured#romaneios");
   const idempotencyKey = uuid(formData, "idempotency_key");
   const referenceId = optionalInteger(formData, "nota_fiscal_id");
   const number = field(formData, "numero_novo");
   const reason = field(formData, "motivo");
   if (!idempotencyKey || !referenceId || !number || reason.length < 10) {
-    redirect("/romaneios?result=missing_external_reference_correction#romaneios");
+    redirect("/romaneios?modo=consulta&result=missing_external_reference_correction#romaneios");
   }
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "corrigir_fat_referencia_externa_numero_idempotente", {
@@ -205,20 +205,20 @@ export async function correctExternalFiscalReferenceAction(formData: FormData) {
     p_numero_novo: number,
     p_serie_nova: optionalField(formData, "serie_nova")
   });
-  if (error) redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+  if (error) redirect(`/romaneios?modo=consulta&result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
   revalidatePath("/romaneios");
-  redirect("/romaneios?result=external_reference_corrected#romaneios");
+  redirect("/romaneios?modo=consulta&result=external_reference_corrected#romaneios");
 }
 
 export async function cancelRomaneioAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/romaneios?result=not_configured#romaneios");
+    redirect("/romaneios?modo=consulta&result=not_configured#romaneios");
   }
 
   const romaneioId = optionalInteger(formData, "romaneio_id");
   const motivo = field(formData, "motivo");
   if (!romaneioId || romaneioId <= 0 || !motivo) {
-    redirect("/romaneios?result=missing_cancel_required#romaneios");
+    redirect("/romaneios?modo=consulta&result=missing_cancel_required#romaneios");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -228,22 +228,22 @@ export async function cancelRomaneioAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+    redirect(`/romaneios?modo=consulta&result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
   }
 
   revalidatePath("/romaneios");
-  redirect("/romaneios?result=romaneio_cancelled#romaneios");
+  redirect("/romaneios?modo=consulta&result=romaneio_cancelled#romaneios");
 }
 
 export async function reverseRomaneioAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/romaneios?result=not_configured#romaneios");
+    redirect("/romaneios?modo=consulta&result=not_configured#romaneios");
   }
 
   const romaneioId = optionalInteger(formData, "romaneio_id");
   const motivo = field(formData, "motivo");
   if (!romaneioId || romaneioId <= 0 || !motivo) {
-    redirect("/romaneios?result=missing_reverse_required#romaneios");
+    redirect("/romaneios?modo=consulta&result=missing_reverse_required#romaneios");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -253,13 +253,13 @@ export async function reverseRomaneioAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/romaneios?result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
+    redirect(`/romaneios?modo=consulta&result=${encodeURIComponent(mapRomaneioError(error.message))}#romaneios`);
   }
 
   revalidatePath("/romaneios");
   revalidatePath("/kanban");
   revalidatePath("/relatorios");
-  redirect("/romaneios?result=romaneio_reversed#romaneios");
+  redirect("/romaneios?modo=consulta&result=romaneio_reversed#romaneios");
 }
 
 function field(formData: FormData, name: string): string {

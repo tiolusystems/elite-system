@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0060_romaneio_quantity_integrity_contract.sql"
 READ_MODEL = ROOT / "apps" / "web" / "lib" / "romaneios.ts"
 PAGE = ROOT / "apps" / "web" / "app" / "romaneios" / "page.tsx"
+PREPARATION = ROOT / "apps" / "web" / "app" / "romaneios" / "romaneio-preparation.tsx"
 ACTIONS = ROOT / "apps" / "web" / "app" / "romaneios" / "actions.ts"
 SMOKE = ROOT / "tests" / "sql" / "romaneio_quantity_integrity_contract.sql"
 CI = ROOT / ".github" / "workflows" / "ci.yml"
@@ -21,6 +22,7 @@ class RomaneioQuantityIntegrityContractTests(unittest.TestCase):
         cls.sql = MIGRATION.read_text(encoding="utf-8").lower()
         cls.read_model = READ_MODEL.read_text(encoding="utf-8")
         cls.page = PAGE.read_text(encoding="utf-8")
+        cls.preparation = PREPARATION.read_text(encoding="utf-8")
 
     def function_body(self, name: str) -> str:
         match = re.search(
@@ -102,9 +104,10 @@ class RomaneioQuantityIntegrityContractTests(unittest.TestCase):
             "pendingItems.filter((item) => item.quantidadeDisponivelRomaneio > 0)",
             self.read_model,
         )
-        self.assertIn("Livre para novo romaneio", self.page)
-        self.assertIn("Nenhum item com saldo livre", self.page)
-        self.assertIn("disabled={dashboard.lookups.pendingItems.length === 0}", self.page)
+        self.assertNotIn("Livre para novo romaneio", self.page)
+        self.assertIn("Pedidos com saldo", self.page)
+        self.assertIn("Somente pedidos com saldo a entregar", self.preparation)
+        self.assertIn("disabled={selectedItems.length === 0 || loadPreview.totalQuantity <= 0}", self.preparation)
         self.assertIn('auditedRpc(supabase, "gravar_exp_romaneio_pedido_idempotente"', ACTIONS.read_text(encoding="utf-8"))
 
     def test_transactional_smoke_and_documentation_are_wired(self) -> None:

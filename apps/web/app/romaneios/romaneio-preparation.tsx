@@ -176,7 +176,7 @@ export function RomaneioPreparation({
 
       <section className="panel form-panel" id="reservar-lote" aria-labelledby="reservar-lote-title">
         <div className="panel-header">
-          <div><h2 id="reservar-lote-title">2. Escolha o produto e consulte os lotes</h2><p className="muted">O estoque só é consultado para o produto do romaneio escolhido.</p></div>
+          <div><h2 id="reservar-lote-title">2. Reserve os lotes do Romaneio gravado</h2><p className="muted">Escolha um produto do Romaneio. O estoque só será consultado para esse produto.</p></div>
           <span className="pill">multilote</span>
         </div>
         <label className="wide-field">
@@ -193,7 +193,7 @@ export function RomaneioPreparation({
             <div className={`notice-panel ${compatibleBalance >= remaining ? "success" : "warning"}`} role="status">
               <strong>{compatibleBalance >= remaining ? "Estoque compatível localizado" : "Saldo insuficiente para completar a reserva"}</strong>
               <span>Necessário: {formatNumber(remaining)}. Disponível nos lotes deste produto: {formatNumber(compatibleBalance)}.</span>
-              {compatibleBalance < remaining ? <span>Reserve o disponível em mais de um lote ou escolha outro produto do pedido.</span> : null}
+              {compatibleBalance < remaining ? <span>Reserve o saldo disponível por lote. A quantidade restante continuará pendente até haver estoque compatível.</span> : null}
             </div>
             <div className="form-grid romaneio-form-grid">
               <label className="wide-field">Lote compatível

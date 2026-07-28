@@ -6,10 +6,8 @@ import {
   cancelRomaneioAction,
   confirmRomaneioAction,
   correctExternalFiscalReferenceAction,
-  createRomaneioAction,
   removeRomaneioLogisticsAction,
   registerExternalFiscalReferenceAction,
-  reserveRomaneioPaLotAction,
   reverseRomaneioAction
 } from "@/app/romaneios/actions";
 import { RomaneioPreparation } from "@/app/romaneios/romaneio-preparation";
@@ -18,7 +16,6 @@ import {
   type RomaneioItem,
   type RomaneioLookupOption,
   type RomaneioLookups,
-  type RomaneioPendingItem,
   type RomaneioRecord
 } from "@/lib/romaneios";
 
@@ -29,52 +26,48 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
   const dashboard = await getRomaneioDashboard();
   const result = singleValue(params.result);
   const statusView = singleValue(params.status) ?? null;
+  const mode = singleValue(params.modo) === "consulta" ? "consulta" : "planejar";
   const formMessage = messageForResult(result);
+  const closedCount = dashboard.romaneios.filter((romaneio) =>
+    ["confirmado", "cancelado", "estornado"].includes(romaneio.status)
+  ).length;
 
   return (
     <main className="app-shell">
       <section className="workspace dashboard-workspace">
         <div className="dashboard-header">
           <div>
-            <span className="eyebrow">baixa PA controlada</span>
-            <h1>Romaneio e separacao por lote</h1>
+            <span className="eyebrow">expedição controlada</span>
+            <h1>Romaneio e separação por lote</h1>
             <p className="muted">
-              Pedido aberto nao baixa estoque. Romaneio reserva lote PA em separacao e confirma a baixa apenas no
-              fechamento.
+              Comece pelo pedido com saldo, selecione os produtos e reserve somente os lotes necessários.
             </p>
           </div>
           <div className="toolbar-actions" aria-label="Acoes de romaneio">
-            <Link className="secondary-button contextual-help-link" href="/romaneios/manual" aria-label="Abrir ajuda do Romaneio">
-              <span aria-hidden="true">?</span> Ajuda
+            <Link className={mode === "planejar" ? "secondary-button" : "primary-button"} href={mode === "planejar" ? "/romaneios?modo=consulta" : "/romaneios"}>
+              {mode === "planejar" ? "Consultar Romaneios" : "Planejar carga"}
             </Link>
-            <a className="secondary-button" href="#novo-romaneio">
-              Iniciar separação
-            </a>
           </div>
         </div>
 
-        <section className="kpi-grid" aria-label="Resumo romaneio">
-          <a className="kpi-card romaneio-kpi accent-blue" href="#novo-romaneio">
-            <span>Pedidos com pendencia</span>
-            <strong>{valueOrDash(dashboard.metrics.pedidosComPendencia)}</strong>
-            <p>{valueOrDash(dashboard.metrics.itensPendentes)} item(ns) com saldo a separar.</p>
-          </a>
-          <Link className="kpi-card romaneio-kpi accent-amber" href="/romaneios?status=romaneios-rascunho#romaneios-rascunho">
-            <span>Em rascunho</span>
-            <strong>{valueOrDash(dashboard.metrics.romaneiosRascunho)}</strong>
-            <p>Ainda sem baixa de estoque.</p>
+        <nav className="romaneio-workflow-tabs" aria-label="Etapas do Romaneio">
+          <Link href="/romaneios" aria-current={mode === "planejar" ? "page" : undefined}>
+            <span>Pedidos com saldo</span>
+            <strong>{numberOrDash(dashboard.metrics.pedidosComPendencia)}</strong>
           </Link>
-          <Link className="kpi-card romaneio-kpi accent-green" href="/romaneios?status=romaneios-separacao#romaneios-separacao">
-            <span>Em separacao</span>
-            <strong>{valueOrDash(dashboard.metrics.romaneiosSeparacao)}</strong>
-            <p>Com lote reservado ou aguardando completar reserva.</p>
+          <Link href="/romaneios?modo=consulta&status=romaneios-rascunho#romaneios-rascunho" aria-current={statusView === "romaneios-rascunho" ? "page" : undefined}>
+            <span>Rascunhos</span>
+            <strong>{numberOrDash(dashboard.metrics.romaneiosRascunho)}</strong>
           </Link>
-          <a className="kpi-card romaneio-kpi accent-red" href="#novo-romaneio">
-            <span>Livre para novo romaneio</span>
-            <strong>{valueOrDash(dashboard.metrics.quantidadeDisponivelRomaneio)}</strong>
-            <p>Ja desconta rascunhos, separacoes e confirmacoes ativas.</p>
-          </a>
-        </section>
+          <Link href="/romaneios?modo=consulta&status=romaneios-separacao#romaneios-separacao" aria-current={statusView === "romaneios-separacao" ? "page" : undefined}>
+            <span>Em separação</span>
+            <strong>{numberOrDash(dashboard.metrics.romaneiosSeparacao)}</strong>
+          </Link>
+          <Link href="/romaneios?modo=consulta&status=romaneios-finalizados#romaneios-finalizados" aria-current={statusView === "romaneios-finalizados" ? "page" : undefined}>
+            <span>Encerrados</span>
+            <strong>{numberOrDash(closedCount)}</strong>
+          </Link>
+        </nav>
 
         {dashboard.error ? (
           <section className="notice-panel warning" role="status">
@@ -90,166 +83,20 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
           </section>
         ) : null}
 
-        <nav className="romaneio-mode-navigation" aria-label="Modos do Romaneio">
-          <a className="primary-button" href="#novo-romaneio">Planejar carga</a>
-          <a className="secondary-button" href="#romaneios">Consultar romaneios</a>
-        </nav>
-
-        <RomaneioPreparation pendingItems={dashboard.pendingItems} romaneios={dashboard.romaneios} />
-
-        <section className="panel form-panel legacy-romaneio-ui" aria-hidden="true" aria-labelledby="novo-romaneio-title">
-          <div className="panel-header">
-            <div>
-              <h2 id="novo-romaneio-title">Pedidos com saldo a entregar</h2>
-              <p className="muted">Abra um pedido, marque os produtos e informe a quantidade de cada item. Consultar não grava.</p>
-            </div>
-            <span className="pill">gravação explícita</span>
-          </div>
-          {groupPendingByOrder(dashboard.pendingItems).map(([pedidoId, items]) => (
-            <details className="romaneio-order" key={pedidoId}>
-              <summary>
-                <strong>{items[0].codigoPedido}</strong>
-                <span>{items[0].clienteNome}</span>
-                <span>{items.length} produto(s) com saldo</span>
-              </summary>
-              <form action={createRomaneioAction}>
-                <input type="hidden" name="pedido_id" value={pedidoId} />
-                <div className="romaneio-order-items">
-                  {items.map((item) => (
-                    <label className="romaneio-order-item" key={item.pedidoItemId}>
-                      <input type="checkbox" name="pedido_item_id" value={item.pedidoItemId} />
-                      <span>
-                        <strong>{item.itemLabel}</strong>
-                        <small>Saldo livre: {numberOrDash(item.quantidadeDisponivelRomaneio)}</small>
-                      </span>
-                      <input name={`quantidade_${item.pedidoItemId}`} inputMode="decimal" min="0" max={item.quantidadeDisponivelRomaneio} step="any" placeholder="Quantidade" />
-                    </label>
-                  ))}
-                </div>
-                <div className="form-footer">
-                  <span>Nenhum estoque é alterado antes da reserva por lote.</span>
-                  <button className="primary-button" type="submit" disabled={dashboard.lookups.pendingItems.length === 0}>Gravar romaneio</button>
-                </div>
-              </form>
-            </details>
-          ))}
-          {dashboard.pendingItems.length === 0 ? <p className="muted">Nenhum item com saldo livre para novo romaneio.</p> : null}
-        </section>
-
-        <section className="two-column legacy-romaneio-ui" aria-hidden="true">
-          <section className="panel form-panel" id="reservar-lote" aria-labelledby="reservar-lote-title">
+        {mode === "planejar" ? (
+          <RomaneioPreparation pendingItems={dashboard.pendingItems} romaneios={dashboard.romaneios} />
+        ) : (
+          <section className="panel" id="romaneios" aria-labelledby="romaneios-title">
             <div className="panel-header">
-              <h2 id="reservar-lote-title">Reservar lote PA</h2>
-              <span className="pill">multilote</span>
+              <div>
+                <h2 id="romaneios-title">Consultar Romaneios</h2>
+                <p className="muted">Abra somente a situação e o Romaneio que deseja operar.</p>
+              </div>
+              <span className="pill">{dashboard.romaneios.length} registro(s)</span>
             </div>
-            <form action={reserveRomaneioPaLotAction}>
-              <div className="form-grid romaneio-form-grid">
-                <label className="wide-field">
-                  Item do romaneio
-                  <select name="romaneio_item_id" defaultValue="" required>
-                    <option value="" disabled>
-                      Selecione o item a reservar
-                    </option>
-                    <LookupSelectOptions options={dashboard.lookups.romaneioItemsAbertos} />
-                  </select>
-                </label>
-                <label className="wide-field">
-                  Lote PA
-                  <select name="lote_pa_id" defaultValue="" required>
-                    <option value="" disabled>
-                      Selecione um lote disponivel
-                    </option>
-                    <LookupSelectOptions options={dashboard.lookups.lotesPa} />
-                  </select>
-                </label>
-                <label>
-                  Quantidade
-                  <input name="quantidade_reservada" inputMode="decimal" placeholder="opcional" />
-                </label>
-              </div>
-              <div className="form-footer">
-                <span>A reserva reduz disponibilidade, mas a baixa fisica so ocorre ao confirmar o romaneio.</span>
-                <button className="primary-button" type="submit">
-                  Reservar
-                </button>
-              </div>
-            </form>
+            <RomaneioStatusGroups romaneios={dashboard.romaneios} lookups={dashboard.lookups} activeGroup={statusView} />
           </section>
-
-          <section className="panel" aria-labelledby="pendencias-title">
-            <div className="panel-header">
-              <h2 id="pendencias-title">Itens pendentes</h2>
-              <span className="pill">{dashboard.pendingItems.length} item(ns)</span>
-            </div>
-            {dashboard.pendingItems.length > 0 ? (
-              <div className="module-list">
-                {dashboard.pendingItems.slice(0, 10).map((item) => (
-                  <PendingItemCard key={item.pedidoItemId} item={item} />
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <strong>Sem pendencias carregadas</strong>
-                <span>Pedidos abertos com saldo a separar aparecerao aqui.</span>
-              </div>
-            )}
-          </section>
-        </section>
-
-        <section className="panel" id="romaneios" aria-labelledby="romaneios-title">
-          <div className="panel-header">
-            <h2 id="romaneios-title">Consultar romaneios</h2>
-            <span className="pill">{dashboard.romaneios.length} registro(s)</span>
-          </div>
-          <RomaneioStatusGroups romaneios={dashboard.romaneios} lookups={dashboard.lookups} activeGroup={statusView} />
-        </section>
-
-        <section className="panel legacy-romaneio-ui" aria-hidden="true" aria-labelledby="lotes-pa-title">
-          <div className="panel-header">
-            <h2 id="lotes-pa-title">Lotes PA disponiveis</h2>
-            <span className="pill">{dashboard.availableLots.length} lote(s)</span>
-          </div>
-          {dashboard.availableLots.length > 0 ? (
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Lote</th>
-                    <th>Produto</th>
-                    <th>Status</th>
-                    <th>Saldo</th>
-                    <th>Reservado</th>
-                    <th>Disponivel</th>
-                    <th>Validade</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dashboard.availableLots.slice(0, 80).map((lot) => (
-                    <tr key={lot.id}>
-                      <td>
-                        <strong>{lot.codigoLote}</strong>
-                        <span className="table-subtext">id {lot.id}</span>
-                      </td>
-                      <td>{lot.itemLabel}</td>
-                      <td>
-                        <span className={`status-chip ${lot.status}`}>{lotStatusLabel(lot.status)}</span>
-                      </td>
-                      <td>{numberOrDash(lot.saldoFisico)}</td>
-                      <td>{numberOrDash(lot.quantidadeReservada)}</td>
-                      <td>{numberOrDash(lot.saldoDisponivel)}</td>
-                      <td>{lot.dataValidade ?? "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="empty-state">
-              <strong>Sem lote PA carregado</strong>
-              <span>Lotes disponiveis aparecem apos producao ou entrada PA.</span>
-            </div>
-          )}
-        </section>
+        )}
       </section>
     </main>
   );
@@ -276,28 +123,6 @@ function RomaneioStatusGroups({ romaneios, lookups, activeGroup }: { romaneios: 
   );
 }
 
-function PendingItemCard({ item }: { item: RomaneioPendingItem }) {
-  return (
-    <article className="module-card">
-      <div className="module-card-main">
-        <h3>{item.codigoPedido}</h3>
-        <span>{item.clienteNome}</span>
-      </div>
-      <div className="module-card-meta">
-        <span>livre</span>
-        <strong>{numberOrDash(item.quantidadeDisponivelRomaneio)}</strong>
-      </div>
-      <p>{item.itemLabel}</p>
-      <div className="tag-row">
-        <span className="tag">pedido: {numberOrDash(item.quantidadePedido)}</span>
-        <span className="tag">confirmado: {numberOrDash(item.quantidadeConfirmada)}</span>
-        <span className="tag">comprometido: {numberOrDash(item.quantidadeComprometida)}</span>
-        <span className="tag">pendente de atendimento: {numberOrDash(item.quantidadePendente)}</span>
-      </div>
-    </article>
-  );
-}
-
 function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups: RomaneioLookups }) {
   const statusAllowsConfirmation = romaneio.status === "draft" || romaneio.status === "separacao";
   const canCancel = romaneio.status === "draft" || romaneio.status === "separacao";
@@ -312,25 +137,23 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
   const canConfirm = statusAllowsConfirmation && reservationsComplete && logisticsComplete && shippingReferences.length > 0;
 
   return (
-    <article className={`romaneio-card romaneio-${romaneio.status}`}>
-      <div className="romaneio-header">
-        <div>
-          <h3>{romaneio.codigoRomaneio}</h3>
-          <p>{romaneio.pedidoLabel}</p>
-        </div>
-        <div className="romaneio-meta">
-          <span className={`status-chip ${romaneio.status}`}>{romaneioStatusLabel(romaneio.status)}</span>
-          <strong>{separationTypeLabel(romaneio.tipoSeparacao)}</strong>
-        </div>
-      </div>
+    <details className={`romaneio-record romaneio-${romaneio.status}`}>
+      <summary>
+        <span>
+          <strong>{romaneio.codigoRomaneio}</strong>
+          <small>{romaneio.pedidoLabel} · {romaneio.clienteNome}</small>
+        </span>
+        <span className={`status-chip ${romaneio.status}`}>{romaneioStatusLabel(romaneio.status)}</span>
+        <strong>{separationTypeLabel(romaneio.tipoSeparacao)}</strong>
+      </summary>
+      <article className="romaneio-card">
       <div className="tag-row">
-        <span className="tag">cliente: {romaneio.clienteNome}</span>
-        <span className="tag">data: {romaneio.dataRomaneio}</span>
-        <span className="tag">itens: {romaneio.items.length}</span>
-        <span className="tag">litros: {numberOrDash(romaneio.carga?.volumeLiquidoL ?? null)}</span>
-        <span className="tag">volumes: {numberOrDash(romaneio.carga?.volumesLogisticos ?? null)}</span>
-        <span className="tag">peso líquido: {numberOrDash(romaneio.carga?.pesoLiquidoKg ?? null)} kg</span>
-        <span className="tag">peso bruto: {numberOrDash(romaneio.carga?.pesoBrutoKg ?? null)} kg</span>
+        <span className="tag">Data: {romaneio.dataRomaneio}</span>
+        <span className="tag">Itens: {romaneio.items.length}</span>
+        <span className="tag">Litros: {numberOrDash(romaneio.carga?.volumeLiquidoL ?? null)}</span>
+        <span className="tag">Volumes: {numberOrDash(romaneio.carga?.volumesLogisticos ?? null)}</span>
+        <span className="tag">Peso líquido: {numberOrDash(romaneio.carga?.pesoLiquidoKg ?? null)} kg</span>
+        <span className="tag">Peso bruto: {numberOrDash(romaneio.carga?.pesoBrutoKg ?? null)} kg</span>
       </div>
       {romaneio.carga?.pendencias.length ? <p className="muted">Cálculo pendente: {romaneio.carga.pendencias.join(", ")}.</p> : null}
 
@@ -529,7 +352,8 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
           </form>
         ) : null}
       </div>
-    </article>
+      </article>
+    </details>
   );
 }
 
@@ -538,9 +362,7 @@ function RomaneioItemRow({ item }: { item: RomaneioItem }) {
     <div className="romaneio-item-row">
       <div>
         <strong>{item.itemLabel}</strong>
-        <span>
-          item {item.id} / lote {item.lotePaRef ?? "-"}
-        </span>
+        <span>{item.lotePaRef ? `Lote: ${item.lotePaRef}` : "Lote ainda não reservado"}</span>
       </div>
       <span className={`status-chip ${item.status}`}>{romaneioItemStatusLabel(item.status)}</span>
       <div className="tag-row">
@@ -572,23 +394,11 @@ function singleValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function valueOrDash(value: number | null): string {
-  return value === null ? "sem conexao" : numberOrDash(value);
-}
-
 function numberOrDash(value: number | null): string {
   if (value === null) {
     return "-";
   }
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(value);
-}
-
-function groupPendingByOrder(items: RomaneioPendingItem[]): Array<[number, RomaneioPendingItem[]]> {
-  const grouped = new Map<number, RomaneioPendingItem[]>();
-  for (const item of items.filter((entry) => entry.quantidadeDisponivelRomaneio > 0)) {
-    grouped.set(item.pedidoId, [...(grouped.get(item.pedidoId) ?? []), item]);
-  }
-  return [...grouped.entries()];
 }
 
 function labelFromMap(value: string, labels: Record<string, string>): string {
@@ -621,10 +431,6 @@ function romaneioItemStatusLabel(value: string): string {
 
 function reservationStatusLabel(value: string): string {
   return labelFromMap(value, { ativa: "Ativa", baixada: "Baixada", liberada: "Liberada" });
-}
-
-function lotStatusLabel(value: string): string {
-  return labelFromMap(value, { disponivel: "Disponivel", bloqueado: "Bloqueado", vencido: "Vencido" });
 }
 
 function fiscalStatusLabel(value: string): string {

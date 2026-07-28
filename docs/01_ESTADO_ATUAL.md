@@ -48,10 +48,11 @@ Macrociclo noturno PROD-UX-03 -> UX-01H:
   foram removidas e o perfil tecnico foi inativado;
 - POP, versao publicada, OP cancelada e eventos permanecem como evidencias
   sinteticas append-only; nenhum fato historico foi apagado;
-- a execucao manual completa do workflow Playwright nao foi disparada porque o
-  `workflow_dispatch` nao esta disponivel na branch fora do ramo padrao e o
-  Docker local estava indisponivel; CI descartavel, contratos SQL e o smoke
-  autenticado online cobriram o bloco alterado;
+- o E2E descartavel `30360462935` reconstruiu o banco de `0001` a `0115`,
+  executou as quatro cadeias SQL, iniciou Auth e frontend isolados e aprovou a
+  regressao Playwright nas cinco resolucoes; o ambiente foi encerrado ao final;
+- o gatilho temporario restrito a branch foi removido depois do ensaio e o
+  workflow voltou a ser exclusivamente manual;
 - PROD-UX-03, POPs e UX-01H estao tecnicamente validados no staging. Nenhuma
   homologacao visual foi atribuida a Luciano.
 

@@ -137,7 +137,9 @@ begin
     'Executar a formulacao conforme os controles sinteticos do ensaio.',
     'Criacao controlada para validar a migration 0115'
   );
-  select pop_id into v_pop_id from public.pcp_pop_versoes where id = v_pop_version;
+  select pop_id into v_pop_id
+    from public.list_pcp_pop_catalog()
+   where pop_versao_id = v_pop_version;
   perform public.publish_pcp_pop_version(
     v_pop_version,
     'Publicacao sintetica para validar imutabilidade'
@@ -213,10 +215,10 @@ begin
 
   begin
     update public.pcp_pop_versoes set titulo = 'Mutacao proibida' where id = v_pop_version;
-    raise exception 'published POP version was updated';
+    raise exception 'authenticated updated a published POP version directly';
   exception when others then
-    if sqlerrm = 'published POP version was updated' then raise; end if;
-    if sqlerrm not like 'published POP versions are immutable%' then raise; end if;
+    if sqlerrm = 'authenticated updated a published POP version directly' then raise; end if;
+    if sqlerrm not like 'permission denied for table pcp_pop_versoes%' then raise; end if;
   end;
 
   begin
@@ -242,5 +244,24 @@ begin
   end if;
 end
 $governance$;
+
+reset role;
+
+do $owner_immutability$
+begin
+  begin
+    update public.pcp_pop_versoes
+       set titulo = 'Mutacao proibida pelo proprietario'
+     where revisao = '01'
+       and pop_id = (
+         select id from public.pcp_pops where codigo = 'POP-HOM-0115'
+       );
+    raise exception 'published POP version was updated by its table owner';
+  exception when others then
+    if sqlerrm = 'published POP version was updated by its table owner' then raise; end if;
+    if sqlerrm not like 'published POP versions are immutable%' then raise; end if;
+  end;
+end
+$owner_immutability$;
 
 rollback;

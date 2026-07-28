@@ -7617,3 +7617,117 @@ h1 {
     padding: 16px 12px;
   }
 }
+/* Controlled procedures --------------------------------------------------- */
+
+.controlled-procedures-workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.controlled-procedure-content {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.controlled-procedure-content p {
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+}
+
+.controlled-procedure-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.controlled-procedure-actions form {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+}
+
+.controlled-procedure-unlink {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(12rem, 1fr) auto;
+}
+
+.controlled-procedure-unlink label {
+  display: grid;
+  gap: 6px;
+}
+
+.quality-procedure-checks {
+  margin: 16px 0;
+}
+
+.quality-procedure-check {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.quality-procedure-check > div {
+  display: grid;
+  gap: 4px;
+}
+
+.quality-procedure-check > div span,
+.quality-procedure-history span {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.quality-procedure-history {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.production-order-procedure-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.production-order-procedure-table th,
+.production-order-procedure-table td {
+  padding: 7px 8px;
+  border: 1px solid #8b98a5;
+  text-align: left;
+  vertical-align: top;
+}
+
+@media (max-width: 900px) {
+  .quality-procedure-check {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quality-procedure-check > div {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .controlled-procedure-actions,
+  .controlled-procedure-unlink,
+  .quality-procedure-check {
+    grid-template-columns: 1fr;
+  }
+
+  .controlled-procedure-actions form,
+  .quality-procedure-check {
+    min-width: 0;
+  }
+}

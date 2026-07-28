@@ -87,6 +87,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/pcp_supervisor_dashboard_access.sql
+      - name: Run controlled procedures governance smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/controlled_procedures_governance.sql
       - name: Run production FIFO reservation smoke
         env:
           PGPASSWORD: postgres

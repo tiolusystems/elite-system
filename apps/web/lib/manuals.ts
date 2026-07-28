@@ -125,6 +125,14 @@ export const ROUTE_MANUALS: RouteManual[] = [
     after: ["A consulta e a simulação não alteram lotes, pedidos ou expedições.", "A exportação registra usuário, data e filtros na auditoria."],
     blockers: ["Falta de alçada ou genealogia operacional incompleta impedem o resultado.", "Divergências devem ser investigadas; a tela não as corrige silenciosamente."],
   }),
+  manual("/qualidade/pops", "Qualidade", "POPs e documentos controlados", "Cadastrar, versionar e vincular procedimentos industriais e de qualidade sem alterar OPs historicas.", {
+    before: ["Defina codigo, titulo, finalidade, revisao, vigencia e referencia documental.", "Confirme a alcada individual para criar, publicar ou vincular um documento controlado."],
+    steps: ["Pesquise o procedimento pelo codigo ou titulo.", "Crie a revisao em rascunho e confira o conteudo.", "Publique a versao com justificativa.", "Ative o POP e vincule a versao publicada a uma etapa ou formula.", "Abra uma nova OP para confirmar as referencias congeladas."],
+    after: ["Versoes publicadas permanecem imutaveis.", "Novas revisoes nao alteram OPs abertas ou concluidas.", "A impressao da OP mostra somente codigo, titulo, revisao e vigencia."],
+    roles: ["Consulta e manutencao dependem de alcadas individuais do PCP e Controle de Qualidade."],
+    blockers: ["Versao em rascunho ou POP inativo nao pode receber novo vinculo.", "Falta de justificativa impede publicacao, ativacao e mudanca de aplicabilidade."],
+    records: ["Versoes, estado, aplicabilidade, congelamento na OP e observacoes do CQ permanecem auditaveis."]
+  }),
   manual("/pedidos/financeiro", "Financeiro", "Recebimentos e comissoes", "Registrar dinheiro recebido e controlar a conta corrente de comissoes.", {
     before: ["O pedido de venda deve estar liberado ou atendido e possuir saldo financeiro aberto.", "Pagamentos e ajustes de comissao exigem permissao financeira especifica."],
     steps: ["Em venda aprovada e ainda sem recebimento, defina vendedor, agente ou gerente com percentual e justificativa.", "Selecione um pedido com saldo e registre o recebimento.", "Confira a liberacao proporcional gerada para os comissionados do pedido.", "Consulte o saldo por pessoa.", "Registre pagamento ou ajuste manual somente com documento e motivo adequados."],

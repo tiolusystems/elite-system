@@ -70,7 +70,7 @@ class PcpOrderPrintAndCqParticipantsContractTests(unittest.TestCase):
         ):
             self.assertIn(expected, self.quality)
 
-        self.assertIn('"finalizar_pcp_op_relacional"', self.actions)
+        self.assertIn('"finalizar_pcp_op_relacional_com_pops"', self.actions)
         self.assertIn("p_formulador_pessoa_ids: formuladorIds", self.actions)
         self.assertNotIn("p_separador_mp:", self.actions)
         self.assertNotIn("p_conferente_mp:", self.actions)

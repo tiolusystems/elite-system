@@ -1,5 +1,6 @@
 import { getRuntimeStatus } from "@/lib/runtime";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { OpControlledProcedure } from "@/lib/controlled-procedures";
 
 export type PcpComponentType = "MP" | "PA" | "PI";
 
@@ -202,6 +203,7 @@ export type PcpRecentOp = {
   participants: PcpOpParticipant[];
   outputs: PcpOpOutput[];
   guaranteeResults: PcpOpGuaranteeResult[];
+  procedures: OpControlledProcedure[];
 };
 
 export type PcpAvailableLot = {
@@ -678,7 +680,8 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         components: componentsByOp.get(id) ?? [],
         participants: participantsByOp.get(id) ?? [],
         outputs: outputsByOp.get(id) ?? [],
-        guaranteeResults: guaranteeResultsByOp.get(id) ?? []
+        guaranteeResults: guaranteeResultsByOp.get(id) ?? [],
+        procedures: []
       } satisfies PcpRecentOp;
     });
 
@@ -968,7 +971,8 @@ export async function getPcpOrderPrintData(orderId: number): Promise<PcpRecentOp
       components,
       participants,
       outputs: [],
-      guaranteeResults: []
+      guaranteeResults: [],
+      procedures: []
     };
   } catch {
     return null;

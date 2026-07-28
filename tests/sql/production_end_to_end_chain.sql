@@ -15,6 +15,9 @@ declare
   v_package_version_id bigint;
   v_formula_id bigint;
   v_mapa_formula_id bigint;
+  v_pop_id bigint;
+  v_pop_version_id bigint;
+  v_op_pop_snapshot_id bigint;
   v_formula_lot_id bigint;
   v_packaging_lot_id bigint;
   v_formula_lot_code text;
@@ -186,6 +189,38 @@ begin
   );
   perform public.activate_pcp_formula_versao(v_mapa_formula_id, 'Formula MAPA aprovada no smoke integrado');
 
+  v_pop_version_id := public.create_pcp_pop_version(
+    null,
+    'POP-CHAIN-0087',
+    'Formulacao integrada 0087',
+    'Orientar a formulacao sintetica da cadeia integrada',
+    '01',
+    current_date,
+    'DOC-POP-CHAIN-0087',
+    'Executar separacao, conferencia e formulacao conforme o registro controlado.',
+    'Criacao sintetica para validar o congelamento na OP'
+  );
+  select pop_id into v_pop_id
+    from public.pcp_pop_versoes
+   where id = v_pop_version_id;
+  perform public.publish_pcp_pop_version(
+    v_pop_version_id,
+    'Publicacao sintetica para a cadeia industrial integrada'
+  );
+  perform public.set_pcp_pop_active_state(
+    v_pop_id,
+    true,
+    'Ativacao sintetica para a cadeia industrial integrada'
+  );
+  perform public.set_pcp_pop_applicability(
+    v_pop_version_id,
+    'formulacao',
+    v_formula_id,
+    true,
+    10,
+    'Aplicacao sintetica na formula operacional integrada'
+  );
+
   v_op_id := public.create_pcp_op_idempotente(
     '87000000-0000-4000-8000-000000000010', v_formula_id, 'estoque', 10, 'OP integrada 0087'
   );
@@ -202,13 +237,21 @@ begin
   exception when others then
     if sqlerrm not like 'idempotency key reused with different production order request%' then raise; end if;
   end;
+  select id into v_op_pop_snapshot_id
+    from public.pcp_op_pops_congelados
+   where op_id = v_op_id
+     and pop_versao_id = v_pop_version_id
+     and etapa = 'formulacao';
+  if v_op_pop_snapshot_id is null then
+    raise exception 'applicable POP version was not frozen on production order creation';
+  end if;
   select id into v_component_id from public.pcp_op_componentes_planejados
    where op_id = v_op_id and tipo_componente = 'MP';
   perform public.reservar_pcp_op_componente(
     v_component_id, v_formula_lot_id, null, null, 10, 'Reserva completa da formula'
   );
   perform public.iniciar_pcp_op(v_op_id, 'Inicio da producao integrada');
-  perform public.finalizar_pcp_op_relacional(
+  perform public.finalizar_pcp_op_relacional_com_pops(
     v_op_id,
     jsonb_build_array(jsonb_build_object(
       'tipo_produto', 'PI', 'produto_id', v_product_id, 'quantidade', 9,
@@ -220,6 +263,12 @@ begin
     array[v_formulador_id],
     v_responsavel_cq_id,
     v_responsavel_liberacao_id,
+    jsonb_build_array(jsonb_build_object(
+      'op_pop_congelado_id', v_op_pop_snapshot_id,
+      'resultado', 'conforme',
+      'etapa_controle', 'formulacao',
+      'observacao', 'Procedimento observado sem desvio'
+    )),
     'Perda de processo de um litro'
   );
 
@@ -236,6 +285,15 @@ begin
        )
   ) <> 5 then
     raise exception 'relational CQ participants were not preserved';
+  end if;
+  if not exists (
+    select 1
+      from public.pcp_op_cq_pop_registros
+     where op_id = v_op_id
+       and op_pop_congelado_id = v_op_pop_snapshot_id
+       and resultado = 'conforme'
+  ) then
+    raise exception 'controlled procedure CQ observation was not preserved';
   end if;
 
   select lote_pi_id into v_pi_lot_id from public.pcp_op_produtos_gerados where op_id = v_op_id;

@@ -86,6 +86,7 @@ export function QualityFinishForm({ op, lookups }: { op: PcpRecentOp; lookups: P
         <strong>Dados de processo e CQ</strong>
         <span>baixa insumos e gera um lote na mesma transação</span>
       </div>
+      <ProcedureChecks op={op} />
       <div className="form-grid pcp-cq-grid">
         <label>
           Resultado CQ
@@ -210,6 +211,16 @@ function CompletedQualityCard({ op }: { op: PcpRecentOp }) {
           ))}
         </div>
       ) : null}
+      {op.procedures.length > 0 ? (
+        <div className="quality-procedure-history" aria-label="Procedimentos observados">
+          <strong>Procedimentos aplicados</strong>
+          {op.procedures.map((procedure) => (
+            <span key={procedure.id}>
+              {procedure.code} / revisao {procedure.revision}: {procedure.cqResult ? cqProcedureResultLabel(procedure.cqResult) : "Sem registro de execucao"}
+            </span>
+          ))}
+        </div>
+      ) : null}
       {historyState.needsReview ? (
         <div className="notice-panel warning compact" role="status">
           <strong>Registro histórico preservado</strong>
@@ -235,6 +246,50 @@ function CompletedQualityCard({ op }: { op: PcpRecentOp }) {
         </form>
       ) : null}
     </article>
+  );
+}
+
+function ProcedureChecks({ op }: { op: PcpRecentOp }) {
+  if (op.procedures.length === 0) {
+    return (
+      <div className="notice-panel compact" role="status">
+        <strong>Nenhum POP congelado nesta OP</strong>
+        <span>A ordem preserva esse fato historico. Vinculos criados depois nao alteram a OP.</span>
+      </div>
+    );
+  }
+
+  return (
+    <fieldset className="form-section quality-procedure-checks">
+      <legend>Procedimentos aplicaveis</legend>
+      <p className="muted">Registre a observancia das versoes congeladas quando a OP foi aberta.</p>
+      {op.procedures.map((procedure) => (
+        <div className="quality-procedure-check" key={procedure.id}>
+          <input type="hidden" name="pop_snapshot_id" value={procedure.id} />
+          <input type="hidden" name={`pop_etapa_${procedure.id}`} value={procedure.stage} />
+          <div>
+            <strong>{procedure.code} - {procedure.title}</strong>
+            <span>Revisao {procedure.revision} / vigencia {shortDate(procedure.effectiveFrom)}</span>
+          </div>
+          <label>
+            Resultado
+            <select name={`pop_resultado_${procedure.id}`} defaultValue="conforme">
+              <option value="conforme">Conforme</option>
+              <option value="desvio">Desvio</option>
+              <option value="nao_conforme">Nao conforme</option>
+            </select>
+          </label>
+          <label>
+            Observacao
+            <input name={`pop_observacao_${procedure.id}`} placeholder="Obrigatoria para desvio ou nao conformidade" />
+          </label>
+          <label>
+            Acao corretiva
+            <input name={`pop_acao_${procedure.id}`} placeholder="Quando houver acao contratada" />
+          </label>
+        </div>
+      ))}
+    </fieldset>
   );
 }
 
@@ -284,4 +339,12 @@ function participantRoleLabel(role: string, order: number): string {
     responsavel_cq: "Responsável pelo CQ",
     responsavel_liberacao: "Responsável pela liberação"
   } as Record<string, string>)[role] ?? "Participante";
+}
+
+function cqProcedureResultLabel(value: string): string {
+  return ({
+    conforme: "Conforme",
+    desvio: "Desvio",
+    nao_conforme: "Nao conforme"
+  } as Record<string, string>)[value] ?? "Resultado nao reconhecido";
 }

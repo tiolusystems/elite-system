@@ -2,18 +2,30 @@ import Link from "next/link";
 
 import { ProductionFeedback, ProductionShell, singleProductionParam } from "@/app/producao/production-shell";
 import { QualityWorkbench } from "@/app/producao/qualidade/quality-workbench";
+import { getOpControlledProcedures } from "@/lib/controlled-procedures";
 import { getPcpDashboard } from "@/lib/pcp";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function ProductionQualityPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
-  const dashboard = await getPcpDashboard();
+  const [dashboard, procedures] = await Promise.all([
+    getPcpDashboard(),
+    getOpControlledProcedures()
+  ]);
+  const proceduresByOp = new Map<number, typeof procedures>();
+  for (const procedure of procedures) {
+    proceduresByOp.set(procedure.opId, [...(proceduresByOp.get(procedure.opId) ?? []), procedure]);
+  }
+  const orders = dashboard.recentOps.map((op) => ({
+    ...op,
+    procedures: proceduresByOp.get(op.id) ?? []
+  }));
   const type = singleProductionParam(params.tipo);
-  const inProcess = dashboard.recentOps.filter(
+  const inProcess = orders.filter(
     (op) => op.status === "in_process" && (!type || op.tipoOp === type)
   );
-  const completed = dashboard.recentOps.filter((op) => op.status === "completed").slice(0, 12);
+  const completed = orders.filter((op) => op.status === "completed").slice(0, 12);
 
   return (
     <ProductionShell

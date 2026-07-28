@@ -12,6 +12,7 @@ const ALLOWED_FORMULA_TYPES = new Set(["producao", "mapa"]);
 const ALLOWED_COMPONENT_TYPES = new Set(["MP", "PA", "PI"]);
 const ALLOWED_OP_TYPES = new Set(["estoque", "experimental", "desenvolvimento", "reprocessamento"]);
 const ALLOWED_CQ_STATUS = new Set(["aprovado", "bloqueado", "reprovado"]);
+const ALLOWED_POP_CQ_RESULTS = new Set(["conforme", "desvio", "nao_conforme"]);
 const ALLOWED_OUTPUT_TYPES = new Set(["PA", "PI"]);
 const ALLOWED_GUARANTEE_LIMITS = new Set(["minimo", "maximo", "faixa", "declarado"]);
 const ALLOWED_GUARANTEE_SOURCES = new Set(["mapa", "manual", "laboratorio", "fornecedor", "calculado"]);
@@ -32,6 +33,14 @@ type OutputPayload = {
   produto_id?: number;
   quantidade: number;
   observacao?: string;
+};
+
+type PopCqResultPayload = {
+  op_pop_congelado_id: number;
+  resultado: string;
+  etapa_controle: string;
+  observacao?: string;
+  acao_corretiva?: string;
 };
 
 type OpReturnTarget = {
@@ -248,6 +257,7 @@ export async function finishPcpOpAction(formData: FormData) {
   const responsavelCqPessoaId = optionalInteger(formData, "responsavel_cq_pessoa_id");
   const responsavelLiberacaoPessoaId = optionalInteger(formData, "responsavel_liberacao_pessoa_id");
   const parsedOutputs = parseOutputs(formData);
+  const popResults = parsePopCqResults(formData);
 
   if (
     !opId
@@ -291,7 +301,7 @@ export async function finishPcpOpAction(formData: FormData) {
   }
   const correlationId = `pcp_op:${opId}:finish`;
   const outputs = parsedOutputs.map((output) => ({ ...output, quantidade: volume }));
-  const { error } = await auditedRpc(supabase, "finalizar_pcp_op_relacional", {
+  const { error } = await auditedRpc(supabase, "finalizar_pcp_op_relacional_com_pops", {
     p_conferente_pessoa_id: conferentePessoaId,
     p_cq_status: cqStatus,
     p_densidade_kg_l: densidade,
@@ -300,6 +310,7 @@ export async function finishPcpOpAction(formData: FormData) {
     p_observacao: optionalField(formData, "observacao_finalizacao"),
     p_op_id: opId,
     p_outputs_jsonb: outputs,
+    p_pop_resultados_jsonb: popResults,
     p_ph: ph,
     p_responsavel_cq_pessoa_id: responsavelCqPessoaId,
     p_responsavel_liberacao_pessoa_id: responsavelLiberacaoPessoaId,
@@ -640,6 +651,29 @@ function parseOutputs(formData: FormData): OutputPayload[] {
     outputs.push(payload);
   }
   return outputs;
+}
+
+function parsePopCqResults(formData: FormData): PopCqResultPayload[] {
+  return formData.getAll("pop_snapshot_id").map((rawId) => {
+    const snapshotId = Number(String(rawId));
+    const result = field(formData, `pop_resultado_${snapshotId}`);
+    const stage = field(formData, `pop_etapa_${snapshotId}`);
+    const observation = optionalField(formData, `pop_observacao_${snapshotId}`);
+    const correctiveAction = optionalField(formData, `pop_acao_${snapshotId}`);
+    if (!Number.isSafeInteger(snapshotId) || snapshotId <= 0 || !ALLOWED_POP_CQ_RESULTS.has(result) || !stage) {
+      redirect("/producao/qualidade?result=invalid_pop_result#cq-pendente");
+    }
+    if (result !== "conforme" && !observation) {
+      redirect("/producao/qualidade?result=missing_pop_observation#cq-pendente");
+    }
+    return {
+      op_pop_congelado_id: snapshotId,
+      resultado: result,
+      etapa_controle: stage,
+      ...(observation ? { observacao: observation } : {}),
+      ...(correctiveAction ? { acao_corretiva: correctiveAction } : {})
+    };
+  });
 }
 
 function field(formData: FormData, name: string): string {

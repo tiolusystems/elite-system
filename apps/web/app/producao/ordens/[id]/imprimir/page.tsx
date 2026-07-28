@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PrintButton } from "@/app/producao/ordens/[id]/imprimir/print-button";
+import { getOpControlledProcedures } from "@/lib/controlled-procedures";
 import type { PcpOpParticipant, PcpOpReservation } from "@/lib/pcp";
 import { getPcpOrderPrintData } from "@/lib/pcp";
 import { orderStatusLabel, unitLabel } from "@/lib/production-labels";
@@ -11,7 +12,10 @@ export default async function PrintProductionOrderPage({ params }: { params: Pro
   const orderId = Number.parseInt(id, 10);
   if (!Number.isInteger(orderId) || orderId <= 0) notFound();
 
-  const order = await getPcpOrderPrintData(orderId);
+  const [order, procedures] = await Promise.all([
+    getPcpOrderPrintData(orderId),
+    getOpControlledProcedures(orderId)
+  ]);
   if (!order) notFound();
 
   const materials = order.components.filter((component) => component.tipoComponente === "MP");
@@ -46,6 +50,36 @@ export default async function PrintProductionOrderPage({ params }: { params: Pro
         />
         <PrintField label="Revisão vigente" value={formulaVersion.version} />
         <PrintField label="Situação" value={orderStatusLabel(order.status)} />
+      </section>
+
+      <section className="production-order-print-section">
+        <h2>Procedimentos aplicaveis</h2>
+        {procedures.length > 0 ? (
+          <table className="production-order-procedure-table">
+            <thead>
+              <tr>
+                <th>Codigo</th>
+                <th>Titulo</th>
+                <th>Revisao</th>
+                <th>Vigencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {procedures.map((procedure) => (
+                <tr key={procedure.id}>
+                  <td>{procedure.code}</td>
+                  <td>{procedure.title}</td>
+                  <td>{procedure.revision}</td>
+                  <td>{dateOnly(procedure.effectiveFrom)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="production-order-print-note">
+            Nenhum procedimento estava vinculado quando esta OP foi aberta.
+          </p>
+        )}
       </section>
 
       <section className="production-order-print-section">
@@ -184,4 +218,10 @@ function dateTime(value: string): string {
     timeStyle: "short",
     timeZone: "America/Sao_Paulo"
   }).format(new Date(value));
+}
+
+function dateOnly(value: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo"
+  }).format(new Date(`${value}T12:00:00-03:00`));
 }

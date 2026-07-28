@@ -402,7 +402,7 @@ begin
    where event.pop_id = p_pop_id
    order by event.created_at desc, event.id desc
    limit 1;
-  if v_current = case when p_active then 'active' else 'inactive' end then
+  if v_current = (case when p_active then 'active' else 'inactive' end) then
     raise exception 'controlled procedure already has the requested state';
   end if;
   v_actor := public.current_actor_id();
@@ -494,7 +494,7 @@ begin
      and event.formula_versao_id is not distinct from p_formula_versao_id
    order by event.created_at desc, event.id desc
    limit 1;
-  if v_current = case when p_active then 'active' else 'inactive' end then
+  if v_current = (case when p_active then 'active' else 'inactive' end) then
     raise exception 'controlled procedure applicability already has the requested state';
   end if;
 

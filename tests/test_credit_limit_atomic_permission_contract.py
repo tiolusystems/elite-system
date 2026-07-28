@@ -42,7 +42,7 @@ class CreditLimitAtomicPermissionContractTests(unittest.TestCase):
     def test_order_review_does_not_render_permanent_limit_form(self) -> None:
         self.assertNotIn("ajustarLimiteCreditoAction", ORDER_PAGE)
         self.assertNotIn("Ajustar limite do cliente", ORDER_PAGE)
-        self.assertIn("Consultar credito do cliente", ORDER_PAGE)
+        self.assertIn("Consultar crédito do cliente", ORDER_PAGE)
 
     def test_security_screen_distinguishes_role_override_and_origin(self) -> None:
         self.assertIn('LEGACY_PERMISSION_KEYS = new Set(["pedidos.credit.limit.adjust"])', SECURITY_DATA)

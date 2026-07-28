@@ -28,7 +28,7 @@ class OrderRequestIdempotencyContractTests(unittest.TestCase):
         actions = ACTIONS.read_text(encoding="utf-8")
         page = PAGE.read_text(encoding="utf-8")
         self.assertIn('name="idempotency_key"', page)
-        self.assertIn('"create_com_pedido_vendedor_itens_idempotente"', actions)
+        self.assertIn('"create_com_pedido_vendedor_programado_idempotente"', actions)
         self.assertIn('"create_com_pedido_vendedor_especial_idempotente"', actions)
         self.assertNotIn('"create_com_pedido_vendedor_itens"', actions)
         self.assertNotIn('"create_com_pedido_vendedor_especial"', actions)

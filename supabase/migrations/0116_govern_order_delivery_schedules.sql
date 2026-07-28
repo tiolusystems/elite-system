@@ -479,7 +479,7 @@ begin
   ) values (p_idempotency_key, 'venda', v_pedido_id, v_actor, v_payload_hash);
 
   v_context := public.begin_audited_rpc(
-    'pedidos.create.own', 'pedidos', 'com_pedido_entregas', 'own_any',
+    'pedidos.create.own', 'pedidos', 'com_pedidos', 'own_any',
     jsonb_build_object('pedido_id', v_pedido_id)
   );
   perform public.log_audited_rpc_change(

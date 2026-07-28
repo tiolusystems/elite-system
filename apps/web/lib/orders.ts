@@ -85,8 +85,12 @@ export type PortfolioClient = {
   linkId: number;
   clientId: number;
   clientName: string;
-  propertyId: number | null;
-  propertyName: string | null;
+  legalName: string | null;
+  tradeName: string | null;
+  document: string | null;
+  city: string | null;
+  state: string | null;
+  status: string;
   sellerName: string;
   availableLimit: number | null;
   creditStatus: string;
@@ -119,7 +123,29 @@ export type ApprovalOrder = {
   creditStatus: string;
 };
 
-export type SalesItem = { id: number; label: string };
+export type SalesItem = {
+  id: number;
+  productId: number;
+  productCode: string;
+  productName: string;
+  presentationCode: string;
+  packaging: string;
+  volumeLiters: number | null;
+  unit: string | null;
+  label: string;
+};
+
+export type DeliveryLocation = {
+  key: string;
+  type: string;
+  propertyId: number | null;
+  establishmentId: number | null;
+  addressId: number | null;
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+};
 
 export type ExchangeSourceItem = {
   id: number;
@@ -172,7 +198,7 @@ export type OrderContract = {
   items: OrderContractItem[];
 };
 
-export async function getOrderWorkspace(search: string | null) {
+export async function getOrderWorkspace(search: string | null, page = 0) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
     return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], error: "Banco de homologação indisponível." };
@@ -181,13 +207,15 @@ export async function getOrderWorkspace(search: string | null) {
     const supabase = await createSupabaseServerClient();
     const normalizedSearch = search?.trim() ?? "";
     const [clients, orders, approvals, items] = await Promise.all([
-      normalizedSearch.length >= 2
-        ? supabase.rpc("consultar_com_carteira_clientes", { p_busca: normalizedSearch })
-        : Promise.resolve({ data: [], error: null }),
+      supabase.rpc("consultar_com_carteira_clientes_paginada", {
+        p_busca: normalizedSearch || null,
+        p_limite: 20,
+        p_offset: Math.max(0, page) * 20
+      }),
       supabase.rpc("consultar_com_pedidos_escopo", { p_limite: 120 }),
       supabase.rpc("consultar_com_pedidos_aprovacao"),
       supabase.from("cad_produto_embalagens")
-        .select("id,codigo_item,status,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros)")
+        .select("id,produto_id,codigo_item,status,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)")
         .eq("status", "active").order("codigo_item").limit(250)
     ]);
     const scopedOrders = (orders.data ?? []) as Array<Record<string, unknown>>;
@@ -206,7 +234,9 @@ export async function getOrderWorkspace(search: string | null) {
     return {
       clients: ((clients.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
         linkId: Number(row.vinculo_id), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
-        propertyId: nullableNumber(row.propriedade_id), propertyName: row.propriedade_nome ? String(row.propriedade_nome) : null,
+        legalName: nullableString(row.razao_social), tradeName: nullableString(row.nome_fantasia),
+        document: nullableString(row.documento_principal), city: nullableString(row.municipio),
+        state: nullableString(row.uf), status: String(row.situacao),
         sellerName: String(row.vendedor_nome), availableLimit: nullableNumber(row.limite_disponivel), creditStatus: String(row.status_credito)
       })),
       orders: scopedOrders.map((row) => ({
@@ -222,7 +252,21 @@ export async function getOrderWorkspace(search: string | null) {
       })),
       items: ((items.data ?? []) as Array<Record<string, unknown>>).map((row) => {
         const product = firstNested(row.cad_produtos_base); const pack = firstNested(row.cad_embalagens);
-        return { id: Number(row.id), label: `${row.codigo_item} - ${product?.nome ?? "Produto"} - ${pack?.descricao ?? "Embalagem"}` };
+        const productCode = String(product?.codigo_produto ?? "Sem código");
+        const productName = String(product?.nome ?? "Produto");
+        const presentationCode = String(row.codigo_item);
+        const packaging = String(pack?.descricao ?? "Embalagem");
+        return {
+          id: Number(row.id),
+          productId: Number(row.produto_id),
+          productCode,
+          productName,
+          presentationCode,
+          packaging,
+          volumeLiters: nullableNumber(pack?.volume_litros),
+          unit: nullableString(pack?.unidade),
+          label: `${presentationCode} - ${productName} - ${packaging}`
+        };
       }),
       exchangeItems: ((exchangeSource.data ?? []) as Array<Record<string, unknown>>).map((row) => {
         const order = orderById.get(Number(row.pedido_id));
@@ -243,6 +287,31 @@ export async function getOrderWorkspace(search: string | null) {
     };
   } catch {
     return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], error: "Não foi possível carregar Pedidos agora." };
+  }
+}
+
+export async function getOrderDeliveryLocations(clientId: number): Promise<DeliveryLocation[]> {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured || !Number.isInteger(clientId) || clientId <= 0) return [];
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("consultar_com_locais_entrega_cliente", {
+      p_cliente_id: clientId
+    });
+    if (error) return [];
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      key: String(row.local_key),
+      type: String(row.tipo_local),
+      propertyId: nullableNumber(row.propriedade_id),
+      establishmentId: nullableNumber(row.estabelecimento_id),
+      addressId: nullableNumber(row.endereco_id),
+      name: String(row.nome),
+      address: nullableString(row.endereco_resumo),
+      city: nullableString(row.municipio),
+      state: nullableString(row.uf)
+    }));
+  } catch {
+    return [];
   }
 }
 

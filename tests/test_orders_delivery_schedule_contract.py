@@ -1,0 +1,73 @@
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class OrdersDeliveryScheduleContractTest(unittest.TestCase):
+    def test_database_contract_is_relational_scoped_and_atomic(self):
+        sql = (ROOT / "supabase/migrations/0116_govern_order_delivery_schedules.sql").read_text(encoding="utf-8")
+        self.assertIn("create table public.com_pedido_entregas", sql)
+        self.assertIn("create table public.com_pedido_entrega_itens", sql)
+        self.assertIn("num_nonnulls(propriedade_id, estabelecimento_id, endereco_id) = 1", sql)
+        self.assertIn("references public.cad_cliente_propriedades(id, cliente_id) on delete restrict", sql)
+        self.assertIn("references public.com_pedido_itens(id, pedido_id) on delete restrict", sql)
+        self.assertIn("public.can_current_user_view_order(pedido_id)", sql)
+        self.assertIn("revoke insert, update, delete, truncate", sql)
+        self.assertIn("create_com_pedido_vendedor_programado_idempotente", sql)
+        self.assertIn("delivery schedule does not cover order quantities", sql)
+        self.assertIn("duplicate sale presentation is not allowed", sql)
+        self.assertIn("pg_advisory_xact_lock", sql)
+        self.assertIn("'pedidos.programacao_entrega_criada'", sql)
+        self.assertNotIn("on delete cascade", sql.lower())
+
+    def test_portfolio_and_locations_are_governed(self):
+        sql = (ROOT / "supabase/migrations/0116_govern_order_delivery_schedules.sql").read_text(encoding="utf-8")
+        library = (ROOT / "apps/web/lib/orders.ts").read_text(encoding="utf-8")
+        self.assertIn("consultar_com_carteira_clientes_paginada", sql)
+        self.assertIn("consultar_com_locais_entrega_cliente", sql)
+        self.assertIn("public.current_user_manages_seller", sql)
+        self.assertIn("public.can_current_user_view_client", sql)
+        self.assertIn("consultar_com_carteira_clientes_paginada", library)
+        self.assertIn("consultar_com_locais_entrega_cliente", library)
+
+    def test_interface_separates_client_location_product_and_presentation(self):
+        page = (ROOT / "apps/web/app/pedidos/page.tsx").read_text(encoding="utf-8")
+        entry = (ROOT / "apps/web/app/pedidos/order-entry-editor.tsx").read_text(encoding="utf-8")
+        items = (ROOT / "apps/web/app/pedidos/order-items-editor.tsx").read_text(encoding="utf-8")
+        deliveries = (ROOT / "apps/web/app/pedidos/delivery-schedule-editor.tsx").read_text(encoding="utf-8")
+        action = (ROOT / "apps/web/app/pedidos/actions.ts").read_text(encoding="utf-8")
+        self.assertIn("Sua carteira", page)
+        self.assertIn("2. Local e entrega", page)
+        self.assertIn("Local de entrega", deliveries)
+        self.assertIn("Adicionar outra entrega", deliveries)
+        self.assertIn("Selecione o produto", items)
+        self.assertIn("Selecione a apresentação", items)
+        self.assertIn("Distribua integralmente", entry)
+        self.assertIn('name="entregas_json"', entry)
+        self.assertIn("sessionStorage", entry)
+        self.assertIn("Os dados foram preservados", page)
+        self.assertIn('name="return_page"', page)
+        self.assertIn('query.set("pagina"', action)
+        self.assertIn("create_com_pedido_vendedor_programado_idempotente", action)
+        self.assertNotIn('name="propriedade"', entry)
+
+    def test_manual_explains_operational_effects(self):
+        manual = (ROOT / "docs/manuais/pedidos/PEDIDOS_E_APROVACAO.md").read_text(encoding="utf-8")
+        self.assertIn("programação de entrega", manual)
+        self.assertIn("não reserva estoque", manual)
+        self.assertIn("produto e depois a apresentação", manual)
+        self.assertIn("mais de uma entrega", manual)
+
+    def test_sql_smoke_covers_permissions_idempotency_and_allocation(self):
+        smoke = (ROOT / "tests/sql/order_delivery_schedules.sql").read_text(encoding="utf-8")
+        self.assertIn("scheduled order retry did not return the original order", smoke)
+        self.assertIn("direct scheduled delivery write is exposed", smoke)
+        self.assertIn("incomplete delivery allocation was accepted", smoke)
+        self.assertIn("duplicate presentation was accepted", smoke)
+        self.assertIn("user without permission created a scheduled order", smoke)
+
+
+if __name__ == "__main__":
+    unittest.main()

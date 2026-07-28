@@ -20,7 +20,7 @@ export async function criarPedidoComercialAction(formData: FormData) {
     return criarPedidoEspecialVendedorAction(formData);
   }
   if (tipoPedido !== "venda") {
-    redirect("/pedidos?result=invalid_order_type#novo-pedido");
+    redirectOrder(formData, "invalid_order_type");
   }
   return criarPedidoVendedorAction(formData);
 }
@@ -34,10 +34,10 @@ export async function criarPedidoEspecialVendedorAction(formData: FormData) {
   const dataPedido = field(formData, "data_pedido");
   const justificativa = field(formData, "observacao");
   if (!idempotencyKey || !vinculoId || !produtoEmbalagemId || quantidade === null || quantidade <= 0 || !dataPedido || !["bonificacao", "mostruario"].includes(tipoPedido)) {
-    redirect("/pedidos?result=missing_order_required#novo-pedido");
+    redirectOrder(formData, "missing_order_required");
   }
   if (tipoPedido === "bonificacao" && justificativa.length < 10) {
-    redirect("/pedidos?result=missing_bonus_reason#novo-pedido");
+    redirectOrder(formData, "missing_bonus_reason");
   }
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_especial_idempotente", {
@@ -57,32 +57,56 @@ export async function criarPedidoEspecialVendedorAction(formData: FormData) {
       failure_action: "pedidos.special_create_failed"
     }
   });
-  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-pedido`);
+  if (error) redirectOrder(formData, mapSupabaseError(error.message));
   revalidatePath("/pedidos");
-  redirect("/pedidos?result=pedido_pending_approval#historico");
+  redirectOrder(formData, "pedido_pending_approval", "#historico");
 }
 
 export async function criarPedidoVendedorAction(formData: FormData) {
   const idempotencyKey = uuid(formData, "idempotency_key");
   const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
   const itensJson = field(formData, "itens_json");
+  const entregasJson = field(formData, "entregas_json");
   const dataPedido = field(formData, "data_pedido");
   let items: Array<{ produto_embalagem_id: number; quantidade: number; valor_unitario: number }> = [];
+  let deliveries: Array<{
+    data_prevista: string;
+    propriedade_id: number | null;
+    estabelecimento_id: number | null;
+    endereco_id: number | null;
+    itens: Array<{ item_index: number; quantidade: number }>;
+  }> = [];
   try {
     const parsed: unknown = JSON.parse(itensJson);
     items = Array.isArray(parsed) ? parsed : [];
   } catch {
     items = [];
   }
+  try {
+    const parsed: unknown = JSON.parse(entregasJson);
+    deliveries = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    deliveries = [];
+  }
   if (!idempotencyKey || !vinculoId || !dataPedido || !items.length || items.some((item) => !item.produto_embalagem_id || item.quantidade <= 0 || item.valor_unitario < 0)) {
-    redirect("/pedidos?result=missing_order_required#novo-pedido");
+    redirectOrder(formData, "missing_order_required");
+  }
+  if (!deliveries.length || deliveries.some((delivery) =>
+    !delivery.data_prevista
+    || [delivery.propriedade_id, delivery.estabelecimento_id, delivery.endereco_id].filter((value) => value !== null).length !== 1
+    || !Array.isArray(delivery.itens)
+    || !delivery.itens.length
+    || delivery.itens.some((item) => !Number.isInteger(item.item_index) || item.item_index <= 0 || item.quantidade <= 0)
+  )) {
+    redirectOrder(formData, "missing_delivery_schedule");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_itens_idempotente", {
+  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_programado_idempotente", {
     p_idempotency_key: idempotencyKey,
     p_cliente_vendedor_vinculo_id: vinculoId,
     p_data_pedido: dataPedido,
+    p_entregas_jsonb: deliveries,
     p_itens_jsonb: items,
     p_observacao: optionalField(formData, "observacao"),
   }, {
@@ -94,9 +118,9 @@ export async function criarPedidoVendedorAction(formData: FormData) {
       failure_action: "pedidos.create_failed"
     }
   });
-  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-pedido`);
+  if (error) redirectOrder(formData, mapSupabaseError(error.message));
   revalidatePath("/pedidos");
-  redirect("/pedidos?result=pedido_pending_approval#historico");
+  redirectOrder(formData, "pedido_pending_approval", "#historico");
 }
 
 export async function decidirPedidoGerencialAction(formData: FormData) {
@@ -352,6 +376,21 @@ function mapSupabaseError(message: string): string {
   if (normalized.includes("foreign key")) {
     return "missing_related_record";
   }
+  if (normalized.includes("delivery schedule") || normalized.includes("delivery items")) {
+    return "missing_delivery_schedule";
+  }
+  if (normalized.includes("delivery date")) {
+    return "invalid_delivery_date";
+  }
+  if (normalized.includes("delivery property") || normalized.includes("delivery establishment") || normalized.includes("delivery address") || normalized.includes("delivery location")) {
+    return "invalid_delivery_location";
+  }
+  if (normalized.includes("sale item is inactive") || normalized.includes("invalid order item")) {
+    return "invalid_sale_item";
+  }
+  if (normalized.includes("idempotency key reused")) {
+    return "idempotency_conflict";
+  }
   if (normalized.includes("motivo is required")) {
     return "missing_credit_reason";
   }
@@ -389,4 +428,15 @@ function mapSupabaseError(message: string): string {
     return "invalid_justification";
   }
   return "save_failed";
+}
+
+function redirectOrder(formData: FormData, result: string, hash = "#novo-pedido"): never {
+  const linkId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
+  const search = field(formData, "return_search");
+  const page = optionalInteger(formData, "return_page");
+  const query = new URLSearchParams({ result });
+  if (linkId) query.set("cliente", String(linkId));
+  if (search) query.set("busca", search);
+  if (page !== null && page >= 0) query.set("pagina", String(page));
+  redirect(`/pedidos?${query.toString()}${hash}`);
 }

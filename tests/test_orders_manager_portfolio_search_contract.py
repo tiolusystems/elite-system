@@ -13,13 +13,16 @@ class OrdersManagerPortfolioSearchContractTest(unittest.TestCase):
         self.assertIn("revoke all on function public.consultar_com_carteira_clientes(text) from public, anon", sql)
         self.assertIn("grant execute on function public.consultar_com_carteira_clientes(text) to authenticated", sql)
 
-    def test_page_does_not_preload_portfolio_and_filters_client_history(self):
+    def test_page_preloads_scoped_portfolio_and_filters_client_history(self):
         library = (ROOT / "apps/web/lib/orders.ts").read_text(encoding="utf-8")
         page = (ROOT / "apps/web/app/pedidos/page.tsx").read_text(encoding="utf-8")
-        self.assertIn("normalizedSearch.length >= 2", library)
-        self.assertIn("Digite pelo menos 2 letras", page)
+        self.assertIn('"consultar_com_carteira_clientes_paginada"', library)
+        self.assertIn("p_limite: 20", library)
+        self.assertIn("Sua carteira", page)
+        self.assertIn("Página anterior", page)
+        self.assertIn("Próxima página", page)
         self.assertIn("order.clientId === selected.clientId", page)
-        self.assertIn("clientes próprios e da equipe", page)
+        self.assertIn("nome, razão social, nome fantasia, documento, município, propriedade ou estabelecimento", page)
 
 
 if __name__ == "__main__":

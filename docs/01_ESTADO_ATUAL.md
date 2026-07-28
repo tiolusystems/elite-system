@@ -5,18 +5,56 @@ Atualizado em: 2026-07-28
 ## Referencia vigente
 
 - branch de desenvolvimento publicada: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `ae091b9`;
-- frontend funcional ativo: `ae091b9`;
-- Supabase de homologacao: ledger alinhado de `0001` a `0115`;
+- HEAD funcional publicado: `cfab4d1`;
+- frontend funcional ativo: `cfab4d1`;
+- Supabase de homologacao: ledger alinhado de `0001` a `0116`;
 - frontend estavel: `https://elite-system-staging.vercel.app`;
 - backend de staging: `/api/health` com `status=ok` e `backendConfigured=true`;
-- deployment estavel de staging: `dpl_4KAcP1iz9B3XbFzfx8WvvQn2Py4L`;
+- deployment estavel de staging: `dpl_CtRjmDcYBNEVRwTMQMaZjzxgECra`;
 - deployment funcional anterior preservado para rollback:
-  `dpl_CzhRWnV2KARsvoFJF3LuFFwrF5rV`;
+  `dpl_5x84zyyEr516bhPo5fHhz86DbgBG`;
 - producao real e `main`: nao alteradas;
 - PWA: adiada.
 
 ## Tarefa concluida mais recente
+
+UX-01I - Pedidos, itens e programacao de entregas:
+
+- o gate visual anterior foi publicado em `2e65cb6`, preservando as telas de
+  Producao e Romaneio ja aprovadas;
+- `3859739` implantou o fluxo sequencial do vendedor: carteira paginada,
+  cliente, credito, local de entrega, itens, programacao e revisao;
+- `cfab4d1` alinhou o contexto de auditoria da criacao transacional e os
+  contratos de regressao;
+- a migration `0116_govern_order_delivery_schedules.sql` criou programacoes e
+  itens de entrega relacionais, sem transformar observacao em fonte
+  operacional;
+- local de entrega referencia propriedade, estabelecimento ou endereco
+  cadastrado por ID; produto e apresentacao tambem permanecem relacionais;
+- a RPC idempotente cria pedido, itens e programacoes na mesma transacao,
+  exige cobertura integral das quantidades e recalcula as validacoes no banco;
+- a carteira do vendedor possui consulta paginada e pesquisa por dados
+  governados, sem carregar todos os clientes no navegador;
+- o rascunho permanece no navegador quando uma validacao falha, e a consulta
+  preserva pagina, busca e cliente selecionado;
+- a CI `30380140238` aprovou `database-contract`, `python-tests` e
+  `web-contract`; a instalacao limpa incluiu a `0116`;
+- o dry-run remoto listou somente a `0116`, aplicada exclusivamente no
+  Supabase de staging; o ledger foi confirmado ate `0116`;
+- o Preview `dpl_2hCYgZeNmcZMn1xB2nq9dPjSWhnc` foi promovido para o deployment
+  estavel `dpl_CtRjmDcYBNEVRwTMQMaZjzxgECra`;
+- `/api/health` respondeu `status=ok` e `backendConfigured=true`, e o rodape do
+  staging confirmou o SHA `cfab4d1`;
+- as cinco resolucoes foram capturadas fora do Git; a protecao de rota, login,
+  identidade e rodape permaneceram legiveis, sem menu autenticado para
+  visitante;
+- o E2E descartavel `30381872116`, tentativa 2, reconstruiu `0001` a `0116`,
+  aprovou as quatro cadeias SQL, criou 11 usuarios sinteticos, executou login
+  real e aprovou 40 testes Playwright nas cinco resolucoes;
+- nenhuma conta, senha ou dado operacional foi criado no staging para
+  contornar a autenticacao; o ambiente descartavel foi encerrado sem backup;
+- UX-01I esta tecnicamente validado no staging. Nenhuma homologacao visual foi
+  atribuida a Luciano.
 
 Macrociclo noturno PROD-UX-03 -> UX-01H:
 

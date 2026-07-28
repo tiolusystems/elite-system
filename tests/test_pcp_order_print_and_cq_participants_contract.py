@@ -9,6 +9,7 @@ QUALITY = WEB / "app" / "producao" / "qualidade" / "quality-workbench.tsx"
 ACTIONS = WEB / "app" / "pcp" / "actions.ts"
 PCP = WEB / "lib" / "pcp.ts"
 MANUALS = WEB / "lib" / "manuals.ts"
+GLOBALS = WEB / "app" / "globals.css"
 MIGRATION = ROOT / "supabase" / "migrations" / "0114_govern_pcp_cq_participants.sql"
 
 
@@ -19,6 +20,7 @@ class PcpOrderPrintAndCqParticipantsContractTests(unittest.TestCase):
         self.actions = ACTIONS.read_text(encoding="utf-8")
         self.pcp = PCP.read_text(encoding="utf-8")
         self.manuals = MANUALS.read_text(encoding="utf-8")
+        self.globals = GLOBALS.read_text(encoding="utf-8")
         self.migration = MIGRATION.read_text(encoding="utf-8")
 
     def test_print_uses_total_order_quantities_and_separate_lot_rows(self) -> None:
@@ -52,6 +54,13 @@ class PcpOrderPrintAndCqParticipantsContractTests(unittest.TestCase):
             "participant?.nome",
         ):
             self.assertIn(expected, self.print_page)
+
+    def test_print_signature_lines_cannot_expand_the_page(self) -> None:
+        signature_styles = self.globals.split(
+            ".production-order-signatures > div > span", 1
+        )[1].split("}", 1)[0]
+        for expected in ("width: 100%", "overflow: hidden", "font-size: 0"):
+            self.assertIn(expected, signature_styles)
 
     def test_print_loads_the_requested_order_instead_of_recent_dashboard_limit(self) -> None:
         self.assertIn("getPcpOrderPrintData(orderId)", self.print_page)

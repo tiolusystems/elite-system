@@ -118,7 +118,15 @@ export async function criarPedidoVendedorAction(formData: FormData) {
       failure_action: "pedidos.create_failed"
     }
   });
-  if (error) redirectOrder(formData, mapSupabaseError(error.message));
+  if (error) {
+    console.error("[pedidos.create_failed]", {
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      message: error.message
+    });
+    redirectOrder(formData, mapSupabaseError(error.message));
+  }
   revalidatePath("/pedidos");
   redirectOrder(formData, "pedido_pending_approval", "#historico");
 }

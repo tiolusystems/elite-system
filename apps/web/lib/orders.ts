@@ -84,6 +84,7 @@ export type OrdersDashboard = {
 export type PortfolioClient = {
   linkId: number;
   clientId: number;
+  sellerId: number;
   clientName: string;
   legalName: string | null;
   tradeName: string | null;
@@ -201,12 +202,12 @@ export type OrderContract = {
 export async function getOrderWorkspace(search: string | null, page = 0) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], error: "Banco de homologação indisponível." };
+    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], commercialPersonId: null as number | null, error: "Banco de homologação indisponível." };
   }
   try {
     const supabase = await createSupabaseServerClient();
     const normalizedSearch = search?.trim() ?? "";
-    const [clients, orders, approvals, items] = await Promise.all([
+    const [clients, orders, approvals, items, commercialPerson] = await Promise.all([
       supabase.rpc("consultar_com_carteira_clientes_paginada", {
         p_busca: normalizedSearch || null,
         p_limite: 20,
@@ -216,7 +217,8 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
       supabase.rpc("consultar_com_pedidos_aprovacao"),
       supabase.from("cad_produto_embalagens")
         .select("id,produto_id,codigo_item,status,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)")
-        .eq("status", "active").order("codigo_item").limit(250)
+        .eq("status", "active").order("codigo_item").limit(250),
+      supabase.rpc("current_commercial_person_id")
     ]);
     const scopedOrders = (orders.data ?? []) as Array<Record<string, unknown>>;
     const orderIds = scopedOrders.map((row) => Number(row.pedido_id)).filter((id) => Number.isInteger(id) && id > 0);
@@ -230,10 +232,10 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
           .limit(300)
       : { data: [], error: null };
     const orderById = new Map(scopedOrders.map((row) => [Number(row.pedido_id), row]));
-    const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? items.error?.message ?? exchangeSource.error?.message ?? null;
+    const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? items.error?.message ?? commercialPerson.error?.message ?? exchangeSource.error?.message ?? null;
     return {
       clients: ((clients.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-        linkId: Number(row.vinculo_id), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
+        linkId: Number(row.vinculo_id), clientId: Number(row.cliente_id), sellerId: Number(row.vendedor_id), clientName: String(row.cliente_nome),
         legalName: nullableString(row.razao_social), tradeName: nullableString(row.nome_fantasia),
         document: nullableString(row.documento_principal), city: nullableString(row.municipio),
         state: nullableString(row.uf), status: String(row.situacao),
@@ -283,10 +285,11 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
           quantity: Number(row.quantidade ?? 0)
         };
       }),
+      commercialPersonId: nullableNumber(commercialPerson.data),
       error
     };
   } catch {
-    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], error: "Não foi possível carregar Pedidos agora." };
+    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], commercialPersonId: null as number | null, error: "Não foi possível carregar Pedidos agora." };
   }
 }
 

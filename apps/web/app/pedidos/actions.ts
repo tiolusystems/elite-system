@@ -118,15 +118,7 @@ export async function criarPedidoVendedorAction(formData: FormData) {
       failure_action: "pedidos.create_failed"
     }
   });
-  if (error) {
-    console.error("[pedidos.create_failed]", {
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      message: error.message
-    });
-    redirectOrder(formData, mapSupabaseError(error.message));
-  }
+  if (error) redirectOrder(formData, mapSupabaseError(error.message));
   revalidatePath("/pedidos");
   redirectOrder(formData, "pedido_pending_approval", "#historico");
 }
@@ -431,6 +423,9 @@ function mapSupabaseError(message: string): string {
   }
   if (normalized.includes("outside seller portfolio") || normalized.includes("outside manager team")) {
     return "permission_denied";
+  }
+  if (normalized.includes("commercial identity not linked")) {
+    return "commercial_identity_required";
   }
   if (normalized.includes("justification")) {
     return "invalid_justification";

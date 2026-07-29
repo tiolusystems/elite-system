@@ -16,6 +16,9 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
   const result = single(params.result);
   const workspace = await getOrderWorkspace(search || null, page);
   const selected = workspace.clients.find((client) => client.linkId === selectedLink) ?? null;
+  const canCreateForSelected = selected !== null
+    && workspace.commercialPersonId !== null
+    && selected.sellerId === workspace.commercialPersonId;
   const deliveryLocations = selected ? await getOrderDeliveryLocations(selected.clientId) : [];
   const visibleOrders = selected
     ? workspace.orders.filter((order) => order.clientId === selected.clientId)
@@ -79,7 +82,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
 
         <section className="panel orders-entry" id="novo-pedido">
           <div className="panel-header"><div><h2>Novo pedido</h2><p>{selected ? selected.clientName : "Selecione um cliente da carteira para começar."}</p></div><span className="status-chip status-pending_review">Aguardará liberação</span></div>
-          {selected ? (
+          {selected && canCreateForSelected ? (
             <form action={criarPedidoComercialAction}>
               <input type="hidden" name="idempotency_key" value={orderRequestKey} />
               <input type="hidden" name="cliente_vendedor_vinculo_id" value={selected.linkId} />
@@ -99,6 +102,14 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
                 exchangeItems={workspace.exchangeItems.filter((item) => item.clientId === selected.clientId)}
               />
             </form>
+          ) : selected ? (
+            <div className="permission-state">
+              <strong>Consulta disponível, criação indisponível</strong>
+              <span>
+                Sua conta pode consultar este cliente, mas não representa o vendedor responsável pela carteira.
+                Entre com a conta do vendedor ou solicite à Segurança a correção do vínculo de identidade.
+              </span>
+            </div>
           ) : <div className="empty-state"><strong>Cliente ainda não selecionado</strong><span>Pesquise ou escolha um cliente da lista; o limite aparecerá antes do preenchimento.</span></div>}
         </section>
       </section>
@@ -143,6 +154,7 @@ function resultMessage(result?: string) {
     invalid_credit_limit: { kind: "warning", title: "Limite inválido", detail: "Informe valor não negativo e justificativa completa." },
     missing_bonus_reason: { kind: "warning", title: "Justificativa obrigatória", detail: "Explique a bonificação com pelo menos 10 caracteres." },
     permission_denied: { kind: "warning", title: "Operação não autorizada", detail: "Este cliente ou pedido não pertence ao seu escopo comercial." },
+    commercial_identity_required: { kind: "warning", title: "Identidade comercial necessária", detail: "A conta precisa estar vinculada ao vendedor responsável para criar pedidos nesta carteira." },
     missing_order_required: { kind: "warning", title: "Pedido incompleto", detail: "Revise os campos indicados e mantenha ao menos um item válido." },
     missing_delivery_schedule: { kind: "warning", title: "Programação incompleta", detail: "Informe local, data e distribuição integral das quantidades." },
     invalid_delivery_date: { kind: "warning", title: "Data de entrega inválida", detail: "A previsão não pode ser anterior à data do pedido." },

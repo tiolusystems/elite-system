@@ -86,12 +86,25 @@ class OrdersDeliveryScheduleContractTest(unittest.TestCase):
         self.assertIn('type === "venda" && hasValidItem', entry)
         self.assertIn("hasValidItem && !confirmed", entry)
 
+    def test_portfolio_visibility_does_not_imply_order_creation_identity(self):
+        page = (ROOT / "apps/web/app/pedidos/page.tsx").read_text(encoding="utf-8")
+        library = (ROOT / "apps/web/lib/orders.ts").read_text(encoding="utf-8")
+        action = (ROOT / "apps/web/app/pedidos/actions.ts").read_text(encoding="utf-8")
+        self.assertIn("canCreateForSelected", page)
+        self.assertIn("Consulta disponível, criação indisponível", page)
+        self.assertIn("não representa o vendedor responsável", page)
+        self.assertIn('supabase.rpc("current_commercial_person_id")', library)
+        self.assertIn("sellerId: Number(row.vendedor_id)", library)
+        self.assertIn("commercialPersonId: nullableNumber(commercialPerson.data)", library)
+        self.assertIn('normalized.includes("commercial identity not linked")', action)
+
     def test_manual_explains_operational_effects(self):
         manual = (ROOT / "docs/manuais/pedidos/PEDIDOS_E_APROVACAO.md").read_text(encoding="utf-8")
         self.assertIn("programação de entrega", manual)
         self.assertIn("não reserva estoque", manual)
         self.assertIn("produto e depois a apresentação", manual)
         self.assertIn("mais de uma entrega", manual)
+        self.assertIn("conta está vinculada ao vendedor responsável", manual)
 
     def test_sql_smoke_covers_permissions_idempotency_and_allocation(self):
         smoke = (ROOT / "tests/sql/order_delivery_schedules.sql").read_text(encoding="utf-8")

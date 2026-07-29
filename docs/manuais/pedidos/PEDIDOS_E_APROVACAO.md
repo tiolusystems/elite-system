@@ -30,6 +30,10 @@ Todo pedido fica como **Aguardando liberação**. Bonificação e mostruário n�
 geram comissão. O vendedor não escolhe outro vendedor, não aumenta limite e
 não libera o próprio pedido.
 
+A criação pertence à carteira própria do vendedor. Gerentes e administradores
+podem consultar outras carteiras conforme suas alçadas, mas o formulário de novo
+pedido só aparece quando a conta está vinculada ao vendedor responsável.
+
 Duplo clique ou repeticao da mesma requisicao nao cria outro pedido. O sistema
 retorna o pedido bloqueado originalmente criado e preserva uma unica fila de
 liberacao gerencial.

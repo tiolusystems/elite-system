@@ -20,6 +20,11 @@ test("consulta, ficha e novo cliente permanecem separados", async ({
   await loginAs(page, masterData);
   await page.goto("/cadastros?grupo=clientes&modo=novo");
   await expect(page.locator(".clients-list-panel")).toHaveCount(0);
+  await expectNoHorizontalOverflow(page, testInfo, "new client form");
+  await page.screenshot({
+    path: testInfo.outputPath("cliente-novo.png"),
+    fullPage: true,
+  });
   const form = page.locator("#cadastro-cliente form");
   await form.locator('input[name="nome"]').fill(name);
   await form.locator('input[name="cidade"]').fill("Campinas");
@@ -58,6 +63,11 @@ test("consulta, ficha e novo cliente permanecem separados", async ({
     .getByRole("button", { name: "Buscar" })
     .click();
   await expect(page.locator(".client-list-item")).toHaveCount(1);
+  await expectNoHorizontalOverflow(page, testInfo, "client list");
+  await page.screenshot({
+    path: testInfo.outputPath("clientes-lista.png"),
+    fullPage: true,
+  });
 
   await page.locator(".client-list-item").click();
   await expect(page.locator(".clients-list-panel")).toHaveCount(0);
@@ -68,15 +78,7 @@ test("consulta, ficha e novo cliente permanecem separados", async ({
   await expect(page.locator("body")).not.toContainText(
     /SQLSTATE|permission denied|stack trace|AuthRetryableFetchError/i,
   );
-  const horizontalOverflow = await page.evaluate(
-    () =>
-      document.documentElement.scrollWidth >
-      document.documentElement.clientWidth + 1,
-  );
-  expect(
-    horizontalOverflow,
-    `client file has horizontal overflow in ${testInfo.project.name}`,
-  ).toBeFalsy();
+  await expectNoHorizontalOverflow(page, testInfo, "client file");
   const sectionNavigationOverflow = await page
     .getByRole("navigation", { name: /seções da ficha/i })
     .evaluate((navigation) => navigation.scrollWidth > navigation.clientWidth + 1);
@@ -105,4 +107,16 @@ async function loginAs(page, account) {
   await expect(page).toHaveURL((url) => url.pathname === "/", {
     timeout: 30_000,
   });
+}
+
+async function expectNoHorizontalOverflow(page, testInfo, state) {
+  const horizontalOverflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth + 1,
+  );
+  expect(
+    horizontalOverflow,
+    `${state} has horizontal overflow in ${testInfo.project.name}`,
+  ).toBeFalsy();
 }

@@ -43,8 +43,23 @@ jobs:
           version: 2.109.0
       - name: Start disposable Supabase
         run: supabase start
-      - name: Rebuild database from every migration
-        run: supabase db reset
+      - name: Rebuild through 0116 and validate the 0117 upgrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration="supabase/migrations/0117_govern_client_workbench_search.sql"
+          pending="$RUNNER_TEMP/0117_govern_client_workbench_search.sql"
+          restore_migration() {
+            if [ -f "$pending" ]; then
+              mv "$pending" "$migration"
+            fi
+          }
+          trap restore_migration EXIT
+          mv "$migration" "$pending"
+          supabase db reset
+          restore_migration
+          supabase migration up --local
+          trap - EXIT
       - name: Lint PostgreSQL schema
         run: supabase db lint --local --level warning
       - name: Generate database TypeScript contract
@@ -111,6 +126,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_delivery_schedules.sql
+      - name: Run governed client workbench search smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/client_workbench_search.sql
       - name: Run atomic credit limit permission smoke
         env:
           PGPASSWORD: postgres

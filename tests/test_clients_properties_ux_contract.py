@@ -51,7 +51,9 @@ class ClientsPropertiesUxContractTests(unittest.TestCase):
         self.assertIn("client-form-grid", clients)
         self.assertIn("@media (max-width: 820px)", css)
         self.assertIn("@media (max-width: 520px)", css)
-        self.assertIn(".clients-workbench { grid-template-columns: 1fr; }", css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", css)
+        self.assertIn("clients-workbench-detail", clients)
+        self.assertIn("clients-workbench-form", clients)
 
     def test_client_area_hides_technical_errors_and_has_one_primary_flow(self) -> None:
         page = PAGE.read_text(encoding="utf-8")

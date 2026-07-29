@@ -8,16 +8,34 @@ unico campo. Cada informacao permanece vinculada ao cliente por relacionamento.
 
 ## Antes de cadastrar
 
-- pesquise por nome, razao social, nome fantasia, documento ou codigo legado;
+- pesquise por nome, razao social, nome fantasia, CPF, CNPJ, inscricao
+  estadual, codigo legado, apelido, propriedade, estabelecimento, municipio,
+  UF, telefone, e-mail ou CEP;
 - confirme se o cliente ja existe com outra grafia;
 - tenha os documentos e a origem da informacao;
 - use dados fiscais somente quando houver fonte verificavel;
 - nao invente municipio, documento, inscricao ou situacao cadastral ausente.
 
+## Consultar clientes
+
+1. Abra **Cadastros > Clientes**.
+2. Informe um termo de busca e, quando necessario, filtre por situacao ou
+   altere a ordenacao.
+3. A consulta pesquisa todos os clientes permitidos para a sua sessao e mostra
+   os resultados em paginas. Ela nao fica limitada aos primeiros registros
+   carregados no navegador.
+4. Abra o cliente desejado. A ficha ocupa a largura operacional e a lista deixa
+   de ser exibida enquanto voce consulta ou altera o cadastro.
+5. Use **Voltar aos clientes** para recuperar a busca, os filtros, a ordenacao
+   e a pagina consultada.
+
+A pesquisa ignora diferencas de maiusculas, acentos e pontuacao de documentos.
+Somente as relacoes do cliente aberto sao carregadas na ficha.
+
 ## Novo cliente
 
 1. Abra **Cadastros > Clientes**.
-2. Pesquise o nome ou documento.
+2. Pesquise o nome, documento ou outra referencia conhecida.
 3. Se nao houver cadastro correspondente, escolha **Novo cliente**.
 4. Informe a identificacao basica e grave.
 5. Abra a ficha criada para incluir documentos, contatos, propriedades,
@@ -62,6 +80,8 @@ unico campo. Cada informacao permanece vinculada ao cliente por relacionamento.
 ## Correcao e inativacao
 
 - corrija a secao que possui o dado; nao recrie o cliente;
+- a consulta e a ficha sao telas do mesmo cadastro, mas ficam separadas para
+  evitar formularios comprimidos e alteracoes no cliente errado;
 - inativar preserva pedidos, documentos e historico;
 - reativacao depende da acao autorizada e nao reabre vinculos encerrados por
   conta propria.

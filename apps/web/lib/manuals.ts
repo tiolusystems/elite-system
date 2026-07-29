@@ -24,9 +24,9 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/cadastros", "Cadastros", "Central de Cadastros", "Consultar e manter dados mestres usados pela operacao.", {
     before: ["Pesquise o cadastro antes de criar um novo registro.", "Confirme se possui a alcada individual exigida pela operacao."],
-    steps: ["Escolha a area do cadastro.", "Use a busca para localizar registros existentes.", "Abra a acao de criacao ou manutencao.", "Revise a mensagem de confirmacao e o historico quando disponivel."],
+    steps: ["Escolha a area do cadastro.", "Em Clientes, pesquise por identidade, documento, codigo, propriedade, localizacao ou contato e use os filtros da consulta.", "Abra a ficha desejada; a consulta permanece separada da manutencao e pode ser retomada pelo botao Voltar aos clientes.", "Use Novo cliente somente depois de confirmar que o registro ainda nao existe.", "Revise a mensagem de confirmacao e o historico quando disponivel."],
     after: ["Cadastros ativos passam a alimentar os respectivos fluxos operacionais.", "Veiculos ativos ficam disponiveis para atribuicao no Romaneio."],
-    blockers: ["Duplicidades e dados obrigatorios impedem a gravacao.", "Sem alcada, a consulta pode permanecer disponivel, mas os controles de escrita nao sao exibidos."],
+    blockers: ["Nenhum resultado indica que os termos ou filtros devem ser revisados; isso nao cria cadastro automaticamente.", "Duplicidades e dados obrigatorios impedem a gravacao.", "Sem alcada, a consulta pode permanecer disponivel, mas os controles de escrita nao sao exibidos."],
     records: ["Criacoes e mudancas de situacao governadas registram usuario, data e estado anterior ou posterior."]
   }),
   manual("/cadastros/materias-primas", "Cadastros", "Materias-primas", "Cadastrar e revisar insumos, unidades e classificacoes governadas.", {

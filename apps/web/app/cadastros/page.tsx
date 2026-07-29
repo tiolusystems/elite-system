@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ClientesSection } from "@/app/cadastros/clientes-section";
 import { PessoasSection } from "@/app/cadastros/pessoas-section";
 import { VehiclesSection } from "@/app/cadastros/vehicles-section";
-import { getMasterDataDashboard } from "@/lib/master-data";
+import { getMasterDataClientWorkspace, getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -37,9 +37,6 @@ const CADASTRO_GROUPS: Array<{
 export default async function CadastrosPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
-  const dashboard = await getMasterDataDashboard();
-  const lookups = dashboard.lookups;
-  const pendingCount = dashboard.validationIssues.length;
   const result = singleValue(params.result);
   const formMessage = messageForResult(result);
   const requestedGroup = singleValue(params.grupo);
@@ -49,6 +46,23 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
   const selectedPersonId = positiveInteger(singleValue(params.pessoa));
   const newClientMode = activeGroup?.key === "clientes" && singleValue(params.modo) === "novo";
   const newPersonMode = activeGroup?.key === "pessoas" && singleValue(params.modo) === "novo";
+  const clientStatus = singleValue(params.situacao) ?? "";
+  const clientSort = singleValue(params.ordem) ?? "nome_asc";
+  const clientPage = positiveInteger(singleValue(params.pagina)) ?? 1;
+  const [dashboard, clientWorkspace] = await Promise.all([
+    getMasterDataDashboard({ lightweight: activeGroup?.key === "clientes" }),
+    activeGroup?.key === "clientes"
+      ? getMasterDataClientWorkspace({
+          busca: singleValue(params.busca) ?? "",
+          situacao: clientStatus,
+          ordenacao: clientSort,
+          pagina: clientPage,
+          clienteId: selectedClientId,
+          carregarLista: !selectedClientId && !newClientMode
+        })
+      : Promise.resolve(null)
+  ]);
+  const pendingCount = dashboard.validationIssues.length;
   const visibleGroups = query
     ? CADASTRO_GROUPS.filter((group) => `${group.title} ${group.description}`.toLocaleLowerCase("pt-BR").includes(query))
     : CADASTRO_GROUPS;
@@ -67,28 +81,46 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           <div className="cadastros-heading-actions">
             {activeGroup ? <Link className="secondary-button" href="/cadastros">Visao geral</Link> : null}
             {activeGroup ? (
-              <a className="primary-button" href={actionHref(activeGroup.key)}>{activeGroup.action}</a>
+              <a
+                className="primary-button"
+                href={
+                  activeGroup.key === "clientes"
+                    ? clientNewHref({
+                        busca: singleValue(params.busca) ?? "",
+                        situacao: clientStatus,
+                        ordenacao: clientSort,
+                        pagina: clientPage
+                      })
+                    : actionHref(activeGroup.key)
+                }
+              >
+                {activeGroup.action}
+              </a>
             ) : (
               <Link className="primary-button" href="/cadastros?grupo=clientes&modo=novo#cadastro-cliente">Novo cliente</Link>
             )}
           </div>
         </div>
 
-        <form className="cadastros-search" action="/cadastros" method="get" role="search">
-          {activeGroup ? <input type="hidden" name="grupo" value={activeGroup.key} /> : null}
-          <label htmlFor="cadastros-search-input">Buscar nos cadastros</label>
-          <div>
-            <input id="cadastros-search-input" name="busca" defaultValue={singleValue(params.busca)} placeholder="Cliente, produto, materia-prima ou area" />
-            <button className="secondary-button" type="submit">Buscar</button>
-            {query ? <Link className="text-button" href={activeGroup ? `/cadastros?grupo=${activeGroup.key}` : "/cadastros"}>Limpar</Link> : null}
-          </div>
-        </form>
+        {activeGroup?.key !== "clientes" ? (
+          <form className="cadastros-search" action="/cadastros" method="get" role="search">
+            {activeGroup ? <input type="hidden" name="grupo" value={activeGroup.key} /> : null}
+            <label htmlFor="cadastros-search-input">Buscar nos cadastros</label>
+            <div>
+              <input id="cadastros-search-input" name="busca" defaultValue={singleValue(params.busca)} placeholder="Cliente, produto, materia-prima ou area" />
+              <button className="secondary-button" type="submit">Buscar</button>
+              {query ? <Link className="text-button" href={activeGroup ? `/cadastros?grupo=${activeGroup.key}` : "/cadastros"}>Limpar</Link> : null}
+            </div>
+          </form>
+        ) : null}
 
-        <section className="cadastros-context" aria-label="Situacao dos cadastros">
-          <div><strong>{dashboard.modules.length}</strong><span>cadastros monitorados</span></div>
-          <div className={pendingCount > 0 ? "attention" : ""}><strong>{pendingCount}</strong><span>pendencias relevantes</span></div>
-          <div><strong>{dashboard.source === "supabase" ? "Conectado" : "Indisponivel"}</strong><span>estado da consulta</span></div>
-        </section>
+        {activeGroup?.key !== "clientes" ? (
+          <section className="cadastros-context" aria-label="Situacao dos cadastros">
+            <div><strong>{dashboard.modules.length}</strong><span>cadastros monitorados</span></div>
+            <div className={pendingCount > 0 ? "attention" : ""}><strong>{pendingCount}</strong><span>pendencias relevantes</span></div>
+            <div><strong>{dashboard.source === "supabase" ? "Conectado" : "Indisponivel"}</strong><span>estado da consulta</span></div>
+          </section>
+        ) : null}
 
         {dashboard.error ? (
           <section className="notice-panel" role="status">
@@ -161,23 +193,30 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           <ClientesSection
             busca={singleValue(params.busca) ?? ""}
             clienteSelecionadoId={selectedClientId}
-            clientes={dashboard.clientes}
-            commercialLinksManageAvailable={dashboard.clienteVinculosGravacaoDisponivel}
-            contatos={dashboard.clienteContatos}
-            creditos={dashboard.clienteCreditos}
-            creditoEventos={dashboard.clienteCreditoEventos}
-            creditoGravacaoDisponivel={dashboard.creditoGravacaoDisponivel}
-            documentos={dashboard.clienteDocumentos}
-            enderecos={dashboard.clienteEnderecos}
-            estabelecimentos={dashboard.clienteEstabelecimentos}
+            clienteSelecionado={clientWorkspace?.cliente ?? null}
+            clientes={clientWorkspace?.pagina.clientes ?? []}
+            commercialLinksManageAvailable={clientWorkspace?.commercialLinksManageAvailable ?? false}
+            contatos={clientWorkspace?.contatos ?? []}
+            creditos={clientWorkspace?.creditos ?? []}
+            creditoEventos={clientWorkspace?.creditoEventos ?? []}
+            creditoGravacaoDisponivel={clientWorkspace?.creditoGravacaoDisponivel ?? false}
+            documentos={clientWorkspace?.documentos ?? []}
+            enderecos={clientWorkspace?.enderecos ?? []}
+            erroConsulta={clientWorkspace?.erro ?? null}
+            estabelecimentos={clientWorkspace?.estabelecimentos ?? []}
             gravacaoDisponivel={runtime.supabaseConfigured}
-            identificacoes={dashboard.clienteIdentificacoes}
-            linkRoles={dashboard.clienteVinculoPapeis}
+            identificacoes={clientWorkspace?.identificacoes ?? []}
+            linkRoles={clientWorkspace?.linkRoles ?? []}
             modoNovo={newClientMode}
-            pessoas={lookups.pessoasComerciais}
-            propriedades={dashboard.propriedades}
+            ordenacao={clientSort}
+            pagina={clientWorkspace?.pagina.pagina ?? clientPage}
+            pessoas={clientWorkspace?.pessoas ?? []}
+            propriedades={clientWorkspace?.propriedades ?? []}
             secao={singleValue(params.secao) ?? undefined}
-            vinculos={dashboard.clienteVendedores}
+            situacao={clientStatus}
+            tamanhoPagina={clientWorkspace?.pagina.tamanhoPagina ?? 25}
+            totalClientes={clientWorkspace?.pagina.total ?? 0}
+            vinculos={clientWorkspace?.vinculos ?? []}
           />
         ) : null}
 
@@ -233,6 +272,20 @@ function actionHref(group: CadastroGroupKey): string {
     validacao: "#validacao"
   };
   return hrefs[group];
+}
+
+function clientNewHref(input: {
+  busca: string;
+  situacao: string;
+  ordenacao: string;
+  pagina: number;
+}): string {
+  const query = new URLSearchParams({ grupo: "clientes", modo: "novo" });
+  if (input.busca.trim()) query.set("busca", input.busca.trim());
+  if (input.situacao) query.set("situacao", input.situacao);
+  if (input.ordenacao === "nome_desc") query.set("ordem", "nome_desc");
+  if (input.pagina > 1) query.set("pagina", String(input.pagina));
+  return `/cadastros?${query.toString()}#cadastro-cliente`;
 }
 
 function groupHref(group: CadastroGroupKey): string {

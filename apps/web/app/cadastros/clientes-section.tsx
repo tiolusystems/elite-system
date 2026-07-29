@@ -26,6 +26,7 @@ import {
 import type {
   LookupOption,
   MasterDataClient,
+  MasterDataClientListItem,
   MasterDataClientAddress,
   MasterDataClientContact,
   MasterDataClientCredit,
@@ -53,7 +54,8 @@ const SECTIONS = [
 type SectionKey = (typeof SECTIONS)[number][0];
 
 type Props = {
-  clientes: MasterDataClient[];
+  clientes: MasterDataClientListItem[];
+  clienteSelecionado: MasterDataClient | null;
   propriedades: MasterDataProperty[];
   vinculos: MasterDataClientSeller[];
   linkRoles: MasterDataClientLinkRole[];
@@ -69,88 +71,183 @@ type Props = {
   enderecos: MasterDataClientAddress[];
   busca: string;
   clienteSelecionadoId: number | null;
+  totalClientes: number;
+  pagina: number;
+  tamanhoPagina: number;
+  situacao: string;
+  ordenacao: string;
+  erroConsulta: string | null;
   secao?: string;
   modoNovo: boolean;
   gravacaoDisponivel: boolean;
 };
 
 export function ClientesSection(props: Props) {
-  const consulta = normalizeSearch(props.busca);
-  const clientesFiltrados = props.clientes.filter(
-    (cliente) => {
-      const relatedValues = [
-        cliente.nome,
-        cliente.codigoLegado,
-        cliente.cidade,
-        cliente.uf,
-        ...cliente.apelidos,
-        ...props.propriedades
-          .filter((item) => item.clienteId === cliente.id)
-          .flatMap((item) => [item.nome, item.cnpj, item.cidade, item.uf]),
-        ...props.documentos
-          .filter((item) => item.clienteId === cliente.id)
-          .flatMap((item) => [item.tipo, item.numero]),
-        ...props.contatos
-          .filter((item) => item.clienteId === cliente.id)
-          .flatMap((item) => [item.nome, item.papel, item.telefone, item.email]),
-        ...props.identificacoes
-          .filter((item) => item.clienteId === cliente.id)
-          .flatMap((item) => [item.razaoSocial, item.nomeFantasia, item.cnaePrincipal]),
-        ...props.estabelecimentos
-          .filter((item) => item.clienteId === cliente.id)
-          .flatMap((item) => [item.nome, item.tipo]),
-        ...props.enderecos
-          .filter((item) => item.clienteId === cliente.id)
-          .flatMap((item) => [item.cep, item.logradouro, item.numero, item.complemento, item.bairro, item.cidade, item.uf]),
-      ];
-      return !consulta || relatedValues.some((value) => matchesSearch(consulta, value));
-    },
-  );
-  const cliente = props.modoNovo
-    ? null
-    : (props.clientes.find((item) => item.id === props.clienteSelecionadoId) ??
-      null);
   const secao = SECTIONS.some(([key]) => key === props.secao)
     ? (props.secao as SectionKey)
     : "resumo";
+  const consultaHref = clientListHref(props);
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(props.totalClientes / props.tamanhoPagina),
+  );
+  const inicio =
+    props.totalClientes === 0
+      ? 0
+      : (props.pagina - 1) * props.tamanhoPagina + 1;
+  const fim = Math.min(
+    props.totalClientes,
+    inicio + props.clientes.length - 1,
+  );
+
+  if (props.modoNovo) {
+    return (
+      <section
+        className="clients-workbench clients-workbench-form"
+        aria-label="Novo cliente"
+      >
+        <div className="client-workbench-toolbar">
+          <Link className="secondary-button" href={consultaHref}>
+            Voltar aos clientes
+          </Link>
+        </div>
+        <ClientForm gravacaoDisponivel={props.gravacaoDisponivel} />
+      </section>
+    );
+  }
+
+  if (props.clienteSelecionadoId) {
+    return (
+      <section
+        className="clients-workbench clients-workbench-detail"
+        aria-label="Ficha do cliente"
+      >
+        <div className="client-workbench-toolbar">
+          <Link className="secondary-button" href={consultaHref}>
+            Voltar aos clientes
+          </Link>
+        </div>
+        {props.clienteSelecionado ? (
+          <ClientDetail
+            {...props}
+            cliente={props.clienteSelecionado}
+            secao={secao}
+          />
+        ) : (
+          <Empty
+            title="Cliente não localizado"
+            text="O cadastro não existe ou não está disponível para a sua sessão."
+          />
+        )}
+      </section>
+    );
+  }
 
   return (
     <section
-      className="clients-workbench"
-      aria-label="Gestão de clientes e propriedades"
+      className="clients-workbench clients-workbench-list"
+      aria-label="Consulta de clientes"
     >
       <div className="clients-list-panel">
         <div className="clients-list-heading">
           <div>
             <span className="section-kicker">Consulta</span>
             <h2>Clientes</h2>
+            <p>
+              Localize o cadastro antes de abrir a ficha ou criar um novo
+              cliente.
+            </p>
           </div>
-          <span className="count-badge">{clientesFiltrados.length}</span>
+          <span className="count-badge">{props.totalClientes}</span>
         </div>
-        {clientesFiltrados.length ? (
-          <div className="clients-list" role="list">
-            {clientesFiltrados.map((item) => (
+        <form
+          className="client-search-form"
+          action="/cadastros"
+          method="get"
+          role="search"
+        >
+          <input type="hidden" name="grupo" value="clientes" />
+          <label className="client-search-query">
+            Buscar clientes
+            <input
+              name="busca"
+              defaultValue={props.busca}
+              placeholder="Nome, documento, código, propriedade, cidade, telefone ou e-mail"
+            />
+          </label>
+          <label>
+            Situação
+            <select name="situacao" defaultValue={props.situacao}>
+              <option value="">Todas</option>
+              <option value="active">Ativos</option>
+              <option value="pending_review">Em revisão</option>
+              <option value="inactive">Inativos</option>
+            </select>
+          </label>
+          <label>
+            Ordenação
+            <select name="ordem" defaultValue={props.ordenacao}>
+              <option value="nome_asc">Nome: A a Z</option>
+              <option value="nome_desc">Nome: Z a A</option>
+            </select>
+          </label>
+          <div className="client-search-actions">
+            <button className="primary-button" type="submit">
+              Buscar
+            </button>
+            {props.busca ||
+            props.situacao ||
+            props.ordenacao === "nome_desc" ? (
               <Link
-                aria-current={cliente?.id === item.id ? "page" : undefined}
-                className={`client-list-item${cliente?.id === item.id ? " selected" : ""}`}
-                href={`/cadastros?grupo=clientes&cliente=${item.id}`}
+                className="secondary-button"
+                href="/cadastros?grupo=clientes"
+              >
+                Limpar
+              </Link>
+            ) : null}
+          </div>
+        </form>
+        {props.erroConsulta ? (
+          <div className="notice-panel warning" role="status">
+            <strong>Consulta temporariamente indisponível</strong>
+            <span>{props.erroConsulta}</span>
+          </div>
+        ) : null}
+        <div className="client-results-summary" aria-live="polite">
+          <span>{props.totalClientes} cliente(s) encontrado(s)</span>
+          {props.totalClientes > 0 ? (
+            <span>
+              Exibindo {inicio} a {fim}
+            </span>
+          ) : null}
+        </div>
+        {props.clientes.length ? (
+          <div className="clients-list" role="list">
+            {props.clientes.map((item) => (
+              <Link
+                className="client-list-item"
+                href={clientDetailHref(item.id, props)}
                 key={item.id}
                 role="listitem"
               >
                 <span className="client-list-main">
                   <strong>{item.nome}</strong>
-                  <small>{formatLocation(item.cidade, item.uf)}</small>
+                  <small>
+                    {item.nomeFantasia ||
+                      item.razaoSocial ||
+                      formatLocation(item.cidade, item.uf)}
+                  </small>
                 </span>
                 <span className={`status-chip status-${item.status}`}>
                   {cadastroStatusLabel(item.status)}
                 </span>
                 <span className="client-list-meta">
-                  {
-                    props.propriedades.filter(
-                      (property) => property.clienteId === item.id,
-                    ).length
-                  }{" "}
-                  propriedade(s)
+                  {formatLocation(item.cidade, item.uf)}
+                  {" · "}
+                  {item.documentoPrincipal ||
+                    formatLegacyCode(item.codigoLegado)}
+                  {" · "}
+                  {item.propriedadesTotal} propriedade(s)
                 </span>
               </Link>
             ))}
@@ -161,20 +258,36 @@ export function ClientesSection(props: Props) {
             text="Revise nome, documento, município, UF, telefone ou e-mail."
           />
         )}
-      </div>
-
-      <div className="clients-detail-panel">
-        {cliente ? (
-          <ClientDetail {...props} cliente={cliente} secao={secao} />
-        ) : props.modoNovo ? (
-          <ClientForm gravacaoDisponivel={props.gravacaoDisponivel} />
-        ) : (
-          <Empty
-            title="Selecione um cliente"
-            text="Abra uma ficha para consultar e manter seus dados relacionados."
-            action="Cadastrar cliente"
-          />
-        )}
+        {props.totalClientes > props.tamanhoPagina ? (
+          <nav
+            className="client-pagination"
+            aria-label="Paginação de clientes"
+          >
+            {props.pagina > 1 ? (
+              <Link
+                className="secondary-button"
+                href={clientListHref(props, props.pagina - 1)}
+              >
+                Anterior
+              </Link>
+            ) : (
+              <span />
+            )}
+            <span>
+              Página {props.pagina} de {totalPaginas}
+            </span>
+            {props.pagina < totalPaginas ? (
+              <Link
+                className="secondary-button"
+                href={clientListHref(props, props.pagina + 1)}
+              >
+                Próxima
+              </Link>
+            ) : (
+              <span />
+            )}
+          </nav>
+        ) : null}
       </div>
     </section>
   );
@@ -238,7 +351,7 @@ function ClientDetail(
         {SECTIONS.map(([key, label]) => (
           <Link
             key={key}
-            href={`/cadastros?grupo=clientes&cliente=${cliente.id}&secao=${key}`}
+            href={clientSectionHref(cliente.id, key, props)}
             aria-current={secao === key ? "page" : undefined}
           >
             {label}
@@ -1020,7 +1133,7 @@ function ClientForm({
           </label>
         </div>
         <button className="primary-button" disabled={!gravacaoDisponivel}>
-          Salvar alterações
+          {editing ? "Salvar alterações" : "Cadastrar cliente"}
         </button>
       </form>
       {cliente && cliente.status !== "inactive" ? (
@@ -1164,18 +1277,33 @@ function formatDateTime(value: string) {
     : new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
-function normalizeSearch(value: string | null | undefined): string {
-  return (value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR")
-    .trim();
+function clientListHref(props: Props, page = props.pagina): string {
+  const query = clientListQuery(props, page);
+  return `/cadastros?${query.toString()}`;
 }
 
-function matchesSearch(query: string, value: string | null | undefined): boolean {
-  const normalizedValue = normalizeSearch(value);
-  if (!normalizedValue) return false;
-  const compactQuery = query.replace(/[^a-z0-9]/g, "");
-  const compactValue = normalizedValue.replace(/[^a-z0-9]/g, "");
-  return normalizedValue.includes(query) || Boolean(compactQuery && compactValue.includes(compactQuery));
+function clientDetailHref(clientId: number, props: Props): string {
+  const query = clientListQuery(props, props.pagina);
+  query.set("cliente", String(clientId));
+  return `/cadastros?${query.toString()}`;
+}
+
+function clientSectionHref(
+  clientId: number,
+  section: SectionKey,
+  props: Props,
+): string {
+  const query = clientListQuery(props, props.pagina);
+  query.set("cliente", String(clientId));
+  query.set("secao", section);
+  return `/cadastros?${query.toString()}`;
+}
+
+function clientListQuery(props: Props, page: number): URLSearchParams {
+  const query = new URLSearchParams({ grupo: "clientes" });
+  if (props.busca.trim()) query.set("busca", props.busca.trim());
+  if (props.situacao) query.set("situacao", props.situacao);
+  if (props.ordenacao === "nome_desc") query.set("ordem", "nome_desc");
+  if (page > 1) query.set("pagina", String(page));
+  return query;
 }

@@ -7,18 +7,35 @@ CLIENTS = (ROOT / "apps/web/app/cadastros/clientes-section.tsx").read_text(encod
 MASTER_DATA = (ROOT / "apps/web/lib/master-data.ts").read_text(encoding="utf-8")
 ORDERS_ACTIONS = (ROOT / "apps/web/app/pedidos/actions.ts").read_text(encoding="utf-8")
 CADASTROS_PAGE = (ROOT / "apps/web/app/cadastros/page.tsx").read_text(encoding="utf-8")
+CLIENT_SEARCH = (
+    ROOT / "supabase/migrations/0117_govern_client_workbench_search.sql"
+).read_text(encoding="utf-8")
 
 
 class Ux01cCustomerCreditContractTests(unittest.TestCase):
     def test_customer_search_covers_relational_record(self) -> None:
+        self.assertIn("consultar_cad_clientes_paginada", MASTER_DATA)
         for source in (
-            "props.propriedades", "props.documentos", "props.contatos",
-            "props.identificacoes", "props.estabelecimentos", "props.enderecos",
+            "cad_cliente_propriedades",
+            "cad_cliente_documentos",
+            "cad_cliente_contatos",
+            "cad_cliente_identificacoes",
+            "cad_cliente_estabelecimentos",
+            "cad_cliente_enderecos",
         ):
-            self.assertIn(source, CLIENTS)
-        for value in ("item.cnpj", "item.numero", "item.telefone", "item.email", "item.razaoSocial", "item.nomeFantasia", "item.cep"):
-            self.assertIn(value, CLIENTS)
-        self.assertIn("normalizeSearch", CLIENTS)
+            self.assertIn(source, CLIENT_SEARCH)
+        for value in (
+            "property.cnpj",
+            "customer_document.numero",
+            "contact.telefone",
+            "contact.email",
+            "identification.razao_social",
+            "identification.nome_fantasia",
+            "address.cep",
+        ):
+            self.assertIn(value, CLIENT_SEARCH)
+        self.assertIn("normalize_client_search_text", CLIENT_SEARCH)
+        self.assertNotIn("normalizeSearch", CLIENTS)
 
     def test_credit_remains_finance_owned_and_permission_checked(self) -> None:
         self.assertIn('p_action_key: "financeiro.credit_limits.adjust"', MASTER_DATA)

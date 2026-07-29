@@ -77,6 +77,13 @@ test("consulta, ficha e novo cliente permanecem separados", async ({
     horizontalOverflow,
     `client file has horizontal overflow in ${testInfo.project.name}`,
   ).toBeFalsy();
+  const sectionNavigationOverflow = await page
+    .getByRole("navigation", { name: /seções da ficha/i })
+    .evaluate((navigation) => navigation.scrollWidth > navigation.clientWidth + 1);
+  expect(
+    sectionNavigationOverflow,
+    `client section navigation overflows in ${testInfo.project.name}`,
+  ).toBeFalsy();
 
   await page.screenshot({
     path: testInfo.outputPath("cliente-ficha.png"),

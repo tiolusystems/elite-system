@@ -59,7 +59,7 @@ test("consulta, ficha e novo cliente permanecem separados", async ({
     .click();
   await expect(page.locator(".client-list-item")).toHaveCount(1);
 
-  await page.getByRole("link", { name: new RegExp(name) }).click();
+  await page.locator(".client-list-item").click();
   await expect(page.locator(".clients-list-panel")).toHaveCount(0);
   await expect(page.getByRole("heading", { name })).toBeVisible();
   const back = page.getByRole("link", { name: "Voltar aos clientes" });

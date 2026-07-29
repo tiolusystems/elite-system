@@ -85,6 +85,7 @@ class ClientWorkbenchSearchContractTests(unittest.TestCase):
         self.assertIn("first page or total is invalid", smoke)
         self.assertIn("second page is invalid", smoke)
         self.assertIn("records beyond the old 250 limit are missing", smoke)
+        self.assertIn("last partial page is invalid", smoke)
         self.assertIn("without an active profile enumerated clients", smoke)
         self.assertIn("client search is exposed to anon or PUBLIC", smoke)
         self.assertIn("client search migration expanded direct write access", smoke)

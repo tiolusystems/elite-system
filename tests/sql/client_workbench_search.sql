@@ -195,8 +195,16 @@ begin
     from public.consultar_cad_clientes_paginada(
       '0117', null, 'nome_asc', 25, 250
     );
-  if page_rows <> 26 then
+  if page_rows <> 25 then
     raise exception 'records beyond the old 250 limit are missing: rows %', page_rows;
+  end if;
+
+  select count(*) into page_rows
+    from public.consultar_cad_clientes_paginada(
+      '0117', null, 'nome_asc', 25, 275
+    );
+  if page_rows <> 1 then
+    raise exception 'last partial page is invalid: rows %', page_rows;
   end if;
 
   if not exists (

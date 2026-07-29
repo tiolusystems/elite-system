@@ -5,16 +5,16 @@ Atualizado em: 2026-07-29
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `6d5f782`;
+- HEAD funcional publicado: `35a1633`;
 - sincronizacao local/remoto: `0/0`;
 - Supabase de staging: ledger `0001` a `0117`;
-- deployment ativo: `dpl_6XALShVXg5GB393q7wDjkWgQ6K5a`;
-- rollback preservado: `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT`;
+- deployment ativo: `dpl_HmBGrrYnLhpvMHLgwtQKawtCvznF`;
+- rollback preservado: `dpl_6XALShVXg5GB393q7wDjkWgQ6K5a`;
 - URL: `https://elite-system-staging.vercel.app`;
-- CI do HEAD funcional: `30465735141`, com `database-contract`,
+- CI do HEAD funcional: `30472806418`, com `database-contract`,
   `python-tests` e `web-contract` aprovados;
-- E2E operacional: `30465776522`, 45 testes Playwright aprovados nas cinco
-  resolucoes e quatro cadeias SQL aprovadas em ambiente descartavel;
+- E2E operacional: `30473086759`, com o contrato dos cadastros canonicos,
+  cinco resolucoes e cadeias SQL aprovados em ambiente descartavel;
 - producao real, `main` e PWA: inalterados.
 
 O estado detalhado acumulado ate esta data foi preservado em
@@ -73,15 +73,27 @@ Matriz vigente:
   dados, tabelas ou contratos de escrita;
 - o contexto de busca e preservado ao abrir a ficha e ao retornar para a lista.
 
+### Cadastros canonicos
+
+- Materias-primas, Produtos PA/PI, Embalagens, Grupos de produto, Tipos de
+  insumo e Unidades seguem o mesmo contrato visual homologado em Clientes;
+- consulta, ficha e novo cadastro sao modos exclusivos, sem formularios
+  concorrentes ou paineis laterais comprimindo a area operacional;
+- a Central e a visao de Cadastros tecnicos direcionam explicitamente para as
+  rotas canonicas e para o modo de novo cadastro;
+- a terminologia de Unidades foi simplificada para o operador, sem alterar os
+  valores internos ou contratos do banco;
+- nenhuma migration, regra de negocio ou permissao foi alterada.
+
 ## Validacao vigente
 
-- CI `30465735141`: aprovada;
+- CI `30472806418`: aprovada;
 - instalacao limpa `0001` a `0117`: aprovada no job `database-contract`;
 - smokes SQL de integridade, rollout, industrial, comercial, estoque,
   Romaneio, Seguranca e importacoes: aprovados;
-- regressao Python completa: 690 testes aprovados;
-- E2E `30465776522`: 45 testes Playwright aprovados em `1920 x 1080`,
-  `1366 x 768`, `768 x 1024`, `390 x 844` e `360 x 800`;
+- regressao Python completa: 695 testes aprovados;
+- E2E `30473086759`: aprovado em `1920 x 1080`, `1366 x 768`,
+  `768 x 1024`, `390 x 844` e `360 x 800`;
 - TypeScript, ESLint e build Next.js: aprovados;
 - o smoke anterior de Pedidos confirmou o SHA `8d677ae` e o estado
   `Consulta disponivel, criacao indisponivel` para conta sem identidade de
@@ -92,6 +104,9 @@ Matriz vigente:
 - o smoke autenticado de Clientes confirmou busca por codigo, abertura da
   ficha sem lista lateral, retorno preservando o filtro, novo cadastro isolado
   e SHA `6d5f782`;
+- o smoke autenticado dos cadastros canonicos confirmou consulta, criacao e
+  ficha em modos exclusivos, sem rolagem horizontal ou erro tecnico, no SHA
+  `35a1633`;
 - a migration de leitura `0117` foi aplicada unitariamente no staging.
 
 ## Classificacao

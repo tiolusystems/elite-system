@@ -64,6 +64,14 @@ test("consulta, ficha e novo cliente permanecem separados", async ({
     .click();
   await expect(page.locator(".client-list-item")).toHaveCount(1);
   await expectNoHorizontalOverflow(page, testInfo, "client list");
+  const compactSearchControls = await page.evaluate(() =>
+    [...document.querySelectorAll(".client-search-form input, .client-search-form select")]
+      .some((control) => control.getBoundingClientRect().height < 40),
+  );
+  expect(
+    compactSearchControls,
+    `client search control is too small in ${testInfo.project.name}`,
+  ).toBeFalsy();
   await page.screenshot({
     path: testInfo.outputPath("clientes-lista.png"),
     fullPage: true,

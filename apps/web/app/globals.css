@@ -6007,7 +6007,11 @@ h1 {
   font-weight: 750;
 }
 .client-search-form input,
-.client-search-form select { min-width: 0; width: 100%; }
+.client-search-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+}
 .client-search-actions { display: flex; align-items: center; gap: 8px; }
 .client-results-summary {
   display: flex;

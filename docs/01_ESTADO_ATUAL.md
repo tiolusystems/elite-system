@@ -1,17 +1,20 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-28
+Atualizado em: 2026-07-29
 
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `7f50fee`;
+- HEAD funcional publicado: `8d677ae`;
 - sincronizacao local/remoto: `0/0`;
 - Supabase de staging: ledger `0001` a `0116`;
-- deployment ativo: `dpl_3wSPY9NqtfCs5g9jwhbnN7iStcR3`;
+- deployment ativo: `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT`;
+- rollback preservado: `dpl_3wSPY9NqtfCs5g9jwhbnN7iStcR3`;
 - URL: `https://elite-system-staging.vercel.app`;
-- CI do HEAD funcional: `30413280107`, com `database-contract`,
+- CI do HEAD funcional: `30442260717`, com `database-contract`,
   `python-tests` e `web-contract` aprovados;
+- E2E operacional: `30442558138`, 40 testes Playwright aprovados nas cinco
+  resolucoes e quatro cadeias SQL aprovadas em ambiente descartavel;
 - producao real, `main` e PWA: inalterados.
 
 O estado detalhado acumulado ate esta data foi preservado em
@@ -53,31 +56,39 @@ Matriz vigente:
 
 ### Manuais e inventario
 
-- manuais operacionais genericos estao sendo substituidos por sequencias,
+- manuais operacionais genericos foram substituidos por sequencias,
   bloqueios, efeitos e historico especificos;
 - o teste de cobertura descobre as rotas publicadas em `page.tsx`;
 - a matriz OPS-GATE-01 inventaria paginas, route handlers e 121 Server Actions.
 
 ## Validacao vigente
 
-- CI `30413280107`: aprovada;
+- CI `30442260717`: aprovada;
 - instalacao limpa `0001` a `0116`: aprovada no job `database-contract`;
 - smokes SQL de integridade, rollout, industrial, comercial, estoque,
   Romaneio, Seguranca e importacoes: aprovados;
-- testes dirigidos do ajuste de Pedidos: 12 aprovados;
-- TypeScript, ESLint e build do ajuste de Pedidos: aprovados;
-- smoke autenticado no staging confirmou o SHA `7f50fee` e o estado
+- regressao Python completa: 685 testes aprovados;
+- E2E `30442558138`: 40 testes Playwright aprovados em `1920 x 1080`,
+  `1366 x 768`, `768 x 1024`, `390 x 844` e `360 x 800`;
+- TypeScript, ESLint e build Next.js: aprovados;
+- smoke autenticado no staging confirmou o SHA `8d677ae` e o estado
   `Consulta disponivel, criacao indisponivel` para conta sem identidade de
   vendedor.
+- `/api/health`: `status=ok` e `backendConfigured=true`;
+- cinco verificacoes responsivas adicionais no staging nao encontraram
+  rolagem horizontal, erro tecnico ou divergencia do SHA;
+- nenhuma migration foi criada ou aplicada neste gate.
 
-## Pendencias para fechar o OPS-GATE-01
+## Classificacao
 
-1. concluir e versionar manuais e matriz;
-2. executar a regressao automatizada completa do HEAD resultante;
-3. executar o workflow E2E operacional descartavel nas cinco resolucoes;
-4. publicar o bloco documental no staging somente se houver alteracao web;
-5. registrar CI, E2E, health-check, residuos e classificacao final;
-6. confirmar working tree limpa e sincronizacao `0/0`.
+`OPS-GATE-01`: tecnicamente aprovado.
+
+Todas as rotas e acoes publicadas estao classificadas na matriz. As funcoes
+futuras permanecem bloqueadas de forma explicita. Os defeitos P1 encontrados
+foram corrigidos; nenhum P0 permaneceu aberto.
+
+O sistema esta protegido contra o catalogo de erros humanos previsiveis
+testados. Isso nao constitui declaracao de infalibilidade.
 
 ## Proxima tarefa
 

@@ -1,6 +1,6 @@
 # OPS-GATE-01 - matriz de aceitacao operacional
 
-Atualizado em: 2026-07-28
+Atualizado em: 2026-07-29
 
 ## Baseline recuperada
 
@@ -11,12 +11,15 @@ reorganizado.
 | Item | Estado comprovado |
 |---|---|
 | Branch | `feature/0044-production-module-release` |
-| HEAD funcional deste checkpoint | `7f50fee` |
+| HEAD funcional deste checkpoint | `8d677ae` |
 | Sincronizacao | local/remoto `0/0` |
 | Banco de staging | migrations `0001` a `0116` |
-| CI | `30413280107`, tres jobs aprovados |
-| Deployment | `dpl_3wSPY9NqtfCs5g9jwhbnN7iStcR3` |
+| CI | `30442260717`, tres jobs aprovados |
+| E2E | `30442558138`, 40 testes Playwright e quatro cadeias SQL aprovados |
+| Deployment | `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT` |
+| Rollback | `dpl_3wSPY9NqtfCs5g9jwhbnN7iStcR3` |
 | Dominio | `https://elite-system-staging.vercel.app` |
+| Health | `status=ok`, `backendConfigured=true` |
 | Banco, main, producao real e PWA | inalterados |
 
 ## Criterio
@@ -54,7 +57,7 @@ interface.
 | `/cadastros/embalagens` | A | Manter embalagem e composicao versionada | alçadas de embalagem | composicao incompleta, versao nao revisada e capacidade invalida negadas | 360 a 1920 | N/A | contextual especifico | SQL embalagem + contratos | comprovado |
 | `/cadastros/unidades` | A | Manter conversoes governadas | alçada de conversao | fator zero/negativo e unidade inexistente negados | 360 a 1920 | N/A | contextual especifico | SQL DEC-007 | comprovado |
 | `/cadastros/tecnicos` | B | Portal para rotas canonicas | leitura de Cadastros | nao cria interface paralela nem escrita | 360 a 1920 | N/A | contextual especifico | contrato Central | comprovado |
-| `/pedidos` | A/B | Carteira, pedido, entregas e liberacao | identidade de vendedor e alçadas independentes | formulario incompleto, carteira alheia, distribuicao divergente, duplo envio e retry divergente negados | 360 a 1920 | contrato separado | contextual | SQL 0116, CI `30413280107`, smoke `7f50fee` | comprovado |
+| `/pedidos` | A/B | Carteira, pedido, entregas e liberacao | identidade de vendedor e alçadas independentes | formulario incompleto, carteira alheia, distribuicao divergente, duplo envio e retry divergente negados | 360 a 1920 | contrato separado | contextual | SQL 0116, CI `30442260717`, smoke `8d677ae` | comprovado |
 | `/pedidos/[id]/contrato` | D | Imprimir pedido liberado | leitura do pedido no escopo | pedido bloqueado nao exporta; layout omite shell | 360 a 1920 e papel | PDF/impressao | herda Pedidos | regressao PDF | comprovado |
 | `/kanban` | B | Consultar pedidos por situacao | escopo comercial | nao altera estado por arraste ou cargo | 360 a 1920 | N/A | contextual especifico | contrato comercial | comprovado |
 | `/pedidos/financeiro` | A/B | Recebimentos e comissoes | alçadas financeiras individuais | valor acima do saldo, duplicidade e pagamento excessivo negados | 360 a 1920 | N/A | contextual | cadeia comercial SQL/E2E | comprovado |
@@ -233,8 +236,29 @@ codigo.
 
 | ID | Prioridade | Defeito | Correcao | Evidencia | Situacao |
 |---|---|---|---|---|---|
-| OPS-P1-001 | P1 | Conta administrativa via clientes da equipe, mas recebia erro tecnico ao criar pedido sem identidade de vendedor | consulta e criacao foram separadas; o formulario so aparece para a identidade comercial vinculada e a orientacao ficou em PT-BR | commit `7f50fee`, CI `30413280107`, smoke autenticado no staging | resolvido |
-| OPS-P1-002 | P1 | Manuais genericos nao explicavam sequencia, bloqueios e efeitos de telas operacionais | guias especificos adicionados e cobertura passou a descobrir `page.tsx` automaticamente | testes de manuais deste gate | resolvido |
+| OPS-P1-001 | P1 | Conta administrativa via clientes da equipe, mas recebia erro tecnico ao criar pedido sem identidade de vendedor | consulta e criacao foram separadas; o formulario so aparece para a identidade comercial vinculada e a orientacao ficou em PT-BR | commit `7f50fee`, CI `30442260717`, smoke autenticado no staging `8d677ae` | resolvido |
+| OPS-P1-002 | P1 | Manuais genericos nao explicavam sequencia, bloqueios e efeitos de telas operacionais | guias especificos adicionados e cobertura passou a descobrir `page.tsx` automaticamente | 685 testes Python e E2E `30442558138` | resolvido |
+| OPS-P1-003 | P2 | Orientacao de permissao em Pedidos tinha pouco espaco entre titulo e explicacao no celular | espacamento e ritmo tipografico ajustados sem alterar o fluxo | commit `8d677ae`, cinco resolucoes no staging | resolvido |
+
+## Evidencia final
+
+- CI `30442260717`: `database-contract`, `python-tests` e `web-contract`
+  aprovados.
+- O contrato de banco reconstruiu `0001` a `0116`, executou lint PostgreSQL,
+  RLS, grants, idempotencia, concorrencia e as cadeias operacionais.
+- E2E `30442558138`: 40 testes Playwright aprovados em cinco resolucoes,
+  incluindo shell, manuais, rotas canonicas, separacao de alcadas de credito,
+  gravacao real de MP e estoque, Ordens, leitura sem escrita, painel supervisor
+  e clareza dos cadastros tecnicos.
+- As quatro cadeias SQL descartaveis cobriram estoque e referencias fiscais,
+  Producao, Comercial e rastreabilidade total.
+- O staging publicou `8d677ae` em `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT`; o
+  deployment anterior permanece disponivel para rollback.
+- O smoke autenticado de Pedidos confirmou o bloqueio humano para conta sem
+  identidade de vendedor, manual contextual especifico, ausencia de erro
+  tecnico e ausencia de rolagem horizontal nas cinco resolucoes.
+- Evidencias visuais e artefatos de navegador permaneceram fora do Git.
+- Nenhum P0 foi encontrado aberto. Todos os P1 encontrados foram resolvidos.
 
 ## Ressalvas e limites
 

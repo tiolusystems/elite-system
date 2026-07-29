@@ -6772,6 +6772,8 @@ h1 {
 .orders-credit-strip > div { display: grid; gap: 4px; padding: 14px 16px; border-right: 1px solid var(--brand-border); }
 .orders-credit-strip > div:last-child { border-right: 0; }
 .orders-credit-strip span { color: var(--brand-text-muted); font-size: 11px; font-weight: 750; }
+.permission-state { display: grid; gap: 6px; padding: 18px; color: var(--brand-text); }
+.permission-state span { color: var(--brand-text-muted); line-height: 1.45; }
 .orders-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 18px; border-bottom: 1px solid var(--brand-border); }
 .orders-form-grid textarea { resize: vertical; }
 .order-items-editor, .delivery-location-editor, .delivery-schedule-editor { display: grid; gap: 12px; margin: 0; padding: 18px; border: 0; border-bottom: 1px solid var(--brand-border); }

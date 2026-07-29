@@ -57,13 +57,14 @@ class ArchitectureNavigationContractTest(unittest.TestCase):
 
         self.assertIn("## Classificacao da tarefa", executive)
         self.assertIn("## Gate de arquitetura", executive)
-        self.assertIn("## Tarefa concluida mais recente", status)
-        self.assertIn("## Validacao desta tarefa", status)
+        self.assertIn("## Tarefa em execucao", status)
+        self.assertIn("## Validacao vigente", status)
         self.assertIn("## Proxima tarefa", status)
-        self.assertIn("## Tarefa seguinte", status)
-        self.assertIn("DEC-001", decisions)
+        self.assertIn("OPS-GATE-01", status)
         self.assertIn("DEC-002", decisions)
-        self.assertIn("solicitacao de troca de email nao pertence", decisions)
+        self.assertIn("DEC-012", decisions)
+        self.assertNotIn("| implementada |", decisions)
+        self.assertIn("decisoes ainda dependentes de Luciano", decisions)
 
     def test_human_map_covers_every_runtime_module(self) -> None:
         document = ARCHITECTURE_MAP.read_text(encoding="utf-8")

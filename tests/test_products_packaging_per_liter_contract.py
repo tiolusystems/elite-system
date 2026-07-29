@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0068_govern_products_packaging_per_liter.sql"
 ADR = ROOT / "docs" / "decisoes-arquiteturais" / "ADR-013-base-unica-por-litro-custos-garantias-lote.md"
-DECISIONS = ROOT / "docs" / "02_DECISOES_PENDENTES.md"
+DECISIONS = ROOT / "docs" / "historico" / "02_DECISOES_ATE_2026-07-28.md"
 MANUAL_INDEX = ROOT / "docs" / "manuais" / "README.md"
 OPERATING_MANUAL = ROOT / "docs" / "manuais" / "cadastros" / "PRODUTOS_APRESENTACOES_EMBALAGENS.md"
 

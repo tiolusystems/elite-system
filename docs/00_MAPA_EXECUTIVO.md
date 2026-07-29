@@ -28,6 +28,7 @@ O mapa detalhado continua sendo
 
 | Assunto | Modulo dono | Ponto inicial |
 |---|---|---|
+| fechamento operacional e tolerancia a erro | transversal, sem novo modulo | `docs/validacoes/OPS_GATE_01_MATRIZ.md` |
 | login, usuario, permissao, MFA | `seguranca` | `apps/web/app/seguranca`, `apps/web/app/login` |
 | progresso, dependencias e implantacao | `core` | `/modulos`; `docs/implantacao/00_MAPA_IMPLANTACAO_MODULOS.md` |
 | perfis combinaveis e permissoes atomicas | `seguranca` | `docs/seguranca/00_MATRIZ_INICIAL_PERFIS_PERMISSOES.md` |
@@ -69,3 +70,8 @@ Correcao interna que preserva esses limites nao muda a arvore arquitetonica.
 Toda tarefa concluida atualiza `docs/01_ESTADO_ATUAL.md` com entrega, validacao e
 proxima tarefa. Toda decisao ainda aberta entra em
 `docs/02_DECISOES_PENDENTES.md`. Push continua dependendo de autorizacao.
+
+Enquanto o `OPS-GATE-01` estiver em execucao, nenhuma lacuna futura deve ser
+interpretada como autorizacao para criar modulo, dashboard, PWA, integracao ou
+regra de negocio. Defeito objetivo de uma funcao existente e corrigido no
+dominio proprietario; funcionalidade futura permanece bloqueada e documentada.

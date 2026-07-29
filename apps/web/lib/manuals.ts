@@ -35,7 +35,14 @@ export const ROUTE_MANUALS: RouteManual[] = [
     after: ["O insumo fica disponivel para lotes, formulas e XML conforme sua situacao.", "Dados tecnicos ou regulatorios pendentes continuam sinalizados."],
     blockers: ["SKU repetido e unidade invalida bloqueiam a gravacao.", "Possivel duplicidade exige revisao e justificativa."],
   }),
-  manual("/cadastros/tipos-insumo", "Cadastros", "Tipos de insumo", "Manter o catalogo controlado de classificacao dos insumos."),
+  manual("/cadastros/tipos-insumo", "Cadastros", "Tipos de insumo", "Manter o catálogo controlado de classificação dos insumos.", {
+    before: ["Pesquise o tipo antes de criar outro.", "Tenha código, nome e finalidade operacional definidos."],
+    steps: ["Localize o tipo pelo código ou nome.", "Crie ou edite o cadastro com a alçada correspondente.", "Revise as matérias-primas vinculadas.", "Justifique a inativação ou reativação."],
+    after: ["Tipos ativos podem ser usados em novos vínculos de matéria-prima.", "Tipos inativos permanecem legíveis nos vínculos históricos."],
+    roles: ["Consulta e manutenção dependem de alçadas individuais de Cadastros."],
+    blockers: ["Código ou nome duplicado é recusado.", "Tipo inativo não pode ser usado em novo vínculo."],
+    records: ["Criação, edição e mudança de situação ficam auditadas sem exclusão física."]
+  }),
   manual("/cadastros/produtos", "Cadastros", "Produtos", "Manter produtos, apresentacoes e composicoes de embalagem.", {
     before: ["Cadastre o produto base antes da apresentacao.", "Tenha capacidade, unidade, itens da embalagem, tara e unidades por volume logistico."],
     steps: ["Pesquise o produto pelo codigo ou nome.", "Crie ou edite o produto base.", "Vincule uma embalagem para formar a apresentacao vendavel.", "Revise e ative a composicao da embalagem.", "Informe unidades por volume logistico para calculos de carga."],
@@ -50,9 +57,30 @@ export const ROUTE_MANUALS: RouteManual[] = [
     blockers: ["Código ou nome duplicado é recusado.", "Grupo inativo não pode ser atribuído a novo produto."],
     records: ["Criação, edição, inativação e reativação são auditadas com estado anterior, posterior e justificativa."],
   }),
-  manual("/cadastros/embalagens", "Cadastros", "Embalagens", "Manter embalagens e capacidades usadas no envase e na expedicao."),
-  manual("/cadastros/unidades", "Cadastros", "Unidades e conversoes", "Manter unidades governadas e conversoes autorizadas."),
-  manual("/cadastros/tecnicos", "Cadastros", "Cadastros tecnicos", "Consultar catalogos tecnicos usados em formulas e garantias."),
+  manual("/cadastros/embalagens", "Cadastros", "Embalagens", "Manter embalagens, composição, tara e capacidade usadas no envase e na expedição.", {
+    before: ["Pesquise a embalagem antes de criar.", "Tenha capacidade, unidade, tara e composição física conferidas."],
+    steps: ["Consulte a embalagem pelo código ou descrição.", "Crie ou edite a identidade e os dados físicos.", "Crie uma nova versão da composição quando houver mudança.", "Inclua os componentes, revise e ative a versão.", "Informe a configuração logística usada para volumes e peso bruto."],
+    after: ["A versão ativa alimenta envase, estoque PA, pedido e Romaneio.", "Versões anteriores permanecem somente leitura."],
+    roles: ["Consulta, edição, revisão e ativação são alçadas independentes."],
+    blockers: ["Capacidade inválida, composição vazia ou versão não revisada impedem a ativação.", "Embalagem inativa não pode ser usada em nova apresentação."],
+    records: ["Identidade, dados físicos, componentes, revisão, ativação e justificativas ficam versionados."]
+  }),
+  manual("/cadastros/unidades", "Cadastros", "Unidades e conversões", "Manter unidades governadas e conversões autorizadas de matéria-prima.", {
+    before: ["Confirme a unidade de origem, a unidade de estoque e o fator documentado.", "Não use conversão estimada."],
+    steps: ["Consulte as unidades disponíveis.", "Selecione a matéria-prima quando a conversão for específica.", "Informe origem, destino, fator e referência.", "Revise o resultado antes de gravar."],
+    after: ["Conversões válidas podem normalizar entradas e consumos para a unidade de estoque.", "A unidade apresentada ao operador permanece em PT-BR."],
+    roles: ["Somente usuários com alçada de catálogo técnico podem criar conversões."],
+    blockers: ["Fator zero ou negativo, unidade desconhecida e conversão sem fonte são recusados."],
+    records: ["Origem, destino, fator, fonte, usuário e data permanecem auditáveis."]
+  }),
+  manual("/cadastros/tecnicos", "Cadastros", "Cadastros técnicos", "Consultar a base técnica que alimenta fórmulas, estoque, produção e rastreabilidade.", {
+    before: ["Use esta tela como portal; a manutenção ocorre nas rotas canônicas de cada cadastro."],
+    steps: ["Escolha matéria-prima, produto, embalagem, unidade ou tipo de insumo.", "Abra a rota canônica correspondente.", "Pesquise o registro antes de criar ou editar.", "Retorne ao portal para mudar de área."],
+    after: ["A navegação não altera dados.", "Cada cadastro mantém sua própria alçada, validação e auditoria."],
+    roles: ["Usuários com acesso a Cadastros consultam o portal; cada ação respeita sua alçada específica."],
+    blockers: ["Catálogo indisponível ou falta de permissão mantém a área em modo de consulta ou bloqueada."],
+    records: ["O portal não grava fatos; as rotas de destino registram as operações executadas."]
+  }),
   manual("/pedidos", "Pedidos", "Pedidos", "Pesquisar clientes da carteira, criar pedidos e acompanhar aprovacao.", {
     before: ["O cliente deve estar vinculado a carteira do vendedor.", "O cliente precisa ter propriedade, estabelecimento ou endereco de entrega ativo.", "As apresentacoes precisam estar ativas e os precos devem ser conferidos."],
     steps: ["Escolha um cliente na primeira pagina da carteira ou pesquise por nome, documento, municipio, propriedade ou estabelecimento.", "Confira limite e situacao de credito.", "Selecione o local e a previsao de entrega; use Adicionar outra entrega quando precisar dividir quantidades.", "Escolha o produto e depois a apresentacao comercial correspondente.", "Distribua integralmente os itens entre as entregas.", "Revise cliente, locais, datas, quantidades, valores e confirme o envio.", "O responsavel com alcada de revisao aprova ou reprova com justificativa.", "Depois da aprovacao, use Exportar PDF para imprimir ou salvar o contrato."],
@@ -61,8 +89,22 @@ export const ROUTE_MANUALS: RouteManual[] = [
     blockers: ["Cliente fora da carteira, local de outro cliente, data anterior ao pedido, apresentacao inativa ou quantidades nao distribuídas impedem o envio.", "Bonificacao exige justificativa e nao gera comissao.", "PDF permanece indisponivel enquanto o pedido estiver bloqueado."],
     records: ["Pedido, itens, programacao de entregas, decisao de credito e justificativa ficam registrados.", "Uma aprovacao excepcional do pedido nao altera o limite cadastral do cliente."],
   }),
-  manual("/kanban", "Pedidos", "Kanban comercial", "Acompanhar pedidos por situacao e responsabilidade comercial."),
-  manual("/producao", "Producao", "Producao", "Acompanhar a cadeia de formula, OP, reserva, CQ e lote."),
+  manual("/kanban", "Pedidos", "Kanban comercial", "Acompanhar pedidos por situação e responsabilidade comercial.", {
+    before: ["Os pedidos precisam existir e estar dentro do escopo comercial da conta."],
+    steps: ["Filtre a fila pela situação desejada.", "Localize o pedido pelo código ou cliente.", "Abra a operação correspondente em Pedidos.", "Retorne ao Kanban para conferir a mudança de situação."],
+    after: ["O Kanban apresenta o estado atual; ele não substitui as ações governadas de aprovação, expedição ou recebimento."],
+    roles: ["Vendedor vê sua carteira; responsáveis autorizados veem a equipe conforme os vínculos vigentes."],
+    blockers: ["Pedido fora do escopo não é exibido.", "Mudanças de situação não são feitas por arraste sem contrato governado."],
+    records: ["As mudanças aparecem no Kanban depois do evento auditado no domínio proprietário."]
+  }),
+  manual("/producao", "Produção", "Produção", "Acompanhar exceções e acessar a cadeia de fórmula, OP, reserva, CQ e lote.", {
+    before: ["A visão geral exige alçada supervisória; operadores são direcionados às rotas operacionais permitidas."],
+    steps: ["Revise pendências e exceções quando possuir acesso ao painel.", "Abra Fórmulas, Ordens, CQ, Envase ou Estoque pela navegação compacta.", "Use Como operar para consultar a sequência industrial."],
+    after: ["O painel não movimenta estoque nem altera OPs.", "As correções são executadas nas telas operacionais correspondentes."],
+    roles: ["A visão geral depende de pcp.dashboard.view.", "Cada rota operacional mantém alçadas próprias."],
+    blockers: ["Sem alçada do painel, /producao redireciona para a primeira rota operacional disponível."],
+    records: ["O painel consulta fatos existentes; as ações auditadas pertencem às telas operacionais."]
+  }),
   manual("/producao/formulas", "Producao", "Formulas", "Criar e versionar formulas operacionais e documentais.", {
     before: ["Produto e materias-primas devem estar ativos.", "A formula operacional usa base de 1 litro; a formula MAPA e documental."],
     steps: ["Consulte as referencias vigentes ou use os filtros para abrir o historico.", "Selecione Nova formula ou use uma versao anterior como base.", "Informe produto, finalidade e componentes por litro; repetir a mesma solicitacao nao cria outra versao.", "Registre a justificativa, salve e confira os detalhes da nova versao.", "Ative somente a versao conferida e informe o motivo da ativacao."],
@@ -141,10 +183,38 @@ export const ROUTE_MANUALS: RouteManual[] = [
     blockers: ["Valor acima do saldo do pedido e recusado.", "O mesmo recebimento nao libera comissao duas vezes.", "Pagamento acima do saldo de comissao e ajuste sem motivo valido sao recusados."],
     records: ["Recebimento, alocacao, liberacao proporcional e movimentos da conta corrente de comissao ficam registrados."],
   }),
-  manual("/importacao-xml", "Importacao", "XML de materia-prima", "Conferir a NF-e e relacionar itens aos insumos cadastrados."),
-  manual("/importacao-historica/mp", "Auditoria", "Excel historico", "Analisar e homologar fontes historicas antes da importacao."),
-  manual("/relatorios", "Relatorios", "Relatorios", "Consultar vendas, estoque e rastreabilidade conforme as permissoes."),
-  manual("/seguranca", "Seguranca", "Seguranca", "Administrar usuarios, convites e permissoes auditadas."),
+  manual("/importacao-xml", "Importação", "XML de matéria-prima", "Conferir uma referência de NF-e externa e relacionar seus itens aos insumos cadastrados.", {
+    before: ["O módulo precisa estar liberado no ambiente.", "Use somente XML recebido de fonte autorizada e confira emitente, documento e itens."],
+    steps: ["Carregue o conteúdo do XML.", "Confira o cabeçalho antes de levar itens ao estágio de análise.", "Relacione cada item a uma matéria-prima governada.", "Confirme o vínculo ou ignore justificadamente.", "Gere o lote somente após a conferência final."],
+    after: ["O estágio não cria saldo.", "Somente a confirmação governada gera lote e movimento de entrada."],
+    roles: ["Importação, conciliação e geração de lote exigem alçadas distintas."],
+    blockers: ["Módulo desabilitado, XML inválido, item sem vínculo ou unidade sem conversão impedem a conclusão."],
+    records: ["Documento, linha de origem, vínculo, decisão, lote e movimento permanecem rastreáveis."]
+  }),
+  manual("/importacao-historica/mp", "Auditoria", "Excel histórico", "Analisar e homologar fontes históricas antes da importação definitiva.", {
+    before: ["A fonte precisa estar identificada e homologada.", "O DEC-012 e o corte físico precisam estar aprovados antes da ativação de saldos oficiais."],
+    steps: ["Selecione a fonte permitida.", "Execute somente a análise de estrutura e consistência.", "Revise pendências, aliases e divergências.", "Registre a decisão sem ativar saldos quando o rollout estiver bloqueado."],
+    after: ["A análise não altera o estoque oficial.", "Resultados permanecem separados dos dados operacionais até a homologação formal."],
+    roles: ["Somente Auditoria e responsáveis explicitamente autorizados acessam a análise."],
+    blockers: ["Fonte não homologada, workbook divergente ou rollout desabilitado bloqueiam a importação."],
+    records: ["Fonte, hash, lote de análise, divergências e decisões ficam registrados sem apagar a origem."]
+  }),
+  manual("/relatorios", "Relatórios", "Relatórios", "Consultar posições operacionais e rastreabilidade conforme as permissões.", {
+    before: ["Escolha período e filtros coerentes com a consulta.", "Confirme se o módulo está liberado em modo de leitura."],
+    steps: ["Selecione o relatório operacional disponível.", "Informe período, produto, família ou situação quando aplicável.", "Revise físico, reservado e disponível sem somar reservas ao consumo.", "Abra a rastreabilidade para investigar divergências."],
+    after: ["A consulta não altera fatos.", "Divergências permanecem visíveis para conciliação; não são ajustadas automaticamente."],
+    roles: ["Cada relatório e exportação depende de alçada individual de leitura."],
+    blockers: ["Módulo bloqueado, falta de alçada ou filtros incompatíveis impedem a consulta."],
+    records: ["Consultas sensíveis e exportações registram usuário, data e filtros conforme o contrato vigente."]
+  }),
+  manual("/seguranca", "Segurança", "Segurança", "Administrar usuários, identidade operacional e alçadas individuais auditadas.", {
+    before: ["Confirme a conta selecionada e a ação exata que será administrada.", "Nunca compartilhe senha, token ou chave."],
+    steps: ["Convide a pessoa pelo e-mail corporativo.", "Confira confirmação, ativação e papel organizacional.", "Vincule a conta à pessoa comercial somente quando ambas representarem a mesma pessoa.", "Consulte a alçada efetiva e sua origem.", "Conceda, bloqueie ou remova o override individual com justificativa."],
+    after: ["Papel não concede automaticamente ações sensíveis.", "A próxima operação já usa a nova decisão efetiva."],
+    roles: ["Somente administradores de Segurança com alçadas específicas gerenciam usuários, identidade e permissões."],
+    blockers: ["Último administrador capaz, conta inativa, identidade já vinculada ou falta de justificativa impedem a alteração."],
+    records: ["Convite, perfil, vínculo de identidade e override registram ator, motivo, antes e depois; credenciais nunca entram na auditoria."]
+  }),
 ];
 
 export function manualForPath(pathname: string): RouteManual | null {

@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DECISION = ROOT / "docs" / "decisao_pops_documentos_controlados.md"
 MAP = ROOT / "docs" / "00_MAPA_EXECUTIVO.md"
 STATE = ROOT / "docs" / "01_ESTADO_ATUAL.md"
+OPS_GATE = ROOT / "docs" / "validacoes" / "OPS_GATE_01_MATRIZ.md"
 
 
 class PopsArchitectureDecisionTests(unittest.TestCase):
@@ -13,6 +14,7 @@ class PopsArchitectureDecisionTests(unittest.TestCase):
         self.decision = DECISION.read_text(encoding="utf-8")
         self.map = MAP.read_text(encoding="utf-8")
         self.state = STATE.read_text(encoding="utf-8")
+        self.ops_gate = OPS_GATE.read_text(encoding="utf-8")
 
     def test_pop_stays_in_pcp_quality_without_new_module(self) -> None:
         self.assertIn("dominio `pcp`", self.decision)
@@ -45,8 +47,9 @@ class PopsArchitectureDecisionTests(unittest.TestCase):
         self.assertIn("O manual contextual explica como operar o Elite System", self.decision)
         self.assertIn("O POP determina como", self.decision)
         self.assertIn("executar o processo industrial ou de qualidade", self.decision)
-        self.assertIn("UX-01H - Romaneio", self.state)
-        self.assertIn("O catalogo de POPs nao integra esse", self.state)
+        self.assertIn("`/qualidade/pops`", self.ops_gate)
+        self.assertIn("`/romaneios`", self.ops_gate)
+        self.assertIn("versao publicada imutavel", self.ops_gate)
 
 
 if __name__ == "__main__":

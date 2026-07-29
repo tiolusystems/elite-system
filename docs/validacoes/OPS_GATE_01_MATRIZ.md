@@ -11,13 +11,13 @@ reorganizado.
 | Item | Estado comprovado |
 |---|---|
 | Branch | `feature/0044-production-module-release` |
-| HEAD funcional deste checkpoint | `8d677ae` |
+| HEAD funcional deste checkpoint | `6d5f782` |
 | Sincronizacao | local/remoto `0/0` |
-| Banco de staging | migrations `0001` a `0116` |
-| CI | `30442260717`, tres jobs aprovados |
-| E2E | `30442558138`, 40 testes Playwright e quatro cadeias SQL aprovados |
-| Deployment | `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT` |
-| Rollback | `dpl_3wSPY9NqtfCs5g9jwhbnN7iStcR3` |
+| Banco de staging | migrations `0001` a `0117` |
+| CI | `30465735141`, tres jobs aprovados |
+| E2E | `30465776522`, 45 testes Playwright e quatro cadeias SQL aprovados |
+| Deployment | `dpl_6XALShVXg5GB393q7wDjkWgQ6K5a` |
+| Rollback | `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT` |
 | Dominio | `https://elite-system-staging.vercel.app` |
 | Health | `status=ok`, `backendConfigured=true` |
 | Banco, main, producao real e PWA | inalterados |
@@ -49,7 +49,7 @@ interface.
 | `/` | B | Inicio autenticado e atalhos liberados | sessao e acesso efetivo | falha de catalogo preserva navegacao minima | 360 a 1920 | N/A | contextual | E2E transversal | comprovado |
 | `/modulos` | C | Consultar e administrar rollout | `system.admin` para escrita | dependencias e ambiente incorretos bloqueiam; evento e append-only | 360 a 1920 | N/A | contextual | rollout SQL e E2E | comprovado |
 | `/modulo-indisponivel` | E | Explicar bloqueio e oferecer rota util | sessao | nao executa escrita nem retry sem efeito | 360 a 1920 | N/A | contextual | contrato shell | bloqueado corretamente |
-| `/cadastros` | A/B | Central, Clientes, Pessoas e Logistica | alçadas atomicas de Cadastros | duplicidade, inativo, relacao alheia e concorrencia negados | 360 a 1920 | N/A | contextual | contratos Clientes/Pessoas/Veiculos | comprovado |
+| `/cadastros` | A/B | Central, Clientes, Pessoas e Logistica; busca de clientes paginada no servidor | alçadas atomicas de Cadastros | duplicidade, inativo, relacao alheia e concorrencia negados | 360 a 1920 | N/A | contextual | contratos Clientes/Pessoas/Veiculos, SQL 0117 e E2E `30465776522` | comprovado |
 | `/cadastros/materias-primas` | A | Consultar e manter MP | alçadas atomicas de MP | SKU duplicado, candidato semelhante e unidade invalida tratados | 360 a 1920 | N/A | contextual | SQL MP + E2E | comprovado |
 | `/cadastros/tipos-insumo` | A | Manter catalogo governado | alçadas de tipos de insumo | duplicidade, inativo e FK inexistente negados | 360 a 1920 | N/A | contextual especifico | SQL 0064 + contratos | comprovado |
 | `/cadastros/produtos` | A | Manter produto e apresentacao | alçadas de produto | grupo/embalagem inativos e duplicidade negados | 360 a 1920 | N/A | contextual | contratos produto | comprovado |
@@ -98,7 +98,7 @@ sao verificados nas RPCs idempotentes e constraints correspondentes.
 |---|---|---|---|---|---|---|---|---|
 | `/login` | entrar, recuperar senha, trocar senha/e-mail, sair e trocar usuario | conta individual | contrato Auth | conta/sessao valida | sessao criada ou encerrada uma vez | token, credencial e Auth indisponivel tratados | Auth E2E | comprovado |
 | `/modulos` | ambiente e rollout | administrador autorizado | `system.admin` | dependencias e justificativa | evento append-only | repeticao nao duplica estado; ambiente incorreto recusado | rollout SQL | comprovado |
-| `/cadastros` | cliente, documentos, contatos, propriedades, enderecos e vinculos | operador autorizado | alçadas de cliente | fonte e relacionamentos ativos | RPC auditada | documento/relacao duplicados e concorrencia recusados | Clientes E2E | comprovado |
+| `/cadastros` | consultar clientes com paginacao, abrir ficha, criar cliente, documentos, contatos, propriedades, enderecos e vinculos | operador autorizado | alçadas de cliente | fonte e relacionamentos ativos | consulta governada e RPC auditada para escrita | documento/relacao duplicados e concorrencia recusados; busca normalizada preserva o contexto | SQL 0117 e Clientes E2E `30465776522` | comprovado |
 | `/cadastros` | pessoa, papeis, areas, inativacao e reativacao | operador autorizado | alçadas de pessoa | identidade governada | RPC auditada | homonimo exige justificativa; codigo legado e vinculo sobreposto recusados | SQL 0065 | comprovado |
 | `/cadastros/materias-primas` | criar e manter identidade, SKU, tecnico, estoque e regulatorio | operador autorizado | alçadas de MP | tipo/unidade ativos | RPC auditada | SKU e candidato duplicados, valor invalido e inativo recusados | SQL MP | comprovado |
 | `/cadastros/produtos` | produto, grupo, apresentacao e situacao | operador autorizado | alçadas de produto/grupo | catalogos ativos | RPC auditada | duplicidade e relacionamento inativo recusados | SQL produto | comprovado |
@@ -239,24 +239,28 @@ codigo.
 | OPS-P1-001 | P1 | Conta administrativa via clientes da equipe, mas recebia erro tecnico ao criar pedido sem identidade de vendedor | consulta e criacao foram separadas; o formulario so aparece para a identidade comercial vinculada e a orientacao ficou em PT-BR | commit `7f50fee`, CI `30442260717`, smoke autenticado no staging `8d677ae` | resolvido |
 | OPS-P1-002 | P1 | Manuais genericos nao explicavam sequencia, bloqueios e efeitos de telas operacionais | guias especificos adicionados e cobertura passou a descobrir `page.tsx` automaticamente | 685 testes Python e E2E `30442558138` | resolvido |
 | OPS-P1-003 | P2 | Orientacao de permissao em Pedidos tinha pouco espaco entre titulo e explicacao no celular | espacamento e ritmo tipografico ajustados sem alterar o fluxo | commit `8d677ae`, cinco resolucoes no staging | resolvido |
+| OPS-P1-004 | P1 | Busca de clientes limitada ao recorte previamente carregado e ficha comprimida por lista lateral permanente | consulta paginada e normalizada no servidor; lista, ficha e novo cadastro separados; relacoes carregadas apenas para o cliente selecionado | migration `0117`, commits `29894f6` a `6d5f782`, CI `30465735141`, E2E `30465776522` e smoke autenticado em `dpl_6XALShVXg5GB393q7wDjkWgQ6K5a` | resolvido |
 
 ## Evidencia final
 
-- CI `30442260717`: `database-contract`, `python-tests` e `web-contract`
+- CI `30465735141`: `database-contract`, `python-tests` e `web-contract`
   aprovados.
-- O contrato de banco reconstruiu `0001` a `0116`, executou lint PostgreSQL,
+- O contrato de banco reconstruiu `0001` a `0117`, executou lint PostgreSQL,
   RLS, grants, idempotencia, concorrencia e as cadeias operacionais.
-- E2E `30442558138`: 40 testes Playwright aprovados em cinco resolucoes,
+- E2E `30465776522`: 45 testes Playwright aprovados em cinco resolucoes,
   incluindo shell, manuais, rotas canonicas, separacao de alcadas de credito,
   gravacao real de MP e estoque, Ordens, leitura sem escrita, painel supervisor
-  e clareza dos cadastros tecnicos.
+  e os estados de lista, novo cadastro e ficha completa de Clientes.
 - As quatro cadeias SQL descartaveis cobriram estoque e referencias fiscais,
   Producao, Comercial e rastreabilidade total.
-- O staging publicou `8d677ae` em `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT`; o
+- O staging publicou `6d5f782` em `dpl_6XALShVXg5GB393q7wDjkWgQ6K5a`; o
   deployment anterior permanece disponivel para rollback.
 - O smoke autenticado de Pedidos confirmou o bloqueio humano para conta sem
   identidade de vendedor, manual contextual especifico, ausencia de erro
   tecnico e ausencia de rolagem horizontal nas cinco resolucoes.
+- O smoke autenticado de Clientes confirmou busca por codigo no servidor,
+  abertura da ficha sem lista lateral, retorno preservando o filtro e novo
+  cadastro isolado; o rodape confirmou o SHA `6d5f782`.
 - Evidencias visuais e artefatos de navegador permaneceram fora do Git.
 - Nenhum P0 foi encontrado aberto. Todos os P1 encontrados foram resolvidos.
 

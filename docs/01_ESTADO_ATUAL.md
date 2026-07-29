@@ -5,15 +5,15 @@ Atualizado em: 2026-07-29
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `8d677ae`;
+- HEAD funcional publicado: `6d5f782`;
 - sincronizacao local/remoto: `0/0`;
-- Supabase de staging: ledger `0001` a `0116`;
-- deployment ativo: `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT`;
-- rollback preservado: `dpl_3wSPY9NqtfCs5g9jwhbnN7iStcR3`;
+- Supabase de staging: ledger `0001` a `0117`;
+- deployment ativo: `dpl_6XALShVXg5GB393q7wDjkWgQ6K5a`;
+- rollback preservado: `dpl_6BybZDJfe57sfvrqQEVFuqN2MoUT`;
 - URL: `https://elite-system-staging.vercel.app`;
-- CI do HEAD funcional: `30442260717`, com `database-contract`,
+- CI do HEAD funcional: `30465735141`, com `database-contract`,
   `python-tests` e `web-contract` aprovados;
-- E2E operacional: `30442558138`, 40 testes Playwright aprovados nas cinco
+- E2E operacional: `30465776522`, 45 testes Playwright aprovados nas cinco
   resolucoes e quatro cadeias SQL aprovadas em ambiente descartavel;
 - producao real, `main` e PWA: inalterados.
 
@@ -61,23 +61,38 @@ Matriz vigente:
 - o teste de cobertura descobre as rotas publicadas em `page.tsx`;
 - a matriz OPS-GATE-01 inventaria paginas, route handlers e 121 Server Actions.
 
+### Clientes
+
+- a busca deixou de depender do recorte previamente carregado e passou a ser
+  paginada, normalizada e executada no servidor;
+- lista, ficha cadastral e novo cliente sao modos separados na mesma rota
+  canonica, sem interface concorrente;
+- a ficha utiliza a largura operacional disponivel e carrega relacoes somente
+  para o cliente selecionado;
+- a migration `0117` adicionou apenas a RPC de leitura governada, sem alterar
+  dados, tabelas ou contratos de escrita;
+- o contexto de busca e preservado ao abrir a ficha e ao retornar para a lista.
+
 ## Validacao vigente
 
-- CI `30442260717`: aprovada;
-- instalacao limpa `0001` a `0116`: aprovada no job `database-contract`;
+- CI `30465735141`: aprovada;
+- instalacao limpa `0001` a `0117`: aprovada no job `database-contract`;
 - smokes SQL de integridade, rollout, industrial, comercial, estoque,
   Romaneio, Seguranca e importacoes: aprovados;
-- regressao Python completa: 685 testes aprovados;
-- E2E `30442558138`: 40 testes Playwright aprovados em `1920 x 1080`,
+- regressao Python completa: 690 testes aprovados;
+- E2E `30465776522`: 45 testes Playwright aprovados em `1920 x 1080`,
   `1366 x 768`, `768 x 1024`, `390 x 844` e `360 x 800`;
 - TypeScript, ESLint e build Next.js: aprovados;
-- smoke autenticado no staging confirmou o SHA `8d677ae` e o estado
+- o smoke anterior de Pedidos confirmou o SHA `8d677ae` e o estado
   `Consulta disponivel, criacao indisponivel` para conta sem identidade de
   vendedor.
 - `/api/health`: `status=ok` e `backendConfigured=true`;
 - cinco verificacoes responsivas adicionais no staging nao encontraram
   rolagem horizontal, erro tecnico ou divergencia do SHA;
-- nenhuma migration foi criada ou aplicada neste gate.
+- o smoke autenticado de Clientes confirmou busca por codigo, abertura da
+  ficha sem lista lateral, retorno preservando o filtro, novo cadastro isolado
+  e SHA `6d5f782`;
+- a migration de leitura `0117` foi aplicada unitariamente no staging.
 
 ## Classificacao
 

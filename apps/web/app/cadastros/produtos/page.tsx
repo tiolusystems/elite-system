@@ -11,6 +11,7 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
   const params = searchParams ? await searchParams : {};
   const catalog = await getTechnicalCatalog();
   const query = (singleParam(params.q) ?? "").trim().toLocaleLowerCase("pt-BR");
+  const mode = singleParam(params.modo);
   const selectedId = Number(singleParam(params.selected) ?? "");
   const filteredProducts = catalog.products.filter((item) =>
     !query || `${item.code} ${item.name} ${item.group ?? ""}`.toLocaleLowerCase("pt-BR").includes(query)
@@ -22,6 +23,11 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
     variantsByProduct.set(item.productId, current);
   }
   const selectedProduct = catalog.products.find((item) => item.id === selectedId) ?? null;
+  const isCreatingProduct = mode === "novo";
+  const isCreatingPresentation = mode === "nova-apresentacao";
+  const isViewing = selectedProduct !== null && !isCreatingProduct && !isCreatingPresentation;
+  const isListing = !isCreatingProduct && !isCreatingPresentation && !isViewing;
+  const listHref = buildListHref(singleParam(params.q));
 
   return (
     <CatalogShell
@@ -31,14 +37,21 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
       source={catalog.source}
       error={catalog.error}
       actions={
-        <>
-          <a className="secondary-button" href="#novo-item-vendavel">Nova apresentacao</a>
-          <a className="primary-button" href="#novo-produto">Novo produto</a>
-        </>
+        isListing ? (
+          <>
+            <Link className="secondary-button" href="/cadastros/produtos?modo=nova-apresentacao#novo-item-vendavel">Nova apresentação</Link>
+            <Link className="primary-button" href="/cadastros/produtos?modo=novo#novo-produto">Novo produto</Link>
+          </>
+        ) : (
+          <Link className="secondary-button" href={listHref}>Voltar à consulta</Link>
+        )
       }
     >
       <CatalogFeedback result={singleParam(params.result)} />
 
+      <div className="catalog-workbench">
+      {isListing ? (
+      <section className="catalog-list-view" aria-label="Consulta de produtos">
       <form className="catalog-filter single-search" method="get" aria-label="Filtro de produtos">
         <label>Buscar<input name="q" defaultValue={singleParam(params.q) ?? ""} placeholder="Codigo, nome ou grupo" /></label>
         <button className="secondary-button" type="submit">Filtrar</button>
@@ -53,7 +66,7 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
           {filteredProducts.map((product) => {
             const variants = variantsByProduct.get(product.id) ?? [];
             return (
-              <article key={product.id} className={selectedProduct?.id === product.id ? "selected-record" : undefined}>
+              <article key={product.id}>
                 <div><span><small>{product.code}</small><strong>{product.name}</strong></span><StatusChip value={product.status} /></div>
                 <dl>
                   <div><dt>Grupo</dt><dd>{product.group ?? "-"}</dd></div>
@@ -67,21 +80,31 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
                   ))}
                   {variants.length === 0 ? <span className="pending-variant">Sem item vendavel</span> : null}
                 </div>
-                <Link className="record-open-link" href={`/cadastros/produtos?selected=${product.id}#editar-produto`}>Abrir produto</Link>
+                <Link className="record-open-link" href={`/cadastros/produtos?selected=${product.id}#editar-produto`}>Abrir ficha</Link>
               </article>
             );
           })}
           {filteredProducts.length === 0 ? <p className="empty-state">Nenhum produto encontrado.</p> : null}
         </div>
       </section>
+      <section className="panel production-next-band">
+        <div><span className="eyebrow">Próxima etapa</span><h2>Fórmulas, garantias e produção</h2><p>Produtos ativos podem receber fórmulas de produção e MAPA, gerar OP e originar lotes PA ou PI.</p></div>
+        <div className="toolbar-actions"><Link className="secondary-button" href="/producao/garantias">Garantias</Link><Link className="primary-button" href="/producao/formulas">Abrir fórmulas</Link></div>
+      </section>
+      </section>
+      ) : null}
 
+      {isViewing ? (
+      <section className="catalog-detail-view">
       <ProductMaintenancePanel
         product={selectedProduct}
         groups={catalog.productGroups}
         variants={selectedProduct ? variantsByProduct.get(selectedProduct.id) ?? [] : []}
       />
+      </section>
+      ) : null}
 
-      <section className="two-column catalog-form-columns">
+      {isCreatingProduct ? (
         <article className="panel form-panel" id="novo-produto">
           <div className="panel-header"><div><span className="eyebrow">Produto-base</span><h2>Novo produto</h2></div></div>
           <form action={createProdutoBaseAction}>
@@ -117,7 +140,9 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
             <div className="form-footer"><span>Codigo de 0001 a 9999.</span><button className="primary-button" type="submit">Salvar produto</button></div>
           </form>
         </article>
+      ) : null}
 
+      {isCreatingPresentation ? (
         <article className="panel form-panel" id="novo-item-vendavel">
           <div className="panel-header"><div><span className="eyebrow">Produto + embalagem</span><h2>Nova apresentacao</h2></div></div>
           <form action={createProdutoEmbalagemAction}>
@@ -154,12 +179,12 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
             <div className="form-footer"><span>Este codigo sera usado em pedido e estoque PA.</span><button className="primary-button" type="submit">Salvar apresentacao</button></div>
           </form>
         </article>
-      </section>
-
-      <section className="panel production-next-band">
-        <div><span className="eyebrow">Proxima dependencia</span><h2>Formula, garantias e producao</h2><p>Produtos ativos podem receber receitas de producao e MAPA, gerar OP e originar lotes PA ou PI.</p></div>
-        <div className="toolbar-actions"><Link className="secondary-button" href="/producao/garantias">Garantias</Link><Link className="primary-button" href="/producao/formulas">Abrir formulas</Link></div>
-      </section>
+      ) : null}
+      </div>
     </CatalogShell>
   );
+}
+
+function buildListHref(query: string | null): string {
+  return query ? `/cadastros/produtos?q=${encodeURIComponent(query)}` : "/cadastros/produtos";
 }

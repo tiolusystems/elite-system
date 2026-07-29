@@ -5968,6 +5968,39 @@ h1 {
 .client-summary-heading h2 { margin: 3px 0 0; font-size: 20px; }
 .clients-list-heading p { max-width: 62ch; margin: 5px 0 0; color: var(--brand-text-muted); }
 .client-summary-heading p { margin: 5px 0 0; color: var(--brand-text-muted); }
+
+/* Consulta primeiro nos cadastros canônicos */
+.catalog-workbench {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  width: 100%;
+}
+
+.catalog-list-view,
+.catalog-detail-view,
+.catalog-create-view {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  width: 100%;
+}
+
+.catalog-list-view .catalog-list-panel {
+  position: static;
+}
+
+.catalog-list-view .catalog-record-list {
+  max-height: none;
+}
+
+.catalog-detail-view > .catalog-maintenance {
+  margin-top: 0;
+}
+
+.catalog-create-view {
+  max-width: none;
+}
 .section-kicker {
   display: block;
   color: var(--brand-text-muted);

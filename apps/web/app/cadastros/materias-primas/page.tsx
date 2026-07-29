@@ -21,6 +21,7 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
   const catalog = await getTechnicalCatalog();
   const query = (singleParam(params.q) ?? "").trim().toLocaleLowerCase("pt-BR");
   const status = singleParam(params.status) ?? "all";
+  const mode = singleParam(params.modo);
   const requestedId = Number(singleParam(params.selected));
   const activeUnits = catalog.units.filter((unit) => unit.status === "active");
   const activeInputTypes = catalog.inputTypes.filter((item) => item.status === "active");
@@ -30,8 +31,10 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
     const matchesStatus = status === "all" || material.status === status;
     return matchesQuery && matchesStatus;
   });
-  const selectedMaterial =
-    catalog.materials.find((material) => material.id === requestedId) ?? filteredMaterials[0] ?? null;
+  const selectedMaterial = catalog.materials.find((material) => material.id === requestedId) ?? null;
+  const isCreating = mode === "novo";
+  const isViewing = selectedMaterial !== null && !isCreating;
+  const listHref = buildListHref(singleParam(params.q), status);
 
   return (
     <CatalogShell
@@ -40,32 +43,43 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
       description="Identidade, classificação governada, unidade, densidade, estoque mínimo e informações regulatórias."
       source={catalog.source}
       error={catalog.error}
-      actions={<a className="primary-button" href="#nova-mp">Nova MP</a>}
+      actions={
+        isCreating || isViewing ? (
+          <Link className="secondary-button" href={listHref}>Voltar à consulta</Link>
+        ) : (
+          <Link className="primary-button" href="/cadastros/materias-primas?modo=novo#nova-mp">Nova matéria-prima</Link>
+        )
+      }
     >
       <CatalogFeedback result={singleParam(params.result)} />
 
-      <form className="catalog-filter" method="get" aria-label="Filtros de matérias-primas">
-        <label>
-          Buscar
-          <input name="q" defaultValue={singleParam(params.q) ?? ""} placeholder="SKU, nome ou código legado" />
-        </label>
-        <label>
-          Status
-          <select name="status" defaultValue={status}>
-            <option value="all">Todos</option>
-            <option value="active">Ativos</option>
-            <option value="pending_review">Em revisão</option>
-            <option value="inactive">Inativos</option>
-          </select>
-        </label>
-        <button className="secondary-button" type="submit">Filtrar</button>
-        <Link href="/cadastros/materias-primas">Limpar</Link>
-      </form>
+      <div className="catalog-workbench">
+      {!isCreating && !isViewing ? (
+        <section className="catalog-list-view" aria-label="Consulta de matérias-primas">
+          <form className="catalog-filter" method="get" aria-label="Filtros de matérias-primas">
+            <label>
+              Buscar
+              <input name="q" defaultValue={singleParam(params.q) ?? ""} placeholder="SKU, nome ou código legado" />
+            </label>
+            <label>
+              Situação
+              <select name="status" defaultValue={status}>
+                <option value="all">Todas</option>
+                <option value="active">Ativas</option>
+                <option value="pending_review">Em revisão</option>
+                <option value="inactive">Inativas</option>
+              </select>
+            </label>
+            <button className="secondary-button" type="submit">Filtrar</button>
+            <Link href="/cadastros/materias-primas">Limpar</Link>
+          </form>
 
-      <section className="catalog-split">
-        <article className="panel catalog-list-panel">
+          <article className="panel catalog-list-panel">
           <div className="panel-header">
-            <h2>Catálogo</h2>
+            <div>
+              <span className="eyebrow">Consulta</span>
+              <h2>Matérias-primas cadastradas</h2>
+            </div>
             <span className="pill">{filteredMaterials.length}</span>
           </div>
           <div className="catalog-record-list">
@@ -73,7 +87,7 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
               <Link
                 key={material.id}
                 href={{ pathname: "/cadastros/materias-primas", query: { q: singleParam(params.q) ?? "", status, selected: material.id } }}
-                aria-current={selectedMaterial?.id === material.id ? "page" : undefined}
+                aria-label={`Abrir ficha de ${material.name}`}
               >
                 <span>
                   <strong>{material.sku}</strong>
@@ -87,10 +101,13 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
             ))}
             {filteredMaterials.length === 0 ? <div className="empty-state"><strong>Nenhuma matéria-prima encontrada</strong><span>Ajuste os filtros ou cadastre uma nova matéria-prima.</span></div> : null}
           </div>
-        </article>
+          </article>
+        </section>
+      ) : null}
 
-        <article className="panel catalog-detail-panel" id="editar">
-          {selectedMaterial ? (
+      {isViewing ? (
+        <section className="catalog-detail-view">
+          <article className="panel catalog-detail-panel" id="editar">
             <>
               <div className="panel-header catalog-detail-header">
                 <div>
@@ -209,13 +226,12 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
                 ) : null}
               </div>
             </>
-          ) : (
-            <div className="empty-state"><strong>Selecione uma matéria-prima</strong><span>Os detalhes e ações aparecerão aqui.</span></div>
-          )}
-        </article>
-      </section>
+          </article>
+        </section>
+      ) : null}
 
-      <section className="panel form-panel" id="nova-mp" aria-labelledby="nova-mp-title" style={{ scrollMarginTop: 76 }}>
+      {isCreating ? (
+      <section className="panel form-panel catalog-create-view" id="nova-mp" aria-labelledby="nova-mp-title" style={{ scrollMarginTop: 76 }}>
         <div className="panel-header">
           <div>
             <span className="eyebrow">Novo registro</span>
@@ -227,6 +243,8 @@ export default async function MaterialsPage({ searchParams }: { searchParams?: P
           units={activeUnits.map((unit) => ({ id: unit.id, label: formatUnitLabel(unit.name, unit.symbol) }))}
         />
       </section>
+      ) : null}
+      </div>
     </CatalogShell>
   );
 }
@@ -246,4 +264,12 @@ function formatDate(value: string): string {
 function formatUnitLabel(name: string, symbol: string): string {
   const normalizedSymbol = symbol.trim();
   return normalizedSymbol && normalizedSymbol !== "1" ? `${name} (${normalizedSymbol})` : name;
+}
+
+function buildListHref(query: string | null, status: string): string {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (status !== "all") params.set("status", status);
+  const suffix = params.toString();
+  return suffix ? `/cadastros/materias-primas?${suffix}` : "/cadastros/materias-primas";
 }

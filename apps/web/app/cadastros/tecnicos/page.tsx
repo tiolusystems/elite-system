@@ -19,7 +19,7 @@ export default async function TechnicalCatalogOverviewPage() {
       description="Escolha o cadastro que deseja consultar ou alterar."
       source={catalog.source}
       error={catalog.error}
-      actions={<Link className="primary-button" href="/cadastros/materias-primas#nova-mp">Cadastrar matéria-prima</Link>}
+      actions={<Link className="primary-button" href="/cadastros/materias-primas?modo=novo#nova-mp">Cadastrar matéria-prima</Link>}
     >
       <section className="technical-entry-section" aria-labelledby="technical-entry-title">
         <div className="technical-entry-header">

@@ -10,14 +10,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const STATUS = new Set(["active", "pending_review"]);
 
 export async function createInputTypeAction(formData: FormData) {
-  requireConfigured("/cadastros/tipos-insumo?result=not_configured");
+  requireConfigured("/cadastros/tipos-insumo?modo=novo&result=not_configured#novo-tipo");
   const code = field(formData, "codigo").toUpperCase();
   const name = field(formData, "nome");
   const status = field(formData, "status") || "pending_review";
   const reason = field(formData, "motivo");
   const displayOrder = Number(field(formData, "ordem_exibicao") || "100");
-  if (!code || !name || !reason) redirect("/cadastros/tipos-insumo?result=missing_required#novo-tipo");
-  if (!STATUS.has(status) || !Number.isInteger(displayOrder) || displayOrder < 0) redirect("/cadastros/tipos-insumo?result=invalid_value#novo-tipo");
+  if (!code || !name || !reason) redirect("/cadastros/tipos-insumo?modo=novo&result=missing_required#novo-tipo");
+  if (!STATUS.has(status) || !Number.isInteger(displayOrder) || displayOrder < 0) redirect("/cadastros/tipos-insumo?modo=novo&result=invalid_value#novo-tipo");
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "create_cad_tipo_insumo", {
     p_codigo: code, p_descricao: optionalField(formData, "descricao"), p_motivo: reason,
@@ -70,13 +70,13 @@ export async function setMaterialInputTypeAction(formData: FormData) {
 }
 
 export async function createGovernedMaterialAction(formData: FormData) {
-  requireConfigured("/cadastros/materias-primas?result=not_configured");
+  requireConfigured("/cadastros/materias-primas?modo=novo&result=not_configured#nova-mp");
   const name = field(formData, "nome");
   const sku = field(formData, "sku_corrigido").toUpperCase();
   const unitId = positiveInteger(formData, "unidade_base_estoque_id");
   const status = field(formData, "status") || "active";
   const inputTypeId = optionalPositiveInteger(formData, "tipo_insumo_id");
-  if (!name || !sku || !unitId) redirect("/cadastros/materias-primas?result=missing_required#nova-mp");
+  if (!name || !sku || !unitId) redirect("/cadastros/materias-primas?modo=novo&result=missing_required#nova-mp");
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "create_cad_materia_prima_governada", {
     p_codigo_ads: optionalField(formData, "codigo_ads"), p_codigo_legado: optionalField(formData, "codigo_legado"),
@@ -87,7 +87,7 @@ export async function createGovernedMaterialAction(formData: FormData) {
     p_confirmar_possivel_duplicidade: false, p_motivo_duplicidade: null,
     p_sku_corrigido: sku, p_status: status, p_tipo_insumo_id: inputTypeId, p_unidade_base_estoque_id: unitId
   });
-  if (error) redirect(`/cadastros/materias-primas?result=${mapError(error.message)}#nova-mp`);
+  if (error) redirect(`/cadastros/materias-primas?modo=novo&result=${mapError(error.message)}#nova-mp`);
   refreshCatalog();
   redirect("/cadastros/materias-primas?result=mp_created#nova-mp");
 }
@@ -173,7 +173,10 @@ function refreshCatalog() {
 }
 function requireConfigured(target: string) { if (!getRuntimeStatus().supabaseConfigured) redirect(target); }
 function redirectResult(result: string, hash = "", selected?: number | null): never {
-  redirect(`/cadastros/tipos-insumo?result=${encodeURIComponent(result)}${selected ? `&selected=${selected}` : ""}${hash}`);
+  const params = new URLSearchParams({ result });
+  if (selected) params.set("selected", String(selected));
+  if (!selected && hash === "#novo-tipo" && result !== "input_type_created") params.set("modo", "novo");
+  redirect(`/cadastros/tipos-insumo?${params.toString()}${hash}`);
 }
 function field(data: FormData, key: string) { return String(data.get(key) ?? "").trim(); }
 function optionalField(data: FormData, key: string) { return field(data, key) || null; }

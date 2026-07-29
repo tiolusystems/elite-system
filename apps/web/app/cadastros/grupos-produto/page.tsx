@@ -15,6 +15,7 @@ export default async function ProductGroupsPage({ searchParams }: { searchParams
   const catalog = await getTechnicalCatalog();
   const query = (singleParam(params.q) ?? "").trim().toLocaleLowerCase("pt-BR");
   const status = singleParam(params.status) ?? "all";
+  const mode = singleParam(params.modo);
   const selectedId = Number(singleParam(params.selected) ?? "");
   const selected = catalog.productGroups.find((item) => item.id === selectedId) ?? null;
   const history = selected ? await getTechnicalProductGroupHistory(selected.id) : [];
@@ -27,6 +28,10 @@ export default async function ProductGroupsPage({ searchParams }: { searchParams
     if (!product.groupId) continue;
     productsByGroup.set(product.groupId, [...(productsByGroup.get(product.groupId) ?? []), product]);
   }
+  const isCreating = mode === "novo";
+  const isViewing = selected !== null && !isCreating;
+  const isListing = !isCreating && !isViewing;
+  const listHref = buildListHref(singleParam(params.q), status);
 
   return (
     <CatalogShell
@@ -35,9 +40,18 @@ export default async function ProductGroupsPage({ searchParams }: { searchParams
       description="Catálogo relacional usado por Produtos, Pedidos, Produção e Relatórios."
       source={catalog.source}
       error={catalog.error}
-      actions={<a className="primary-button" href="#novo-grupo">Novo grupo</a>}
+      actions={
+        isListing ? (
+          <Link className="primary-button" href="/cadastros/grupos-produto?modo=novo#novo-grupo">Novo grupo</Link>
+        ) : (
+          <Link className="secondary-button" href={listHref}>Voltar à consulta</Link>
+        )
+      }
     >
       <CatalogFeedback result={singleParam(params.result)} />
+      <div className="catalog-workbench">
+      {isListing ? (
+      <section className="catalog-list-view" aria-label="Consulta de grupos de produto">
       <form className="catalog-filter" method="get" aria-label="Filtros de grupos de produto">
         <label>Buscar<input name="q" defaultValue={singleParam(params.q) ?? ""} placeholder="Código, nome ou descrição" /></label>
         <label>Situação<select name="status" defaultValue={status}><option value="all">Todas</option><option value="active">Ativos</option><option value="inactive">Inativos</option><option value="pending_review">Em revisão</option></select></label>
@@ -57,9 +71,11 @@ export default async function ProductGroupsPage({ searchParams }: { searchParams
           {groups.length === 0 ? <div className="empty-state"><strong>Nenhum grupo encontrado</strong><span>Revise os filtros ou crie o primeiro grupo.</span></div> : null}
         </div>
       </section>
+      </section>
+      ) : null}
 
-      {selected ? (
-        <section className="panel form-panel" id="editar-grupo">
+      {isViewing ? (
+        <section className="panel form-panel catalog-detail-view" id="editar-grupo">
           <div className="panel-header"><div><span className="eyebrow">Manutenção auditada</span><h2>{selected.name}</h2></div><StatusChip value={selected.status} /></div>
           <form action={updateProdutoGroupAction}>
             <input type="hidden" name="return_to" value="/cadastros/grupos-produto" /><input type="hidden" name="grupo_id" value={selected.id} />
@@ -76,7 +92,8 @@ export default async function ProductGroupsPage({ searchParams }: { searchParams
         </section>
       ) : null}
 
-      <section className="panel form-panel" id="novo-grupo">
+      {isCreating ? (
+      <section className="panel form-panel catalog-create-view" id="novo-grupo">
         <div className="panel-header"><div><span className="eyebrow">Novo cadastro</span><h2>Criar grupo</h2></div></div>
         <form action={createProdutoGroupAction}>
           <input type="hidden" name="return_to" value="/cadastros/grupos-produto" />
@@ -84,6 +101,8 @@ export default async function ProductGroupsPage({ searchParams }: { searchParams
           <div className="form-footer"><span>Código e nome são únicos após normalização.</span><button className="primary-button" type="submit">Criar grupo</button></div>
         </form>
       </section>
+      ) : null}
+      </div>
     </CatalogShell>
   );
 }
@@ -96,4 +115,12 @@ function productGroupEventLabel(action: string): string {
     "cadastros.grupo_produto_reactivated": "Grupo reativado"
   };
   return labels[action] ?? "Alteração registrada";
+}
+
+function buildListHref(query: string | null, status: string): string {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (status !== "all") params.set("status", status);
+  const suffix = params.toString();
+  return suffix ? `/cadastros/grupos-produto?${suffix}` : "/cadastros/grupos-produto";
 }

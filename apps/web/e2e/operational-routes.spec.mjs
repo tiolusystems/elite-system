@@ -42,7 +42,7 @@ test("material registration and valued stock entry cross the real application bo
   const materialName = `Materia-prima sintetica ${suffix}`;
 
   await loginAs(page, masterData);
-  await page.goto("/cadastros/materias-primas#nova-mp");
+  await page.goto("/cadastros/materias-primas?modo=novo#nova-mp");
   const materialForm = page.locator("#nova-mp form");
   await materialForm.locator('input[name="sku_corrigido"]').fill(sku);
   await materialForm.locator('input[name="nome"]').fill(materialName);

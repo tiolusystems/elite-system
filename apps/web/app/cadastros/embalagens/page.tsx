@@ -12,6 +12,7 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
   const params = searchParams ? await searchParams : {};
   const catalog = await getTechnicalCatalog();
   const query = (singleParam(params.q) ?? "").trim().toLocaleLowerCase("pt-BR");
+  const mode = singleParam(params.modo);
   const selectedId = Number(singleParam(params.selected) ?? "");
   const filtered = catalog.packages.filter((item) =>
     !query || `${item.description} ${item.legacyCode ?? ""} ${item.materialLabel ?? ""}`.toLocaleLowerCase("pt-BR").includes(query)
@@ -23,6 +24,10 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
     : [];
   const selectedVersionIds = new Set(selectedVersions.map((item) => item.id));
   const selectedComponents = catalog.packageComponents.filter((item) => selectedVersionIds.has(item.packageVersionId));
+  const isCreating = mode === "novo";
+  const isViewing = selectedPackage !== null && !isCreating;
+  const isListing = !isCreating && !isViewing;
+  const listHref = buildListHref(singleParam(params.q));
 
   return (
     <CatalogShell
@@ -31,10 +36,19 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
       description="Volumes comerciais e embalagens controladas como insumo da producao."
       source={catalog.source}
       error={catalog.error}
-      actions={<a className="primary-button" href="#nova-embalagem">Nova embalagem</a>}
+      actions={
+        isListing ? (
+          <Link className="primary-button" href="/cadastros/embalagens?modo=novo#nova-embalagem">Nova embalagem</Link>
+        ) : (
+          <Link className="secondary-button" href={listHref}>Voltar à consulta</Link>
+        )
+      }
     >
       <CatalogFeedback result={singleParam(params.result)} />
 
+      <div className="catalog-workbench">
+      {isListing ? (
+      <section className="catalog-list-view" aria-label="Consulta de embalagens">
       <form className="catalog-filter single-search" method="get" aria-label="Filtro de embalagens">
         <label>Buscar<input name="q" defaultValue={singleParam(params.q) ?? ""} placeholder="Descricao, codigo ou MP vinculada" /></label>
         <button className="secondary-button" type="submit">Filtrar</button>
@@ -47,7 +61,7 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
         </div>
         <div className="responsive-record-grid package-grid">
           {filtered.map((item) => (
-            <article key={item.id} className={selectedPackage?.id === item.id ? "selected-record" : undefined}>
+            <article key={item.id}>
               <div><strong>{item.description}</strong><StatusChip value={item.status} /></div>
               <dl>
                 <div><dt>Capacidade</dt><dd>{item.volumeLiters === null ? item.unit : `${formatNumber(item.volumeLiters)} L`}</dd></div>
@@ -55,13 +69,17 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
                 <div><dt>MP vinculada</dt><dd>{item.materialLabel ?? "-"}</dd></div>
                 <div><dt>Origem</dt><dd>{dataOriginLabel(item.source)}</dd></div>
               </dl>
-              <Link className="record-open-link" href={`/cadastros/embalagens?selected=${item.id}#editar-embalagem`}>Abrir embalagem</Link>
+              <Link className="record-open-link" href={`/cadastros/embalagens?selected=${item.id}#editar-embalagem`}>Abrir ficha</Link>
             </article>
           ))}
           {filtered.length === 0 ? <p className="empty-state">Nenhuma embalagem encontrada.</p> : null}
         </div>
       </section>
+      </section>
+      ) : null}
 
+      {isViewing ? (
+      <section className="catalog-detail-view">
       <PackageMaintenancePanel
         packageRecord={selectedPackage}
         versions={selectedVersions}
@@ -69,8 +87,11 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
         materials={catalog.materials}
         units={catalog.units}
       />
+      </section>
+      ) : null}
 
-      <section className="panel form-panel" id="nova-embalagem" aria-labelledby="new-package-title">
+      {isCreating ? (
+      <section className="panel form-panel catalog-create-view" id="nova-embalagem" aria-labelledby="new-package-title">
         <div className="panel-header"><div><span className="eyebrow">Novo registro</span><h2 id="new-package-title">Cadastrar embalagem</h2></div></div>
         <form action={createEmbalagemAction}>
           <input type="hidden" name="return_to" value="/cadastros/embalagens" />
@@ -109,10 +130,16 @@ export default async function PackagesPage({ searchParams }: { searchParams?: Pr
           </div>
         </form>
       </section>
+      ) : null}
+      </div>
     </CatalogShell>
   );
 }
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(value);
+}
+
+function buildListHref(query: string | null): string {
+  return query ? `/cadastros/embalagens?q=${encodeURIComponent(query)}` : "/cadastros/embalagens";
 }

@@ -36,6 +36,22 @@ const ALLOWED_CADASTRO_RETURN_PATHS = new Set([
   "/cadastros/produtos",
   "/cadastros/grupos-produto"
 ]);
+const CATALOG_CREATE_MODE_BY_HASH = new Map([
+  ["#nova-mp", "novo"],
+  ["#novo-produto", "novo"],
+  ["#novo-item-vendavel", "nova-apresentacao"],
+  ["#novo-grupo", "novo"],
+  ["#nova-embalagem", "novo"],
+  ["#nova-conversao-mp", "novo"]
+]);
+const CATALOG_CREATE_SUCCESS_RESULTS = new Set([
+  "mp_created",
+  "produto_created",
+  "item_vendavel_created",
+  "product_group_created",
+  "embalagem_created",
+  "conversion_created"
+]);
 
 export async function createClienteAction(formData: FormData) {
   const runtime = getRuntimeStatus();
@@ -1434,6 +1450,10 @@ function redirectCadastroAction(
   }
   if ((targetPath === "/cadastros/produtos" || targetPath === "/cadastros/embalagens") && selectedId && selectedId > 0) {
     params.set("selected", String(selectedId));
+  }
+  const createMode = CATALOG_CREATE_MODE_BY_HASH.get(hash);
+  if (!selectedId && createMode && !CATALOG_CREATE_SUCCESS_RESULTS.has(result)) {
+    params.set("modo", createMode);
   }
   redirect(`${targetPath}?${params.toString()}${hash}`);
 }

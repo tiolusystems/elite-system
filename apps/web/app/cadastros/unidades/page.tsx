@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { createConversaoUnidadeMpAction } from "@/app/cadastros/actions";
 import { CatalogFeedback, CatalogShell, StatusChip, singleParam } from "@/app/cadastros/tecnicos/catalog-shell";
 import { getTechnicalCatalog } from "@/lib/technical-catalog";
@@ -8,28 +10,38 @@ export default async function UnitsPage({ searchParams }: { searchParams?: Promi
   const params = searchParams ? await searchParams : {};
   const catalog = await getTechnicalCatalog();
   const activeUnits = catalog.units.filter((unit) => unit.status === "active");
+  const isCreating = singleParam(params.modo) === "novo";
 
   return (
     <CatalogShell
       active="units"
-      title="Unidades e conversoes"
-      description="Catalogo canonico usado por MP, embalagens, formulas, XML e movimentacoes de estoque."
+      title="Unidades e conversões"
+      description="Unidades usadas nas matérias-primas, embalagens, fórmulas e movimentações de estoque."
       source={catalog.source}
       error={catalog.error}
-      actions={<a className="primary-button" href="#nova-conversao-mp">Nova conversao</a>}
+      actions={
+        isCreating ? (
+          <Link className="secondary-button" href="/cadastros/unidades">Voltar à consulta</Link>
+        ) : (
+          <Link className="primary-button" href="/cadastros/unidades?modo=novo#nova-conversao-mp">Nova conversão</Link>
+        )
+      }
     >
       <CatalogFeedback result={singleParam(params.result)} />
 
+      <div className="catalog-workbench">
+      {!isCreating ? (
+      <section className="catalog-list-view" aria-label="Consulta de unidades e conversões">
       <section className="technical-kpis" aria-label="Resumo de unidades">
         <article><span>Unidades</span><strong>{catalog.units.length}</strong><small>{activeUnits.length} ativas</small></article>
-        <article><span>Dimensoes</span><strong>{new Set(catalog.units.map((item) => item.dimension)).size}</strong><small>massa, volume e outras</small></article>
-        <article><span>Conversoes MP</span><strong>{catalog.conversions.length}</strong><small>com vigencia controlada</small></article>
+        <article><span>Grandezas</span><strong>{new Set(catalog.units.map((item) => item.dimension)).size}</strong><small>Massa, volume e outras</small></article>
+        <article><span>Conversões de MP</span><strong>{catalog.conversions.length}</strong><small>Com vigência controlada</small></article>
         <article><span>Nutrientes</span><strong>{catalog.nutrients.length}</strong><small>referencias de garantia</small></article>
       </section>
 
       <section className="two-column technical-lists">
         <article className="panel">
-          <div className="panel-header"><h2>Unidades canonicas</h2><span className="pill">{catalog.units.length}</span></div>
+          <div className="panel-header"><h2>Unidades de medida</h2><span className="pill">{catalog.units.length}</span></div>
           <div className="canonical-grid">
             {catalog.units.map((unit) => (
               <div key={unit.id}>
@@ -68,8 +80,11 @@ export default async function UnitsPage({ searchParams }: { searchParams?: Promi
           {catalog.conversions.length === 0 ? <p className="empty-state">Nenhuma conversao cadastrada.</p> : null}
         </div>
       </section>
+      </section>
+      ) : null}
 
-      <section className="panel form-panel" id="nova-conversao-mp" aria-labelledby="new-conversion-title">
+      {isCreating ? (
+      <section className="panel form-panel catalog-create-view" id="nova-conversao-mp" aria-labelledby="new-conversion-title">
         <div className="panel-header">
           <div><span className="eyebrow">Regra de entrada</span><h2 id="new-conversion-title">Nova conversao de MP</h2></div>
         </div>
@@ -108,6 +123,8 @@ export default async function UnitsPage({ searchParams }: { searchParams?: Promi
           </div>
         </form>
       </section>
+      ) : null}
+      </div>
     </CatalogShell>
   );
 }

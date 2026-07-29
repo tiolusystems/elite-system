@@ -74,8 +74,12 @@ class ProductsPackagingUxContractTests(unittest.TestCase):
         self.assertIn("ProductMaintenancePanel", product)
         self.assertIn("selectedPackage", package)
         self.assertIn("PackageMaintenancePanel", package)
-        self.assertIn("Abrir produto", product)
-        self.assertIn("Abrir embalagem", package)
+        self.assertIn("Abrir ficha", product)
+        self.assertIn("Abrir ficha", package)
+        self.assertIn("isListing", product)
+        self.assertIn("isListing", package)
+        self.assertIn("isViewing", product)
+        self.assertIn("isViewing", package)
 
     def test_actions_delegate_to_governed_rpcs(self) -> None:
         text = ACTIONS.read_text(encoding="utf-8")

@@ -264,9 +264,9 @@ function actionHref(group: CadastroGroupKey): string {
   const hrefs: Record<CadastroGroupKey, string> = {
     clientes: "/cadastros?grupo=clientes&modo=novo#cadastro-cliente",
     pessoas: "/cadastros?grupo=pessoas&modo=novo#cadastro-pessoa",
-    "materias-primas": "/cadastros/materias-primas#nova-mp",
-    produtos: "/cadastros/produtos#novo-produto",
-    embalagens: "/cadastros/embalagens#nova-embalagem",
+    "materias-primas": "/cadastros/materias-primas?modo=novo#nova-mp",
+    produtos: "/cadastros/produtos?modo=novo#novo-produto",
+    embalagens: "/cadastros/embalagens?modo=novo#nova-embalagem",
     logistica: "/cadastros?grupo=logistica#novo-veiculo",
     tecnicos: "/cadastros/tecnicos",
     validacao: "#validacao"

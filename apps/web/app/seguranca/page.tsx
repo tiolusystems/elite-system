@@ -125,7 +125,10 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
 
           <section className="panel" aria-labelledby="selecao-title">
             <div className="panel-header">
-              <h2 id="selecao-title">Usuario selecionado</h2>
+              <div>
+                <h2 id="selecao-title">Acesso da conta selecionada</h2>
+                <p className="muted">O bloqueio impede o uso do sistema sem excluir a pessoa, as alçadas ou o histórico.</p>
+              </div>
               <span className="pill">{dashboard.selectedProfile ? securityRoleLabel(dashboard.selectedProfile.role) : "Nenhum"}</span>
             </div>
             {dashboard.selectedProfile ? (
@@ -147,7 +150,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                   </dd>
                 </div>
                 <div className="status-row">
-                  <dt>Status</dt>
+                  <dt>Acesso ao sistema</dt>
                   <dd>
                     <span className={`status-chip ${dashboard.selectedProfile.status}`}>
                       {internalValueLabel(dashboard.selectedProfile.status)}
@@ -179,6 +182,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                   type="hidden"
                   value={dashboard.selectedProfile.status === "active" ? "inactive" : "active"}
                 />
+                <p className="field-note">Alterar alçadas não bloqueia a conta. Esta ação pertence somente à conta selecionada e nunca exclui o usuário.</p>
                 <div className="form-footer">
                   <span>A mudanÃ§a preserva o perfil, as alÃ§adas e o histÃ³rico de auditoria.</span>
                   <button className="secondary-button" type="submit">

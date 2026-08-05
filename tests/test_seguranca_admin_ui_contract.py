@@ -64,6 +64,15 @@ class SecurityAdminUiContractTests(unittest.TestCase):
         self.assertIn("securityRoleLabel", page)
         self.assertNotIn('permission.effectiveAllowed ? "permitido" : "bloqueado"', page)
 
+    def test_account_control_is_attached_to_selected_user_without_physical_delete(self) -> None:
+        page = SECURITY_PAGE.read_text(encoding="utf-8")
+
+        self.assertIn("Acesso da conta selecionada", page)
+        self.assertIn("Alterar alçadas não bloqueia a conta", page)
+        self.assertIn('name="user_id" type="hidden" value={dashboard.selectedProfile.id}', page)
+        self.assertNotIn("deleteSecurityUserAction", page)
+        self.assertNotIn("Excluir usuário", page)
+
 
 if __name__ == "__main__":
     unittest.main()

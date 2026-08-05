@@ -39,7 +39,7 @@ class OrdersReservationsUxContractTests(unittest.TestCase):
         self.assertIn("!startCreating", page)
         self.assertIn("capabilities.canCreate", page)
         self.assertIn('href="/producao/formulas"', page)
-        self.assertIn("Consulta disponível em modo somente leitura", workbench)
+        self.assertIn("Consulta disponível em modo somente leitura", page)
         self.assertIn("order-create-workflow", workbench)
         self.assertNotIn("module-card-meta", workbench)
         self.assertNotIn("formula.formulaVersionId", workbench)

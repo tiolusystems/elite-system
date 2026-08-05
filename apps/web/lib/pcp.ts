@@ -266,6 +266,34 @@ export type PcpOrderCapabilities = {
   canCancel: boolean;
 };
 
+export type PcpQualityCapabilities = {
+  canRecord: boolean;
+  canFinish: boolean;
+};
+
+export type PcpQualityQueueItem = {
+  id: number;
+  codigoOp: string;
+  produtoLabel: string;
+  formulaLabel: string;
+  tipoOp: string;
+  status: string;
+  cqStatus: string | null;
+  quantidadePlanejada: number | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
+export type PcpQualityQueue = {
+  items: PcpQualityQueueItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  source: "supabase" | "not_configured" | "error";
+  error: string | null;
+};
+
 const EMPTY_LOOKUPS: PcpLookups = {
   produtos: [],
   materiasPrimas: [],
@@ -308,6 +336,131 @@ export async function getPcpOrderCapabilities(): Promise<PcpOrderCapabilities> {
     return Object.fromEntries(entries) as PcpOrderCapabilities;
   } catch {
     return EMPTY_ORDER_CAPABILITIES;
+  }
+}
+
+export async function getPcpQualityCapabilities(): Promise<PcpQualityCapabilities> {
+  if (!getRuntimeStatus().supabaseConfigured) return { canRecord: false, canFinish: false };
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const [recordPermission, finishPermission] = await Promise.all([
+      supabase.rpc("can_current_user", { p_action_key: "pcp.cq.record" }),
+      supabase.rpc("can_current_user", { p_action_key: "pcp.op.finish" })
+    ]);
+    return {
+      canRecord: !recordPermission.error && recordPermission.data === true,
+      canFinish: !finishPermission.error && finishPermission.data === true
+    };
+  } catch {
+    return { canRecord: false, canFinish: false };
+  }
+}
+
+export async function getPcpQualityQueue(input: {
+  query?: string;
+  view?: "queue" | "history";
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PcpQualityQueue> {
+  const runtime = getRuntimeStatus();
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(50, Math.max(10, input.pageSize ?? 20));
+  if (!runtime.supabaseConfigured) {
+    return { items: [], total: 0, page, pageSize, source: "not_configured", error: null };
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const queryText = (input.query ?? "").trim();
+    let formulaIds: number[] = [];
+    if (queryText) {
+      const pattern = `%${queryText.replace(/[%_,()]/g, " ")}%`;
+      const { data: products } = await supabase
+        .from("cad_produtos_base")
+        .select("id")
+        .or(`codigo_produto.ilike.${pattern},nome.ilike.${pattern}`)
+        .limit(1000);
+      const productIds = uniqueNumbers((products ?? []).map((row) => row.id));
+      if (productIds.length > 0) {
+        const { data: formulas } = await supabase
+          .from("pcp_formula_versoes")
+          .select("id")
+          .in("produto_id", productIds)
+          .limit(2000);
+        formulaIds = uniqueNumbers((formulas ?? []).map((row) => row.id));
+      }
+    }
+
+    let opQuery = supabase
+      .from("pcp_ordens_producao")
+      .select("id,codigo_op,formula_versao_id,tipo_op,status,quantidade_planejada,cq_status,created_at,started_at,completed_at", { count: "exact" })
+      .order(input.view === "history" ? "completed_at" : "started_at", { ascending: false, nullsFirst: false });
+    opQuery = input.view === "history"
+      ? opQuery.eq("status", "completed")
+      : opQuery.eq("status", "in_process");
+    if (input.status) opQuery = opQuery.eq("cq_status", input.status);
+    if (queryText) {
+      const safe = queryText.replace(/[%_,()]/g, " ");
+      opQuery = formulaIds.length > 0
+        ? opQuery.or(`codigo_op.ilike.%${safe}%,formula_versao_id.in.(${formulaIds.join(",")})`)
+        : opQuery.ilike("codigo_op", `%${safe}%`);
+    }
+    const from = (page - 1) * pageSize;
+    const response = await opQuery.range(from, from + pageSize - 1);
+    if (response.error) {
+      return { items: [], total: 0, page, pageSize, source: "error", error: response.error.message };
+    }
+
+    const opRows = (response.data ?? []) as Array<Record<string, unknown>>;
+    const returnedFormulaIds = uniqueNumbers(opRows.map((row) => row.formula_versao_id));
+    const formulaMap = new Map<number, { formulaLabel: string; productLabel: string }>();
+    if (returnedFormulaIds.length > 0) {
+      const { data: formulas } = await supabase
+        .from("pcp_formula_versoes")
+        .select("id,versao,tipo_receita,produto_id,cad_produtos_base(codigo_produto,nome)")
+        .in("id", returnedFormulaIds);
+      for (const formula of (formulas ?? []) as Array<Record<string, unknown>>) {
+        const product = firstNested(formula.cad_produtos_base);
+        const productLabel = product
+          ? `${String(product.codigo_produto)} - ${String(product.nome)}`
+          : "Produto não identificado";
+        formulaMap.set(Number(formula.id), {
+          formulaLabel: `${productLabel} / versão ${Number(formula.versao)}`,
+          productLabel
+        });
+      }
+    }
+
+    return {
+      items: opRows.map((row) => {
+        const formula = formulaMap.get(Number(row.formula_versao_id));
+        return {
+          id: Number(row.id),
+          codigoOp: String(row.codigo_op),
+          produtoLabel: formula?.productLabel ?? "Produto não identificado",
+          formulaLabel: formula?.formulaLabel ?? "Fórmula não identificada",
+          tipoOp: String(row.tipo_op),
+          status: String(row.status),
+          cqStatus: nullableString(row.cq_status),
+          quantidadePlanejada: nullableNumber(row.quantidade_planejada),
+          createdAt: String(row.created_at),
+          startedAt: nullableString(row.started_at),
+          completedAt: nullableString(row.completed_at)
+        };
+      }),
+      total: response.count ?? 0,
+      page,
+      pageSize,
+      source: "supabase",
+      error: null
+    };
+  } catch (error) {
+    return {
+      items: [], total: 0, page, pageSize, source: "error",
+      error: error instanceof Error ? error.message : "Não foi possível consultar o Controle de Qualidade."
+    };
   }
 }
 

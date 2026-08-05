@@ -18,6 +18,7 @@ ORDERS_PAGE = PRODUCTION / "ordens" / "page.tsx"
 ORDERS_COMPONENT = PRODUCTION / "ordens" / "orders-workbench.tsx"
 QUALITY_PAGE = PRODUCTION / "qualidade" / "page.tsx"
 QUALITY_COMPONENT = PRODUCTION / "qualidade" / "quality-workbench.tsx"
+QUALITY_DETAIL = PRODUCTION / "qualidade" / "[id]" / "page.tsx"
 STOCK_PAGE = PRODUCTION / "estoque" / "page.tsx"
 STOCK_COMPONENT = PRODUCTION / "estoque" / "stock-workbench.tsx"
 TRANSFORMATIONS_PAGE = PRODUCTION / "transformacoes" / "page.tsx"
@@ -78,14 +79,22 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn('value={lot.id}', component)
         self.assertNotIn("<datalist", component)
 
-    def test_quality_route_uses_only_started_ops_for_finalization(self) -> None:
+    def test_quality_route_separates_paginated_queue_from_finalization(self) -> None:
         page = QUALITY_PAGE.read_text(encoding="utf-8")
         component = QUALITY_COMPONENT.read_text(encoding="utf-8")
+        detail = QUALITY_DETAIL.read_text(encoding="utf-8")
+        pcp = (ROOT / "apps/web/lib/pcp.ts").read_text(encoding="utf-8")
 
         self.assertIn('active="qualidade"', page)
-        self.assertIn('op.status === "in_process"', page)
-        self.assertIn('op.status === "completed"', page)
-        self.assertIn("<QualityWorkbench", page)
+        self.assertIn("getPcpQualityQueue", page)
+        self.assertIn('name="q"', page)
+        self.assertIn('params.set("pagina", String(page))', page)
+        self.assertIn('visao", "historico"', page)
+        self.assertIn('href={`/producao/qualidade/${op.id}`}', page)
+        self.assertIn("getPcpOrderPrintData(opId)", detail)
+        self.assertIn("getPcpQualityCapabilities()", detail)
+        self.assertIn('{ count: "exact" }', pcp)
+        self.assertIn(".range(from, from + pageSize - 1)", pcp)
         self.assertIn("finishPcpOpAction", component)
         self.assertIn("calculateOpGuaranteesAction", component)
         self.assertIn('name="cq_status"', component)
@@ -119,9 +128,8 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         manuals = (ROOT / "apps/web/lib/manuals.ts").read_text(encoding="utf-8")
 
         for expected in (
-            "CQ e finalização",
-            "Resultado físico preservado",
-            "Finalizações recentes",
+            "Controle de Qualidade",
+            "Consulta disponível",
             "Observação final",
             "Motivo do cálculo ou recálculo",
         ):

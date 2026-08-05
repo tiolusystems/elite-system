@@ -1,54 +1,7 @@
 import { calculateOpGuaranteesAction, finishPcpOpAction } from "@/app/pcp/actions";
 import { OutputRows } from "@/app/pcp/production-editors";
-import type { PcpLookups, PcpRecentOp } from "@/lib/pcp";
+import type { PcpLookups, PcpQualityCapabilities, PcpRecentOp } from "@/lib/pcp";
 import { productionStatusLabel, unitLabel } from "@/lib/production-labels";
-
-export function QualityWorkbench({ inProcess, completed, lookups }: { inProcess: PcpRecentOp[]; completed: PcpRecentOp[]; lookups: PcpLookups }) {
-  return (
-    <>
-      <section className="notice-panel quality-rule-panel">
-        <strong>Resultado físico preservado</strong>
-        <span>CQ bloqueado ou reprovado finaliza o fato produtivo e gera lote bloqueado para decisão auditada posterior.</span>
-      </section>
-
-      <section className="panel" id="cq-pendente" aria-labelledby="quality-pending-title">
-        <div className="panel-header">
-          <h2 id="quality-pending-title">OP aguardando CQ</h2>
-          <span className="pill">{inProcess.length} em processo</span>
-        </div>
-        {inProcess.length > 0 ? (
-          <div className="pcp-op-list quality-op-list">
-            {inProcess.map((op) => (
-              <QualityOrderCard key={op.id} op={op} lookups={lookups} />
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <strong>Nenhuma OP aguardando CQ</strong>
-            <span>As ordens iniciadas aparecem aqui para registro e finalização.</span>
-          </div>
-        )}
-      </section>
-
-      <section className="panel" id="historico-cq" aria-labelledby="quality-history-title">
-        <div className="panel-header">
-          <h2 id="quality-history-title">Finalizações recentes</h2>
-          <span className="pill">{completed.length} registro(s)</span>
-        </div>
-        {completed.length > 0 ? (
-          <div className="operation-card-grid quality-history-grid">
-            {completed.map((op) => <CompletedQualityCard key={op.id} op={op} />)}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <strong>Sem finalizações recentes</strong>
-            <span>O histórico de produto gerado e garantias calculadas aparecerá aqui.</span>
-          </div>
-        )}
-      </section>
-    </>
-  );
-}
 
 function QualityOrderCard({ op, lookups }: { op: PcpRecentOp; lookups: PcpLookups }) {
   const reserved = op.components.reduce((total, component) => total + component.quantidadeReservada, 0);
@@ -290,6 +243,34 @@ function ProcedureChecks({ op }: { op: PcpRecentOp }) {
         </div>
       ))}
     </fieldset>
+  );
+}
+
+export function QualityOrderDetail({ op, lookups, capabilities }: { op: PcpRecentOp; lookups: PcpLookups; capabilities: PcpQualityCapabilities }) {
+  if (op.status === "completed") return <CompletedQualityCard op={op} />;
+  if (op.status !== "in_process") {
+    return <div className="notice-panel warning"><strong>OP fora da etapa de CQ</strong><span>Consulte Ordens de Produção para verificar a etapa atual.</span></div>;
+  }
+  if (!capabilities.canRecord || !capabilities.canFinish) {
+    return (
+      <>
+        <QualityOrderSummary op={op} />
+        <div className="permission-state" role="status">
+          <strong>Consulta disponível</strong>
+          <span>Você não possui as alçadas necessárias para registrar o CQ e finalizar esta OP.</span>
+        </div>
+      </>
+    );
+  }
+  return <QualityOrderCard op={op} lookups={lookups} />;
+}
+
+function QualityOrderSummary({ op }: { op: PcpRecentOp }) {
+  return (
+    <article className="pcp-op-card quality-op-card">
+      <div className="pcp-op-header"><div><h3>{op.codigoOp}</h3><p>{op.formulaLabel}</p></div><span className={`status-chip ${op.status}`}>{productionStatusLabel(op.status)}</span></div>
+      <div className="tag-row"><span className="tag">Produto: {op.produtoLabel}</span><span className="tag">Planejado: {op.quantidadePlanejada === null ? "Não informado" : formatNumber(op.quantidadePlanejada)}</span></div>
+    </article>
   );
 }
 

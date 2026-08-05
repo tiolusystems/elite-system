@@ -135,12 +135,19 @@ export type RomaneioDashboard = {
     romaneiosRascunho: number | null;
     romaneiosSeparacao: number | null;
     romaneiosConfirmados: number | null;
+    romaneiosEncerrados: number | null;
     quantidadePendente: number | null;
     quantidadeDisponivelRomaneio: number | null;
   };
   lookups: RomaneioLookups;
   pendingItems: RomaneioPendingItem[];
   romaneios: RomaneioRecord[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -153,7 +160,12 @@ const EMPTY_LOOKUPS: RomaneioLookups = {
   veiculos: []
 };
 
-export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
+export async function getRomaneioDashboard(input: {
+  page?: number;
+  pageSize?: number;
+  status?: string | null;
+  query?: string | null;
+} = {}): Promise<RomaneioDashboard> {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
     return emptyDashboard("not_configured", null);
@@ -161,6 +173,30 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
+    const pageSize = Math.min(50, Math.max(10, input.pageSize ?? 20));
+    const page = Math.max(1, input.page ?? 1);
+    const from = (page - 1) * pageSize;
+    const statuses = statusValues(input.status);
+    let romaneioQuery = supabase
+      .from("exp_romaneios")
+      .select(
+        "id,codigo_romaneio,pedido_id,tipo_separacao,status,data_romaneio,observacao,confirmado_at,cancelado_at,estornado_at,created_by,created_at",
+        { count: "exact" }
+      );
+    if (statuses.length > 0) romaneioQuery = romaneioQuery.in("status", statuses);
+    const normalizedQuery = input.query?.trim();
+    if (normalizedQuery) romaneioQuery = romaneioQuery.ilike("codigo_romaneio", `%${normalizedQuery}%`);
+    const romaneios = await romaneioQuery
+      .order("created_at", { ascending: false })
+      .range(from, from + pageSize - 1);
+    const [draftCount, separationCount, confirmedCount, closedCount] = await Promise.all([
+      supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).eq("status", "draft"),
+      supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).eq("status", "separacao"),
+      supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).eq("status", "confirmado"),
+      supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).in("status", ["confirmado", "cancelado", "estornado"])
+    ]);
+    const selectedRomaneioIds = rows(romaneios).map((row) => Number(row.id));
+    const selectedRomaneioFilter = selectedRomaneioIds.length > 0 ? selectedRomaneioIds : [-1];
     const produtoEmbalagensPromise = (async () => {
       const completeResult = await supabase
         .from("cad_produto_embalagens")
@@ -186,7 +222,7 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       const result = await supabase
         .from("exp_romaneio_carga_resumo")
         .select("romaneio_id,volume_liquido_l,volumes_logisticos,peso_liquido_kg,peso_bruto_kg,itens_sem_volume_configurado,itens_sem_densidade,itens_sem_tara")
-        .limit(200);
+        .in("romaneio_id", selectedRomaneioFilter);
 
       if (result.error?.message.includes("exp_romaneio_carga_resumo")) {
         return { data: [], error: null };
@@ -200,7 +236,6 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       clientes,
       produtoEmbalagens,
       configuracoesEmbalagem,
-      romaneios,
       romaneioItems,
       reservas,
       movimentos,
@@ -232,33 +267,26 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         .select("embalagem_id,peso_tara_kg")
         .limit(500),
       supabase
-        .from("exp_romaneios")
-        .select(
-          "id,codigo_romaneio,pedido_id,tipo_separacao,status,data_romaneio,observacao,confirmado_at,cancelado_at,estornado_at,created_by,created_at"
-        )
-        .order("created_at", { ascending: false })
-        .limit(80),
-      supabase
         .from("exp_romaneio_itens")
         .select(
           "id,romaneio_id,pedido_id,pedido_item_id,produto_embalagem_id,lote_pa_id,lote_pa_ref,quantidade_romaneada,quantidade_reservada,status,created_at"
         )
-        .order("created_at", { ascending: false })
-        .limit(600),
+        .in("romaneio_id", selectedRomaneioFilter)
+        .order("created_at", { ascending: false }),
       supabase
         .from("est_reservas_pa")
         .select("id,lote_pa_id,romaneio_id,romaneio_item_id,produto_embalagem_id,quantidade_reservada,status,created_at")
-        .order("created_at", { ascending: false })
-        .limit(600),
+        .in("romaneio_id", selectedRomaneioFilter)
+        .order("created_at", { ascending: false }),
       supabase
         .from("exp_romaneio_movimentos_pa")
         .select("id,romaneio_id,romaneio_item_id,lote_pa_ref,lote_pa_id,tipo_movimento,quantidade,created_at")
-        .order("created_at", { ascending: false })
-        .limit(600),
+        .in("romaneio_id", selectedRomaneioFilter)
+        .order("created_at", { ascending: false }),
       supabase
         .from("exp_romaneio_logistica_atual")
         .select("romaneio_id,entregador_id,veiculo_id,ocorrido_em,evento_id")
-        .limit(200),
+        .in("romaneio_id", selectedRomaneioFilter),
       supabase
         .from("cad_pessoas_comerciais")
         .select("id,nome,tipo_comercial,status")
@@ -280,8 +308,9 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         .from("fat_notas_fiscais")
         .select("id,pedido_id,romaneio_id,numero,serie,tipo,status_atual,data_emissao,valor_nf,origem_registro")
         .eq("origem_registro", "externa")
+        .or(`romaneio_id.in.(${selectedRomaneioFilter.join(",")}),romaneio_id.is.null`)
         .order("data_emissao", { ascending: false })
-        .limit(300),
+        .limit(500),
       cargasPromise,
       supabase.from("user_profiles").select("id,display_name").limit(500)
     ]);
@@ -437,9 +466,10 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       metrics: {
         pedidosComPendencia: new Set(pendingItems.map((item) => item.pedidoId)).size,
         itensPendentes: pendingItems.length,
-        romaneiosRascunho: romaneioRecords.filter((romaneio) => romaneio.status === "draft").length,
-        romaneiosSeparacao: romaneioRecords.filter((romaneio) => romaneio.status === "separacao").length,
-        romaneiosConfirmados: romaneioRecords.filter((romaneio) => romaneio.status === "confirmado").length,
+        romaneiosRascunho: draftCount.count ?? null,
+        romaneiosSeparacao: separationCount.count ?? null,
+        romaneiosConfirmados: confirmedCount.count ?? null,
+        romaneiosEncerrados: closedCount.count ?? null,
         quantidadePendente: pendingItems.reduce((sum, item) => sum + item.quantidadePendente, 0),
         quantidadeDisponivelRomaneio: allocatableItems.reduce(
           (sum, item) => sum + item.quantidadeDisponivelRomaneio,
@@ -480,6 +510,12 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       },
       pendingItems,
       romaneios: romaneioRecords,
+      pagination: {
+        page,
+        pageSize,
+        total: romaneios.count ?? 0,
+        totalPages: Math.max(1, Math.ceil((romaneios.count ?? 0) / pageSize))
+      },
       source: firstError ? "error" : "supabase",
       error: firstError
     };
@@ -683,13 +719,22 @@ function emptyDashboard(source: RomaneioDashboard["source"], error: string | nul
       romaneiosRascunho: null,
       romaneiosSeparacao: null,
       romaneiosConfirmados: null,
+      romaneiosEncerrados: null,
       quantidadePendente: null,
       quantidadeDisponivelRomaneio: null
     },
     lookups: EMPTY_LOOKUPS,
     pendingItems: [],
     romaneios: [],
+    pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1 },
     source,
     error
   };
+}
+
+function statusValues(value: string | null | undefined): string[] {
+  if (value === "romaneios-rascunho") return ["draft"];
+  if (value === "romaneios-separacao") return ["separacao"];
+  if (value === "romaneios-finalizados") return ["confirmado", "cancelado", "estornado"];
+  return [];
 }

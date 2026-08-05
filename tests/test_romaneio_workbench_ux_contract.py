@@ -4,6 +4,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "apps/web/app/romaneios/page.tsx"
+DATA = ROOT / "apps/web/lib/romaneios.ts"
 PREPARATION = ROOT / "apps/web/app/romaneios/romaneio-preparation.tsx"
 ACTIONS = ROOT / "apps/web/app/romaneios/actions.ts"
 MANUALS = ROOT / "apps/web/lib/manuals.ts"
@@ -14,6 +15,7 @@ class RomaneioWorkbenchUxContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.page = PAGE.read_text(encoding="utf-8")
+        cls.data = DATA.read_text(encoding="utf-8")
         cls.preparation = PREPARATION.read_text(encoding="utf-8")
         cls.actions = ACTIONS.read_text(encoding="utf-8")
         cls.manuals = MANUALS.read_text(encoding="utf-8")
@@ -59,6 +61,13 @@ class RomaneioWorkbenchUxContractTests(unittest.TestCase):
         self.assertIn('estornada: "Estornada"', self.page)
         self.assertIn('baixa: "Baixa física"', self.page)
         self.assertIn('estorno: "Estorno da baixa"', self.page)
+
+    def test_consultation_is_server_paginated_and_scopes_relations_to_the_page(self) -> None:
+        self.assertIn('name="busca"', self.page)
+        self.assertIn("params.pagina", self.page)
+        self.assertIn('.range(from, from + pageSize - 1)', self.data)
+        self.assertIn('.in("romaneio_id", selectedRomaneioFilter)', self.data)
+        self.assertNotIn('.from("exp_romaneios")\n        .select(\n          "id,codigo_romaneio', self.data.split('const [', 1)[1])
 
 
 if __name__ == "__main__":

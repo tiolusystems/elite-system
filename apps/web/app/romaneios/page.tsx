@@ -23,14 +23,18 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function RomaneiosPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
-  const dashboard = await getRomaneioDashboard();
   const result = singleValue(params.result);
   const statusView = singleValue(params.status) ?? null;
   const mode = singleValue(params.modo) === "consulta" ? "consulta" : "planejar";
+  const query = singleValue(params.busca)?.trim() ?? "";
+  const page = positiveInteger(singleValue(params.pagina)) ?? 1;
+  const dashboard = await getRomaneioDashboard({
+    page,
+    pageSize: mode === "consulta" ? 20 : 50,
+    status: mode === "consulta" ? statusView : null,
+    query: mode === "consulta" ? query : null
+  });
   const formMessage = messageForResult(result);
-  const closedCount = dashboard.romaneios.filter((romaneio) =>
-    ["confirmado", "cancelado", "estornado"].includes(romaneio.status)
-  ).length;
 
   return (
     <main className="app-shell">
@@ -65,7 +69,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
           </Link>
           <Link href="/romaneios?modo=consulta&status=romaneios-finalizados#romaneios-finalizados" aria-current={statusView === "romaneios-finalizados" ? "page" : undefined}>
             <span>Encerrados</span>
-            <strong>{numberOrDash(closedCount)}</strong>
+            <strong>{numberOrDash(dashboard.metrics.romaneiosEncerrados)}</strong>
           </Link>
         </nav>
 
@@ -92,9 +96,26 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
                 <h2 id="romaneios-title">Consultar Romaneios</h2>
                 <p className="muted">Abra somente a situação e o Romaneio que deseja operar.</p>
               </div>
-              <span className="pill">{dashboard.romaneios.length} registro(s)</span>
+              <span className="pill">{dashboard.pagination.total} registro(s)</span>
             </div>
+            <form className="filter-bar" action="/romaneios" method="get">
+              <input type="hidden" name="modo" value="consulta" />
+              {statusView ? <input type="hidden" name="status" value={statusView} /> : null}
+              <label className="wide-field">
+                Buscar Romaneio
+                <input name="busca" defaultValue={query} placeholder="Código do Romaneio" />
+              </label>
+              <button className="secondary-button" type="submit">Buscar</button>
+              {query ? <Link className="text-link" href={consultationHref(statusView)}>Limpar busca</Link> : null}
+            </form>
             <RomaneioStatusGroups romaneios={dashboard.romaneios} lookups={dashboard.lookups} activeGroup={statusView} />
+            <nav className="pagination-bar" aria-label="Paginação dos Romaneios">
+              <span>Página {dashboard.pagination.page} de {dashboard.pagination.totalPages}</span>
+              <div className="toolbar-actions">
+                {dashboard.pagination.page > 1 ? <Link className="secondary-button" href={consultationHref(statusView, query, dashboard.pagination.page - 1)}>Anterior</Link> : null}
+                {dashboard.pagination.page < dashboard.pagination.totalPages ? <Link className="secondary-button" href={consultationHref(statusView, query, dashboard.pagination.page + 1)}>Próxima</Link> : null}
+              </div>
+            </nav>
           </section>
         )}
       </section>
@@ -459,6 +480,19 @@ function movementTypeLabel(value: string): string {
     saida_romaneio: "Saída por Romaneio",
     estorno_saida: "Estorno da saída"
   });
+}
+
+function positiveInteger(value: string | undefined): number | null {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function consultationHref(status: string | null, query = "", page = 1): string {
+  const params = new URLSearchParams({ modo: "consulta" });
+  if (status) params.set("status", status);
+  if (query) params.set("busca", query);
+  if (page > 1) params.set("pagina", String(page));
+  return `/romaneios?${params.toString()}#romaneios`;
 }
 
 function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {

@@ -26,17 +26,7 @@ import {
   unitLabel
 } from "@/lib/production-labels";
 
-export function OrdersWorkbench({
-  dashboard,
-  orders,
-  capabilities,
-  startCreating = false
-}: {
-  dashboard: PcpDashboard;
-  orders: PcpRecentOp[];
-  capabilities: PcpOrderCapabilities;
-  startCreating?: boolean;
-}) {
+export function OrderCreationWorkbench({ dashboard }: { dashboard: PcpDashboard }) {
   const opRequestKey = randomUUID();
   const operationalFormulas = dashboard.formulaVersions.filter(
     (formula) => formula.tipoReceita === "producao"
@@ -44,8 +34,7 @@ export function OrdersWorkbench({
       && formula.isActive
   );
 
-  if (startCreating) {
-    return (
+  return (
       <section className="two-column production-primary-grid order-create-workflow" id="nova-op">
         <section className="panel form-panel" aria-labelledby="nova-op-title">
           <div className="panel-header">
@@ -124,48 +113,6 @@ export function OrdersWorkbench({
           <Link className="secondary-button" href="/producao/formulas">Consultar fórmulas</Link>
         </section>
       </section>
-    );
-  }
-
-  const hasAnyOperationalCapability = Object.values(capabilities).some(Boolean);
-  return (
-    <>
-      {!hasAnyOperationalCapability ? (
-        <div className="notice-panel warning order-readonly-notice" role="status">
-          <strong>Consulta disponível em modo somente leitura</strong>
-          <span>Você não possui alçada para abrir, reservar, iniciar ou cancelar ordens. As ações não são exibidas.</span>
-        </div>
-      ) : null}
-
-      <section className="panel" id="ops" aria-labelledby="orders-title">
-        <div className="panel-header">
-          <div>
-            <span className="eyebrow">Consulta operacional</span>
-            <h2 id="orders-title">Fila de ordens</h2>
-          </div>
-          <span className="pill">{orders.length} resultado(s)</span>
-        </div>
-        {orders.length > 0 ? (
-          <div className="pcp-op-list">
-            {orders.map((op, index) => (
-              <PlanningOrderCard
-                key={op.id}
-                op={op}
-                availableLots={dashboard.availableLots}
-                capabilities={capabilities}
-                defaultOpen={index === 0 && ["draft", "planned", "in_process"].includes(op.status)}
-                returnTo="ordens"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <strong>Nenhuma OP encontrada</strong>
-            <span>Revise os filtros ou abra uma nova ordem.</span>
-          </div>
-        )}
-      </section>
-    </>
   );
 }
 

@@ -294,6 +294,10 @@ export type PcpQualityQueue = {
   error: string | null;
 };
 
+export type PcpOrderQueue = PcpQualityQueue & {
+  statusCounts: Record<string, number>;
+};
+
 const EMPTY_LOOKUPS: PcpLookups = {
   produtos: [],
   materiasPrimas: [],
@@ -461,6 +465,99 @@ export async function getPcpQualityQueue(input: {
       items: [], total: 0, page, pageSize, source: "error",
       error: error instanceof Error ? error.message : "Não foi possível consultar o Controle de Qualidade."
     };
+  }
+}
+
+export async function getPcpOrderQueue(input: {
+  query?: string;
+  status?: string;
+  type?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PcpOrderQueue> {
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(50, Math.max(10, input.pageSize ?? 20));
+  const empty = (source: PcpOrderQueue["source"], error: string | null): PcpOrderQueue => ({
+    items: [], total: 0, page, pageSize, source, error, statusCounts: {}
+  });
+  if (!getRuntimeStatus().supabaseConfigured) return empty("not_configured", null);
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const queryText = (input.query ?? "").trim();
+    let formulaIds: number[] = [];
+    if (queryText) {
+      const pattern = `%${queryText.replace(/[%_,()]/g, " ")}%`;
+      const { data: products } = await supabase
+        .from("cad_produtos_base")
+        .select("id")
+        .or(`codigo_produto.ilike.${pattern},nome.ilike.${pattern}`)
+        .limit(1000);
+      const productIds = uniqueNumbers((products ?? []).map((row) => row.id));
+      let formulaQuery = supabase.from("pcp_formula_versoes").select("id");
+      if (productIds.length > 0) formulaQuery = formulaQuery.in("produto_id", productIds);
+      const { data: formulas } = productIds.length > 0
+        ? await formulaQuery.limit(2000)
+        : { data: [] as Array<{ id: number }> };
+      formulaIds = uniqueNumbers((formulas ?? []).map((row) => row.id));
+    }
+
+    const statuses = ["draft", "planned", "in_process", "completed", "cancelled"];
+    const countResponses = await Promise.all(statuses.map((status) => supabase
+      .from("pcp_ordens_producao")
+      .select("id", { count: "exact", head: true })
+      .eq("status", status)));
+    const statusCounts = Object.fromEntries(statuses.map((status, index) => [status, countResponses[index].count ?? 0]));
+
+    let opQuery = supabase
+      .from("pcp_ordens_producao")
+      .select("id,codigo_op,formula_versao_id,tipo_op,status,quantidade_planejada,cq_status,created_at,started_at,completed_at", { count: "exact" })
+      .order("created_at", { ascending: false });
+    const status = input.status ?? "open";
+    if (status === "open") opQuery = opQuery.in("status", ["draft", "planned", "in_process"]);
+    else if (status !== "all") opQuery = opQuery.eq("status", status);
+    if (input.type && input.type !== "all") opQuery = opQuery.eq("tipo_op", input.type);
+    if (queryText) {
+      const safe = queryText.replace(/[%_,()]/g, " ");
+      opQuery = formulaIds.length > 0
+        ? opQuery.or(`codigo_op.ilike.%${safe}%,formula_versao_id.in.(${formulaIds.join(",")})`)
+        : opQuery.ilike("codigo_op", `%${safe}%`);
+    }
+    const from = (page - 1) * pageSize;
+    const response = await opQuery.range(from, from + pageSize - 1);
+    if (response.error) return { ...empty("error", response.error.message), statusCounts };
+
+    const opRows = (response.data ?? []) as Array<Record<string, unknown>>;
+    const returnedFormulaIds = uniqueNumbers(opRows.map((row) => row.formula_versao_id));
+    const formulaMap = new Map<number, { formulaLabel: string; productLabel: string }>();
+    if (returnedFormulaIds.length > 0) {
+      const { data: formulas } = await supabase
+        .from("pcp_formula_versoes")
+        .select("id,versao,produto_id,cad_produtos_base(codigo_produto,nome)")
+        .in("id", returnedFormulaIds);
+      for (const formula of (formulas ?? []) as Array<Record<string, unknown>>) {
+        const product = firstNested(formula.cad_produtos_base);
+        const productLabel = product ? `${String(product.codigo_produto)} - ${String(product.nome)}` : "Produto não identificado";
+        formulaMap.set(Number(formula.id), { productLabel, formulaLabel: `${productLabel} / versão ${Number(formula.versao)}` });
+      }
+    }
+
+    return {
+      items: opRows.map((row) => {
+        const formula = formulaMap.get(Number(row.formula_versao_id));
+        return {
+          id: Number(row.id), codigoOp: String(row.codigo_op),
+          produtoLabel: formula?.productLabel ?? "Produto não identificado",
+          formulaLabel: formula?.formulaLabel ?? "Fórmula não identificada",
+          tipoOp: String(row.tipo_op), status: String(row.status), cqStatus: nullableString(row.cq_status),
+          quantidadePlanejada: nullableNumber(row.quantidade_planejada), createdAt: String(row.created_at),
+          startedAt: nullableString(row.started_at), completedAt: nullableString(row.completed_at)
+        };
+      }),
+      total: response.count ?? 0, page, pageSize, source: "supabase", error: null, statusCounts
+    };
+  } catch (error) {
+    return empty("error", error instanceof Error ? error.message : "Não foi possível consultar as ordens.");
   }
 }
 

@@ -16,6 +16,7 @@ GUARANTEES_PAGE = PRODUCTION / "garantias" / "page.tsx"
 GUARANTEES_COMPONENT = PRODUCTION / "garantias" / "guarantee-workbench.tsx"
 ORDERS_PAGE = PRODUCTION / "ordens" / "page.tsx"
 ORDERS_COMPONENT = PRODUCTION / "ordens" / "orders-workbench.tsx"
+ORDERS_DETAIL = PRODUCTION / "ordens" / "[id]" / "page.tsx"
 QUALITY_PAGE = PRODUCTION / "qualidade" / "page.tsx"
 QUALITY_COMPONENT = PRODUCTION / "qualidade" / "quality-workbench.tsx"
 QUALITY_DETAIL = PRODUCTION / "qualidade" / "[id]" / "page.tsx"
@@ -65,15 +66,22 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn('redirect("/producao")', pcp_page)
         self.assertNotIn("<FormulaWorkbench", pcp_page)
 
-    def test_orders_route_filters_queue_and_uses_relational_lot_ids(self) -> None:
+    def test_orders_route_uses_server_pagination_and_relational_lot_ids(self) -> None:
         page = ORDERS_PAGE.read_text(encoding="utf-8")
         component = ORDERS_COMPONENT.read_text(encoding="utf-8")
+        detail = ORDERS_DETAIL.read_text(encoding="utf-8")
+        pcp = (ROOT / "apps/web/lib/pcp.ts").read_text(encoding="utf-8")
 
         self.assertIn('active="ordens"', page)
         self.assertIn('name="status"', page)
         self.assertIn('name="tipo"', page)
-        self.assertIn("dashboard.recentOps.filter", page)
-        self.assertIn("<OrdersWorkbench", page)
+        self.assertIn("getPcpOrderQueue", page)
+        self.assertIn("queue.total", page)
+        self.assertIn('href={`/producao/ordens/${op.id}`}', page)
+        self.assertIn("getPcpOrderPrintData(opId)", detail)
+        self.assertIn("<PlanningOrderCard", detail)
+        self.assertIn(".range(from, from + pageSize - 1)", pcp)
+        self.assertNotIn("dashboard.recentOps.filter", page)
         self.assertIn('name="op_componente_id"', component)
         self.assertIn('name="lote_id"', component)
         self.assertIn('value={lot.id}', component)

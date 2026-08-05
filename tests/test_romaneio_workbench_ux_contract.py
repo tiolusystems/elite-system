@@ -35,12 +35,14 @@ class RomaneioWorkbenchUxContractTests(unittest.TestCase):
         self.assertIn('const mode = singleValue(params.modo) === "consulta"', self.page)
         self.assertIn('mode === "planejar"', self.page)
         self.assertIn("RomaneioPreparation", self.page)
-        self.assertIn("RomaneioStatusGroups", self.page)
+        self.assertIn("RomaneioConsultationTable", self.page)
         self.assertIn("romaneio-workflow-tabs", self.page)
         self.assertIn("Consultar Romaneios", self.page)
 
     def test_consultation_is_compact_and_hides_technical_ids(self) -> None:
-        self.assertIn("<details className={`romaneio-record", self.page)
+        self.assertIn("DataTable", self.page)
+        self.assertIn("PrimarySecondaryCell", self.page)
+        self.assertIn("StatusBadge", self.page)
         self.assertIn("Abra somente a situação e o Romaneio", self.page)
         self.assertNotIn("item {item.id}", self.page)
         self.assertNotIn("id {lot.id}", self.page)

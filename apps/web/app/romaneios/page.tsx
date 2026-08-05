@@ -12,7 +12,14 @@ import {
 } from "@/app/romaneios/actions";
 import { RomaneioPreparation } from "@/app/romaneios/romaneio-preparation";
 import { EntityLookup } from "@/app/corporate-search/entity-lookup";
-import { ActiveFilterChips, FilterActions, PaginatedResultList, SearchField, SearchToolbar } from "@/app/corporate-search/search-controls";
+import { ActiveFilterChips, AdvancedFilterPanel, FilterActions, FilterToolbar, SearchField } from "@/app/corporate-search/search-controls";
+import {
+  DataTable,
+  type DataTableColumn,
+  PaginationBar,
+  PrimarySecondaryCell,
+  StatusBadge
+} from "@/app/operational-table/operational-table";
 import {
   getRomaneioDashboard,
   type RomaneioItem,
@@ -30,6 +37,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
   const mode = singleValue(params.modo) === "consulta" ? "consulta" : "planejar";
   const query = singleValue(params.busca)?.trim() ?? "";
   const page = positiveInteger(singleValue(params.pagina)) ?? 1;
+  const selectedRomaneioId = positiveInteger(singleValue(params.selecionado));
   const filters = parseConsultationFilters(params, statusView, query);
   const dashboard = await getRomaneioDashboard({
     page,
@@ -49,6 +57,7 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
     finishedLotId: filters.finishedLotId
   });
   const formMessage = messageForResult(result);
+  const selectedRomaneio = dashboard.romaneios.find((romaneio) => romaneio.id === selectedRomaneioId) ?? null;
 
   return (
     <main className="app-shell">
@@ -73,15 +82,15 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
             <span>Pedidos com saldo</span>
             <strong>{numberOrDash(dashboard.metrics.pedidosComPendencia)}</strong>
           </Link>
-          <Link href="/romaneios?modo=consulta&status=romaneios-rascunho#romaneios-rascunho" aria-current={statusView === "romaneios-rascunho" ? "page" : undefined}>
+          <Link href="/romaneios?modo=consulta&status=romaneios-rascunho#romaneios" aria-current={statusView === "romaneios-rascunho" ? "page" : undefined}>
             <span>Rascunhos</span>
             <strong>{numberOrDash(dashboard.metrics.romaneiosRascunho)}</strong>
           </Link>
-          <Link href="/romaneios?modo=consulta&status=romaneios-separacao#romaneios-separacao" aria-current={statusView === "romaneios-separacao" ? "page" : undefined}>
+          <Link href="/romaneios?modo=consulta&status=romaneios-separacao#romaneios" aria-current={statusView === "romaneios-separacao" ? "page" : undefined}>
             <span>Em separação</span>
             <strong>{numberOrDash(dashboard.metrics.romaneiosSeparacao)}</strong>
           </Link>
-          <Link href="/romaneios?modo=consulta&status=romaneios-finalizados#romaneios-finalizados" aria-current={statusView === "romaneios-finalizados" ? "page" : undefined}>
+          <Link href="/romaneios?modo=consulta&status=romaneios-finalizados#romaneios" aria-current={statusView === "romaneios-finalizados" ? "page" : undefined}>
             <span>Encerrados</span>
             <strong>{numberOrDash(dashboard.metrics.romaneiosEncerrados)}</strong>
           </Link>
@@ -112,31 +121,37 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
               </div>
               <span className="pill">{dashboard.pagination.total} registro(s)</span>
             </div>
-            <SearchToolbar action="/romaneios">
+            <FilterToolbar action="/romaneios">
               <input type="hidden" name="modo" value="consulta" />
               <SearchField name="busca" label="Cliente, pedido ou Romaneio" defaultValue={query} placeholder="Nome, documento, pedido, destino ou código" wide />
               <label><span>Situação</span><select name="status" defaultValue={statusView ?? ""}><option value="">Todas</option><option value="romaneios-rascunho">Rascunhos</option><option value="romaneios-separacao">Em separação</option><option value="romaneios-finalizados">Encerrados</option></select></label>
-              <details className="corporate-advanced-filters" open={hasAdvancedFilters(filters)}>
-                <summary>Mais filtros</summary>
-                <div className="corporate-advanced-filter-grid">
-                  <EntityLookup entity="clientes" name="cliente" labelName="cliente_label" label="Cliente" placeholder="Abra a lista ou pesquise" defaultValue={filters.clientId} defaultLabel={filters.clientLabel} />
-                  <EntityLookup entity="pedidos" name="pedido" labelName="pedido_label" label="Pedido" placeholder="Abra a lista ou pesquise" defaultValue={filters.orderId} defaultLabel={filters.orderLabel} />
-                  <EntityLookup entity="propriedades" name="propriedade" labelName="propriedade_label" label="Propriedade ou destino" placeholder="Abra a lista ou pesquise" defaultValue={filters.propertyId} defaultLabel={filters.propertyLabel} contextId={filters.clientId} />
-                  <EntityLookup entity="romaneios" name="romaneio" labelName="romaneio_label" label="Romaneio" placeholder="Abra a lista ou pesquise" defaultValue={filters.shipmentId} defaultLabel={filters.shipmentLabel} />
-                  <EntityLookup entity="pessoas" name="entregador" labelName="entregador_label" label="Entregador" placeholder="Abra a lista ou pesquise" defaultValue={filters.courierId} defaultLabel={filters.courierLabel} />
-                  <EntityLookup entity="veiculos" name="veiculo" labelName="veiculo_label" label="Veículo" placeholder="Abra a lista ou pesquise" defaultValue={filters.vehicleId} defaultLabel={filters.vehicleLabel} />
-                  <EntityLookup entity="produtos" name="produto" labelName="produto_label" label="Produto" placeholder="Abra a lista ou pesquise" defaultValue={filters.productId} defaultLabel={filters.productLabel} />
-                  <EntityLookup entity="lotes-pa" name="lote" labelName="lote_label" label="Lote PA" placeholder="Abra a lista ou pesquise" defaultValue={filters.finishedLotId} defaultLabel={filters.finishedLotLabel} />
-                  <label><span>NF de remessa</span><input name="referencia" defaultValue={filters.fiscalReference} placeholder="Número emitido externamente" /></label>
-                  <label><span>Data inicial</span><input type="date" name="inicio" defaultValue={filters.startDate} /></label>
-                  <label><span>Data final</span><input type="date" name="fim" defaultValue={filters.endDate} /></label>
-                </div>
-              </details>
+              <AdvancedFilterPanel open={hasAdvancedFilters(filters)} activeCount={advancedFilterCount(filters)}>
+                <EntityLookup entity="clientes" name="cliente" labelName="cliente_label" label="Cliente" placeholder="Abra a lista ou pesquise" defaultValue={filters.clientId} defaultLabel={filters.clientLabel} />
+                <EntityLookup entity="pedidos-romaneio" name="pedido" labelName="pedido_label" label="Pedido" placeholder="Abra a lista ou pesquise" defaultValue={filters.orderId} defaultLabel={filters.orderLabel} />
+                <EntityLookup entity="propriedades" name="propriedade" labelName="propriedade_label" label="Propriedade ou destino" placeholder="Abra a lista ou pesquise" defaultValue={filters.propertyId} defaultLabel={filters.propertyLabel} contextId={filters.clientId} />
+                <EntityLookup entity="romaneios" name="romaneio" labelName="romaneio_label" label="Romaneio" placeholder="Abra a lista ou pesquise" defaultValue={filters.shipmentId} defaultLabel={filters.shipmentLabel} />
+                <EntityLookup entity="pessoas" name="entregador" labelName="entregador_label" label="Entregador" placeholder="Abra a lista ou pesquise" defaultValue={filters.courierId} defaultLabel={filters.courierLabel} />
+                <EntityLookup entity="veiculos" name="veiculo" labelName="veiculo_label" label="Veículo" placeholder="Abra a lista ou pesquise" defaultValue={filters.vehicleId} defaultLabel={filters.vehicleLabel} />
+                <EntityLookup entity="produtos" name="produto" labelName="produto_label" label="Produto" placeholder="Abra a lista ou pesquise" defaultValue={filters.productId} defaultLabel={filters.productLabel} />
+                <EntityLookup entity="lotes-pa" name="lote" labelName="lote_label" label="Lote PA" placeholder="Abra a lista ou pesquise" defaultValue={filters.finishedLotId} defaultLabel={filters.finishedLotLabel} />
+                <label><span>NF de remessa</span><input name="referencia" defaultValue={filters.fiscalReference} placeholder="Número emitido externamente" /></label>
+                <label><span>Data inicial</span><input type="date" name="inicio" defaultValue={filters.startDate} /></label>
+                <label><span>Data final</span><input type="date" name="fim" defaultValue={filters.endDate} /></label>
+              </AdvancedFilterPanel>
               <FilterActions clearHref="/romaneios?modo=consulta#romaneios" submitLabel="Pesquisar" />
-            </SearchToolbar>
+            </FilterToolbar>
             <ActiveFilterChips filters={activeRomaneioFilters(filters)} clearHref="/romaneios?modo=consulta#romaneios" />
-            <RomaneioStatusGroups romaneios={dashboard.romaneios} lookups={dashboard.lookups} activeGroup={statusView} />
-            <PaginatedResultList page={dashboard.pagination.page} total={dashboard.pagination.total} pageSize={dashboard.pagination.pageSize} previousHref={dashboard.pagination.page > 1 ? consultationHref(filters, dashboard.pagination.page - 1) : null} nextHref={dashboard.pagination.page < dashboard.pagination.totalPages ? consultationHref(filters, dashboard.pagination.page + 1) : null} />
+            {dashboard.romaneios.length ? (
+              <RomaneioConsultationTable romaneios={dashboard.romaneios} filters={filters} page={dashboard.pagination.page} />
+            ) : (
+              <div className="empty-state compact-empty"><strong>Nenhum Romaneio encontrado</strong><span>Revise os filtros ou consulte outro período.</span></div>
+            )}
+            <PaginationBar page={dashboard.pagination.page} pageCount={dashboard.pagination.totalPages} total={dashboard.pagination.total} previousHref={dashboard.pagination.page > 1 ? consultationHref(filters, dashboard.pagination.page - 1) : null} nextHref={dashboard.pagination.page < dashboard.pagination.totalPages ? consultationHref(filters, dashboard.pagination.page + 1) : null} />
+            {selectedRomaneio ? (
+              <section className="romaneio-consultation-detail" id="romaneio-detalhe" aria-label={`Detalhes do Romaneio ${selectedRomaneio.codigoRomaneio}`}>
+                <RomaneioCard romaneio={selectedRomaneio} lookups={dashboard.lookups} expanded />
+              </section>
+            ) : null}
           </section>
         )}
       </section>
@@ -144,28 +159,57 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
   );
 }
 
-function RomaneioStatusGroups({ romaneios, lookups, activeGroup }: { romaneios: RomaneioRecord[]; lookups: RomaneioLookups; activeGroup: string | null }) {
-  const groups = [
-    { id: "romaneios-rascunho", label: "Rascunhos", statuses: ["draft"] },
-    { id: "romaneios-separacao", label: "Em separação", statuses: ["separacao"] },
-    { id: "romaneios-finalizados", label: "Finalizados, cancelados e estornados", statuses: ["confirmado", "cancelado", "estornado"] }
+function RomaneioConsultationTable({ romaneios, filters, page }: { romaneios: RomaneioRecord[]; filters: RomaneioConsultationFilters; page: number }) {
+  const columns: Array<DataTableColumn<RomaneioRecord>> = [
+    {
+      key: "romaneio",
+      label: "Romaneio",
+      width: "17%",
+      render: (romaneio) => <PrimarySecondaryCell primary={romaneio.codigoRomaneio} secondary={separationTypeLabel(romaneio.tipoSeparacao)} />
+    },
+    {
+      key: "pedido",
+      label: "Pedido e cliente",
+      width: "25%",
+      render: (romaneio) => <PrimarySecondaryCell primary={orderCode(romaneio.pedidoLabel)} secondary={romaneio.clienteNome} />
+    },
+    {
+      key: "carga",
+      label: "Carga",
+      width: "15%",
+      render: (romaneio) => <PrimarySecondaryCell primary={`${numberOrDash(romaneio.carga?.volumeLiquidoL ?? null)} L`} secondary={`${numberOrDash(romaneio.carga?.volumesLogisticos ?? null)} volume(s)`} />
+    },
+    {
+      key: "situacao",
+      label: "Situação",
+      width: "13%",
+      render: (romaneio) => <StatusBadge status={romaneio.status}>{romaneioStatusLabel(romaneio.status)}</StatusBadge>
+    },
+    {
+      key: "data",
+      label: "Data",
+      width: "12%",
+      render: (romaneio) => formatDate(romaneio.dataRomaneio)
+    },
+    {
+      key: "entrega",
+      label: "Entrega",
+      width: "12%",
+      render: (romaneio) => <PrimarySecondaryCell primary={romaneio.logistics?.entregadorNome ?? "A definir"} secondary={romaneio.logistics?.veiculoLabel ?? "Veículo não informado"} />
+    },
+    {
+      key: "acao",
+      label: "Ação",
+      width: "6%",
+      align: "end",
+      render: (romaneio) => <Link className="secondary-button compact" href={romaneioDetailHref(filters, page, romaneio.id)}>Abrir</Link>
+    }
   ];
-  return (
-    <div className="romaneio-status-groups">
-      {groups.map((group) => {
-        const records = romaneios.filter((romaneio) => group.statuses.includes(romaneio.status));
-        return (
-          <details className="romaneio-status-group" id={group.id} key={group.id} open={activeGroup === group.id}>
-            <summary><strong>{group.label}</strong><span>{records.length} registro(s)</span></summary>
-            {records.length ? <div className="romaneio-list">{records.map((romaneio) => <RomaneioCard key={romaneio.id} romaneio={romaneio} lookups={lookups} />)}</div> : <div className="empty-state compact-empty"><strong>Nenhum registro</strong><span>Não há romaneios nesta situação.</span></div>}
-          </details>
-        );
-      })}
-    </div>
-  );
+
+  return <DataTable caption="Romaneios encontrados" columns={columns} rows={romaneios} rowKey={(romaneio) => romaneio.id} />;
 }
 
-function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups: RomaneioLookups }) {
+function RomaneioCard({ romaneio, lookups, expanded = false }: { romaneio: RomaneioRecord; lookups: RomaneioLookups; expanded?: boolean }) {
   const statusAllowsConfirmation = romaneio.status === "draft" || romaneio.status === "separacao";
   const canCancel = romaneio.status === "draft" || romaneio.status === "separacao";
   const canReverse = romaneio.status === "confirmado";
@@ -179,7 +223,7 @@ function RomaneioCard({ romaneio, lookups }: { romaneio: RomaneioRecord; lookups
   const canConfirm = statusAllowsConfirmation && reservationsComplete && logisticsComplete && shippingReferences.length > 0;
 
   return (
-    <details className={`romaneio-record romaneio-${romaneio.status}`}>
+    <details className={`romaneio-record romaneio-${romaneio.status}`} open={expanded}>
       <summary>
         <span>
           <strong>{romaneio.codigoRomaneio}</strong>
@@ -566,6 +610,36 @@ function consultationHref(filters: RomaneioConsultationFilters, page = 1, omit?:
 
 function hasAdvancedFilters(filters: RomaneioConsultationFilters): boolean {
   return Boolean(filters.clientId || filters.orderId || filters.propertyId || filters.shipmentId || filters.courierId || filters.vehicleId || filters.productId || filters.finishedLotId || filters.fiscalReference || filters.startDate || filters.endDate);
+}
+
+function advancedFilterCount(filters: RomaneioConsultationFilters): number {
+  return [
+    filters.clientId,
+    filters.orderId,
+    filters.propertyId,
+    filters.shipmentId,
+    filters.courierId,
+    filters.vehicleId,
+    filters.productId,
+    filters.finishedLotId,
+    filters.fiscalReference,
+    filters.startDate,
+    filters.endDate
+  ].filter(Boolean).length;
+}
+
+function romaneioDetailHref(filters: RomaneioConsultationFilters, page: number, romaneioId: number): string {
+  const base = consultationHref(filters, page).split("#")[0];
+  return `${base}&selecionado=${romaneioId}#romaneio-detalhe`;
+}
+
+function orderCode(label: string): string {
+  return label.split(" - ")[0] || label;
+}
+
+function formatDate(value: string): string {
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat("pt-BR").format(date);
 }
 
 function activeRomaneioFilters(filters: RomaneioConsultationFilters) {

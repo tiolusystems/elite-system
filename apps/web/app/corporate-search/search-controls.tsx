@@ -3,9 +3,11 @@ import type { ReactNode } from "react";
 
 import styles from "./search-controls.module.css";
 
-export function SearchToolbar({ children, action, className = "" }: { children: ReactNode; action?: string; className?: string }) {
+export function FilterToolbar({ children, action, className = "" }: { children: ReactNode; action?: string; className?: string }) {
   return <form className={`${styles.toolbar} ${className}`.trim()} action={action} method="get" role="search">{children}</form>;
 }
+
+export const SearchToolbar = FilterToolbar;
 
 export function SearchField({ name, label, defaultValue, placeholder, wide = false }: { name: string; label: string; defaultValue?: string; placeholder: string; wide?: boolean }) {
   return <label className={wide ? styles.wide : undefined}><span>{label}</span><input type="search" name={name} defaultValue={defaultValue} placeholder={placeholder} /></label>;
@@ -13,6 +15,16 @@ export function SearchField({ name, label, defaultValue, placeholder, wide = fal
 
 export function FilterActions({ clearHref, submitLabel = "Pesquisar" }: { clearHref: string; submitLabel?: string }) {
   return <div className={styles.actions}><button className="secondary-button" type="submit">{submitLabel}</button><Link href={clearHref}>Limpar filtros</Link></div>;
+}
+
+export function AdvancedFilterPanel({ children, open = false, activeCount = 0 }: { children: ReactNode; open?: boolean; activeCount?: number }) {
+  return <details className={styles.advancedPanel} open={open}>
+    <summary className={styles.advancedSummary}>
+      <span>Mais filtros</span>
+      {activeCount > 0 ? <small>{activeCount} ativo(s)</small> : <small>Opcional</small>}
+    </summary>
+    <div className={styles.advancedGrid}>{children}</div>
+  </details>;
 }
 
 export function ActiveFilterChips({ filters, clearHref }: { filters: Array<{ label: string; value: string; href: string }>; clearHref: string }) {

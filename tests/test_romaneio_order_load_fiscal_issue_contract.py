@@ -109,10 +109,10 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
     def test_consultation_shortcuts_open_governed_views(self):
         page = PAGE.read_text(encoding="utf-8")
         self.assertIn('href="/romaneios"', page)
-        self.assertIn("?modo=consulta&status=romaneios-rascunho#romaneios-rascunho", page)
-        self.assertIn("?modo=consulta&status=romaneios-separacao#romaneios-separacao", page)
-        self.assertIn("open={activeGroup === group.id}", page)
-        self.assertIn("Nenhum registro", page)
+        self.assertIn("?modo=consulta&status=romaneios-rascunho#romaneios", page)
+        self.assertIn("?modo=consulta&status=romaneios-separacao#romaneios", page)
+        self.assertIn("RomaneioConsultationTable", page)
+        self.assertIn("Nenhum Romaneio encontrado", page)
 
     def test_logistics_upgrade_gap_does_not_hide_the_dashboard(self):
         source = ROMANEIO_DATA.read_text(encoding="utf-8")
@@ -124,7 +124,7 @@ class RomaneioOrderLoadFiscalIssueContractTest(unittest.TestCase):
         page = PAGE.read_text(encoding="utf-8")
         print_page = PRINT_PAGE.read_text(encoding="utf-8")
         manual = MANUAL_PAGE.read_text(encoding="utf-8")
-        self.assertIn("RomaneioStatusGroups", page)
+        self.assertIn("RomaneioConsultationTable", page)
         self.assertIn("Como fazer um Romaneio", manual)
         self.assertIn("getAuthStatus", print_page)
         self.assertIn("Impresso por:", print_page)

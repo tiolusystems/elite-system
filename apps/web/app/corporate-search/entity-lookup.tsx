@@ -6,7 +6,7 @@ import type { CorporateLookupEntity, CorporateLookupOption, CorporateLookupPage 
 
 import styles from "./search-controls.module.css";
 
-type EntityLookupProps = {
+export type EntityLookupProps = {
   entity: CorporateLookupEntity;
   name: string;
   label: string;
@@ -20,7 +20,7 @@ type EntityLookupProps = {
   helpText?: string;
 };
 
-export function EntityLookup({
+export function EntityCombobox({
   entity,
   name,
   label,
@@ -77,6 +77,7 @@ export function EntityLookup({
   function choose(option: CorporateLookupOption) {
     setSelectedId(option.id);
     setQuery(option.label);
+    setPage(1);
     setOpen(false);
     setError(null);
     inputRef.current?.setCustomValidity("");
@@ -161,6 +162,10 @@ export function EntityLookup({
       </div> : null}
     </div>
   );
+}
+
+export function EntityLookup(props: EntityLookupProps) {
+  return <EntityCombobox {...props} />;
 }
 
 function statusLabel(value: string): string {

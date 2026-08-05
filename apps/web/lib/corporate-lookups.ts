@@ -6,6 +6,7 @@ export const CORPORATE_LOOKUP_ENTITIES = [
   "produtos",
   "materias-primas",
   "pedidos",
+  "pedidos-romaneio",
   "romaneios",
   "lotes-pa",
   "veiculos",
@@ -96,15 +97,42 @@ export async function searchCorporateLookup(input: LookupInput): Promise<Corpora
     return pageResult(records(data).map((row) => ({ id: Number(row.id), label: String(row.nome), detail: optional(row.sku), status: optional(row.status) })), page, pageSize, count ?? 0);
   }
 
-  if (input.entity === "pedidos") {
+  if (input.entity === "pedidos" || input.entity === "pedidos-romaneio") {
     let builder = supabase.from("com_pedidos").select("id,codigo_pedido,data_pedido,status,cliente_id,cad_clientes(nome)", { count: "exact" });
     if (query) builder = builder.or(`codigo_pedido.ilike.%${escapeFilter(query)}%`);
     const { data, error, count } = await builder.order("data_pedido", { ascending: false }).order("id", { ascending: false }).range(offset, offset + pageSize - 1);
     if (error) throw error;
-    return pageResult(records(data).map((row) => ({
+    const orderRows = records(data);
+    if (input.entity === "pedidos") {
+      return pageResult(orderRows.map((row) => ({
+        id: Number(row.id),
+        label: String(row.codigo_pedido),
+        detail: joinDetail([nestedLabel(row.cad_clientes, "nome"), formatDate(row.data_pedido)]),
+        status: optional(row.status)
+      })), page, pageSize, count ?? 0);
+    }
+    const orderIds = orderRows.map((row) => Number(row.id));
+    const balanceResponse = orderIds.length
+      ? await supabase
+          .from("exp_pedido_item_romaneio_saldos")
+          .select("pedido_id,quantidade_disponivel_romaneio")
+          .in("pedido_id", orderIds)
+          .gt("quantidade_disponivel_romaneio", 0)
+      : { data: [], error: null };
+    if (balanceResponse.error) throw balanceResponse.error;
+    const availableItemsByOrder = new Map<number, number>();
+    for (const balance of records(balanceResponse.data)) {
+      const orderId = Number(balance.pedido_id);
+      availableItemsByOrder.set(orderId, (availableItemsByOrder.get(orderId) ?? 0) + 1);
+    }
+    return pageResult(orderRows.map((row) => ({
       id: Number(row.id),
       label: String(row.codigo_pedido),
-      detail: joinDetail([nestedLabel(row.cad_clientes, "nome"), formatDate(row.data_pedido)]),
+      detail: joinDetail([
+        nestedLabel(row.cad_clientes, "nome"),
+        formatDate(row.data_pedido),
+        availableItemsLabel(availableItemsByOrder.get(Number(row.id)) ?? 0)
+      ]),
       status: optional(row.status)
     })), page, pageSize, count ?? 0);
   }
@@ -195,4 +223,9 @@ function formatDate(value: unknown): string | null {
 
 function number(value: unknown): string {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(Number(value ?? 0));
+}
+
+function availableItemsLabel(count: number): string {
+  if (count === 0) return "Sem saldo a entregar";
+  return `${count} ${count === 1 ? "item com saldo" : "itens com saldo"}`;
 }

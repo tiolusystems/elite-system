@@ -49,7 +49,7 @@ class CreditLimitAtomicPermissionContractTests(unittest.TestCase):
         self.assertIn("Padrão da ação", SECURITY_PAGE)
         self.assertIn("Decisão individual", SECURITY_PAGE)
         self.assertIn("Remover decisão individual", SECURITY_PAGE)
-        self.assertIn('permission.defaultAllowed ? "Permitido" : "Bloqueado"', SECURITY_PAGE)
+        self.assertIn('permission.defaultAllowed ? "Permitido" : "Negado"', SECURITY_PAGE)
         self.assertNotIn("padrão do perfil", SECURITY_PAGE.lower())
 
     def test_smoke_covers_role_independence_revocation_and_audit(self) -> None:

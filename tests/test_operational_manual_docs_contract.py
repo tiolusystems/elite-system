@@ -28,8 +28,10 @@ class OperationalManualDocsContractTests(unittest.TestCase):
 
     def test_finance_manual_documents_event_ledgers(self):
         text = (ROOT / "docs/manuais/financeiro/RECEBIMENTOS_COMISSOES.md").read_text(encoding="utf-8")
-        self.assertIn("Cada recebimento libera a fracao", text)
-        self.assertIn("O movimento original nunca e", text)
+        self.assertIn("liberação proporcional", text)
+        self.assertIn("o movimento original não é editado", text)
+        for name in ("COMISSIONAMENTO.md", "RECEBIMENTOS.md", "COMISSOES.md", "AJUSTE_MANUAL.md", "RELATORIO_COMISSOES.md"):
+            self.assertTrue((ROOT / "docs/manuais/financeiro" / name).is_file())
 
 
 if __name__ == "__main__":

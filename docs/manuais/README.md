@@ -47,7 +47,12 @@ Antes da homologacao final, confirmar:
 | Producao, Ordens e Qualidade | `producao/FORMULAS_GARANTIAS.md` | Fluxo operacional documentado |
 | Romaneio | `ROMANEIO.md` | Implementado |
 | Pedidos e aprovacao | `pedidos/PEDIDOS_E_APROVACAO.md` | Implementado e validado tecnicamente na 0078 |
-| Recebimentos e comissoes | `financeiro/RECEBIMENTOS_COMISSOES.md` | Implementado; validacao continua por smoke |
+| Financeiro | `financeiro/RECEBIMENTOS_COMISSOES.md` | Índice e sequência operacional |
+| Comissionamento | `financeiro/COMISSIONAMENTO.md` | Manual específico |
+| Recebimentos | `financeiro/RECEBIMENTOS.md` | Manual específico |
+| Conta corrente de comissões | `financeiro/COMISSOES.md` | Manual específico |
+| Ajuste manual de comissão | `financeiro/AJUSTE_MANUAL.md` | Manual específico |
+| Relatório de comissões | `financeiro/RELATORIO_COMISSOES.md` | Manual específico |
 
 ## Manutencao
 

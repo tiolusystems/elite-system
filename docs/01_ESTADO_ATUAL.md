@@ -1,11 +1,11 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-07-29
+Atualizado em: 2026-08-05
 
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `35a1633`;
+- HEAD funcional publicado: `ead0649`;
 - sincronizacao local/remoto: `0/0`;
 - Supabase de staging: ledger `0001` a `0117`;
 - deployment ativo: `dpl_HmBGrrYnLhpvMHLgwtQKawtCvznF`;
@@ -23,15 +23,15 @@ validacao preservam as evidencias anteriores.
 
 ## Tarefa em execucao
 
-`OPS-GATE-01 - fechamento operacional total e tolerancia a erro humano`.
+`OPS-02 - consolidacao profissional das telas operacionais existentes`.
 
 Escopo congelado:
 
-- classificar todas as rotas e acoes existentes;
-- repetir os fluxos operacionais positivos e negativos;
-- corrigir defeitos objetivos P0 e P1;
-- revisar manuais contextuais;
-- consolidar estado atual, decisoes e evidencias;
+- concluir o Financeiro operacional preservado do `OPS-GATE-01B`;
+- revisar os workbenches existentes sem criar modulo ou regra de negocio;
+- manter pesquisa e paginacao no servidor para catalogos e filas extensas;
+- separar consulta, manutencao, historico e acoes sensiveis;
+- registrar na matriz os blocos aprovados, corrigidos e pendentes de `SEC-UX`;
 - nao iniciar Relatorios Gerenciais, PWA, importacao historica definitiva,
   novo modulo ou nova regra de negocio.
 
@@ -85,6 +85,21 @@ Matriz vigente:
   valores internos ou contratos do banco;
 - nenhuma migration, regra de negocio ou permissao foi alterada.
 
+### Financeiro operacional
+
+- Visao financeira, Comissionamento, Recebimentos, Comissoes e Relatorio a
+  pagar usam rotas separadas e navegacao condicionada a alcadas atomicas;
+- os indicadores sao calculados sobre toda a base autorizada e nao sobre a
+  pagina de detalhes;
+- recebimentos pesquisam pedido, cliente, documento, referencia fiscal e
+  local de entrega, com referencia documental obrigatoria na gravacao;
+- conta corrente, pagamentos e ajustes permanecem fluxos distintos, auditados
+  e idempotentes;
+- a migration aditiva `0118` organiza consultas, grants minimos e o contrato
+  de recebimento sem alterar fatos financeiros existentes;
+- o pacote esta tecnicamente validado em ambiente descartavel e ainda nao foi
+  aplicado no Supabase de staging.
+
 ## Validacao vigente
 
 - CI `30472806418`: aprovada;
@@ -108,10 +123,19 @@ Matriz vigente:
   ficha em modos exclusivos, sem rolagem horizontal ou erro tecnico, no SHA
   `35a1633`;
 - a migration de leitura `0117` foi aplicada unitariamente no staging.
+- Financeiro local: 702 testes Python, ESLint, TypeScript e build aprovados;
+- migration `0118`: instalacao limpa e upgrade `0117 -> 0118` aprovados no
+  projeto, container e volume `elite-validation-finance-0118-clean`;
+- smoke `PG_FINANCE_OPS_GATE_01B_OK` aprovou RLS, grants, escrita direta
+  negada, busca integral, referencia documental, idempotencia e alcadas;
+- Playwright financeiro: 15 cenarios aprovados nas cinco resolucoes, sem
+  rolagem horizontal no corpo ou na navegacao do dominio.
 
 ## Classificacao
 
 `OPS-GATE-01`: tecnicamente aprovado.
+
+`OPS-02`: em execucao; bloco Financeiro tecnicamente validado localmente.
 
 Todas as rotas e acoes publicadas estao classificadas na matriz. As funcoes
 futuras permanecem bloqueadas de forma explicita. Os defeitos P1 encontrados
@@ -122,5 +146,7 @@ testados. Isso nao constitui declaracao de infalibilidade.
 
 ## Proxima tarefa
 
-Nenhuma nova frente esta autorizada. Depois do OPS-GATE-01, parar para a
-homologacao operacional consolidada de Luciano.
+Publicar o bloco Financeiro somente apos CI verde, aplicar unitariamente a
+`0118` no Supabase de staging e executar smoke autenticado. Em seguida,
+continuar o `OPS-02` pelas filas de Producao e CQ. A reformulacao integral de
+usuarios permanece reservada para `SEC-UX`.

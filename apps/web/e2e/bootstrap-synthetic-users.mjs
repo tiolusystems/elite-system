@@ -22,6 +22,9 @@ const definitions = [
   ["quality-operator", "producao", ["qualidade.", "pcp.op.finish"]],
   ["shipping-operator", "expedicao", ["romaneios.", "estoque.pa.issue.romaneio"]],
   ["fiscal-reference", "expedicao", ["faturamento.external_references."]],
+  ["commission-assign", "auditoria", ["pedidos.commissions.assign"]],
+  ["finance-receipts", "auditoria", ["financeiro.receipts."]],
+  ["finance-commissions", "auditoria", ["financeiro.commissions."]],
   ["finance-commission", "auditoria", ["financeiro.", "comissoes."]]
 ];
 const accounts = [];

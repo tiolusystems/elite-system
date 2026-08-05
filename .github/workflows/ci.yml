@@ -43,12 +43,12 @@ jobs:
           version: 2.109.0
       - name: Start disposable Supabase
         run: supabase start
-      - name: Rebuild through 0116 and validate the 0117 upgrade
+      - name: Rebuild through 0117 and validate the 0118 upgrade
         shell: bash
         run: |
           set -euo pipefail
-          migration="supabase/migrations/0117_govern_client_workbench_search.sql"
-          pending="$RUNNER_TEMP/0117_govern_client_workbench_search.sql"
+          migration="supabase/migrations/0118_organize_finance_workbench.sql"
+          pending="$RUNNER_TEMP/0118_organize_finance_workbench.sql"
           restore_migration() {
             if [ -f "$pending" ]; then
               mv "$pending" "$migration"
@@ -130,6 +130,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/client_workbench_search.sql
+      - name: Run financial operations workbench smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/finance_ops_gate_01b.sql
       - name: Run atomic credit limit permission smoke
         env:
           PGPASSWORD: postgres

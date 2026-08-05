@@ -11,6 +11,7 @@ import { logoutAction, switchUserAction } from "@/app/login/actions";
 import { navigationGroups, navigationItemForPath } from "@/lib/app-navigation";
 import type { AuthStatus } from "@/lib/auth";
 import type { BuildInfo } from "@/lib/build-info";
+import type { FinanceAccess } from "@/lib/finance";
 import type { ModuleRuntimeDashboard } from "@/lib/modules";
 import type { RuntimeStatus } from "@/lib/runtime";
 
@@ -19,12 +20,13 @@ const PUBLIC_PREFIXES = ["/login", "/auth/confirm", "/health", "/api/health"];
 type Props = {
   auth: AuthStatus;
   build: BuildInfo;
+  financeAccess: FinanceAccess | null;
   modules: ModuleRuntimeDashboard | null;
   runtime: RuntimeStatus;
   children: React.ReactNode;
 };
 
-export function AuthenticatedAppShell({ auth, build, modules, runtime, children }: Props) {
+export function AuthenticatedAppShell({ auth, build, financeAccess, modules, runtime, children }: Props) {
   const pathname = usePathname();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const userMenuRef = useRef<HTMLDetailsElement>(null);
@@ -98,6 +100,7 @@ export function AuthenticatedAppShell({ auth, build, modules, runtime, children 
               <section className="navigation-group" key={group.label}>
                 <h2>{group.label}</h2>
                 {items.map((item) => {
+                  if (item.href === "/pedidos/financeiro" && !financeAccess?.any) return null;
                   const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
                   const enabled = enabledModules.has(item.moduleKey);
                   return enabled ? (

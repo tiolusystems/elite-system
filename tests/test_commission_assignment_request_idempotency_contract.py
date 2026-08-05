@@ -5,7 +5,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase/migrations/0101_commission_assignment_request_idempotency.sql"
 ACTIONS = ROOT / "apps/web/app/pedidos/financeiro/actions.ts"
-PAGE = ROOT / "apps/web/app/pedidos/financeiro/page.tsx"
+FORMS = ROOT / "apps/web/app/pedidos/financeiro/finance-forms.tsx"
 SMOKE = ROOT / "tests/sql/order_commission_assignment.sql"
 
 
@@ -27,11 +27,11 @@ class CommissionAssignmentRequestIdempotencyContractTests(unittest.TestCase):
 
     def test_finance_form_and_smoke_use_request_key(self):
         actions = ACTIONS.read_text(encoding="utf-8")
-        page = PAGE.read_text(encoding="utf-8")
+        forms = FORMS.read_text(encoding="utf-8")
         smoke = SMOKE.read_text(encoding="utf-8")
         self.assertIn('"definir_com_pedido_comissao_idempotente"', actions)
         self.assertIn("p_idempotency_key: idempotencyKey", actions)
-        self.assertIn("assignmentRequestKey", page)
+        self.assertIn('name="idempotency_key"', forms)
         self.assertGreaterEqual(smoke.count("definir_com_pedido_comissao_idempotente"), 5)
 
 

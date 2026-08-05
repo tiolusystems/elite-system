@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0092_commission_request_idempotency.sql"
 ACTIONS = ROOT / "apps" / "web" / "app" / "pedidos" / "financeiro" / "actions.ts"
-PAGE = ROOT / "apps" / "web" / "app" / "pedidos" / "financeiro" / "page.tsx"
+FORMS = ROOT / "apps" / "web" / "app" / "pedidos" / "financeiro" / "finance-forms.tsx"
 
 
 class CommissionRequestIdempotencyContractTests(unittest.TestCase):
@@ -28,8 +28,8 @@ class CommissionRequestIdempotencyContractTests(unittest.TestCase):
 
     def test_web_uses_hidden_keys_and_no_unkeyed_calls(self) -> None:
         actions = ACTIONS.read_text(encoding="utf-8")
-        page = PAGE.read_text(encoding="utf-8")
-        self.assertGreaterEqual(page.count('name="idempotency_key"'), 3)
+        forms = FORMS.read_text(encoding="utf-8")
+        self.assertGreaterEqual(forms.count('name="idempotency_key"'), 4)
         self.assertIn('"registrar_fin_comissao_pagamento_idempotente"', actions)
         self.assertIn('"registrar_fin_comissao_ajuste_idempotente"', actions)
         self.assertNotIn('"registrar_fin_comissao_pagamento"', actions)

@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0091_receipt_request_idempotency.sql"
 ACTIONS = ROOT / "apps" / "web" / "app" / "pedidos" / "financeiro" / "actions.ts"
-PAGE = ROOT / "apps" / "web" / "app" / "pedidos" / "financeiro" / "page.tsx"
+FORMS = ROOT / "apps" / "web" / "app" / "pedidos" / "financeiro" / "finance-forms.tsx"
 SMOKE = ROOT / "tests" / "sql" / "commercial_end_to_end_chain.sql"
 
 
@@ -31,9 +31,9 @@ class ReceiptRequestIdempotencyContractTests(unittest.TestCase):
 
     def test_web_form_keeps_one_key_for_retries(self) -> None:
         actions = ACTIONS.read_text(encoding="utf-8")
-        page = PAGE.read_text(encoding="utf-8")
-        self.assertIn('name="idempotency_key"', page)
-        self.assertIn("randomUUID()", page)
+        forms = FORMS.read_text(encoding="utf-8")
+        self.assertIn('name="idempotency_key"', forms)
+        self.assertIn("crypto.randomUUID()", forms)
         self.assertIn('auditedRpc(supabase, "registrar_com_recebimento_idempotente"', actions)
         self.assertIn("p_idempotency_key: idempotencyKey", actions)
         self.assertNotIn('auditedRpc(supabase, "registrar_com_recebimento",', actions)

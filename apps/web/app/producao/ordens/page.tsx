@@ -1,11 +1,51 @@
 import Link from "next/link";
 
+import {
+  DataTable,
+  type DataTableColumn,
+  FilterActions,
+  FilterToolbar,
+  OperationalPageShell,
+  PaginationBar,
+  PrimarySecondaryCell,
+  StatusBadge
+} from "@/app/operational-table/operational-table";
 import { OrderCreationWorkbench } from "@/app/producao/ordens/orders-workbench";
 import { ProductionFeedback, ProductionShell, singleProductionParam } from "@/app/producao/production-shell";
 import { getPcpDashboard, getPcpOrderCapabilities, getPcpOrderQueue } from "@/lib/pcp";
 import { orderStatusLabel, orderTypeLabel } from "@/lib/production-labels";
 
 type SearchParams = Record<string, string | string[] | undefined>;
+type OrderRow = Awaited<ReturnType<typeof getPcpOrderQueue>>["items"][number];
+
+const orderColumns: Array<DataTableColumn<OrderRow>> = [
+  {
+    key: "order",
+    label: "OP e fórmula",
+    width: "19%",
+    render: (op) => <PrimarySecondaryCell primary={op.codigoOp} secondary={formulaSummary(op.formulaLabel, op.produtoLabel)} />
+  },
+  {
+    key: "product",
+    label: "Produto",
+    width: "23%",
+    render: (op) => {
+      const product = splitPrimarySecondary(op.produtoLabel);
+      return <PrimarySecondaryCell primary={product.primary} secondary={product.secondary} />;
+    }
+  },
+  { key: "purpose", label: "Finalidade", width: "14%", render: (op) => orderTypeLabel(op.tipoOp) },
+  {
+    key: "quantity",
+    label: "Volume planejado",
+    width: "12%",
+    align: "end",
+    render: (op) => op.quantidadePlanejada === null ? "Não informado" : `${formatNumber(op.quantidadePlanejada)} L`
+  },
+  { key: "status", label: "Situação", width: "12%", render: (op) => <StatusBadge status={op.status}>{orderStatusLabel(op.status)}</StatusBadge> },
+  { key: "date", label: "Aberta em", width: "11%", render: (op) => shortDate(op.createdAt) },
+  { key: "action", label: "Ação", width: "9%", render: (op) => <Link className="secondary-button compact" href={`/producao/ordens/${op.id}`}>Abrir OP</Link> }
+];
 
 export default async function ProductionOrdersPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
@@ -40,27 +80,32 @@ export default async function ProductionOrdersPage({ searchParams }: { searchPar
       ) : null}
       {startCreating && dashboard ? <OrderCreationWorkbench dashboard={dashboard} /> : null}
       {!startCreating && queue ? (
-        <>
-          <nav className="order-status-navigation" aria-label="Situação das ordens">
+        <OperationalPageShell
+          counters={<nav className="order-status-navigation" aria-label="Situação das ordens">
             <OrderStatusLink label="Abertas" value="open" count={(queue.statusCounts.draft ?? 0) + (queue.statusCounts.planned ?? 0) + (queue.statusCounts.in_process ?? 0)} active={status === "open"} />
             {(["draft", "planned", "in_process", "completed", "cancelled"] as const).map((value) => <OrderStatusLink key={value} label={orderStatusLabel(value)} value={value} count={queue.statusCounts[value] ?? 0} active={status === value} />)}
-          </nav>
+          </nav>}
+          filters={<FilterToolbar>
+            <label>Buscar OP<input name="q" type="search" defaultValue={query} placeholder="Código da OP, fórmula ou produto" /></label>
+            <label>Situação<select name="status" defaultValue={status}><option value="open">Abertas</option><option value="all">Todas</option><option value="draft">Rascunho</option><option value="planned">Planejada</option><option value="in_process">Em processo</option><option value="completed">Finalizada</option><option value="cancelled">Cancelada</option></select></label>
+            <label>Finalidade<select name="tipo" defaultValue={type}><option value="all">Todas</option><option value="estoque">Produção para estoque</option><option value="experimental">Experimental</option><option value="desenvolvimento">Desenvolvimento</option><option value="reprocessamento">Reprocessamento</option></select></label>
+            <FilterActions clearHref="/producao/ordens#ops" />
+          </FilterToolbar>}
+        >
           <section className="panel" id="ops" aria-labelledby="orders-title">
             <div className="panel-header"><div><span className="eyebrow">Consulta operacional</span><h2 id="orders-title">Fila de ordens</h2></div><span className="pill">{queue.total} resultado(s)</span></div>
-            <form className="catalog-filter production-order-filter" method="get">
-              <label>Buscar OP<input name="q" type="search" defaultValue={query} placeholder="Código, fórmula ou produto" /></label>
-              <label>Situação<select name="status" defaultValue={status}><option value="open">Abertas</option><option value="all">Todas</option><option value="draft">Rascunho</option><option value="planned">Planejada</option><option value="in_process">Em processo</option><option value="completed">Finalizada</option><option value="cancelled">Cancelada</option></select></label>
-              <label>Finalidade<select name="tipo" defaultValue={type}><option value="all">Todas</option><option value="estoque">Produção para estoque</option><option value="experimental">Experimental</option><option value="desenvolvimento">Desenvolvimento</option><option value="reprocessamento">Reprocessamento</option></select></label>
-              <button className="secondary-button" type="submit">Filtrar</button>
-            </form>
             {queue.items.length > 0 ? (
-              <div className="record-table-wrap"><table className="record-table"><thead><tr><th>OP</th><th>Produto</th><th>Finalidade</th><th>Planejado</th><th>Situação</th><th>Aberta em</th><th><span className="sr-only">Ação</span></th></tr></thead><tbody>
-                {queue.items.map((op) => <tr key={op.id}><td><strong>{op.codigoOp}</strong><small>{op.formulaLabel}</small></td><td>{op.produtoLabel}</td><td>{orderTypeLabel(op.tipoOp)}</td><td>{op.quantidadePlanejada === null ? "Não informado" : formatNumber(op.quantidadePlanejada)}</td><td><span className={`status-chip ${op.status}`}>{orderStatusLabel(op.status)}</span></td><td>{shortDate(op.createdAt)}</td><td><Link className="secondary-button compact" href={`/producao/ordens/${op.id}`}>Abrir OP</Link></td></tr>)}
-              </tbody></table></div>
+              <DataTable caption="Ordens de produção encontradas" columns={orderColumns} rows={queue.items} rowKey={(op) => op.id} />
             ) : <div className="empty-state"><strong>Nenhuma OP encontrada</strong><span>Revise os filtros ou abra uma nova ordem.</span></div>}
-            <nav className="pagination" aria-label="Paginação"><PageLink disabled={page <= 1} page={page - 1} query={query} status={status} type={type}>Anterior</PageLink><span>Página {Math.min(page, pageCount)} de {pageCount}</span><PageLink disabled={page >= pageCount} page={page + 1} query={query} status={status} type={type}>Próxima</PageLink></nav>
+            <PaginationBar
+              page={Math.min(page, pageCount)}
+              pageCount={pageCount}
+              total={queue.total}
+              previousHref={page > 1 ? pageHref(page - 1, query, status, type) : null}
+              nextHref={page < pageCount ? pageHref(page + 1, query, status, type) : null}
+            />
           </section>
-        </>
+        </OperationalPageShell>
       ) : null}
     </ProductionShell>
   );
@@ -70,12 +115,16 @@ function OrderStatusLink({ label, value, count, active }: { label: string; value
   return <Link className={`order-status-link ${active ? "is-active" : ""}`} href={`/producao/ordens?status=${encodeURIComponent(value)}#ops`} aria-current={active ? "page" : undefined}><span>{label}</span><strong>{count}</strong></Link>;
 }
 
-function PageLink({ disabled, page, query, status, type, children }: { disabled: boolean; page: number; query: string; status: string; type: string; children: string }) {
-  if (disabled) return <span className="secondary-button compact disabled" aria-disabled="true">{children}</span>;
+function pageHref(page: number, query: string, status: string, type: string) {
   const params = new URLSearchParams({ pagina: String(page), status, tipo: type });
   if (query) params.set("q", query);
-  return <Link className="secondary-button compact" href={`/producao/ordens?${params.toString()}#ops`}>{children}</Link>;
+  return `/producao/ordens?${params.toString()}#ops`;
 }
 
 function formatNumber(value: number): string { return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 6 }).format(value); }
 function shortDate(value: string): string { return new Intl.DateTimeFormat("pt-BR").format(new Date(value)); }
+function formulaSummary(formula: string, product: string): string { return formula.startsWith(`${product} / `) ? formula.slice(product.length + 3) : formula; }
+function splitPrimarySecondary(value: string): { primary: string; secondary?: string } {
+  const separator = value.indexOf(" - ");
+  return separator < 0 ? { primary: value } : { primary: value.slice(0, separator), secondary: value.slice(separator + 3) };
+}

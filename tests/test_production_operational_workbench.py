@@ -20,6 +20,8 @@ ORDERS_DETAIL = PRODUCTION / "ordens" / "[id]" / "page.tsx"
 QUALITY_PAGE = PRODUCTION / "qualidade" / "page.tsx"
 QUALITY_COMPONENT = PRODUCTION / "qualidade" / "quality-workbench.tsx"
 QUALITY_DETAIL = PRODUCTION / "qualidade" / "[id]" / "page.tsx"
+PACKAGING_PAGE = PRODUCTION / "envase" / "page.tsx"
+PACKAGING_DATA = ROOT / "apps" / "web" / "lib" / "packaging-orders.ts"
 STOCK_PAGE = PRODUCTION / "estoque" / "page.tsx"
 STOCK_COMPONENT = PRODUCTION / "estoque" / "stock-workbench.tsx"
 TRANSFORMATIONS_PAGE = PRODUCTION / "transformacoes" / "page.tsx"
@@ -165,6 +167,17 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn('name="lote_id"', component)
         self.assertIn('href={`/producao/transformacoes?', component)
         self.assertNotIn(".rpc(", page + component)
+
+    def test_packaging_queue_is_filtered_and_paginated_on_the_server(self) -> None:
+        page = PACKAGING_PAGE.read_text(encoding="utf-8")
+        data = PACKAGING_DATA.read_text(encoding="utf-8")
+
+        self.assertIn('name="q"', page)
+        self.assertIn('name="status"', page)
+        self.assertIn("data.pagination.totalPages", page)
+        self.assertIn('.range(from, from + pageSize - 1)', data)
+        self.assertIn('.in("ordem_envase_id", orderFilter)', data)
+        self.assertNotIn('.from("pcp_ordens_envase_dossie").select("*").order', data)
 
     def test_transformations_reuse_reprocessing_op_contract(self) -> None:
         page = TRANSFORMATIONS_PAGE.read_text(encoding="utf-8")

@@ -51,20 +51,35 @@ export type PackagingOrdersData = {
   piLots: PackagingLookup[];
   presentations: PackagingLookup[];
   mpLots: PackagingLookup[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
 
-export async function getPackagingOrdersData(): Promise<PackagingOrdersData> {
+export async function getPackagingOrdersData(input: {
+  page?: number;
+  pageSize?: number;
+  query?: string | null;
+  status?: string | null;
+} = {}): Promise<PackagingOrdersData> {
   if (!getRuntimeStatus().supabaseConfigured) return emptyData("not_configured", null);
   try {
     const supabase = await createSupabaseServerClient();
+    const pageSize = Math.min(50, Math.max(10, input.pageSize ?? 20));
+    const page = Math.max(1, input.page ?? 1);
+    const from = (page - 1) * pageSize;
+    let ordersQuery = supabase.from("pcp_ordens_envase_dossie").select("*", { count: "exact" });
+    if (input.query?.trim()) ordersQuery = ordersQuery.ilike("codigo_ordem", `%${input.query.trim()}%`);
+    if (input.status && input.status !== "all") ordersQuery = ordersQuery.eq("status", input.status);
+    const orderPage = await ordersQuery.order("emitida_em", { ascending: false }).range(from, from + pageSize - 1);
+    const orderIds = rows(orderPage).map((row) => Number(row.id));
+    const orderFilter = orderIds.length > 0 ? orderIds : [-1];
     const [orders, components, reservations, outputs, formulas, products, piLots, presentations, materials, units, mpLots] =
       await Promise.all([
-        supabase.from("pcp_ordens_envase_dossie").select("*").order("emitida_em", { ascending: false }).limit(100),
-        supabase.from("pcp_ordem_envase_embalagens").select("*").order("id", { ascending: true }).limit(800),
-        supabase.from("pcp_ordem_envase_reservas").select("*").order("id", { ascending: true }).limit(1200),
-        supabase.from("pcp_ordem_envase_lotes_pa").select("*").order("id", { ascending: true }).limit(500),
+        Promise.resolve(orderPage),
+        supabase.from("pcp_ordem_envase_embalagens").select("*").in("ordem_envase_id", orderFilter).order("id", { ascending: true }),
+        supabase.from("pcp_ordem_envase_reservas").select("*").in("ordem_envase_id", orderFilter).order("id", { ascending: true }),
+        supabase.from("pcp_ordem_envase_lotes_pa").select("*").in("ordem_envase_id", orderFilter).order("id", { ascending: true }),
         supabase.from("pcp_formula_ativa").select("formula_versao_id,produto_id,tipo_receita,versao").eq("tipo_receita", "mapa").limit(300),
         supabase.from("cad_produtos_base").select("id,codigo_produto,nome,status").limit(400),
         supabase.from("est_lotes_pi_saldos").select("lote_pi_id,produto_id,codigo_lote,status,saldo_disponivel").eq("status", "disponivel").gt("saldo_disponivel", 0).limit(400),
@@ -159,6 +174,12 @@ export async function getPackagingOrdersData(): Promise<PackagingOrdersData> {
         detail: `${materialMap.get(Number(row.materia_prima_id)) ?? `MP ${row.materia_prima_id}`} / disponível ${formatNumber(Number(row.saldo_disponivel))}`,
         targetId: Number(row.materia_prima_id)
       })),
+      pagination: {
+        page,
+        pageSize,
+        total: orders.count ?? 0,
+        totalPages: Math.max(1, Math.ceil((orders.count ?? 0) / pageSize))
+      },
       source: "supabase", error: null
     };
   } catch {
@@ -189,5 +210,5 @@ function humanDatabaseError(message: string): string {
     : "Não foi possível consultar o fluxo de Envase.";
 }
 function emptyData(source: "not_configured" | "error", error: string | null): PackagingOrdersData {
-  return { orders: [], formulas: [], piLots: [], presentations: [], mpLots: [], source, error };
+  return { orders: [], formulas: [], piLots: [], presentations: [], mpLots: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1 }, source, error };
 }

@@ -22,7 +22,7 @@ export function PackagingWorkbench({ data }: { data: PackagingOrdersData }) {
     </section>
 
     <section className="panel" id="ordens-envase">
-      <div className="panel-header"><h2>Ordens de Envase</h2><span className="pill">{data.orders.length} ordem(ns)</span></div>
+      <div className="panel-header"><h2>Ordens de Envase</h2><span className="pill">{data.pagination.total} ordem(ns)</span></div>
       {data.orders.length ? <div className="packaging-order-list">{data.orders.map((order) => <PackagingOrderCard key={order.id} order={order} mpLots={data.mpLots} />)}</div> : <div className="empty-state"><strong>Nenhuma ordem emitida</strong><span>Emita a primeira OP MAPA com sua Ordem de Envase.</span></div>}
     </section>
   </>;

@@ -96,11 +96,13 @@ begin
 
   v_receipt := public.registrar_com_recebimento_idempotente(
     '89000000-0000-4000-8000-000000000001',
-    v_order, 400, current_date, 'pix', 'Recebimento parcial do smoke integrado'
+    v_order, 400, current_date, 'pix', 'COM-E2E-REC-001',
+    'Recebimento parcial do smoke integrado'
   );
   v_receipt_retry := public.registrar_com_recebimento_idempotente(
     '89000000-0000-4000-8000-000000000001',
-    v_order, 400, current_date, 'pix', 'Recebimento parcial do smoke integrado'
+    v_order, 400, current_date, 'pix', 'COM-E2E-REC-001',
+    'Recebimento parcial do smoke integrado'
   );
   if v_receipt_retry is distinct from v_receipt then
     raise exception 'receipt retry did not return the original event';
@@ -112,7 +114,8 @@ begin
   begin
     perform public.registrar_com_recebimento_idempotente(
       '89000000-0000-4000-8000-000000000001',
-      v_order, 401, current_date, 'pix', 'Recebimento parcial do smoke integrado'
+      v_order, 401, current_date, 'pix', 'COM-E2E-REC-001',
+      'Recebimento parcial do smoke integrado'
     );
     raise exception 'changed receipt reused the same idempotency key';
   exception when others then
@@ -136,13 +139,17 @@ begin
   ) then
     raise exception 'unkeyed receipt entrypoint remains executable';
   end if;
-  if not has_function_privilege(
+  if has_function_privilege(
     'authenticated',
     'public.registrar_com_recebimento_idempotente(uuid,bigint,numeric,date,text,text)',
     'EXECUTE'
+  ) or not has_function_privilege(
+    'authenticated',
+    'public.registrar_com_recebimento_idempotente(uuid,bigint,numeric,date,text,text,text)',
+    'EXECUTE'
   ) or has_function_privilege(
     'anon',
-    'public.registrar_com_recebimento_idempotente(uuid,bigint,numeric,date,text,text)',
+    'public.registrar_com_recebimento_idempotente(uuid,bigint,numeric,date,text,text,text)',
     'EXECUTE'
   ) then
     raise exception 'idempotent receipt privileges are incorrect';

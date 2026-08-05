@@ -108,7 +108,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                   <select name="role" defaultValue="comercial">
                     {ROLES.map((role) => (
                       <option value={role} key={role}>
-                        {role}
+                        {securityRoleLabel(role)}
                       </option>
                     ))}
                   </select>
@@ -126,7 +126,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
           <section className="panel" aria-labelledby="selecao-title">
             <div className="panel-header">
               <h2 id="selecao-title">Usuario selecionado</h2>
-              <span className="pill">{dashboard.selectedProfile ? dashboard.selectedProfile.role : "vazio"}</span>
+              <span className="pill">{dashboard.selectedProfile ? securityRoleLabel(dashboard.selectedProfile.role) : "Nenhum"}</span>
             </div>
             {dashboard.selectedProfile ? (
               <dl className="status-list">
@@ -375,7 +375,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                   <th>Usuário</th>
                   <th>E-mail</th>
                   <th>Confirmação</th>
-                  <th>Papel</th>
+                  <th>Função organizacional</th>
                   <th>Status</th>
                   <th>Overrides</th>
                   <th>Selecionar</th>
@@ -398,12 +398,15 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
 
         <section className="panel" id="alcadas" aria-labelledby="alcadas-title">
           <div className="panel-header">
-            <h2 id="alcadas-title">Alçadas efetivas</h2>
+            <div>
+              <h2 id="alcadas-title">Alçadas efetivas</h2>
+              <p className="muted">Uma alçada permite ou nega uma ação específica. Ela não ativa, inativa ou bloqueia a conta do usuário.</p>
+            </div>
             <form className="security-user-picker" action="/seguranca" method="get">
               <select name="user_id" defaultValue={selectedProfile?.id ?? ""}>
                 {dashboard.profiles.map((profile) => (
                   <option value={profile.id} key={profile.id}>
-                    {profile.displayName} - {profile.role}
+                    {profile.displayName} - {securityRoleLabel(profile.role)}
                   </option>
                 ))}
               </select>
@@ -460,7 +463,7 @@ function ProfileRow({ profile, selected }: { profile: SecurityProfile; selected:
           {emailStatusLabel(profile.emailStatus)}
         </span>
       </td>
-      <td>{profile.role}</td>
+      <td>{securityRoleLabel(profile.role)}</td>
       <td>
         <span className={`status-chip ${profile.status}`}>{internalValueLabel(profile.status)}</span>
       </td>
@@ -490,11 +493,11 @@ function PermissionRow({
         <strong>{permission.description}</strong>
         <span className="table-subtext">Permissão operacional governada</span>
       </td>
-      <td>{permission.defaultAllowed ? "Permitido" : "Bloqueado"}</td>
+      <td>{permission.defaultAllowed ? "Permitido" : "Negado"}</td>
       <td>{permission.overrideAllowed === null ? "Padrão da ação" : "Decisão individual"}</td>
       <td>
         <span className={`status-chip ${permission.effectiveAllowed ? "ativo" : "alta"}`}>
-          {permission.effectiveAllowed ? "permitido" : "bloqueado"}
+          {permission.effectiveAllowed ? "Permitido" : "Negado"}
         </span>
       </td>
       <td>
@@ -512,7 +515,7 @@ function PermissionRow({
             <input name="action_key" type="hidden" value={permission.actionKey} />
             <input name="allowed" type="hidden" value="false" />
             <button className="secondary-button" type="submit" disabled={disabled}>
-              Bloquear
+              Negar ação
             </button>
           </form>
           <form action={clearSecurityPermissionOverrideAction}>
@@ -654,6 +657,18 @@ function securityModuleLabel(moduleKey: string): string {
     seguranca: "Segurança",
   };
   return labels[moduleKey] ?? "Módulo não reconhecido";
+}
+
+function securityRoleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    admin: "Administrador",
+    auditoria: "Auditoria",
+    comercial: "Comercial",
+    estoque: "Estoque",
+    expedicao: "Expedição",
+    producao: "Produção"
+  };
+  return labels[role] ?? "Função não reconhecida";
 }
 
 function emailStatusLabel(status: SecurityProfile["emailStatus"]): string {

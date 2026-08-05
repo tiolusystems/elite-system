@@ -54,6 +54,16 @@ class SecurityAdminUiContractTests(unittest.TestCase):
         self.assertNotIn('.from("user_profiles")', text)
         self.assertNotIn('.from("user_permission_overrides")', text)
 
+    def test_permissions_are_not_presented_as_account_blocking(self) -> None:
+        page = SECURITY_PAGE.read_text(encoding="utf-8")
+
+        self.assertIn("Ela não ativa, inativa ou bloqueia a conta do usuário.", page)
+        self.assertIn('permission.defaultAllowed ? "Permitido" : "Negado"', page)
+        self.assertIn('permission.effectiveAllowed ? "Permitido" : "Negado"', page)
+        self.assertIn("Negar ação", page)
+        self.assertIn("securityRoleLabel", page)
+        self.assertNotIn('permission.effectiveAllowed ? "permitido" : "bloqueado"', page)
+
 
 if __name__ == "__main__":
     unittest.main()

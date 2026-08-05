@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 
 import { ReceiptForm } from "@/app/pedidos/financeiro/finance-forms";
 import { FinancePermissionState, FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
+import { EntityLookup } from "@/app/corporate-search/entity-lookup";
+import { FilterActions, SearchToolbar } from "@/app/corporate-search/search-controls";
 import { date, fiscalReferenceTypeLabel, money, orderStatusLabel } from "@/app/pedidos/financeiro/presenters";
 import { getFinanceAccess, searchReceiptOrders } from "@/lib/finance";
 
@@ -57,11 +59,10 @@ export default async function ReceiptsPage({ searchParams }: { searchParams?: Pr
         </>
       ) : (
         <>
-          <form className="panel finance-search-bar" method="get">
-            <label>Pesquisar pedido<input name="q" defaultValue={query} placeholder="Pedido, cliente, CPF/CNPJ, NF ou local de entrega" /></label>
-            <button className="secondary-button">Pesquisar</button>
-            {query ? <Link href="/pedidos/financeiro/recebimentos">Limpar</Link> : null}
-          </form>
+          <SearchToolbar className="panel">
+            <EntityLookup entity="pedidos" name="pedido" labelName="q" label="Pedido ou cliente" placeholder="Abra a lista ou pesquise por pedido" defaultValue={selectedId} defaultLabel={query} helpText="Também é possível localizar por cliente e documento na lista de resultados." />
+            <FilterActions clearHref="/pedidos/financeiro/recebimentos" submitLabel="Localizar" />
+          </SearchToolbar>
           <section className="panel">
             <div className="panel-header"><div><h2>Pedidos com saldo financeiro</h2><p>Resultados paginados; os totalizadores da visão financeira permanecem integrais.</p></div><span className="pill">{orders[0]?.totalCount ?? 0}</span></div>
             <div className="finance-result-list">

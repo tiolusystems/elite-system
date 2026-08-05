@@ -92,8 +92,10 @@ class FinanceOpsGate01BContractTests(unittest.TestCase):
             self.assertIn(label, report)
         self.assertIn("access.commissionsView && access.commissionsExport", csv)
         assignment_page = (FINANCE / "comissionamento/page.tsx").read_text(encoding="utf-8")
-        self.assertIn('name="pessoa_q"', assignment_page)
-        self.assertIn("getCommissionPeople(personQuery)", assignment_page)
+        assignment_form = (FINANCE / "finance-forms.tsx").read_text(encoding="utf-8")
+        self.assertIn('entity="pessoas"', assignment_form)
+        self.assertIn('entity="pedidos"', assignment_page)
+        self.assertNotIn("getCommissionPeople(personQuery)", assignment_page)
         for metadata in ("Ambiente", "Emitido por", "Gerado em", "Versão"):
             self.assertIn(metadata, csv)
         self.assertIn("assignment.created_at::date <= p_data_corte", migration)

@@ -11,6 +11,8 @@ import {
   reverseRomaneioAction
 } from "@/app/romaneios/actions";
 import { RomaneioPreparation } from "@/app/romaneios/romaneio-preparation";
+import { EntityLookup } from "@/app/corporate-search/entity-lookup";
+import { ActiveFilterChips, FilterActions, PaginatedResultList, SearchField, SearchToolbar } from "@/app/corporate-search/search-controls";
 import {
   getRomaneioDashboard,
   type RomaneioItem,
@@ -28,11 +30,23 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
   const mode = singleValue(params.modo) === "consulta" ? "consulta" : "planejar";
   const query = singleValue(params.busca)?.trim() ?? "";
   const page = positiveInteger(singleValue(params.pagina)) ?? 1;
+  const filters = parseConsultationFilters(params, statusView, query);
   const dashboard = await getRomaneioDashboard({
     page,
     pageSize: mode === "consulta" ? 20 : 50,
     status: mode === "consulta" ? statusView : null,
-    query: mode === "consulta" ? query : null
+    query: mode === "consulta" ? query : null,
+    clientId: filters.clientId,
+    orderId: filters.orderId,
+    propertyId: filters.propertyId,
+    shipmentId: filters.shipmentId,
+    fiscalReference: filters.fiscalReference,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    courierId: filters.courierId,
+    vehicleId: filters.vehicleId,
+    productId: filters.productId,
+    finishedLotId: filters.finishedLotId
   });
   const formMessage = messageForResult(result);
 
@@ -98,24 +112,31 @@ export default async function RomaneiosPage({ searchParams }: { searchParams?: P
               </div>
               <span className="pill">{dashboard.pagination.total} registro(s)</span>
             </div>
-            <form className="filter-bar" action="/romaneios" method="get">
+            <SearchToolbar action="/romaneios">
               <input type="hidden" name="modo" value="consulta" />
-              {statusView ? <input type="hidden" name="status" value={statusView} /> : null}
-              <label className="wide-field">
-                Buscar Romaneio
-                <input name="busca" defaultValue={query} placeholder="Código do Romaneio" />
-              </label>
-              <button className="secondary-button" type="submit">Buscar</button>
-              {query ? <Link className="text-link" href={consultationHref(statusView)}>Limpar busca</Link> : null}
-            </form>
+              <SearchField name="busca" label="Cliente, pedido ou Romaneio" defaultValue={query} placeholder="Nome, documento, pedido, destino ou código" wide />
+              <label><span>Situação</span><select name="status" defaultValue={statusView ?? ""}><option value="">Todas</option><option value="romaneios-rascunho">Rascunhos</option><option value="romaneios-separacao">Em separação</option><option value="romaneios-finalizados">Encerrados</option></select></label>
+              <details className="corporate-advanced-filters" open={hasAdvancedFilters(filters)}>
+                <summary>Mais filtros</summary>
+                <div className="corporate-advanced-filter-grid">
+                  <EntityLookup entity="clientes" name="cliente" labelName="cliente_label" label="Cliente" placeholder="Abra a lista ou pesquise" defaultValue={filters.clientId} defaultLabel={filters.clientLabel} />
+                  <EntityLookup entity="pedidos" name="pedido" labelName="pedido_label" label="Pedido" placeholder="Abra a lista ou pesquise" defaultValue={filters.orderId} defaultLabel={filters.orderLabel} />
+                  <EntityLookup entity="propriedades" name="propriedade" labelName="propriedade_label" label="Propriedade ou destino" placeholder="Abra a lista ou pesquise" defaultValue={filters.propertyId} defaultLabel={filters.propertyLabel} contextId={filters.clientId} />
+                  <EntityLookup entity="romaneios" name="romaneio" labelName="romaneio_label" label="Romaneio" placeholder="Abra a lista ou pesquise" defaultValue={filters.shipmentId} defaultLabel={filters.shipmentLabel} />
+                  <EntityLookup entity="pessoas" name="entregador" labelName="entregador_label" label="Entregador" placeholder="Abra a lista ou pesquise" defaultValue={filters.courierId} defaultLabel={filters.courierLabel} />
+                  <EntityLookup entity="veiculos" name="veiculo" labelName="veiculo_label" label="Veículo" placeholder="Abra a lista ou pesquise" defaultValue={filters.vehicleId} defaultLabel={filters.vehicleLabel} />
+                  <EntityLookup entity="produtos" name="produto" labelName="produto_label" label="Produto" placeholder="Abra a lista ou pesquise" defaultValue={filters.productId} defaultLabel={filters.productLabel} />
+                  <EntityLookup entity="lotes-pa" name="lote" labelName="lote_label" label="Lote PA" placeholder="Abra a lista ou pesquise" defaultValue={filters.finishedLotId} defaultLabel={filters.finishedLotLabel} />
+                  <label><span>NF de remessa</span><input name="referencia" defaultValue={filters.fiscalReference} placeholder="Número emitido externamente" /></label>
+                  <label><span>Data inicial</span><input type="date" name="inicio" defaultValue={filters.startDate} /></label>
+                  <label><span>Data final</span><input type="date" name="fim" defaultValue={filters.endDate} /></label>
+                </div>
+              </details>
+              <FilterActions clearHref="/romaneios?modo=consulta#romaneios" submitLabel="Pesquisar" />
+            </SearchToolbar>
+            <ActiveFilterChips filters={activeRomaneioFilters(filters)} clearHref="/romaneios?modo=consulta#romaneios" />
             <RomaneioStatusGroups romaneios={dashboard.romaneios} lookups={dashboard.lookups} activeGroup={statusView} />
-            <nav className="pagination-bar" aria-label="Paginação dos Romaneios">
-              <span>Página {dashboard.pagination.page} de {dashboard.pagination.totalPages}</span>
-              <div className="toolbar-actions">
-                {dashboard.pagination.page > 1 ? <Link className="secondary-button" href={consultationHref(statusView, query, dashboard.pagination.page - 1)}>Anterior</Link> : null}
-                {dashboard.pagination.page < dashboard.pagination.totalPages ? <Link className="secondary-button" href={consultationHref(statusView, query, dashboard.pagination.page + 1)}>Próxima</Link> : null}
-              </div>
-            </nav>
+            <PaginatedResultList page={dashboard.pagination.page} total={dashboard.pagination.total} pageSize={dashboard.pagination.pageSize} previousHref={dashboard.pagination.page > 1 ? consultationHref(filters, dashboard.pagination.page - 1) : null} nextHref={dashboard.pagination.page < dashboard.pagination.totalPages ? consultationHref(filters, dashboard.pagination.page + 1) : null} />
           </section>
         )}
       </section>
@@ -487,12 +508,83 @@ function positiveInteger(value: string | undefined): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-function consultationHref(status: string | null, query = "", page = 1): string {
+type RomaneioConsultationFilters = {
+  query: string; status: string | null;
+  clientId: number | null; clientLabel: string;
+  orderId: number | null; orderLabel: string;
+  propertyId: number | null; propertyLabel: string;
+  shipmentId: number | null; shipmentLabel: string;
+  courierId: number | null; courierLabel: string;
+  vehicleId: number | null; vehicleLabel: string;
+  productId: number | null; productLabel: string;
+  finishedLotId: number | null; finishedLotLabel: string;
+  fiscalReference: string; startDate: string; endDate: string;
+};
+
+function parseConsultationFilters(params: SearchParams, status: string | null, query: string): RomaneioConsultationFilters {
+  return {
+    query, status,
+    clientId: positiveInteger(singleValue(params.cliente)), clientLabel: singleValue(params.cliente_label) ?? "",
+    orderId: positiveInteger(singleValue(params.pedido)), orderLabel: singleValue(params.pedido_label) ?? "",
+    propertyId: positiveInteger(singleValue(params.propriedade)), propertyLabel: singleValue(params.propriedade_label) ?? "",
+    shipmentId: positiveInteger(singleValue(params.romaneio)), shipmentLabel: singleValue(params.romaneio_label) ?? "",
+    courierId: positiveInteger(singleValue(params.entregador)), courierLabel: singleValue(params.entregador_label) ?? "",
+    vehicleId: positiveInteger(singleValue(params.veiculo)), vehicleLabel: singleValue(params.veiculo_label) ?? "",
+    productId: positiveInteger(singleValue(params.produto)), productLabel: singleValue(params.produto_label) ?? "",
+    finishedLotId: positiveInteger(singleValue(params.lote)), finishedLotLabel: singleValue(params.lote_label) ?? "",
+    fiscalReference: singleValue(params.referencia)?.trim() ?? "",
+    startDate: singleValue(params.inicio) ?? "",
+    endDate: singleValue(params.fim) ?? ""
+  };
+}
+
+function consultationHref(filters: RomaneioConsultationFilters, page = 1, omit?: keyof RomaneioConsultationFilters): string {
   const params = new URLSearchParams({ modo: "consulta" });
-  if (status) params.set("status", status);
-  if (query) params.set("busca", query);
+  const pairedKeys: Partial<Record<keyof RomaneioConsultationFilters, keyof RomaneioConsultationFilters>> = {
+    clientId: "clientLabel", orderId: "orderLabel", propertyId: "propertyLabel",
+    shipmentId: "shipmentLabel", courierId: "courierLabel", vehicleId: "vehicleLabel",
+    productId: "productLabel", finishedLotId: "finishedLotLabel"
+  };
+  const entries: Array<[keyof RomaneioConsultationFilters, string, string | number | null]> = [
+    ["query", "busca", filters.query], ["status", "status", filters.status],
+    ["clientId", "cliente", filters.clientId], ["clientLabel", "cliente_label", filters.clientLabel],
+    ["orderId", "pedido", filters.orderId], ["orderLabel", "pedido_label", filters.orderLabel],
+    ["propertyId", "propriedade", filters.propertyId], ["propertyLabel", "propriedade_label", filters.propertyLabel],
+    ["shipmentId", "romaneio", filters.shipmentId], ["shipmentLabel", "romaneio_label", filters.shipmentLabel],
+    ["courierId", "entregador", filters.courierId], ["courierLabel", "entregador_label", filters.courierLabel],
+    ["vehicleId", "veiculo", filters.vehicleId], ["vehicleLabel", "veiculo_label", filters.vehicleLabel],
+    ["productId", "produto", filters.productId], ["productLabel", "produto_label", filters.productLabel],
+    ["finishedLotId", "lote", filters.finishedLotId], ["finishedLotLabel", "lote_label", filters.finishedLotLabel],
+    ["fiscalReference", "referencia", filters.fiscalReference], ["startDate", "inicio", filters.startDate], ["endDate", "fim", filters.endDate]
+  ];
+  for (const [key, name, value] of entries) {
+    if (key !== omit && key !== (omit ? pairedKeys[omit] : undefined) && value !== null && value !== "") params.set(name, String(value));
+  }
   if (page > 1) params.set("pagina", String(page));
   return `/romaneios?${params.toString()}#romaneios`;
+}
+
+function hasAdvancedFilters(filters: RomaneioConsultationFilters): boolean {
+  return Boolean(filters.clientId || filters.orderId || filters.propertyId || filters.shipmentId || filters.courierId || filters.vehicleId || filters.productId || filters.finishedLotId || filters.fiscalReference || filters.startDate || filters.endDate);
+}
+
+function activeRomaneioFilters(filters: RomaneioConsultationFilters) {
+  const pairs: Array<{ key: keyof RomaneioConsultationFilters; label: string; value: string }> = [
+    { key: "query", label: "Pesquisa", value: filters.query },
+    { key: "status", label: "Situação", value: filters.status ? ({ "romaneios-rascunho": "Rascunhos", "romaneios-separacao": "Em separação", "romaneios-finalizados": "Encerrados" } as Record<string, string>)[filters.status] ?? filters.status : "" },
+    { key: "clientId", label: "Cliente", value: filters.clientLabel },
+    { key: "orderId", label: "Pedido", value: filters.orderLabel },
+    { key: "propertyId", label: "Destino", value: filters.propertyLabel },
+    { key: "shipmentId", label: "Romaneio", value: filters.shipmentLabel },
+    { key: "courierId", label: "Entregador", value: filters.courierLabel },
+    { key: "vehicleId", label: "Veículo", value: filters.vehicleLabel },
+    { key: "productId", label: "Produto", value: filters.productLabel },
+    { key: "finishedLotId", label: "Lote PA", value: filters.finishedLotLabel },
+    { key: "fiscalReference", label: "NF de remessa", value: filters.fiscalReference },
+    { key: "startDate", label: "Desde", value: filters.startDate },
+    { key: "endDate", label: "Até", value: filters.endDate }
+  ];
+  return pairs.filter((item) => item.value).map((item) => ({ label: item.label, value: item.value, href: consultationHref(filters, 1, item.key) }));
 }
 
 function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {

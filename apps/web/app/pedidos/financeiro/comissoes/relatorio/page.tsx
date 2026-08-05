@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 
 import { FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
 import { PrintButton } from "@/app/pedidos/financeiro/comissoes/relatorio/print-button";
+import { EntityLookup } from "@/app/corporate-search/entity-lookup";
+import { FilterActions, SearchToolbar } from "@/app/corporate-search/search-controls";
 import { commissionRoleLabel, financeDateDefaults, money } from "@/app/pedidos/financeiro/presenters";
 import { getAuthStatus } from "@/lib/auth";
 import { getBuildInfo } from "@/lib/build-info";
@@ -70,8 +72,8 @@ export default async function CommissionReportPage({ searchParams }: { searchPar
           <span>{reportResult.error}</span>
         </section>
       ) : null}
-      <form className="panel finance-filter-bar finance-report-filters no-print" method="get">
-        <label>Pesquisar pessoa<input name="q" defaultValue={query} placeholder="Nome da pessoa" /></label>
+      <SearchToolbar className="panel finance-report-filters no-print">
+        <EntityLookup entity="pessoas" name="pessoa" labelName="q" label="Pessoa" placeholder="Abra a lista ou pesquise por nome" defaultLabel={query} />
         <label>
           Papel
           <select name="papel" defaultValue={role}>
@@ -92,8 +94,8 @@ export default async function CommissionReportPage({ searchParams }: { searchPar
             <option value="all">Todos</option>
           </select>
         </label>
-        <button className="secondary-button">Aplicar filtros</button>
-      </form>
+        <FilterActions clearHref="/pedidos/financeiro/comissoes/relatorio" submitLabel="Aplicar filtros" />
+      </SearchToolbar>
 
       {!reportResult.error ? <section className="panel finance-report-document">
         <header className="finance-report-heading">

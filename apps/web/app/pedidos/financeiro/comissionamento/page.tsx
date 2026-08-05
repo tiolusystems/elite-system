@@ -4,8 +4,10 @@ import { redirect } from "next/navigation";
 
 import { CommissionAssignmentForm } from "@/app/pedidos/financeiro/finance-forms";
 import { FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
+import { EntityLookup } from "@/app/corporate-search/entity-lookup";
+import { FilterActions, SearchToolbar } from "@/app/corporate-search/search-controls";
 import { commissionRoleLabel, money, orderStatusLabel } from "@/app/pedidos/financeiro/presenters";
-import { getCommissionPeople, getFinanceAccess, searchCommissionOrders } from "@/lib/finance";
+import { getFinanceAccess, searchCommissionOrders } from "@/lib/finance";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -15,15 +17,10 @@ export default async function CommissionAssignmentPage({ searchParams }: { searc
   if (!access.commissionAssign) redirect("/modulo-indisponivel?module=financeiro&reason=permission");
 
   const query = single(params.q) ?? "";
-  const personQuery = single(params.pessoa_q) ?? "";
   const page = positive(single(params.pagina)) || 1;
   const selectedId = positive(single(params.pedido));
-  const [ordersResult, peopleResult] = await Promise.all([
-    searchCommissionOrders(query, page),
-    selectedId ? getCommissionPeople(personQuery) : Promise.resolve({ data: [], error: null }),
-  ]);
+  const ordersResult = await searchCommissionOrders(query, page);
   const orders = ordersResult.data;
-  const people = peopleResult.data;
   const selected = selectedId ? orders.find((order) => order.id === selectedId) ?? null : null;
 
   return (
@@ -34,10 +31,10 @@ export default async function CommissionAssignmentPage({ searchParams }: { searc
       title="Comissionamento da venda"
       description="Defina pessoas e percentuais somente depois da liberação e antes do primeiro recebimento."
     >
-      {ordersResult.error || peopleResult.error ? (
+      {ordersResult.error ? (
         <section className="notice-panel warning" role="alert">
           <strong>Consulta indisponível</strong>
-          <span>{ordersResult.error || peopleResult.error}</span>
+          <span>{ordersResult.error}</span>
         </section>
       ) : null}
       {selected ? (
@@ -59,31 +56,15 @@ export default async function CommissionAssignmentPage({ searchParams }: { searc
           </section>
           <section className="panel form-panel">
             <div className="panel-header"><div><h2>Definir comissionado</h2><p>É possível incluir mais de uma pessoa, uma atribuição por vez.</p></div><span className="pill">antes do recebimento</span></div>
-            <form className="finance-search-bar finance-person-search" method="get">
-              <input type="hidden" name="q" value={query} />
-              <input type="hidden" name="pagina" value={page} />
-              <input type="hidden" name="pedido" value={selected.id} />
-              <label>Pesquisar pessoa<input name="pessoa_q" defaultValue={personQuery} placeholder="Nome ou papel comercial" /></label>
-              <button className="secondary-button">Pesquisar</button>
-              {personQuery ? <Link href={`/pedidos/financeiro/comissionamento?q=${encodeURIComponent(query)}&pagina=${page}&pedido=${selected.id}`}>Limpar</Link> : null}
-            </form>
-            {peopleResult.error ? null : people.length ? (
-              <CommissionAssignmentForm order={selected} people={people} requestKey={randomUUID()} />
-            ) : (
-              <div className="empty-state compact-empty">
-                <strong>Nenhuma pessoa elegível encontrada</strong>
-                <span>Revise a busca ou confirme se a pessoa está ativa e possui cadastro comercial.</span>
-              </div>
-            )}
+            <CommissionAssignmentForm order={selected} requestKey={randomUUID()} />
           </section>
         </>
       ) : (
         <>
-          <form className="panel finance-search-bar" method="get">
-            <label>Pesquisar pedido<input name="q" defaultValue={query} placeholder="Código do pedido ou cliente" /></label>
-            <button className="secondary-button">Pesquisar</button>
-            {query ? <Link href="/pedidos/financeiro/comissionamento">Limpar</Link> : null}
-          </form>
+          <SearchToolbar className="panel">
+            <EntityLookup entity="pedidos" name="pedido" labelName="q" label="Pedido ou cliente" placeholder="Abra a lista ou pesquise o pedido" defaultValue={selectedId} defaultLabel={query} />
+            <FilterActions clearHref="/pedidos/financeiro/comissionamento" submitLabel="Localizar" />
+          </SearchToolbar>
           <section className="panel">
             <div className="panel-header"><div><h2>Pedidos elegíveis</h2><p>Liberados e ainda sem recebimento financeiro.</p></div><span className="pill">{orders[0]?.totalCount ?? 0}</span></div>
             <div className="finance-result-list">

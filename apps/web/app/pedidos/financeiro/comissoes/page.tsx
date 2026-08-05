@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 
 import { CommissionAdjustmentForm, CommissionPaymentForm } from "@/app/pedidos/financeiro/finance-forms";
 import { FinancePermissionState, FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
+import { EntityLookup } from "@/app/corporate-search/entity-lookup";
+import { ActiveFilterChips, FilterActions, SearchToolbar } from "@/app/corporate-search/search-controls";
 import { commissionMovementLabel, commissionRoleLabel, dateTime, financeDateDefaults, money, personStatusLabel } from "@/app/pedidos/financeiro/presenters";
 import { getCommissionMovements, getFinanceAccess, searchCommissionAccounts } from "@/lib/finance";
 
@@ -103,13 +105,14 @@ export default async function CommissionsPage({ searchParams }: { searchParams?:
         </>
       ) : (
         <>
-          <form className="panel finance-filter-bar finance-commission-filters" method="get">
-            <label>Pesquisar pessoa<input name="q" defaultValue={query} placeholder="Nome ou papel" /></label>
+          <SearchToolbar className="panel finance-commission-filters">
+            <EntityLookup entity="pessoas" name="pessoa" labelName="q" label="Pessoa" placeholder="Abra a lista ou pesquise por nome" defaultValue={personId} defaultLabel={query} />
             <label>Papel<select name="papel" defaultValue={role}><option value="">Todos</option><option value="vendedor">Vendedor</option><option value="agente">Agente</option><option value="gerente">Gerente</option><option value="tecnico_campo">Técnico de campo</option><option value="campanha">Campanha</option><option value="outro">Outro</option></select></label>
             <label>Saldo<select name="saldo" defaultValue={status}><option value="positive">Somente positivo</option><option value="all">Todos</option><option value="zero">Zerado</option><option value="negative">Negativo</option></select></label>
             <label>Posição em<input name="corte" type="date" defaultValue={cutoffDate} /></label>
-            <button className="secondary-button">Filtrar</button>
-          </form>
+            <FilterActions clearHref="/pedidos/financeiro/comissoes" submitLabel="Aplicar filtros" />
+          </SearchToolbar>
+          <ActiveFilterChips filters={commissionFilters(query, role, status, cutoffDate, defaults.cutoffDate)} clearHref="/pedidos/financeiro/comissoes" />
           <section className="panel">
             <div className="panel-header"><div><h2>Contas correntes</h2><p>Selecione uma pessoa para consultar o histórico e as operações autorizadas.</p></div><span className="pill">{accounts[0]?.totalCount ?? 0}</span></div>
             <div className="finance-result-list">
@@ -137,3 +140,14 @@ function Pagination({ current, total, query, role, status, cutoff }: { current: 
 function listHref(query: string, role: string, status: string, cutoff: string, page: number) { return `/pedidos/financeiro/comissoes?q=${encodeURIComponent(query)}&papel=${encodeURIComponent(role)}&saldo=${encodeURIComponent(status)}&corte=${cutoff}&pagina=${page}`; }
 function single(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
 function positive(value?: string) { const parsed = Number(value); return Number.isInteger(parsed) && parsed > 0 ? parsed : null; }
+
+function commissionFilters(query: string, role: string, status: string, cutoff: string, defaultCutoff: string) {
+  const base = { q: query, papel: role, saldo: status, corte: cutoff };
+  const href = (changes: Partial<typeof base>) => listHref(changes.q ?? base.q, changes.papel ?? base.papel, changes.saldo ?? base.saldo, changes.corte ?? base.corte, 1);
+  return [
+    query ? { label: "Pessoa", value: query, href: href({ q: "" }) } : null,
+    role ? { label: "Papel", value: commissionRoleLabel(role), href: href({ papel: "" }) } : null,
+    status !== "positive" ? { label: "Saldo", value: status === "all" ? "Todos" : status === "zero" ? "Zerado" : "Negativo", href: href({ saldo: "positive" }) } : null,
+    cutoff !== defaultCutoff ? { label: "Posição", value: cutoff.split("-").reverse().join("/"), href: href({ corte: defaultCutoff }) } : null,
+  ].filter((item): item is { label: string; value: string; href: string } => Boolean(item));
+}

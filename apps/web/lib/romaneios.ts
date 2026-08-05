@@ -165,6 +165,17 @@ export async function getRomaneioDashboard(input: {
   pageSize?: number;
   status?: string | null;
   query?: string | null;
+  clientId?: number | null;
+  orderId?: number | null;
+  propertyId?: number | null;
+  shipmentId?: number | null;
+  fiscalReference?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  courierId?: number | null;
+  vehicleId?: number | null;
+  productId?: number | null;
+  finishedLotId?: number | null;
 } = {}): Promise<RomaneioDashboard> {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
@@ -177,18 +188,24 @@ export async function getRomaneioDashboard(input: {
     const page = Math.max(1, input.page ?? 1);
     const from = (page - 1) * pageSize;
     const statuses = statusValues(input.status);
-    let romaneioQuery = supabase
-      .from("exp_romaneios")
-      .select(
-        "id,codigo_romaneio,pedido_id,tipo_separacao,status,data_romaneio,observacao,confirmado_at,cancelado_at,estornado_at,created_by,created_at",
-        { count: "exact" }
-      );
-    if (statuses.length > 0) romaneioQuery = romaneioQuery.in("status", statuses);
     const normalizedQuery = input.query?.trim();
-    if (normalizedQuery) romaneioQuery = romaneioQuery.ilike("codigo_romaneio", `%${normalizedQuery}%`);
-    const romaneios = await romaneioQuery
-      .order("created_at", { ascending: false })
-      .range(from, from + pageSize - 1);
+    const romaneios = await supabase.rpc("buscar_exp_romaneios_paginada", {
+      p_busca: normalizedQuery || null,
+      p_cliente_id: input.clientId ?? null,
+      p_pedido_id: input.orderId ?? null,
+      p_propriedade_id: input.propertyId ?? null,
+      p_romaneio_id: input.shipmentId ?? null,
+      p_referencia_fiscal: input.fiscalReference?.trim() || null,
+      p_data_inicio: input.startDate || null,
+      p_data_fim: input.endDate || null,
+      p_statuses: statuses.length ? statuses : null,
+      p_entregador_id: input.courierId ?? null,
+      p_veiculo_id: input.vehicleId ?? null,
+      p_produto_id: input.productId ?? null,
+      p_lote_pa_id: input.finishedLotId ?? null,
+      p_limite: pageSize,
+      p_offset: from
+    });
     const [draftCount, separationCount, confirmedCount, closedCount] = await Promise.all([
       supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).eq("status", "draft"),
       supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).eq("status", "separacao"),
@@ -513,8 +530,8 @@ export async function getRomaneioDashboard(input: {
       pagination: {
         page,
         pageSize,
-        total: romaneios.count ?? 0,
-        totalPages: Math.max(1, Math.ceil((romaneios.count ?? 0) / pageSize))
+        total: Number(rows(romaneios)[0]?.total_registros ?? 0),
+        totalPages: Math.max(1, Math.ceil(Number(rows(romaneios)[0]?.total_registros ?? 0) / pageSize))
       },
       source: firstError ? "error" : "supabase",
       error: firstError

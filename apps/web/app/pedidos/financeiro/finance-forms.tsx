@@ -11,21 +11,19 @@ import {
   registerReceiptAction,
   type FinanceActionState,
 } from "@/app/pedidos/financeiro/actions";
-import type { CommissionAccount, CommissionOrder, CommissionPerson, ReceiptOrder } from "@/lib/finance";
+import { EntityLookup } from "@/app/corporate-search/entity-lookup";
+import type { CommissionAccount, CommissionOrder, ReceiptOrder } from "@/lib/finance";
 
 export function CommissionAssignmentForm({
   order,
-  people,
   requestKey,
 }: {
   order: CommissionOrder;
-  people: CommissionPerson[];
   requestKey: string;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(assignOrderCommissionAction, INITIAL_FINANCE_ACTION_STATE);
   const [key, setKey] = useState(requestKey);
-  const [personId, setPersonId] = useState("");
   const [role, setRole] = useState("vendedor");
   const [percentage, setPercentage] = useState("");
   const [reason, setReason] = useState("");
@@ -33,7 +31,6 @@ export function CommissionAssignmentForm({
 
   useRefreshAfterSuccess(state, router.refresh, () => {
     setKey(crypto.randomUUID());
-    setPersonId("");
     setPercentage("");
     setReason("");
   });
@@ -44,14 +41,18 @@ export function CommissionAssignmentForm({
       <input type="hidden" name="pedido_id" value={order.id} />
       <ActionFeedback state={state} />
       <div className="form-grid finance-form-grid">
-        <label>
-          Pessoa comissionada
-          <select name="pessoa_id" value={personId} onChange={(event) => setPersonId(event.target.value)} aria-invalid={Boolean(state.fieldErrors.pessoa_id)} required>
-            <option value="" disabled>Selecione uma pessoa</option>
-            {people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
-          </select>
+        <div>
+          <EntityLookup
+            key={key}
+            entity="pessoas"
+            name="pessoa_id"
+            label="Pessoa comissionada"
+            placeholder="Abra a lista ou pesquise por nome"
+            required
+            helpText="A seleção mantém o vínculo pela pessoa cadastrada, não por texto livre."
+          />
           <FieldError value={state.fieldErrors.pessoa_id} />
-        </label>
+        </div>
         <label>
           Papel na comissão
           <select name="papel_comissao" value={role} onChange={(event) => setRole(event.target.value)} aria-invalid={Boolean(state.fieldErrors.papel_comissao)}>

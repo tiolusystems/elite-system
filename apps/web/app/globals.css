@@ -695,6 +695,39 @@ h1 {
   border-bottom: 1px solid var(--border);
 }
 
+.corporate-advanced-filters {
+  grid-column: 1 / -1;
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.corporate-advanced-filters > summary {
+  width: fit-content;
+  color: var(--brand-primary-strong);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.corporate-advanced-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .corporate-advanced-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .corporate-advanced-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .auth-account-details > p,
 .auth-account-details > form {
   padding: 18px 22px;

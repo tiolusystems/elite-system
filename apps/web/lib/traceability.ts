@@ -38,8 +38,11 @@ export type RecallDestination = {
 export type TraceFilters = {
   type: string;
   code: string;
+  customerId: number | null;
   customerQuery: string;
+  orderId: number | null;
   orderQuery: string;
+  shipmentId: number | null;
   shipmentQuery: string;
   fiscalReference: string;
   direction: string;
@@ -50,9 +53,9 @@ export async function getTraceability(filters: TraceFilters) {
   if (!getRuntimeStatus().supabaseConfigured) return { edges: [] as TraceEdge[], error: "Banco de homologação indisponível.", source: "error" as const };
   const supabase = await createSupabaseServerClient();
   const [customer, order, shipment] = await Promise.all([
-    resolvePresentedId(supabase, "cad_clientes", "nome", filters.customerQuery),
-    resolvePresentedId(supabase, "com_pedidos", "codigo_pedido", filters.orderQuery),
-    resolvePresentedId(supabase, "exp_romaneios", "codigo_romaneio", filters.shipmentQuery)
+    filters.customerId ? Promise.resolve({ id: filters.customerId, error: null }) : resolvePresentedId(supabase, "cad_clientes", "nome", filters.customerQuery),
+    filters.orderId ? Promise.resolve({ id: filters.orderId, error: null }) : resolvePresentedId(supabase, "com_pedidos", "codigo_pedido", filters.orderQuery),
+    filters.shipmentId ? Promise.resolve({ id: filters.shipmentId, error: null }) : resolvePresentedId(supabase, "exp_romaneios", "codigo_romaneio", filters.shipmentQuery)
   ]);
   const resolutionError = customer.error ?? order.error ?? shipment.error;
   if (resolutionError) return { edges: [] as TraceEdge[], error: resolutionError, source: "error" as const };
@@ -83,7 +86,7 @@ export async function getRecall(type: string, lotCode: string) {
 }
 
 export function hasTraceFilter(filters: TraceFilters) {
-  return Boolean(filters.type || filters.code || filters.customerQuery || filters.orderQuery || filters.shipmentQuery || filters.fiscalReference);
+  return Boolean(filters.type || filters.code || filters.customerId || filters.customerQuery || filters.orderId || filters.orderQuery || filters.shipmentId || filters.shipmentQuery || filters.fiscalReference);
 }
 
 async function resolvePresentedId(

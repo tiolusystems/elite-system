@@ -9,6 +9,7 @@ PREPARATION = ROOT / "apps/web/app/romaneios/romaneio-preparation.tsx"
 ACTIONS = ROOT / "apps/web/app/romaneios/actions.ts"
 MANUALS = ROOT / "apps/web/lib/manuals.ts"
 STYLES = ROOT / "apps/web/app/globals.css"
+SEARCH_MIGRATION = ROOT / "supabase/migrations/0119_corporate_search_and_romaneio_filters.sql"
 
 
 class RomaneioWorkbenchUxContractTests(unittest.TestCase):
@@ -65,9 +66,18 @@ class RomaneioWorkbenchUxContractTests(unittest.TestCase):
     def test_consultation_is_server_paginated_and_scopes_relations_to_the_page(self) -> None:
         self.assertIn('name="busca"', self.page)
         self.assertIn("params.pagina", self.page)
-        self.assertIn('.range(from, from + pageSize - 1)', self.data)
+        self.assertIn('rpc("buscar_exp_romaneios_paginada"', self.data)
+        self.assertIn("p_offset: from", self.data)
         self.assertIn('.in("romaneio_id", selectedRomaneioFilter)', self.data)
         self.assertNotIn('.from("exp_romaneios")\n        .select(\n          "id,codigo_romaneio', self.data.split('const [', 1)[1])
+
+    def test_paginated_search_rpc_is_read_only_and_not_public(self) -> None:
+        migration = SEARCH_MIGRATION.read_text(encoding="utf-8")
+        self.assertIn("security invoker", migration.lower())
+        self.assertIn("revoke all on function public.buscar_exp_romaneios_paginada", migration.lower())
+        self.assertIn("from public.exp_romaneios", migration.lower())
+        self.assertNotIn("insert into", migration.lower())
+        self.assertNotIn("update public.", migration.lower())
 
 
 if __name__ == "__main__":

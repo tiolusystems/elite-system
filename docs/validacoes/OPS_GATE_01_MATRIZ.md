@@ -93,6 +93,7 @@ interface.
 | `/pcp` | F | Compatibilidade de rota antiga | sessao | redireciona para rota canonica | N/A | N/A | N/A | contrato de rota | nao aplicavel |
 | `/health` | F | Diagnostico visual do runtime | publica, sem segredos | somente leitura | 360 a 1920 | N/A | N/A | health smoke | comprovado |
 | `/api/health` | F | Health-check estruturado | publico sem dados sensiveis | nao grava nem expoe segredo | N/A | N/A | N/A | deployment smoke | comprovado |
+| `/api/lookups/[entity]` | B | Pesquisa relacional paginada | sessao e RLS da entidade consultada | entidade invalida, sessao ausente e registro sem acesso sao recusados | 360 a 1920 | N/A | herda a tela operacional | contratos OPS-02A | comprovado |
 
 ## Acoes por dominio
 

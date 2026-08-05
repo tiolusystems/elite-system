@@ -43,12 +43,12 @@ jobs:
           version: 2.109.0
       - name: Start disposable Supabase
         run: supabase start
-      - name: Rebuild through 0117 and validate the 0118 upgrade
+      - name: Rebuild through 0118 and validate the 0119 upgrade
         shell: bash
         run: |
           set -euo pipefail
-          migration="supabase/migrations/0118_organize_finance_workbench.sql"
-          pending="$RUNNER_TEMP/0118_organize_finance_workbench.sql"
+          migration="supabase/migrations/0119_corporate_search_and_romaneio_filters.sql"
+          pending="$RUNNER_TEMP/0119_corporate_search_and_romaneio_filters.sql"
           restore_migration() {
             if [ -f "$pending" ]; then
               mv "$pending" "$migration"

@@ -5,13 +5,13 @@ Atualizado em: 2026-08-05
 ## Referencia vigente
 
 - branch: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `ead0649`;
+- HEAD funcional publicado: `e2f9d30`;
 - sincronizacao local/remoto: `0/0`;
-- Supabase de staging: ledger `0001` a `0117`;
-- deployment ativo: `dpl_HmBGrrYnLhpvMHLgwtQKawtCvznF`;
-- rollback preservado: `dpl_6XALShVXg5GB393q7wDjkWgQ6K5a`;
+- Supabase de staging: ledger `0001` a `0118`;
+- deployment ativo: `dpl_6dpGmux7JoX4QawawKn4kQJ2nLQ6`;
+- rollback preservado na Vercel;
 - URL: `https://elite-system-staging.vercel.app`;
-- CI do HEAD funcional: `30472806418`, com `database-contract`,
+- CI do HEAD funcional: `31022098770`, com `database-contract`,
   `python-tests` e `web-contract` aprovados;
 - E2E operacional: `30473086759`, com o contrato dos cadastros canonicos,
   cinco resolucoes e cadeias SQL aprovados em ambiente descartavel;
@@ -97,8 +97,20 @@ Matriz vigente:
   e idempotentes;
 - a migration aditiva `0118` organiza consultas, grants minimos e o contrato
   de recebimento sem alterar fatos financeiros existentes;
-- o pacote esta tecnicamente validado em ambiente descartavel e ainda nao foi
-  aplicado no Supabase de staging.
+- o pacote foi aplicado unitariamente no Supabase de staging e permanece
+  protegido pelas alcadas atomicas existentes.
+
+### Filas operacionais e Seguranca urgente
+
+- CQ e Ordens usam consulta paginada no servidor e detalhe separado;
+- Romaneio consulta por codigo e situacao, pagina 20 registros e carrega itens,
+  reservas, logistica, fiscal e movimentos somente para os IDs exibidos;
+- Envase consulta por codigo e situacao, pagina 20 ordens e carrega componentes,
+  reservas e lotes PA somente para a pagina atual;
+- a tela de Seguranca esclarece que bloquear a conta selecionada nao equivale a
+  alterar alcadas e nao exclui pessoa, permissoes ou historico;
+- a reformulacao integral do ciclo de vida de usuarios continua reservada ao
+  `SEC-UX`.
 
 ## Validacao vigente
 
@@ -123,7 +135,7 @@ Matriz vigente:
   ficha em modos exclusivos, sem rolagem horizontal ou erro tecnico, no SHA
   `35a1633`;
 - a migration de leitura `0117` foi aplicada unitariamente no staging.
-- Financeiro local: 702 testes Python, ESLint, TypeScript e build aprovados;
+- regressao final local: 705 testes Python, ESLint, TypeScript e build aprovados;
 - migration `0118`: instalacao limpa e upgrade `0117 -> 0118` aprovados no
   projeto, container e volume `elite-validation-finance-0118-clean`;
 - smoke `PG_FINANCE_OPS_GATE_01B_OK` aprovou RLS, grants, escrita direta
@@ -135,7 +147,8 @@ Matriz vigente:
 
 `OPS-GATE-01`: tecnicamente aprovado.
 
-`OPS-02`: em execucao; bloco Financeiro tecnicamente validado localmente.
+`OPS-02`: tecnicamente concluido com as ressalvas de `SEC-UX` registradas na
+matriz. Nenhuma nova regra de negocio ou migration foi criada neste fechamento.
 
 Todas as rotas e acoes publicadas estao classificadas na matriz. As funcoes
 futuras permanecem bloqueadas de forma explicita. Os defeitos P1 encontrados
@@ -146,7 +159,5 @@ testados. Isso nao constitui declaracao de infalibilidade.
 
 ## Proxima tarefa
 
-Publicar o bloco Financeiro somente apos CI verde, aplicar unitariamente a
-`0118` no Supabase de staging e executar smoke autenticado. Em seguida,
-continuar o `OPS-02` pelas filas de Producao e CQ. A reformulacao integral de
-usuarios permanece reservada para `SEC-UX`.
+Apresentar o pacote consolidado para homologacao visual de Luciano. Nao iniciar
+`MIG-00`, `OPS-03`, `SEC-UX`, Relatorios Gerenciais ou PWA sem nova orientacao.

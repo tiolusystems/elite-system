@@ -258,6 +258,10 @@ codigo.
 | OPS-FIN-P1-004 | P1 | Referência documental não era obrigatória | coluna aditiva histórica e novo entrypoint idempotente que exige referência | migration `0118` | em validação |
 | OPS-FIN-P1-005 | P1 | Erros genéricos apagavam o contexto do formulário | Server Actions estruturadas, erros por campo, foco e preservação dos dados | formulários financeiros e contrato OPS-FIN | em validação |
 | OPS-FIN-P1-006 | P1 | Texto inferia comissionamento pelo papel gerente | texto e manual agora exigem alçada atômica, sem inferência por cargo | manuais financeiros | em validação |
+| OPS-ROM-P1-001 | P1 | Consulta carregava um recorte fixo de Romaneios e relações globais antes de filtrar | busca e situação passaram para a consulta no servidor, com 20 registros por página e relações restritas aos IDs exibidos | `test_romaneio_workbench_ux_contract.py`, TypeScript e build | resolvido |
+| OPS-ENV-P1-001 | P1 | Fila de Envase carregava até 100 ordens e componentes de todas elas | busca, situação e paginação passaram ao servidor; componentes, reservas e saídas são carregados somente para a página atual | `test_production_operational_workbench.py`, TypeScript e build | resolvido |
+| OPS-SEC-P1-001 | P1 | Controle de acesso da conta podia ser confundido com concessão ou retirada de alçada | ação ficou vinculada visualmente à conta selecionada e explica que bloqueio não exclui pessoa, alçadas ou histórico | `test_seguranca_admin_ui_contract.py` | resolvido |
+| OPS-SEC-R01 | - | Ciclo completo de encerramento de vínculo profissional e direitos históricos | nenhuma exclusão física foi aberta; evolução permanece reservada ao `SEC-UX` | inventário e contratos de Segurança | pendente SEC-UX |
 
 ## Evidencia final
 

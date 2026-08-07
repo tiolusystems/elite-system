@@ -1,3 +1,6 @@
+.toolbar.toolbar {
+  overflow: visible;
+}
 .toolbar {
   display: grid;
   grid-template-columns: minmax(18rem, 2fr) repeat(3, minmax(10rem, 1fr)) auto;

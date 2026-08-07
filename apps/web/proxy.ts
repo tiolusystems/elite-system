@@ -88,7 +88,9 @@ export async function proxy(request: NextRequest) {
   if (pathname === MODULE_GUARD_RECOVERY_ROUTE || pathname.startsWith(`${MODULE_GUARD_RECOVERY_ROUTE}/`)) {
     return response;
   }
-
+if (pathname.startsWith("/api/lookups/")) {
+  return response;
+}
   const moduleAccessResult = await supabase.rpc("get_current_route_module_access", {
     p_pathname: pathname
   });

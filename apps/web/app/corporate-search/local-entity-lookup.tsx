@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 import styles from "./search-controls.module.css";
 
@@ -53,11 +53,9 @@ export function LocalEntityLookup({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  useEffect(() => {
-    if (selectedId === null) return;
-    const option = options.find((candidate) => candidate.id === selectedId);
-    if (option) setQuery(option.label);
-  }, [options, selectedId]);
+  const selectedOption = selectedId === null
+    ? null
+    : options.find((candidate) => candidate.id === selectedId) ?? null;
 
   const filteredOptions = useMemo(() => {
     if (selectedId !== null) return options;
@@ -121,7 +119,7 @@ export function LocalEntityLookup({
           autoComplete="off"
           disabled={disabled}
           required={required}
-          value={query}
+          value={selectedId !== null ? selectedOption?.label ?? "" : query}
           placeholder={placeholder}
           onFocus={() => {
             setOpen(true);

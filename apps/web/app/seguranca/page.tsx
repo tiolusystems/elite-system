@@ -403,8 +403,8 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
         <section className="panel" id="alcadas" aria-labelledby="alcadas-title">
           <div className="panel-header">
             <div>
-              <h2 id="alcadas-title">Alçadas efetivas</h2>
-              <p className="muted">Uma alçada permite ou nega uma ação específica. Ela não ativa, inativa ou bloqueia a conta do usuário.</p>
+              <h2 id="alcadas-title">O que este usuário pode fazer</h2>
+              <p className="muted">As permissões padrão vêm da função organizacional. Alterações individuais afetam somente este usuário e não bloqueiam a conta.</p>
             </div>
             <form className="security-user-picker" action="/seguranca" method="get">
               <select name="user_id" defaultValue={selectedProfile?.id ?? ""}>
@@ -425,10 +425,10 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                 <tr>
                   <th>Modulo</th>
                   <th>Acao</th>
-                  <th>Default</th>
-                  <th>Override</th>
-                  <th>Efetivo</th>
-                  <th>Controle</th>
+                  <th>Padrão da função</th>
+                  <th>Exceção individual</th>
+                  <th>Acesso atual</th>
+                  <th>Alterar acesso</th>
                 </tr>
               </thead>
               <tbody>
@@ -498,7 +498,13 @@ function PermissionRow({
         <span className="table-subtext">Permissão operacional governada</span>
       </td>
       <td>{permission.defaultAllowed ? "Permitido" : "Negado"}</td>
-      <td>{permission.overrideAllowed === null ? "Padrão da ação" : "Decisão individual"}</td>
+      <td>
+  {permission.overrideAllowed === null
+    ? "Sem exceção"
+    : permission.overrideAllowed
+      ? "Permitido para este usuário"
+      : "Negado para este usuário"}
+</td>
       <td>
         <span className={`status-chip ${permission.effectiveAllowed ? "ativo" : "alta"}`}>
           {permission.effectiveAllowed ? "Permitido" : "Negado"}
@@ -511,7 +517,7 @@ function PermissionRow({
             <input name="action_key" type="hidden" value={permission.actionKey} />
             <input name="allowed" type="hidden" value="true" />
             <button className="secondary-button" type="submit" disabled={disabled}>
-              Permitir
+              Permitir para este usuário
             </button>
           </form>
           <form action={setSecurityPermissionOverrideAction}>
@@ -519,14 +525,14 @@ function PermissionRow({
             <input name="action_key" type="hidden" value={permission.actionKey} />
             <input name="allowed" type="hidden" value="false" />
             <button className="secondary-button" type="submit" disabled={disabled}>
-              Negar ação
+              Negar para este usuário
             </button>
           </form>
           <form action={clearSecurityPermissionOverrideAction}>
             <input name="user_id" type="hidden" value={selectedProfile.id} />
             <input name="action_key" type="hidden" value={permission.actionKey} />
             <button className="secondary-button" type="submit" disabled={disabled || permission.overrideAllowed === null}>
-              Remover decisão individual
+              Voltar ao padrão da função
             </button>
           </form>
         </div>

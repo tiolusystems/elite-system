@@ -3,10 +3,47 @@ import Link from "next/link";
 import { ClientesSection } from "@/app/cadastros/clientes-section";
 import { PessoasSection } from "@/app/cadastros/pessoas-section";
 import { VehiclesSection } from "@/app/cadastros/vehicles-section";
+import { searchCorporateLookup } from "@/lib/corporate-lookups";
 import { getMasterDataClientWorkspace, getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
+type GlobalSearchResult = {
+  id: number;
+  label: string;
+  detail: string | null;
+  status: string | null;
+  kind: string;
+  initials: string;
+  href: string;
+};
+
+const GLOBAL_SEARCH_TARGETS = [
+  {
+    entity: "clientes",
+    kind: "Cliente",
+    initials: "CL",
+    href: (id: number) => `/cadastros?grupo=clientes&cliente=${id}`
+  },
+  {
+    entity: "pessoas",
+    kind: "Pessoa",
+    initials: "PV",
+    href: (id: number) => `/cadastros?grupo=pessoas&pessoa=${id}`
+  },
+  {
+    entity: "produtos",
+    kind: "Produto",
+    initials: "PA",
+    href: (id: number) => `/cadastros/produtos?selected=${id}#editar-produto`
+  },
+  {
+    entity: "materias-primas",
+    kind: "Matéria-prima",
+    initials: "MP",
+    href: (id: number) => `/cadastros/materias-primas?selected=${id}`
+  }
+] as const;
 
 type CadastroGroupKey =
   | "clientes"
@@ -41,7 +78,8 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
   const formMessage = messageForResult(result);
   const requestedGroup = singleValue(params.grupo);
   const activeGroup = CADASTRO_GROUPS.find((group) => group.key === requestedGroup) ?? null;
-  const query = (singleValue(params.busca) ?? "").trim().toLocaleLowerCase("pt-BR");
+const searchText = (singleValue(params.busca) ?? "").trim();
+const query = searchText.toLocaleLowerCase("pt-BR");
   const selectedClientId = positiveInteger(singleValue(params.cliente));
   const selectedPersonId = positiveInteger(singleValue(params.pessoa));
   const newClientMode = activeGroup?.key === "clientes" && singleValue(params.modo) === "novo";
@@ -49,7 +87,7 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
   const clientStatus = singleValue(params.situacao) ?? "";
   const clientSort = singleValue(params.ordem) ?? "nome_asc";
   const clientPage = positiveInteger(singleValue(params.pagina)) ?? 1;
-  const [dashboard, clientWorkspace] = await Promise.all([
+const [dashboard, clientWorkspace, globalResults] = await Promise.all([
     getMasterDataDashboard({ lightweight: activeGroup?.key === "clientes" }),
     activeGroup?.key === "clientes"
       ? getMasterDataClientWorkspace({
@@ -60,7 +98,8 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
           clienteId: selectedClientId,
           carregarLista: !selectedClientId && !newClientMode
         })
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    !activeGroup && searchText ? searchGlobalCadastros(searchText) : Promise.resolve([])
   ]);
   const pendingCount = dashboard.validationIssues.length;
   const visibleGroups = query
@@ -138,6 +177,16 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
 
         {!activeGroup ? (
           <section className="cadastros-group-grid" aria-label="Areas de cadastro">
+            {globalResults.map((result) => (
+              <Link className="cadastros-group-card" href={result.href} key={`${result.kind}-${result.id}`}>
+                <span className="cadastros-group-icon" aria-hidden="true">{result.initials}</span>
+                <span className="cadastros-group-copy">
+                  <strong>{result.label}</strong>
+                  <small>{result.kind}{result.detail ? ` · ${result.detail}` : ""}</small>
+                </span>
+                <span className="cadastros-group-meta">Abrir</span>
+              </Link>
+            ))}
             {visibleGroups.map((group) => {
               const groupCount = countForGroup(group.key, dashboard.metrics);
               return (
@@ -148,10 +197,10 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
                 </Link>
               );
             })}
-            {visibleGroups.length === 0 ? (
+            {visibleGroups.length === 0 && globalResults.length === 0 ? (
               <div className="shell-state shell-state-empty cadastros-no-results">
                 <span className="shell-state-label">Sem resultados</span>
-                <h2>Nenhuma area encontrada</h2>
+                <h2>Nenhum cadastro encontrado</h2>
                 <p>Revise a busca ou limpe o filtro para ver todos os grupos.</p>
                 <div className="shell-state-actions"><Link className="secondary-button" href="/cadastros">Limpar busca</Link></div>
               </div>
@@ -259,7 +308,31 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: P
     </main>
   );
 }
+async function searchGlobalCadastros(query: string): Promise<GlobalSearchResult[]> {
+  const resultGroups = await Promise.all(
+    GLOBAL_SEARCH_TARGETS.map(async (target) => {
+      try {
+        const page = await searchCorporateLookup({
+          entity: target.entity,
+          query,
+          page: 1,
+          pageSize: 10
+        });
 
+        return page.options.map((option) => ({
+          ...option,
+          kind: target.kind,
+          initials: target.initials,
+          href: target.href(option.id)
+        }));
+      } catch {
+        return [];
+      }
+    })
+  );
+
+  return resultGroups.flat();
+}
 function actionHref(group: CadastroGroupKey): string {
   const hrefs: Record<CadastroGroupKey, string> = {
     clientes: "/cadastros?grupo=clientes&modo=novo#cadastro-cliente",

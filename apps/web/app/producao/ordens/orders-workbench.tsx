@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import Link from "next/link";
 
+import { LocalEntityLookup } from "@/app/corporate-search/local-entity-lookup";
 import {
   cancelPcpOpAction,
   createPcpOpAction,
@@ -36,7 +37,7 @@ export function OrderCreationWorkbench({ dashboard }: { dashboard: PcpDashboard 
 
   return (
       <section className="two-column production-primary-grid order-create-workflow" id="nova-op">
-        <section className="panel form-panel" aria-labelledby="nova-op-title">
+        <section className="panel form-panel lookup-surface" aria-labelledby="nova-op-title">
           <div className="panel-header">
             <div>
               <span className="eyebrow">Planejamento</span>
@@ -47,17 +48,19 @@ export function OrderCreationWorkbench({ dashboard }: { dashboard: PcpDashboard 
           <form action={createPcpOpAction}>
             <input type="hidden" name="idempotency_key" value={opRequestKey} />
             <div className="form-grid">
-              <label className="wide-field">
-                Fórmula operacional
-                <select name="formula_versao_id" defaultValue="" required>
-                  <option value="">Selecione a fórmula</option>
-                  {operationalFormulas.map((formula) => (
-                    <option key={formula.id} value={formula.id}>
-                      {formula.produtoLabel} - versão {formula.versao} - base de 1 L
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <LocalEntityLookup
+                className="wide-field"
+                name="formula_versao_id"
+                label="Fórmula operacional"
+                placeholder="Abra a lista ou pesquise a fórmula"
+                options={operationalFormulas.map((formula) => ({
+                  id: formula.id,
+                  label: formula.produtoLabel,
+                  detail: `Versão ${formula.versao} · base de 1 L`
+                }))}
+                defaultValue={null}
+                required
+              />
               <label>
                 Finalidade da OP
                 <select name="tipo_op" defaultValue="estoque">
@@ -400,18 +403,20 @@ function PlanningComponentRow({
               <input type="hidden" name="op_componente_id" value={component.id} />
               <input type="hidden" name="tipo_componente" value={component.tipoComponente} />
               <input type="hidden" name="return_to" value={returnTo} />
-              <label className="wide-field">
-                Lote de {componentTypeLabel(component.tipoComponente).toLowerCase()}
-                <select name="lote_id" defaultValue="" required>
-                  <option value="">Selecione</option>
-                  {compatibleLots.map((lot, index) => (
-                    <option key={lot.id} value={lot.id} disabled={index > 0 && !canOverrideFifo}>
-                      {index === 0 ? "FIFO recomendado · " : "Fora do FIFO · "}
-                      {lot.codigoLote} · disponível {formatNumber(lot.saldoDisponivel)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <LocalEntityLookup
+                className="wide-field"
+                name="lote_id"
+                label={`Lote de ${componentTypeLabel(component.tipoComponente).toLowerCase()}`}
+                placeholder="Abra a lista ou pesquise o lote"
+                options={compatibleLots.map((lot, index) => ({
+                  id: lot.id,
+                  label: lot.codigoLote,
+                  detail: `${index === 0 ? "FIFO recomendado" : "Fora do FIFO"} · disponível ${formatNumber(lot.saldoDisponivel)} · validade ${shortDate(lot.dataValidade)}`,
+                  disabled: index > 0 && !canOverrideFifo
+                }))}
+                defaultValue={null}
+                required
+              />
               <label>
                 Quantidade
                 <input name="quantidade_reservada" inputMode="decimal" defaultValue={inputNumber(remaining)} required />

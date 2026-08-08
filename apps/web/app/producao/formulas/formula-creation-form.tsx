@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { LocalEntityLookup } from "@/app/corporate-search/local-entity-lookup";
 import { createPcpFormulaAction } from "@/app/pcp/actions";
 import { FormulaComponentRows } from "@/app/pcp/production-editors";
 import type { PcpFormulaVersion, PcpLookups } from "@/lib/pcp";
@@ -31,13 +32,15 @@ export function FormulaCreationForm({
           </div>
         </div>
         <div className="form-grid formula-identification-grid">
-          <label className="wide-field">
-            Produto PA ou PI
-            <select name="produto_id" defaultValue={initialFormula?.produtoId ?? ""} required>
-              <option value="">Selecione o produto</option>
-              {lookups.produtos.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
-          </label>
+          <LocalEntityLookup
+            className="wide-field"
+            name="produto_id"
+            label="Produto PA ou PI"
+            placeholder="Abra a lista ou pesquise o produto"
+            options={lookups.produtos.map((option) => ({ id: option.id, label: option.label, detail: option.detail }))}
+            defaultValue={initialFormula?.produtoId ?? null}
+            required
+          />
           <label>
             Finalidade
             <select

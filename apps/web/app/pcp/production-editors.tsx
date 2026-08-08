@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { LocalEntityLookup } from "@/app/corporate-search/local-entity-lookup";
 import type { PcpFormulaComponent, PcpLookupOption } from "@/lib/pcp";
 import { productionOptionLabel, unitOptionLabel } from "@/lib/production-labels";
 
@@ -66,6 +67,7 @@ export function FormulaComponentRows({
 
 function FormulaComponentRow({ index, targets, initialComponent }: { index: number; targets: FormulaTargets; initialComponent?: PcpFormulaComponent }) {
   const [type, setType] = useState(initialComponent?.tipoComponente ?? "");
+  const [targetId, setTargetId] = useState<number | null>(initialComponent?.targetId ?? null);
   const options =
     type === "MP" ? targets.materiasPrimas : type === "PA" ? targets.produtoEmbalagens : type === "PI" ? targets.produtos : [];
   const initialUnitId = initialComponent?.unidade
@@ -77,24 +79,24 @@ function FormulaComponentRow({ index, targets, initialComponent }: { index: numb
       <span className="pcp-row-index">{index}</span>
       <label>
         Tipo
-        <select name={`component_${index}_tipo`} value={type} onChange={(event) => setType(event.target.value)}>
+        <select name={`component_${index}_tipo`} value={type} onChange={(event) => { setType(event.target.value); setTargetId(null); }}>
           <option value="">Não usar</option>
           <option value="MP">Matéria-prima</option>
           <option value="PA">Produto acabado</option>
           <option value="PI">Produto intermediário</option>
         </select>
       </label>
-      <label className="wide-field">
-        Item
-        <select key={`${index}-${type}`} name={`component_${index}_target_id`} defaultValue={initialComponent?.targetId ?? ""} disabled={!type}>
-          <option value="">Selecione</option>
-          {options.map((option) => (
-            <option key={`${type}-${option.id}`} value={option.id}>
-              {productionOptionLabel(option)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <LocalEntityLookup
+        key={`${index}-${type}`}
+        className="wide-field"
+        name={`component_${index}_target_id`}
+        label="Item"
+        placeholder={type ? "Abra a lista ou pesquise o item" : "Selecione o tipo primeiro"}
+        options={options.map((option) => ({ id: option.id, label: productionOptionLabel(option) }))}
+        value={targetId}
+        onValueChange={setTargetId}
+        disabled={!type}
+      />
       <label>
         Quantidade por 1 L
         <input name={`component_${index}_quantidade`} inputMode="decimal" defaultValue={initialComponent?.quantidade} />

@@ -65,7 +65,7 @@ export function FormulaWorkbench({
 
   if (isCreating) {
     return (
-      <section className="panel formula-create-panel" id="nova-formula" aria-labelledby="nova-formula-title">
+      <section className="panel formula-create-panel lookup-surface" id="nova-formula" aria-labelledby="nova-formula-title">
         <div className="panel-header formula-create-header">
           <div>
             <span className="formula-section-eyebrow">Nova versão</span>

@@ -1052,6 +1052,10 @@ h1 {
   overflow: hidden;
 }
 
+.lookup-surface {
+  overflow: visible;
+}
+
 .two-column {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);

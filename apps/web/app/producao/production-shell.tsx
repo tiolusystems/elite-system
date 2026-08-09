@@ -14,6 +14,16 @@ export type ProductionRoute =
   | "transformacoes"
   | "manual";
 
+const PRODUCTION_HELP_ANCHORS: Partial<Record<ProductionRoute, string>> = {
+  overview: "visao-geral",
+  formulas: "formulas",
+  garantias: "garantias",
+  ordens: "ordens",
+  qualidade: "cq",
+  envase: "envase",
+  estoque: "estoque",
+  transformacoes: "transformacoes"
+};
 const PRODUCTION_LINKS: Array<{ key: ProductionRoute; href: string; label: string }> = [
   { key: "overview", href: "/producao", label: "Visão geral" },
   { key: "formulas", href: "/producao/formulas", label: "Fórmulas" },
@@ -84,7 +94,16 @@ export async function ProductionShell({
             <h1>{title}</h1>
             <p className="muted">{description}</p>
           </div>
-          {actions ? <div className="toolbar-actions">{actions}</div> : null}
+          {active !== "manual" || actions ? (
+            <div className="toolbar-actions">
+              {active !== "manual" && PRODUCTION_HELP_ANCHORS[active] ? (
+                <Link className="secondary-button" href={`/producao/manual#${PRODUCTION_HELP_ANCHORS[active]}`}>
+                  ❓ Ajuda desta tela
+                </Link>
+              ) : null}
+              {actions}
+            </div>
+          ) : null}
         </div>
 
         {source === "not_configured" ? (
@@ -107,7 +126,7 @@ export async function ProductionShell({
 }
 
 const FEEDBACK: Record<string, { kind: "ok" | "warning"; title: string; detail: string }> = {
-  formula_created: { kind: "ok", title: "Formula criada", detail: "A nova versao foi registrada sem alterar o historico." },
+  formula_created: { kind: "warning", title: "Versão criada — falta ativar", detail: "A nova versão foi salva e o histórico foi preservado. Confira os componentes e depois ative esta versão para que ela passe a valer." },
   formula_activated: { kind: "ok", title: "Formula ativada", detail: "A versao passou a ser a referencia vigente." },
   product_guarantee_registered: { kind: "ok", title: "Garantia registrada", detail: "A versao declarada do produto foi salva." },
   mp_lot_guarantee_registered: { kind: "ok", title: "Analise registrada", detail: "A garantia do lote de materia-prima foi salva." },

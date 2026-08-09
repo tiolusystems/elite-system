@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { SmartSearchField } from "@/app/corporate-search/smart-lookup";
 import { activatePcpFormulaAction } from "@/app/pcp/actions";
 import { FormulaCreationForm } from "@/app/producao/formulas/formula-creation-form";
 import type { PcpDashboard, PcpFormulaVersion } from "@/lib/pcp";
@@ -18,17 +19,19 @@ type StatusFilter = "active" | "all" | "history";
 
 export function FormulaWorkbench({
   dashboard,
-  startCreating = false
+  startCreating = false,
+  initialStatus = "active"
 }: {
   dashboard: PcpDashboard;
   startCreating?: boolean;
+  initialStatus?: StatusFilter;
 }) {
   const router = useRouter();
   const [template, setTemplate] = useState<PcpFormulaVersion | null>(null);
   const [isCreating, setIsCreating] = useState(startCreating);
   const [query, setQuery] = useState("");
   const [purpose, setPurpose] = useState<PurposeFilter>("all");
-  const [status, setStatus] = useState<StatusFilter>("active");
+  const [status, setStatus] = useState<StatusFilter>(initialStatus);
 
   const filteredFormulas = useMemo(() => {
     const normalizedQuery = normalize(query);
@@ -106,7 +109,7 @@ export function FormulaWorkbench({
         </p>
       </div>
 
-      <section className="panel formula-list-panel" aria-labelledby="formulas-title">
+      <section className="panel formula-list-panel lookup-surface" aria-labelledby="formulas-title">
         <div className="panel-header formula-list-heading">
           <div>
             <h2 id="formulas-title">Fórmulas cadastradas</h2>
@@ -116,15 +119,22 @@ export function FormulaWorkbench({
         </div>
 
         <div className="formula-filter-bar" aria-label="Filtros de fórmulas">
-          <label className="formula-search-field">
-            Buscar
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Produto, justificativa ou observação"
-            />
-          </label>
+          <SmartSearchField
+            className="formula-search-field"
+            name="formula-query"
+            label="Buscar"
+            defaultValue={query}
+            placeholder="Produto, justificativa ou observação"
+            source={{
+              kind: "local",
+              options: dashboard.formulaVersions.map((formula) => ({
+                id: formula.id,
+                label: formula.produtoLabel,
+                detail: `Versão ${formula.versao} · ${formulaPurposeLabel(formula.tipoReceita)} · ${formula.isActive ? "Vigente" : "Histórico"}`
+              }))
+            }}
+            onQueryChange={setQuery}
+          />
           <label>
             Finalidade
             <select value={purpose} onChange={(event) => setPurpose(event.target.value as PurposeFilter)}>

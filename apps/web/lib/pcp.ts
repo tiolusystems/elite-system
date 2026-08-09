@@ -659,7 +659,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         .limit(400),
       supabase
         .from("pcp_formula_versoes")
-        .select("id,produto_id,tipo_receita,versao,base_calculo,justificativa,observacao,previous_hash,entry_hash,created_at")
+        .select("id,produto_id,tipo_receita,versao,justificativa,observacao,previous_hash,entry_hash,created_at")
         .order("created_at", { ascending: false })
         .limit(120),
       supabase
@@ -839,12 +839,14 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     const formulaVersions = formulaRows.map((row) => {
       const id = Number(row.id);
       const produtoId = Number(row.produto_id);
+      const tipoReceita = String(row.tipo_receita);
+      const components = formulaComponentsByVersion.get(id) ?? [];
       return {
         id,
         produtoId,
         produtoLabel: produtoMap.get(produtoId) ?? `produto ${produtoId}`,
-        tipoReceita: String(row.tipo_receita),
-        baseCalculo: String(row.base_calculo),
+        tipoReceita,
+        baseCalculo: formulaBasis(tipoReceita, components.length),
         versao: Number(row.versao),
         justificativa: String(row.justificativa),
         observacao: nullableString(row.observacao),
@@ -852,7 +854,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         entryHash: String(row.entry_hash),
         createdAt: String(row.created_at),
         isActive: formulaActiveIds.has(id),
-        components: formulaComponentsByVersion.get(id) ?? []
+        components
       } satisfies PcpFormulaVersion;
     });
 
@@ -1509,6 +1511,11 @@ function firstNested(value: unknown): Record<string, unknown> | null {
     return value as Record<string, unknown>;
   }
   return null;
+}
+
+function formulaBasis(tipoReceita: string, componentCount: number): string {
+  if (tipoReceita === "mapa") return "documental_mapa";
+  return componentCount > 0 ? "por_litro" : "legado_nao_comprovado";
 }
 
 function nullableString(value: unknown): string | null {

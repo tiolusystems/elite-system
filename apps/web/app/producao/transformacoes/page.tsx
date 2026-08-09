@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SmartSearchField } from "@/app/corporate-search/smart-lookup";
 import { ProductionFeedback, ProductionShell, singleProductionParam } from "@/app/producao/production-shell";
 import { TransformationWorkbench } from "@/app/producao/transformacoes/transformation-workbench";
 import { getPcpDashboard, getPcpOrderCapabilities, type PcpComponentType } from "@/lib/pcp";
@@ -59,10 +60,13 @@ export default async function ProductionTransformationsPage({ searchParams }: { 
       </section>
 
       <form className="catalog-filter transformation-filter" method="get">
-        <label>
-          Buscar transformacao
-          <input name="q" defaultValue={singleProductionParam(params.q) ?? ""} placeholder="OP, formula, produto ou justificativa" />
-        </label>
+        <SmartSearchField
+          name="q"
+          label="Buscar transformação"
+          defaultValue={singleProductionParam(params.q) ?? ""}
+          placeholder="OP, fórmula, produto ou justificativa"
+          source={{ kind: "remote", entity: "ops-producao" }}
+        />
         <label>
           Status
           <select name="status" defaultValue={status}>

@@ -32,7 +32,6 @@ export default async function ProductionOverviewPage() {
       canViewOverview
       actions={(
         <>
-          <Link className="secondary-button" href="/producao/manual">Como operar</Link>
           <Link className="primary-button" href="/producao/ordens">Ver ordens</Link>
         </>
       )}

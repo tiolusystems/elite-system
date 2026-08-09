@@ -70,9 +70,9 @@ class OrdersReservationsUxContractTests(unittest.TestCase):
         self.assertIn("Fora do FIFO", text)
         self.assertIn("canOverrideFifo", text)
         self.assertIn("minLength={10}", text)
-        self.assertIn("disabled={index > 0 && !canOverrideFifo}", text)
+        self.assertIn("disabled: index > 0 && !canOverrideFifo", text)
         self.assertIn('name="lote_id"', text)
-        self.assertIn('value={lot.id}', text)
+        self.assertIn('id: lot.id', text)
 
     def test_reservation_and_state_actions_respect_independent_capabilities(self) -> None:
         text = WORKBENCH.read_text(encoding="utf-8")

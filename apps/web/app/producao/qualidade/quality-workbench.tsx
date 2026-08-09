@@ -1,3 +1,4 @@
+import { LocalEntityLookup } from "@/app/corporate-search/local-entity-lookup";
 import { calculateOpGuaranteesAction, finishPcpOpAction } from "@/app/pcp/actions";
 import { OutputRows } from "@/app/pcp/production-editors";
 import type { PcpLookups, PcpQualityCapabilities, PcpRecentOp } from "@/lib/pcp";
@@ -69,55 +70,53 @@ export function QualityFinishForm({ op, lookups }: { op: PcpRecentOp; lookups: P
           Temperatura C
           <input name="temperatura_c" inputMode="decimal" required />
         </label>
-        <label>
-          Separador MP
-          <select name="separador_pessoa_id" defaultValue="" required>
-            <option value="">Selecione</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Conferente MP
-          <select name="conferente_pessoa_id" defaultValue="" required>
-            <option value="">Selecione</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Formulador principal
-          <select name="formulador_1_pessoa_id" defaultValue="" required>
-            <option value="">Selecione</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Formulador 2
-          <select name="formulador_2_pessoa_id" defaultValue="">
-            <option value="">Nenhum</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Formulador 3
-          <select name="formulador_3_pessoa_id" defaultValue="">
-            <option value="">Nenhum</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Responsável pelo CQ
-          <select name="responsavel_cq_pessoa_id" defaultValue="" required>
-            <option value="">Selecione</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
-        <label>
-          Responsável pela liberação
-          <select name="responsavel_liberacao_pessoa_id" defaultValue="" required>
-            <option value="">Selecione</option>
-            {lookups.pessoas.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
-        </label>
+        <LocalEntityLookup
+          name="separador_pessoa_id"
+          label="Separador MP"
+          placeholder="Abra a lista ou pesquise a pessoa"
+          options={lookups.pessoas}
+          required
+        />
+        <LocalEntityLookup
+          name="conferente_pessoa_id"
+          label="Conferente MP"
+          placeholder="Abra a lista ou pesquise a pessoa"
+          options={lookups.pessoas}
+          required
+        />
+        <LocalEntityLookup
+          name="formulador_1_pessoa_id"
+          label="Formulador principal"
+          placeholder="Abra a lista ou pesquise a pessoa"
+          options={lookups.pessoas}
+          required
+        />
+        <LocalEntityLookup
+          name="formulador_2_pessoa_id"
+          label="Formulador 2"
+          placeholder="Opcional · abra a lista ou pesquise"
+          options={lookups.pessoas}
+        />
+        <LocalEntityLookup
+          name="formulador_3_pessoa_id"
+          label="Formulador 3"
+          placeholder="Opcional · abra a lista ou pesquise"
+          options={lookups.pessoas}
+        />
+        <LocalEntityLookup
+          name="responsavel_cq_pessoa_id"
+          label="Responsável pelo CQ"
+          placeholder="Abra a lista ou pesquise a pessoa"
+          options={lookups.pessoas}
+          required
+        />
+        <LocalEntityLookup
+          name="responsavel_liberacao_pessoa_id"
+          label="Responsável pela liberação"
+          placeholder="Abra a lista ou pesquise a pessoa"
+          options={lookups.pessoas}
+          required
+        />
         <label className="wide-field">
           Observação final
           <input name="observacao_finalizacao" placeholder="Ocorrências, desvios ou informação complementar" />

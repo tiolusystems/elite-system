@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import Link from "next/link";
 
+import { SmartSearchField } from "@/app/corporate-search/smart-lookup";
 import { criarPedidoComercialAction, decidirPedidoGerencialAction } from "@/app/pedidos/actions";
 import { OrderEntryEditor } from "@/app/pedidos/order-entry-editor";
 import { getOrderDeliveryLocations, getOrderWorkspace } from "@/lib/orders";
@@ -43,19 +44,17 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
         <section className="panel orders-portfolio">
           <div className="panel-header"><div><h2>1. Sua carteira de clientes</h2><p>Pesquise por nome, razão social, nome fantasia, documento, município, propriedade ou estabelecimento.</p></div></div>
           <form className="orders-search" method="get">
-            <label>
-              <span>Pesquisar cliente</span>
-              <input
-                name="busca"
-                defaultValue={search}
-                placeholder="Nome, documento, município, propriedade ou estabelecimento"
-                role="combobox"
-                aria-expanded="true"
-                aria-controls="orders-client-options"
-                autoComplete="off"
-              />
-            </label>
-            <button className="secondary-button" type="submit">Pesquisar</button>
+            <SmartSearchField
+              name="busca"
+              label="Pesquisar cliente"
+              defaultValue={search}
+              placeholder="Nome, documento, município, propriedade ou estabelecimento"
+              source={{ kind: "remote", entity: "clientes-carteira" }}
+              helpText="Digite ao menos 2 caracteres. Enter pesquisa; ao escolher uma sugestão, a lista é atualizada automaticamente."
+              emptyText="Nenhum cliente disponível na sua carteira para esta pesquisa."
+              minQueryLength={2}
+              submitOnSelect
+            />
           </form>
           <div className="orders-client-list" id="orders-client-options" role="listbox" aria-label="Clientes encontrados">
             {workspace.clients.length ? workspace.clients.map((client) => (

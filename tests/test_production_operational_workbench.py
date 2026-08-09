@@ -56,7 +56,9 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertIn("getPcpSupervisorDashboard", overview)
         self.assertNotIn("getPcpDashboard", overview)
         self.assertNotIn("8 etapas", overview)
-        self.assertIn("8. Executar transformações controladas", MANUAL.read_text(encoding="utf-8"))
+        manual = MANUAL.read_text(encoding="utf-8")
+        self.assertIn('title="Transformações e reprocessamentos"', manual)
+        self.assertIn("A transformação é uma OP governada, não um ajuste manual de saldo.", manual)
 
     def test_formula_and_guarantee_pages_reuse_shared_business_components(self) -> None:
         formulas_page = FORMULAS_PAGE.read_text(encoding="utf-8")
@@ -86,18 +88,21 @@ class ProductionOperationalWorkbenchTests(unittest.TestCase):
         self.assertNotIn("dashboard.recentOps.filter", page)
         self.assertIn('name="op_componente_id"', component)
         self.assertIn('name="lote_id"', component)
-        self.assertIn('value={lot.id}', component)
+        self.assertIn('id: lot.id', component)
         self.assertNotIn("<datalist", component)
 
     def test_quality_route_separates_paginated_queue_from_finalization(self) -> None:
         page = QUALITY_PAGE.read_text(encoding="utf-8")
+        search = (PRODUCTION / "qualidade" / "quality-op-search.tsx").read_text(encoding="utf-8")
         component = QUALITY_COMPONENT.read_text(encoding="utf-8")
         detail = QUALITY_DETAIL.read_text(encoding="utf-8")
         pcp = (ROOT / "apps/web/lib/pcp.ts").read_text(encoding="utf-8")
 
         self.assertIn('active="qualidade"', page)
         self.assertIn("getPcpQualityQueue", page)
-        self.assertIn('name="q"', page)
+        self.assertIn("<QualityOpSearch", page)
+        self.assertIn('name="q"', search)
+        self.assertIn('view={view}', page)
         self.assertIn('params.set("pagina", String(page))', page)
         self.assertIn('visao", "historico"', page)
         self.assertIn('href={`/producao/qualidade/${op.id}`}', page)

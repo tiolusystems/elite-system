@@ -10,6 +10,8 @@ export default async function ProductionFormulasPage({ searchParams }: { searchP
   const params = searchParams ? await searchParams : {};
   const dashboard = await getPcpDashboard();
   const startCreating = singleProductionParam(params.nova) === "1";
+  const result = singleProductionParam(params.result);
+  const initialStatus = result === "formula_created" ? "all" : "active";
 
   return (
     <ProductionShell
@@ -25,8 +27,8 @@ export default async function ProductionFormulasPage({ searchParams }: { searchP
         </>
       )}
     >
-      <ProductionFeedback result={singleProductionParam(params.result)} />
-      <FormulaWorkbench key={startCreating ? "creating" : "catalog"} dashboard={dashboard} startCreating={startCreating} />
+      <ProductionFeedback result={result} />
+      <FormulaWorkbench key={startCreating ? "creating" : `catalog-${initialStatus}`} dashboard={dashboard} startCreating={startCreating} initialStatus={initialStatus} />
     </ProductionShell>
   );
 }

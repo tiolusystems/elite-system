@@ -1,3 +1,4 @@
+import { SmartSearchField } from "@/app/corporate-search/smart-lookup";
 import { PackagingWorkbench } from "@/app/producao/envase/packaging-workbench";
 import { ProductionFeedback, ProductionShell, singleProductionParam } from "@/app/producao/production-shell";
 import { getPackagingOrdersData } from "@/lib/packaging-orders";
@@ -22,7 +23,13 @@ export default async function PackagingOrdersPage({ searchParams }: { searchPara
     >
       <ProductionFeedback result={singleProductionParam(params.result)} />
       <form className="catalog-filter" method="get">
-        <label>Buscar ordem<input name="q" defaultValue={query} placeholder="Código da Ordem de Envase" /></label>
+        <SmartSearchField
+          name="q"
+          label="Buscar ordem"
+          defaultValue={query}
+          placeholder="Código da Ordem de Envase"
+          source={{ kind: "remote", entity: "ordens-envase" }}
+        />
         <label>Situação<select name="status" defaultValue={status}>
           <option value="all">Todas</option>
           <option value="emitida">Emitida</option>

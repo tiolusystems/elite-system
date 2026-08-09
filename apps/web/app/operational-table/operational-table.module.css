@@ -113,8 +113,14 @@
   text-align: right;
 }
 
-.table td:last-child a {
+.table td:last-child {
+  white-space: nowrap;
+}
+
+.table td:last-child a,
+.table td:last-child button {
   width: 100%;
+  max-width: 100%;
   justify-content: center;
 }
 

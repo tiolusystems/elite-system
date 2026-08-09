@@ -58,7 +58,8 @@ class MasterDataHubUxContractTests(unittest.TestCase):
     def test_hub_has_empty_search_and_responsive_contracts(self) -> None:
         page = PAGE.read_text(encoding="utf-8")
         css = CSS.read_text(encoding="utf-8")
-        self.assertIn("Nenhuma area encontrada", page)
+        self.assertIn("Nenhum cadastro encontrado", page)
+        self.assertIn("Revise a busca ou limpe o filtro para ver todos os grupos.", page)
         self.assertIn("cadastros-no-results", page)
         self.assertIn("@media (max-width: 820px)", css)
         self.assertIn("@media (max-width: 420px)", css)

@@ -4,6 +4,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 LOOKUP = ROOT / "apps/web/app/corporate-search/entity-lookup.tsx"
+SMART_LOOKUP = ROOT / "apps/web/app/corporate-search/smart-lookup.tsx"
 CONTROLS = ROOT / "apps/web/app/corporate-search/search-controls.tsx"
 STYLES = ROOT / "apps/web/app/corporate-search/search-controls.module.css"
 ROUTE = ROOT / "apps/web/app/api/lookups/[entity]/route.ts"
@@ -18,6 +19,7 @@ class CanonicalLookupRomaneiosContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.lookup = LOOKUP.read_text(encoding="utf-8")
+        cls.smart_lookup = SMART_LOOKUP.read_text(encoding="utf-8")
         cls.controls = CONTROLS.read_text(encoding="utf-8")
         cls.styles = STYLES.read_text(encoding="utf-8")
         cls.route = ROUTE.read_text(encoding="utf-8")
@@ -36,10 +38,12 @@ class CanonicalLookupRomaneiosContractTests(unittest.TestCase):
         self.assertIn("export const SearchToolbar = FilterToolbar", self.controls)
 
     def test_lookup_opens_on_first_page_and_pages_on_the_server(self) -> None:
-        self.assertIn("if (!open || disabled) return", self.lookup)
-        self.assertIn('new URLSearchParams({ q: selectedId ? "" : query, pagina: String(page) })', self.lookup)
-        self.assertIn("setPage(1)", self.lookup)
-        self.assertIn("result.hasMore", self.lookup)
+        self.assertIn("if (!remoteEntity || !open || disabled) return", self.smart_lookup)
+        self.assertIn("const parameters = new URLSearchParams({", self.smart_lookup)
+        self.assertIn('q: mode === "selection" && selectedId ? "" : query', self.smart_lookup)
+        self.assertIn("pagina: String(page)", self.smart_lookup)
+        self.assertIn("setPage(1)", self.smart_lookup)
+        self.assertIn("remoteResult.hasMore", self.smart_lookup)
         self.assertIn("await supabase.auth.getUser()", self.route)
         self.assertIn('"Cache-Control": "private, no-store"', self.route)
 

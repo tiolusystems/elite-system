@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SmartSearchField } from "@/app/corporate-search/smart-lookup";
 import {
   DataTable,
   type DataTableColumn,
@@ -28,7 +29,7 @@ const orderColumns: Array<DataTableColumn<OrderRow>> = [
   {
     key: "product",
     label: "Produto",
-    width: "23%",
+    width: "21%",
     render: (op) => {
       const product = splitPrimarySecondary(op.produtoLabel);
       return <PrimarySecondaryCell primary={product.primary} secondary={product.secondary} />;
@@ -44,7 +45,7 @@ const orderColumns: Array<DataTableColumn<OrderRow>> = [
   },
   { key: "status", label: "Situação", width: "12%", render: (op) => <StatusBadge status={op.status}>{orderStatusLabel(op.status)}</StatusBadge> },
   { key: "date", label: "Aberta em", width: "11%", render: (op) => shortDate(op.createdAt) },
-  { key: "action", label: "Ação", width: "9%", render: (op) => <Link className="secondary-button compact" href={`/producao/ordens/${op.id}`}>Abrir OP</Link> }
+  { key: "action", label: "Ação", width: "11%", render: (op) => <Link className="secondary-button compact-button" href={`/producao/ordens/${op.id}`}>Abrir OP</Link> }
 ];
 
 export default async function ProductionOrdersPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
@@ -86,7 +87,13 @@ export default async function ProductionOrdersPage({ searchParams }: { searchPar
             {(["draft", "planned", "in_process", "completed", "cancelled"] as const).map((value) => <OrderStatusLink key={value} label={orderStatusLabel(value)} value={value} count={queue.statusCounts[value] ?? 0} active={status === value} />)}
           </nav>}
           filters={<FilterToolbar>
-            <label>Buscar OP<input name="q" type="search" defaultValue={query} placeholder="Código da OP, fórmula ou produto" /></label>
+            <SmartSearchField
+              name="q"
+              label="Buscar OP"
+              defaultValue={query}
+              placeholder="Código da OP, fórmula ou produto"
+              source={{ kind: "remote", entity: "ops-producao" }}
+            />
             <label>Situação<select name="status" defaultValue={status}><option value="open">Abertas</option><option value="all">Todas</option><option value="draft">Rascunho</option><option value="planned">Planejada</option><option value="in_process">Em processo</option><option value="completed">Finalizada</option><option value="cancelled">Cancelada</option></select></label>
             <label>Finalidade<select name="tipo" defaultValue={type}><option value="all">Todas</option><option value="estoque">Produção para estoque</option><option value="experimental">Experimental</option><option value="desenvolvimento">Desenvolvimento</option><option value="reprocessamento">Reprocessamento</option></select></label>
             <FilterActions clearHref="/producao/ordens#ops" />

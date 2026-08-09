@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { CommissionAdjustmentForm, CommissionPaymentForm } from "@/app/pedidos/financeiro/finance-forms";
 import { FinancePermissionState, FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
 import { EntityLookup } from "@/app/corporate-search/entity-lookup";
-import { ActiveFilterChips, FilterActions, SearchToolbar } from "@/app/corporate-search/search-controls";
+import { ActiveFilterChips, FilterActions, PaginatedResultList, SearchToolbar } from "@/app/corporate-search/search-controls";
 import { commissionMovementLabel, commissionRoleLabel, dateTime, financeDateDefaults, money, personStatusLabel } from "@/app/pedidos/financeiro/presenters";
 import { getCommissionMovements, getFinanceAccess, searchCommissionAccounts } from "@/lib/finance";
 
@@ -124,18 +124,19 @@ export default async function CommissionsPage({ searchParams }: { searchParams?:
               )) : accountsResult.error ? null : <div className="empty-state"><strong>Nenhuma conta encontrada</strong><span>Revise a busca ou altere o filtro de saldo.</span></div>}
             </div>
           </section>
-          <Pagination current={page} total={accounts[0]?.totalCount ?? 0} query={query} role={role} status={status} cutoff={cutoffDate} />
+          <PaginatedResultList
+            page={page}
+            total={accounts[0]?.totalCount ?? 0}
+            pageSize={30}
+            previousHref={page > 1 ? listHref(query, role, status, cutoffDate, page - 1) : null}
+            nextHref={page * 30 < (accounts[0]?.totalCount ?? 0) ? listHref(query, role, status, cutoffDate, page + 1) : null}
+          />
         </>
       )}
     </FinanceWorkspace>
   );
 }
 
-function Pagination({ current, total, query, role, status, cutoff }: { current: number; total: number; query: string; role: string; status: string; cutoff: string }) {
-  const pages = Math.max(Math.ceil(total / 30), 1);
-  if (pages <= 1) return null;
-  return <nav className="pagination" aria-label="Paginação"><span>{current > 1 ? <Link className="secondary-button" href={listHref(query, role, status, cutoff, current - 1)}>Anterior</Link> : null}</span><span>Página {current} de {pages}</span><span>{current < pages ? <Link className="secondary-button" href={listHref(query, role, status, cutoff, current + 1)}>Próxima</Link> : null}</span></nav>;
-}
 
 function listHref(query: string, role: string, status: string, cutoff: string, page: number) { return `/pedidos/financeiro/comissoes?q=${encodeURIComponent(query)}&papel=${encodeURIComponent(role)}&saldo=${encodeURIComponent(status)}&corte=${cutoff}&pagina=${page}`; }
 function single(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }

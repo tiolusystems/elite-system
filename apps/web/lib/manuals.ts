@@ -163,7 +163,7 @@ export const ROUTE_MANUALS: RouteManual[] = [
   }),
   manual("/qualidade/rastreabilidade", "Qualidade", "Rastreabilidade total", "Consultar a genealogia de lotes, destinos e referências externas e simular recolhimento sem movimentar estoque.", {
     before: ["Tenha ao menos um código de lote, OP, pedido, Romaneio, cliente ou referência fiscal externa.", "A consulta depende de alçada individual de Qualidade."],
-    steps: ["Informe o tipo e o código apresentado do ponto de partida.", "Escolha a direção para frente, para trás ou ambas.", "Revise cada elo da cadeia, incluindo quantidades e eventos de estorno.", "Use Simular recolhimento para listar somente destinos ativos.", "Exporte CSV quando possuir a alçada específica."],
+    steps: ["Informe o tipo e o código apresentado do ponto de partida.", "Escolha a direção para frente, para trás ou ambas.", "Revise cada elo da cadeia, incluindo quantidades e eventos de estorno.", "Use Simular recolhimento para listar somente destinos ativos.", "Use Exportar e prefira Excel (.xlsx) para trabalho operacional; CSV permanece disponível para integração técnica."],
     after: ["A consulta e a simulação não alteram lotes, pedidos ou expedições.", "A exportação registra usuário, data e filtros na auditoria."],
     blockers: ["Falta de alçada ou genealogia operacional incompleta impedem o resultado.", "Divergências devem ser investigadas; a tela não as corrige silenciosamente."],
   }),
@@ -192,11 +192,11 @@ export const ROUTE_MANUALS: RouteManual[] = [
     records: ["Recebimento, referência, alocação no pedido, comissão liberada, usuário e data são fatos auditáveis e imutáveis."],
   }),
   manual("/pedidos/financeiro/comissoes/relatorio", "Financeiro", "Relatório de comissões", "Consultar e imprimir a posição integral das comissões a pagar em uma data de corte.", {
-    before: ["Defina a data de corte e os filtros de pessoa, papel e saldo.", "A exportação CSV exige alçada própria."],
-    steps: ["Aplique os filtros.", "Confira créditos liberados, pagamentos, estornos, ajustes e saldo.", "Imprima a posição quando necessário.", "Baixe o CSV somente quando possuir a alçada de exportação."],
+    before: ["Defina a data de corte e os filtros de pessoa, papel e saldo.", "A exportação exige alçada própria."],
+    steps: ["Aplique os filtros.", "Confira créditos liberados, pagamentos, estornos, ajustes e saldo.", "Imprima a posição quando necessário.", "Use Exportar: Excel (.xlsx) é o formato principal e CSV (.csv) permanece como alternativa técnica."],
     after: ["A consulta, a impressão e a exportação não alteram a conta corrente."],
     roles: ["Consulta e exportação dependem de alçadas individuais distintas."],
-    blockers: ["Sem alçada de leitura, o relatório não abre; sem alçada de exportação, o botão de CSV não é exibido."],
+    blockers: ["Sem alçada de leitura, o relatório não abre; sem alçada de exportação, as opções de arquivo não são exibidas."],
     records: ["A posição é derivada do histórico financeiro até a data de corte, sem editar movimentos anteriores."],
   }),
   manual("/pedidos/financeiro/comissoes", "Financeiro", "Conta corrente de comissões", "Consultar créditos liberados, pagamentos, estornos, compensações e ajustes por pessoa.", {

@@ -19,6 +19,7 @@ class FinanceOpsGate01BContractTests(unittest.TestCase):
             "recebimentos/page.tsx",
             "comissoes/page.tsx",
             "comissoes/relatorio/page.tsx",
+            "comissoes/relatorio/export/route.ts",
             "comissoes/relatorio/csv/route.ts",
         ):
             self.assertTrue((FINANCE / relative).is_file(), relative)
@@ -87,17 +88,22 @@ class FinanceOpsGate01BContractTests(unittest.TestCase):
         self.assertIn("NF-REM-FIN-0118", smoke)
         self.assertIn("jsonb_array_length(referencias_fiscais) = 2", smoke)
         report = (FINANCE / "comissoes/relatorio/page.tsx").read_text(encoding="utf-8")
-        csv = (FINANCE / "comissoes/relatorio/csv/route.ts").read_text(encoding="utf-8")
+        export = (FINANCE / "comissoes/relatorio/export/route.ts").read_text(encoding="utf-8")
+        csv_compat = (FINANCE / "comissoes/relatorio/csv/route.ts").read_text(encoding="utf-8")
         for label in ("Previsto", "Liberado", "Pagamentos", "Estornos", "Ajustes", "Total a pagar"):
             self.assertIn(label, report)
-        self.assertIn("access.commissionsView && access.commissionsExport", csv)
+        self.assertIn("access.commissionsView && access.commissionsExport", export)
+        self.assertIn('url.pathname.replace(/\\/csv$/, "/export")', csv_compat)
+        self.assertIn('url.searchParams.set("formato", "csv")', csv_compat)
         assignment_page = (FINANCE / "comissionamento/page.tsx").read_text(encoding="utf-8")
         assignment_form = (FINANCE / "finance-forms.tsx").read_text(encoding="utf-8")
         self.assertIn('entity="pessoas"', assignment_form)
         self.assertIn('entity="pedidos"', assignment_page)
         self.assertNotIn("getCommissionPeople(personQuery)", assignment_page)
         for metadata in ("Ambiente", "Emitido por", "Gerado em", "Versão"):
-            self.assertIn(metadata, csv)
+            self.assertIn(metadata, export)
+        self.assertIn('"xlsx"', export)
+        self.assertIn("XLSX_MIME_TYPE", export)
         self.assertIn("assignment.created_at::date <= p_data_corte", migration)
 
     def test_manuals_are_specific_to_each_finance_route(self):

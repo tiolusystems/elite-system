@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { EntityLookup } from "@/app/corporate-search/entity-lookup";
+import { ExportMenu } from "@/app/workspace-components";
 import { ActiveFilterChips, FilterActions, SearchField, SearchToolbar } from "@/app/corporate-search/search-controls";
 import { getRecall, getTraceability, hasTraceFilter, type TraceFilters } from "@/lib/traceability";
 
@@ -23,7 +24,26 @@ export default async function TraceabilityPage({ searchParams }: { searchParams?
     <section className="workspace technical-workspace traceability-workspace">
       <div className="toolbar technical-toolbar">
         <div><span className="eyebrow">Qualidade e autocontrole</span><h1>Rastreabilidade total</h1><p className="muted">Genealogia derivada dos consumos, produções, envases e expedições realmente registrados.</p></div>
-        <div className="toolbar-actions"><Link className="secondary-button" href="/producao/qualidade">CQ e finalização</Link>{trace.edges.length ? <a className="primary-button" href={`/qualidade/rastreabilidade/export?${exportQuery.toString()}`}>Exportar CSV</a> : null}</div>
+        <div className="toolbar-actions">
+          <Link className="secondary-button" href="/producao/qualidade">CQ e finalização</Link>
+          {trace.edges.length ? (
+            <ExportMenu
+              items={[
+                {
+                  label: "Excel (.xlsx)",
+                  href: `/qualidade/rastreabilidade/export?${exportQuery.toString()}&formato=xlsx`,
+                  description: "Planilha estruturada da cadeia rastreada.",
+                  primary: true,
+                },
+                {
+                  label: "CSV (.csv)",
+                  href: `/qualidade/rastreabilidade/export?${exportQuery.toString()}&formato=csv`,
+                  description: "Formato simples para integração e tratamento técnico.",
+                },
+              ]}
+            />
+          ) : null}
+        </div>
       </div>
 
       <section className="panel form-panel trace-filter-form">

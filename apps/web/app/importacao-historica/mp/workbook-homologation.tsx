@@ -2,6 +2,13 @@
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 
+import { ClientExportMenu, type ClientExportFormat } from "@/app/client-export-menu";
+import {
+  XLSX_MIME_TYPE,
+  buildXlsxBytes,
+  downloadBytes,
+  type XlsxRow,
+} from "@/lib/tabular-export";
 import {
   EXPECTED_HISTORICAL_WORKBOOK_TABLES,
   WORKBOOK_HOMOLOGATION_DECISION_LABELS,
@@ -183,13 +190,76 @@ export function WorkbookHomologationWorkspace({ analysis }: { analysis: Historic
     });
   }
 
-  function exportCsv() {
-    downloadBlob(
-      workbookHomologationCsv(rows),
-      `homologacao-workbook-${analysis.file.sha256.slice(0, 12)}.csv`,
-      "text/csv;charset=utf-8"
-    );
-    setMessage({ tone: "success", text: `Matriz CSV exportada com ${rows.length} tabelas.` });
+  async function exportMatrix(format: ClientExportFormat) {
+    const filenameBase = `homologacao-workbook-${analysis.file.sha256.slice(0, 12)}`;
+    if (format === "csv") {
+      downloadBlob(
+        workbookHomologationCsv(rows),
+        `${filenameBase}.csv`,
+        "text/csv;charset=utf-8"
+      );
+      setMessage({ tone: "success", text: `Matriz CSV exportada com ${rows.length} tabelas.` });
+      return;
+    }
+
+    const xlsxRows: XlsxRow[] = rows.map((row) => ({
+      source_table_id: row.sourceTableId,
+      schema_fingerprint: row.schemaFingerprint,
+      ordem_aba: row.sheetOrder,
+      aba: row.sheetName,
+      tabela: row.tableName,
+      intervalo: row.range,
+      quantidade_linhas: row.rowCount,
+      linhas_preenchidas: row.populatedRowCount,
+      quantidade_colunas: row.columnCount,
+      principais_colunas: row.mainColumns.join(" | "),
+      classificacao_tecnica: row.technicalClassification ?? "sem_classificacao_tecnica",
+      dominio_previsto: row.ownerDomain ?? "sem_dominio",
+      destino_previsto: row.targetEntity ?? "sem_destino",
+      presenca_formulas: row.formulaCellCount > 0,
+      quantidade_formulas: row.formulaCellCount,
+      indicio_relatorio: row.reportIndicator,
+      indicio_calculo_derivado: row.derivedCalculationIndicator,
+      risco_duplicidade: row.duplicateRisk,
+      justificativa_tecnica: row.technicalJustification,
+      decisao_final: row.decision ?? "sem_decisao",
+      observacao: row.observation,
+    }));
+    const bytes = await buildXlsxBytes({
+      title: "Matriz de homologação do workbook histórico",
+      sheetName: "Homologação",
+      metadata: [
+        { label: "Arquivo", value: analysis.file.name },
+        { label: "SHA256", value: analysis.file.sha256 },
+        { label: "Tabelas", value: rows.length },
+      ],
+      columns: [
+        { key: "source_table_id", header: "ID da tabela fonte", width: 38 },
+        { key: "schema_fingerprint", header: "Fingerprint do esquema", width: 38 },
+        { key: "ordem_aba", header: "Ordem da aba", width: 12, format: "integer" },
+        { key: "aba", header: "Aba", width: 28 },
+        { key: "tabela", header: "Tabela", width: 28 },
+        { key: "intervalo", header: "Intervalo", width: 16 },
+        { key: "quantidade_linhas", header: "Quantidade de linhas", width: 18, format: "integer" },
+        { key: "linhas_preenchidas", header: "Linhas preenchidas", width: 18, format: "integer" },
+        { key: "quantidade_colunas", header: "Quantidade de colunas", width: 18, format: "integer" },
+        { key: "principais_colunas", header: "Principais colunas", width: 42 },
+        { key: "classificacao_tecnica", header: "Classificação técnica sugerida", width: 30 },
+        { key: "dominio_previsto", header: "Domínio previsto", width: 22 },
+        { key: "destino_previsto", header: "Destino previsto", width: 32 },
+        { key: "presenca_formulas", header: "Possui fórmulas", width: 16, format: "boolean" },
+        { key: "quantidade_formulas", header: "Quantidade de fórmulas", width: 18, format: "integer" },
+        { key: "indicio_relatorio", header: "Indício de relatório", width: 18, format: "boolean" },
+        { key: "indicio_calculo_derivado", header: "Indício de cálculo derivado", width: 22, format: "boolean" },
+        { key: "risco_duplicidade", header: "Risco de duplicidade", width: 20 },
+        { key: "justificativa_tecnica", header: "Justificativa técnica", width: 48 },
+        { key: "decisao_final", header: "Decisão final", width: 26 },
+        { key: "observacao", header: "Observação", width: 42 },
+      ],
+      rows: xlsxRows,
+    });
+    downloadBytes(bytes, `${filenameBase}.xlsx`, XLSX_MIME_TYPE);
+    setMessage({ tone: "success", text: `Matriz Excel exportada com ${rows.length} tabelas.` });
   }
 
   function exportJson(status: WorkbookHomologationStatus) {
@@ -276,7 +346,7 @@ export function WorkbookHomologationWorkspace({ analysis }: { analysis: Historic
       </div>
 
       <div className="homologation-actions" aria-label="Exportação e revisão">
-        <button className="secondary-button" type="button" onClick={exportCsv}>Exportar matriz CSV</button>
+        <ClientExportMenu label="Exportar matriz" onExport={exportMatrix} />
         <button className="secondary-button" type="button" onClick={() => exportJson("draft")}>Exportar revisão JSON</button>
         <label className="secondary-button homologation-import-button">
           Importar revisão JSON

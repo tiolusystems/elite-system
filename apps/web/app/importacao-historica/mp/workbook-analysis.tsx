@@ -2,6 +2,13 @@
 
 import { FormEvent, SyntheticEvent, useMemo, useRef, useState } from "react";
 
+import { ClientExportMenu, type ClientExportFormat } from "@/app/client-export-menu";
+import {
+  XLSX_MIME_TYPE,
+  buildXlsxBytes,
+  downloadBytes,
+  type XlsxRow,
+} from "@/lib/tabular-export";
 import type {
   HistoricalWorkbookAnalysis,
   WorkbookMappingStatus,
@@ -114,9 +121,7 @@ export function WorkbookAnalysisWorkspace() {
           <p className="muted">Inventário estrutural do Tio Lu System antes de qualquer carga de dados.</p>
         </div>
         {analysis ? (
-          <button className="secondary-button" type="button" onClick={() => downloadCsvReport(analysis)}>
-            Baixar relatório CSV
-          </button>
+          <ClientExportMenu onExport={(format) => exportAnalysisReport(analysis, format)} />
         ) : null}
       </div>
 
@@ -363,17 +368,73 @@ function referenceMatches(mapping: WorkbookReference, filters: Filters, query: s
     .some((value) => value.toLocaleLowerCase("pt-BR").includes(query));
 }
 
-function downloadCsvReport(analysis: HistoricalWorkbookAnalysis) {
-  const headers = ["ordem_aba", "tipo_origem", "aba", "tabela", "intervalo", "source_table_id", "vinculo_fonte", "classificacao_fonte", "posicao", "coluna_excel", "codigo", "status", "dominio", "destino", "regra", "alerta"];
-  const rows = analysis.reportRows.map((row) => [row.sheetOrder, row.sourceKind, row.sheet, row.table, row.ref, row.sourceTableId, row.sourceBindingKind, row.sourceClassification ?? "worksheet_metadata", row.columnPosition ?? "", row.excelColumn, row.sourceCode, row.status, row.domain, row.target, row.rule, row.warning ?? ""]);
-  const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(csvCell).join(";")).join("\r\n")}`;
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `analise-workbook-${analysis.file.sha256.slice(0, 12)}.csv`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+async function exportAnalysisReport(
+  analysis: HistoricalWorkbookAnalysis,
+  format: ClientExportFormat
+) {
+  const filenameBase = `analise-workbook-${analysis.file.sha256.slice(0, 12)}`;
+  if (format === "csv") {
+    const headers = ["ordem_aba", "tipo_origem", "aba", "tabela", "intervalo", "source_table_id", "vinculo_fonte", "classificacao_fonte", "posicao", "coluna_excel", "codigo", "status", "dominio", "destino", "regra", "alerta"];
+    const rows = analysis.reportRows.map((row) => [row.sheetOrder, row.sourceKind, row.sheet, row.table, row.ref, row.sourceTableId, row.sourceBindingKind, row.sourceClassification ?? "worksheet_metadata", row.columnPosition ?? "", row.excelColumn, row.sourceCode, row.status, row.domain, row.target, row.rule, row.warning ?? ""]);
+    const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(csvCell).join(";")).join("\r\n")}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${filenameBase}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const rows: XlsxRow[] = analysis.reportRows.map((row) => ({
+    ordem_aba: row.sheetOrder,
+    tipo_origem: row.sourceKind,
+    aba: row.sheet,
+    tabela: row.table,
+    intervalo: row.ref,
+    source_table_id: row.sourceTableId,
+    vinculo_fonte: row.sourceBindingKind,
+    classificacao_fonte: row.sourceClassification ?? "worksheet_metadata",
+    posicao: row.columnPosition ?? null,
+    coluna_excel: row.excelColumn,
+    codigo: row.sourceCode,
+    status: row.status,
+    dominio: row.domain,
+    destino: row.target,
+    regra: row.rule,
+    alerta: row.warning ?? "",
+  }));
+  const bytes = await buildXlsxBytes({
+    title: "Análise do workbook histórico",
+    sheetName: "Análise",
+    metadata: [
+      { label: "Arquivo", value: analysis.file.name },
+      { label: "SHA256", value: analysis.file.sha256 },
+      { label: "Abas", value: analysis.summary.sheetCount },
+      { label: "Tabelas", value: analysis.summary.tableCount },
+    ],
+    columns: [
+      { key: "ordem_aba", header: "Ordem da aba", width: 12, format: "integer" },
+      { key: "tipo_origem", header: "Tipo de origem", width: 24 },
+      { key: "aba", header: "Aba", width: 28 },
+      { key: "tabela", header: "Tabela", width: 28 },
+      { key: "intervalo", header: "Intervalo", width: 16 },
+      { key: "source_table_id", header: "ID da tabela fonte", width: 38 },
+      { key: "vinculo_fonte", header: "Vínculo da fonte", width: 24 },
+      { key: "classificacao_fonte", header: "Classificação da fonte", width: 28 },
+      { key: "posicao", header: "Posição", width: 10, format: "integer" },
+      { key: "coluna_excel", header: "Coluna no Excel", width: 28 },
+      { key: "codigo", header: "Código", width: 24 },
+      { key: "status", header: "Status", width: 20 },
+      { key: "dominio", header: "Domínio", width: 20 },
+      { key: "destino", header: "Destino", width: 34 },
+      { key: "regra", header: "Regra", width: 46 },
+      { key: "alerta", header: "Alerta", width: 46 },
+    ],
+    rows,
+  });
+  downloadBytes(bytes, `${filenameBase}.xlsx`, XLSX_MIME_TYPE);
 }
 
 function csvCell(value: string | number): string {

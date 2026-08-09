@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { CommissionAssignmentForm } from "@/app/pedidos/financeiro/finance-forms";
 import { FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
 import { EntityLookup } from "@/app/corporate-search/entity-lookup";
-import { FilterActions, SearchToolbar } from "@/app/corporate-search/search-controls";
+import { FilterActions, PaginatedResultList, SearchToolbar } from "@/app/corporate-search/search-controls";
 import { commissionRoleLabel, money, orderStatusLabel } from "@/app/pedidos/financeiro/presenters";
 import { getFinanceAccess, searchCommissionOrders } from "@/lib/finance";
 
@@ -76,18 +76,19 @@ export default async function CommissionAssignmentPage({ searchParams }: { searc
               )) : ordersResult.error ? null : <div className="empty-state"><strong>Nenhum pedido elegível</strong><span>Revise a busca ou confirme se o pedido já recebeu algum valor.</span></div>}
             </div>
           </section>
-          <Pagination current={page} total={orders[0]?.totalCount ?? 0} query={query} />
+          <PaginatedResultList
+            page={page}
+            total={orders[0]?.totalCount ?? 0}
+            pageSize={20}
+            previousHref={page > 1 ? listHref(query, page - 1) : null}
+            nextHref={page * 20 < (orders[0]?.totalCount ?? 0) ? listHref(query, page + 1) : null}
+          />
         </>
       )}
     </FinanceWorkspace>
   );
 }
 
-function Pagination({ current, total, query }: { current: number; total: number; query: string }) {
-  const pages = Math.max(Math.ceil(total / 20), 1);
-  if (pages <= 1) return null;
-  return <nav className="pagination" aria-label="Paginação"><span>{current > 1 ? <Link className="secondary-button" href={listHref(query, current - 1)}>Anterior</Link> : null}</span><span>Página {current} de {pages}</span><span>{current < pages ? <Link className="secondary-button" href={listHref(query, current + 1)}>Próxima</Link> : null}</span></nav>;
-}
 
 function listHref(query: string, page: number) {
   return `/pedidos/financeiro/comissionamento?q=${encodeURIComponent(query)}&pagina=${page}`;

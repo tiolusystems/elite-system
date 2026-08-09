@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { FilterActions, FilterToolbar } from "@/app/corporate-search/search-controls";
 import { FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
 import { date, financeDateDefaults, money, receiptMethodLabel } from "@/app/pedidos/financeiro/presenters";
+import { WorkflowGuide } from "@/app/workspace-components";
 import { getFinanceAccess, getFinanceOverview } from "@/lib/finance";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -31,14 +33,35 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
       title="Visão financeira"
       description="Posição atual e movimentos do período calculados sobre toda a base autorizada."
     >
-      <form className="panel finance-filter-bar" method="get" aria-label="Filtros da visão financeira">
-        <label>Data inicial<input name="inicio" type="date" defaultValue={filters.startDate} /></label>
-        <label>Data final<input name="fim" type="date" defaultValue={filters.endDate} /></label>
-        <label>Posição em<input name="corte" type="date" defaultValue={filters.cutoffDate} /></label>
-        <button className="secondary-button">Atualizar visão</button>
-      </form>
+      <FilterToolbar className="panel" action="/pedidos/financeiro">
+        <label><span>Data inicial</span><input name="inicio" type="date" defaultValue={filters.startDate} /></label>
+        <label><span>Data final</span><input name="fim" type="date" defaultValue={filters.endDate} /></label>
+        <label><span>Posição em</span><input name="corte" type="date" defaultValue={filters.cutoffDate} /></label>
+        <FilterActions clearHref="/pedidos/financeiro" submitLabel="Atualizar visão" />
+      </FilterToolbar>
 
       {overview.error ? <section className="notice-panel warning" role="status"><strong>Consulta indisponível</strong><span>{overview.error}</span></section> : null}
+
+      <WorkflowGuide
+        ariaLabel="Fluxo financeiro da venda"
+        steps={[
+          {
+            title: "Definir comissionamento",
+            description: "Depois da liberação do pedido e antes do primeiro recebimento.",
+            href: access.commissionAssign ? "/pedidos/financeiro/comissionamento" : undefined,
+          },
+          {
+            title: "Registrar recebimento",
+            description: "Confirme o valor recebido e sua referência documental. A comissão é liberada proporcionalmente.",
+            href: access.receiptsView || access.receiptsRegister ? "/pedidos/financeiro/recebimentos" : undefined,
+          },
+          {
+            title: "Pagar comissões",
+            description: "Consulte o saldo liberado da pessoa antes de registrar o pagamento.",
+            href: access.commissionsView || access.commissionsPay || access.commissionsAdjust ? "/pedidos/financeiro/comissoes" : undefined,
+          },
+        ]}
+      />
 
       <section className="kpi-grid finance-kpis" aria-label="Resumo financeiro integral">
         <Kpi

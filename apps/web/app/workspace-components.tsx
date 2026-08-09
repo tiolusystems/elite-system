@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 type PageWorkspaceProps = {
@@ -10,6 +11,28 @@ type PageHeaderProps = {
   title: string;
   description: string;
   actions?: ReactNode;
+};
+
+export type DomainNavigationItem = {
+  key: string;
+  href: string;
+  label: string;
+};
+
+type DomainNavigationProps = {
+  items: DomainNavigationItem[];
+  active: string;
+  label: string;
+  ariaLabel: string;
+};
+
+type DomainShellProps = PageHeaderProps & {
+  children: ReactNode;
+  items: DomainNavigationItem[];
+  active: string;
+  navigationLabel: string;
+  navigationAriaLabel: string;
+  className?: string;
 };
 
 export function PageWorkspace({ children, className = "" }: PageWorkspaceProps) {
@@ -26,6 +49,64 @@ export function PageHeader({ eyebrow, title, description, actions }: PageHeaderP
       </div>
       {actions ? <div className="page-actions">{actions}</div> : null}
     </header>
+  );
+}
+
+export function DomainNavigation({ items, active, label, ariaLabel }: DomainNavigationProps) {
+  const activeLabel = items.find((item) => item.key === active)?.label ?? label;
+
+  return (
+    <>
+      <nav className="domain-navigation domain-navigation-desktop" aria-label={ariaLabel}>
+        {items.map((item) => (
+          <Link key={item.key} href={item.href} aria-current={active === item.key ? "page" : undefined}>
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <details className="domain-navigation-mobile">
+        <summary>
+          <span>{label}</span>
+          <strong>{activeLabel}</strong>
+        </summary>
+        <nav className="domain-navigation" aria-label={ariaLabel}>
+          {items.map((item) => (
+            <Link key={item.key} href={item.href} aria-current={active === item.key ? "page" : undefined}>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </details>
+    </>
+  );
+}
+
+export function DomainShell({
+  children,
+  items,
+  active,
+  navigationLabel,
+  navigationAriaLabel,
+  eyebrow,
+  title,
+  description,
+  actions,
+  className = "",
+}: DomainShellProps) {
+  return (
+    <main className="app-shell">
+      <PageWorkspace className={`domain-workspace ${className}`.trim()}>
+        <DomainNavigation
+          items={items}
+          active={active}
+          label={navigationLabel}
+          ariaLabel={navigationAriaLabel}
+        />
+        <PageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} />
+        {children}
+      </PageWorkspace>
+    </main>
   );
 }
 

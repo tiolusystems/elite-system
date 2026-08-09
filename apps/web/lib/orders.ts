@@ -81,6 +81,353 @@ export type OrdersDashboard = {
   error: string | null;
 };
 
+export type PortfolioClient = {
+  linkId: number;
+  clientId: number;
+  sellerId: number;
+  clientName: string;
+  legalName: string | null;
+  tradeName: string | null;
+  document: string | null;
+  city: string | null;
+  state: string | null;
+  status: string;
+  sellerName: string;
+  availableLimit: number | null;
+  creditStatus: string;
+};
+
+export type ScopedOrder = {
+  id: number;
+  code: string;
+  clientId: number;
+  clientName: string;
+  propertyName: string | null;
+  sellerId: number | null;
+  sellerName: string | null;
+  status: string;
+  type: string;
+  orderDate: string;
+  total: number;
+};
+
+export type ApprovalOrder = {
+  id: number;
+  code: string;
+  clientId: number;
+  clientName: string;
+  sellerId: number;
+  sellerName: string;
+  orderDate: string;
+  total: number;
+  availableLimit: number | null;
+  creditStatus: string;
+};
+
+export type SalesItem = {
+  id: number;
+  productId: number;
+  productCode: string;
+  productName: string;
+  presentationCode: string;
+  packaging: string;
+  volumeLiters: number | null;
+  unit: string | null;
+  label: string;
+};
+
+export type DeliveryLocation = {
+  key: string;
+  type: string;
+  propertyId: number | null;
+  establishmentId: number | null;
+  addressId: number | null;
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+};
+
+export type ExchangeSourceItem = {
+  id: number;
+  orderId: number;
+  orderCode: string;
+  clientId: number;
+  productPackagingId: number;
+  label: string;
+  quantity: number;
+};
+
+export type OrderContractItem = {
+  id: number;
+  product: string;
+  packaging: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  volumeLiters: number | null;
+  logisticVolumes: number | null;
+  grossWeightKg: number | null;
+};
+
+export type OrderContract = {
+  id: number;
+  code: string;
+  status: string;
+  type: string;
+  orderDate: string;
+  deliveryDate: string | null;
+  paymentTerms: string | null;
+  observation: string | null;
+  total: number;
+  totalVolumeLiters: number | null;
+  totalLogisticVolumes: number | null;
+  totalGrossWeightKg: number | null;
+  client: {
+    name: string;
+    city: string;
+    state: string;
+    propertyName: string | null;
+    propertyCity: string | null;
+    propertyState: string | null;
+    documents: Array<{ type: string; number: string }>;
+    contacts: Array<{ name: string; role: string; phone: string | null; email: string | null }>;
+  };
+  sellerName: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  items: OrderContractItem[];
+};
+
+export async function getOrderWorkspace(search: string | null, page = 0) {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured) {
+    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], commercialPersonId: null as number | null, error: "Banco de homologação indisponível." };
+  }
+  try {
+    const supabase = await createSupabaseServerClient();
+    const normalizedSearch = search?.trim() ?? "";
+    const [clients, orders, approvals, items, commercialPerson] = await Promise.all([
+      supabase.rpc("consultar_com_carteira_clientes_paginada", {
+        p_busca: normalizedSearch || null,
+        p_limite: 20,
+        p_offset: Math.max(0, page) * 20
+      }),
+      supabase.rpc("consultar_com_pedidos_escopo", { p_limite: 120 }),
+      supabase.rpc("consultar_com_pedidos_aprovacao"),
+      supabase.from("cad_produto_embalagens")
+        .select("id,produto_id,codigo_item,status,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)")
+        .eq("status", "active").order("codigo_item").limit(250),
+      supabase.rpc("current_commercial_person_id")
+    ]);
+    const scopedOrders = (orders.data ?? []) as Array<Record<string, unknown>>;
+    const orderIds = scopedOrders.map((row) => Number(row.pedido_id)).filter((id) => Number.isInteger(id) && id > 0);
+    const exchangeSource = orderIds.length
+      ? await supabase
+          .from("com_pedido_itens")
+          .select("id,pedido_id,produto_embalagem_id,quantidade,status,cad_produto_embalagens(codigo_item,cad_produtos_base(nome),cad_embalagens(descricao))")
+          .in("pedido_id", orderIds)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(300)
+      : { data: [], error: null };
+    const orderById = new Map(scopedOrders.map((row) => [Number(row.pedido_id), row]));
+    const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? items.error?.message ?? commercialPerson.error?.message ?? exchangeSource.error?.message ?? null;
+    return {
+      clients: ((clients.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        linkId: Number(row.vinculo_id), clientId: Number(row.cliente_id), sellerId: Number(row.vendedor_id), clientName: String(row.cliente_nome),
+        legalName: nullableString(row.razao_social), tradeName: nullableString(row.nome_fantasia),
+        document: nullableString(row.documento_principal), city: nullableString(row.municipio),
+        state: nullableString(row.uf), status: String(row.situacao),
+        sellerName: String(row.vendedor_nome), availableLimit: nullableNumber(row.limite_disponivel), creditStatus: String(row.status_credito)
+      })),
+      orders: scopedOrders.map((row) => ({
+        id: Number(row.pedido_id), code: String(row.codigo_pedido), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
+        propertyName: row.propriedade_nome ? String(row.propriedade_nome) : null, sellerId: nullableNumber(row.vendedor_id),
+        sellerName: row.vendedor_nome ? String(row.vendedor_nome) : null, status: String(row.status), type: String(row.tipo_pedido),
+        orderDate: String(row.data_pedido), total: Number(row.valor_total ?? 0)
+      })),
+      approvals: ((approvals.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        id: Number(row.pedido_id), code: String(row.codigo_pedido), clientId: Number(row.cliente_id), clientName: String(row.cliente_nome),
+        sellerId: Number(row.vendedor_id), sellerName: String(row.vendedor_nome), orderDate: String(row.data_pedido),
+        total: Number(row.valor_total ?? 0), availableLimit: nullableNumber(row.limite_disponivel), creditStatus: String(row.status_credito)
+      })),
+      items: ((items.data ?? []) as Array<Record<string, unknown>>).map((row) => {
+        const product = firstNested(row.cad_produtos_base); const pack = firstNested(row.cad_embalagens);
+        const productCode = String(product?.codigo_produto ?? "Sem código");
+        const productName = String(product?.nome ?? "Produto");
+        const presentationCode = String(row.codigo_item);
+        const packaging = String(pack?.descricao ?? "Embalagem");
+        return {
+          id: Number(row.id),
+          productId: Number(row.produto_id),
+          productCode,
+          productName,
+          presentationCode,
+          packaging,
+          volumeLiters: nullableNumber(pack?.volume_litros),
+          unit: nullableString(pack?.unidade),
+          label: `${presentationCode} - ${productName} - ${packaging}`
+        };
+      }),
+      exchangeItems: ((exchangeSource.data ?? []) as Array<Record<string, unknown>>).map((row) => {
+        const order = orderById.get(Number(row.pedido_id));
+        const presentation = firstNested(row.cad_produto_embalagens);
+        const product = firstNested(presentation?.cad_produtos_base);
+        const pack = firstNested(presentation?.cad_embalagens);
+        return {
+          id: Number(row.id),
+          orderId: Number(row.pedido_id),
+          orderCode: String(order?.codigo_pedido ?? `Pedido ${row.pedido_id}`),
+          clientId: Number(order?.cliente_id ?? 0),
+          productPackagingId: Number(row.produto_embalagem_id),
+          label: `${presentation?.codigo_item ?? "Item"} - ${product?.nome ?? "Produto"} - ${pack?.descricao ?? "Apresentação"}`,
+          quantity: Number(row.quantidade ?? 0)
+        };
+      }),
+      commercialPersonId: nullableNumber(commercialPerson.data),
+      error
+    };
+  } catch {
+    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], commercialPersonId: null as number | null, error: "Não foi possível carregar Pedidos agora." };
+  }
+}
+
+export async function getOrderDeliveryLocations(clientId: number): Promise<DeliveryLocation[]> {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured || !Number.isInteger(clientId) || clientId <= 0) return [];
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("consultar_com_locais_entrega_cliente", {
+      p_cliente_id: clientId
+    });
+    if (error) return [];
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      key: String(row.local_key),
+      type: String(row.tipo_local),
+      propertyId: nullableNumber(row.propriedade_id),
+      establishmentId: nullableNumber(row.estabelecimento_id),
+      addressId: nullableNumber(row.endereco_id),
+      name: String(row.nome),
+      address: nullableString(row.endereco_resumo),
+      city: nullableString(row.municipio),
+      state: nullableString(row.uf)
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getOrderContract(orderId: number): Promise<OrderContract | null> {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured || !Number.isInteger(orderId) || orderId <= 0) return null;
+
+  const supabase = await createSupabaseServerClient();
+  const orderResult = await supabase
+    .from("com_pedidos")
+    .select("id,codigo_pedido,cliente_id,propriedade_id,vendedor_gerador_id,tipo_pedido,status,data_pedido,previsao_entrega,condicao_pagamento,valor_total,observacao")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (orderResult.error || !orderResult.data || !["open", "fulfilled"].includes(String(orderResult.data.status))) return null;
+
+  const order = orderResult.data as Record<string, unknown>;
+  const clientId = Number(order.cliente_id);
+  const propertyId = nullableNumber(order.propriedade_id);
+  const sellerId = nullableNumber(order.vendedor_gerador_id);
+  const [clientResult, propertyResult, documentsResult, contactsResult, sellerResult, itemsResult, approvalResult] = await Promise.all([
+    supabase.from("cad_clientes").select("id,nome,cidade,uf").eq("id", clientId).maybeSingle(),
+    propertyId
+      ? supabase.from("cad_cliente_propriedades").select("id,nome,cidade,uf").eq("id", propertyId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from("cad_cliente_documentos").select("tipo,numero").eq("cliente_id", clientId).order("id"),
+    supabase.from("cad_cliente_contatos").select("nome,papel,telefone,email").eq("cliente_id", clientId).eq("status", "active").order("id"),
+    sellerId
+      ? supabase.from("cad_pessoas_comerciais").select("nome").eq("id", sellerId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from("com_pedido_itens")
+      .select("id,quantidade,valor_unitario,valor_total,status,cad_produto_embalagens(codigo_item,embalagem_id,unidades_por_volume_logistico,cad_produtos_base(nome,densidade_kg_l),cad_embalagens(descricao,volume_litros,unidade))")
+      .eq("pedido_id", orderId).eq("status", "active").order("id"),
+    supabase.from("com_pedido_credito_decisoes")
+      .select("created_at,created_by").eq("pedido_id", orderId).eq("decisao", "liberado").order("created_at", { ascending: false }).limit(1).maybeSingle()
+  ]);
+  if (clientResult.error || !clientResult.data || itemsResult.error) return null;
+
+  const itemRows = (itemsResult.data ?? []) as Array<Record<string, unknown>>;
+  const packagingIds = [...new Set(itemRows.map((row) => nullableNumber(firstNested(row.cad_produto_embalagens)?.embalagem_id)).filter((id): id is number => id !== null))];
+  const packagingConfigResult = packagingIds.length
+    ? await supabase.from("cad_embalagem_configuracoes_atuais").select("embalagem_id,peso_tara_kg").in("embalagem_id", packagingIds)
+    : { data: [], error: null };
+  const tareByPackagingId = new Map(
+    ((packagingConfigResult.data ?? []) as Array<Record<string, unknown>>).map((row) => [Number(row.embalagem_id), nullableNumber(row.peso_tara_kg)])
+  );
+  const contractItems: OrderContractItem[] = itemRows.map((row) => {
+    const presentation = firstNested(row.cad_produto_embalagens);
+    const product = firstNested(presentation?.cad_produtos_base);
+    const packaging = firstNested(presentation?.cad_embalagens);
+    const quantity = Number(row.quantidade ?? 0);
+    const unitVolume = nullableNumber(packaging?.volume_litros);
+    const unitsPerVolume = nullableNumber(presentation?.unidades_por_volume_logistico);
+    const density = nullableNumber(product?.densidade_kg_l);
+    const tare = tareByPackagingId.get(Number(presentation?.embalagem_id)) ?? null;
+    const volumeLiters = unitVolume === null ? null : quantity * unitVolume;
+    const logisticVolumes = unitsPerVolume === null ? null : Math.ceil(quantity / unitsPerVolume);
+    const grossWeightKg = volumeLiters === null || logisticVolumes === null || density === null || tare === null
+      ? null
+      : volumeLiters * density + logisticVolumes * tare;
+    return {
+      id: Number(row.id),
+      product: String(product?.nome ?? presentation?.codigo_item ?? "Produto"),
+      packaging: packagingLabel(packaging),
+      quantity,
+      unitPrice: Number(row.valor_unitario ?? 0),
+      total: Number(row.valor_total ?? 0),
+      volumeLiters,
+      logisticVolumes,
+      grossWeightKg
+    };
+  });
+
+  const approvalActorId = approvalResult.data?.created_by ? String(approvalResult.data.created_by) : null;
+  const approvalActor = approvalActorId
+    ? await supabase.from("user_profiles").select("display_name").eq("id", approvalActorId).maybeSingle()
+    : { data: null };
+
+  return {
+    id: Number(order.id),
+    code: String(order.codigo_pedido),
+    status: String(order.status),
+    type: String(order.tipo_pedido),
+    orderDate: String(order.data_pedido),
+    deliveryDate: nullableString(order.previsao_entrega),
+    paymentTerms: nullableString(order.condicao_pagamento),
+    observation: nullableString(order.observacao),
+    total: Number(order.valor_total ?? 0),
+    totalVolumeLiters: sumComplete(contractItems.map((item) => item.volumeLiters)),
+    totalLogisticVolumes: sumComplete(contractItems.map((item) => item.logisticVolumes)),
+    totalGrossWeightKg: sumComplete(contractItems.map((item) => item.grossWeightKg)),
+    client: {
+      name: String(clientResult.data.nome),
+      city: String(clientResult.data.cidade),
+      state: String(clientResult.data.uf),
+      propertyName: propertyResult.data?.nome ? String(propertyResult.data.nome) : null,
+      propertyCity: propertyResult.data?.cidade ? String(propertyResult.data.cidade) : null,
+      propertyState: propertyResult.data?.uf ? String(propertyResult.data.uf) : null,
+      documents: ((documentsResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({ type: String(row.tipo), number: String(row.numero) })),
+      contacts: ((contactsResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        name: String(row.nome), role: String(row.papel), phone: nullableString(row.telefone), email: nullableString(row.email)
+      }))
+    },
+    sellerName: sellerResult.data?.nome ? String(sellerResult.data.nome) : null,
+    approvedAt: approvalResult.data?.created_at ? String(approvalResult.data.created_at) : null,
+    approvedBy: approvalActor.data?.display_name ? String(approvalActor.data.display_name) : null,
+    items: contractItems
+  };
+}
+
+function sumComplete(values: Array<number | null>): number | null {
+  return values.some((value) => value === null) ? null : values.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+}
+
 const EMPTY_LOOKUPS: OrderLookups = {
   clientes: [],
   propriedades: [],
@@ -341,6 +688,19 @@ function firstNested(value: unknown): Record<string, unknown> | null {
 
 function nullableNumber(value: unknown): number | null {
   return value === null || value === undefined ? null : Number(value);
+}
+
+function nullableString(value: unknown): string | null {
+  return value === null || value === undefined || String(value).trim() === "" ? null : String(value);
+}
+
+function packagingLabel(packaging: Record<string, unknown> | null): string {
+  if (!packaging) return "Embalagem não informada";
+  const description = nullableString(packaging.descricao) ?? "Embalagem";
+  const volume = nullableNumber(packaging.volume_litros);
+  const unit = nullableString(packaging.unidade);
+  const capacity = volume === null ? null : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(volume)} L`;
+  return [description, capacity, unit].filter(Boolean).join(" - ");
 }
 
 function emptyDashboard(source: OrdersDashboard["source"], error: string | null): OrdersDashboard {

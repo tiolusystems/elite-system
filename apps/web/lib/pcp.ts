@@ -1,5 +1,6 @@
 import { getRuntimeStatus } from "@/lib/runtime";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { OpControlledProcedure } from "@/lib/controlled-procedures";
 
 export type PcpComponentType = "MP" | "PA" | "PI";
 
@@ -13,10 +14,89 @@ export type PcpLookups = {
   produtos: PcpLookupOption[];
   materiasPrimas: PcpLookupOption[];
   produtoEmbalagens: PcpLookupOption[];
-  componentTargets: PcpLookupOption[];
-  outputTargets: PcpLookupOption[];
+  pessoas: PcpLookupOption[];
   formulas: PcpLookupOption[];
-  ops: PcpLookupOption[];
+  nutrientes: PcpLookupOption[];
+  unidades: PcpLookupOption[];
+};
+
+export type PcpProductGuarantee = {
+  id: number;
+  produtoId: number;
+  produtoLabel: string;
+  nutriente: string;
+  tipoLimite: string;
+  valor: number;
+  valorMaximo: number | null;
+  unidade: string;
+  fonte: string;
+  vigenciaInicio: string | null;
+  vigenciaFim: string | null;
+  documentoReferencia: string | null;
+  justificativa: string | null;
+  createdAt: string;
+};
+
+export type PcpMpLotGuarantee = {
+  id: number;
+  materiaPrimaId: number;
+  loteMpId: number;
+  loteLabel: string;
+  nutriente: string;
+  valor: number;
+  unidade: string;
+  fonte: string;
+  dataReferencia: string | null;
+  documentoReferencia: string | null;
+  justificativa: string | null;
+  createdAt: string;
+};
+
+export type PcpMpLotParameters = {
+  id: number;
+  loteMpId: number;
+  loteLabel: string;
+  densidadeKgL: number;
+  dataReferencia: string;
+  fonte: string;
+  documentoReferencia: string | null;
+  justificativa: string;
+  createdAt: string;
+};
+
+export type PcpHistoricalGuaranteeReview = {
+  id: number;
+  produtoLabel: string;
+  descricaoOrigem: string;
+  valorPpPercentualL: number | null;
+  valorPvKgL: number | null;
+  decisao: string;
+  nutrienteLabel: string | null;
+  unidadePp: string | null;
+  unidadePv: string | null;
+  justificativa: string | null;
+  sourceBatchId: number;
+  sourceRowId: number;
+  linhaExcel: number | null;
+};
+
+export type PcpOpGuaranteeResult = {
+  id: number;
+  opId: number;
+  produtoGeradoId: number;
+  produtoId: number;
+  produtoLabel: string;
+  calculoVersao: number;
+  nutriente: string;
+  unidade: string;
+  valorCalculado: number | null;
+  tipoLimite: string | null;
+  valorReferencia: number | null;
+  valorMaximoReferencia: number | null;
+  statusResultado: string;
+  atende: boolean | null;
+  justificativa: string;
+  createdAt: string;
 };
 
 export type PcpFormulaComponent = {
@@ -35,6 +115,7 @@ export type PcpFormulaVersion = {
   produtoId: number;
   produtoLabel: string;
   tipoReceita: string;
+  baseCalculo: string;
   versao: number;
   justificativa: string;
   observacao: string | null;
@@ -63,8 +144,19 @@ export type PcpOpReservation = {
   loteId: number;
   loteLabel: string;
   quantidadeReservada: number;
+  quantidadeUtilizada: number | null;
   status: string;
   createdAt: string;
+};
+
+export type PcpOpParticipant = {
+  id: number;
+  opId: number;
+  pessoaId: number | null;
+  papel: string;
+  ordem: number;
+  nome: string;
+  registradoEm: string;
 };
 
 export type PcpOpComponent = {
@@ -97,6 +189,7 @@ export type PcpRecentOp = {
   codigoOp: string;
   formulaVersionId: number;
   formulaLabel: string;
+  produtoId: number;
   produtoLabel: string;
   tipoOp: string;
   status: string;
@@ -107,7 +200,10 @@ export type PcpRecentOp = {
   startedAt: string | null;
   completedAt: string | null;
   components: PcpOpComponent[];
+  participants: PcpOpParticipant[];
   outputs: PcpOpOutput[];
+  guaranteeResults: PcpOpGuaranteeResult[];
+  procedures: OpControlledProcedure[];
 };
 
 export type PcpAvailableLot = {
@@ -123,6 +219,7 @@ export type PcpAvailableLot = {
   dataValidade: string | null;
   origemRef: string | null;
   updatedAt: string;
+  entryAt: string;
 };
 
 export type PcpDashboard = {
@@ -133,25 +230,382 @@ export type PcpDashboard = {
     opsEmProcesso: number | null;
     componentesPendentes: number | null;
     lotesBloqueados: number | null;
+    garantiasVigentes: number | null;
+    transformacoesAbertas: number | null;
   };
   lookups: PcpLookups;
   activeFormulas: PcpActiveFormula[];
   formulaVersions: PcpFormulaVersion[];
   recentOps: PcpRecentOp[];
   availableLots: PcpAvailableLot[];
+  productGuarantees: PcpProductGuarantee[];
+  mpLotGuarantees: PcpMpLotGuarantee[];
+  mpLotParameters: PcpMpLotParameters[];
+  historicalGuarantees: PcpHistoricalGuaranteeReview[];
+  opGuaranteeResults: PcpOpGuaranteeResult[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
+};
+
+export type PcpSupervisorDashboard = {
+  metrics: {
+    opsAguardando: number | null;
+    opsEmProducao: number | null;
+    componentesSemReserva: number | null;
+    lotesBloqueados: number | null;
+  };
+  source: "supabase" | "not_configured" | "error";
+  error: string | null;
+};
+
+export type PcpOrderCapabilities = {
+  canCreate: boolean;
+  canReserve: boolean;
+  canOverrideFifo: boolean;
+  canStart: boolean;
+  canCancel: boolean;
+};
+
+export type PcpQualityCapabilities = {
+  canRecord: boolean;
+  canFinish: boolean;
+};
+
+export type PcpQualityQueueItem = {
+  id: number;
+  codigoOp: string;
+  produtoLabel: string;
+  formulaLabel: string;
+  tipoOp: string;
+  status: string;
+  cqStatus: string | null;
+  quantidadePlanejada: number | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
+export type PcpQualityQueue = {
+  items: PcpQualityQueueItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  source: "supabase" | "not_configured" | "error";
+  error: string | null;
+};
+
+export type PcpOrderQueue = PcpQualityQueue & {
+  statusCounts: Record<string, number>;
 };
 
 const EMPTY_LOOKUPS: PcpLookups = {
   produtos: [],
   materiasPrimas: [],
   produtoEmbalagens: [],
-  componentTargets: [],
-  outputTargets: [],
+  pessoas: [],
   formulas: [],
-  ops: []
+  nutrientes: [],
+  unidades: []
 };
+
+const PCP_ORDER_PERMISSION_KEYS = {
+  canCreate: "pcp.op.create",
+  canReserve: "pcp.op.reserve_components",
+  canOverrideFifo: "pcp.op.reserve_override_fifo",
+  canStart: "pcp.op.start",
+  canCancel: "pcp.op.cancel"
+} as const;
+
+const EMPTY_ORDER_CAPABILITIES: PcpOrderCapabilities = {
+  canCreate: false,
+  canReserve: false,
+  canOverrideFifo: false,
+  canStart: false,
+  canCancel: false
+};
+
+export async function getPcpOrderCapabilities(): Promise<PcpOrderCapabilities> {
+  if (!getRuntimeStatus().supabaseConfigured) return EMPTY_ORDER_CAPABILITIES;
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const entries = await Promise.all(
+      Object.entries(PCP_ORDER_PERMISSION_KEYS).map(async ([capability, actionKey]) => {
+        const { data, error } = await supabase.rpc("can_current_user", {
+          p_action_key: actionKey
+        });
+        return [capability, !error && data === true] as const;
+      })
+    );
+    return Object.fromEntries(entries) as PcpOrderCapabilities;
+  } catch {
+    return EMPTY_ORDER_CAPABILITIES;
+  }
+}
+
+export async function getPcpQualityCapabilities(): Promise<PcpQualityCapabilities> {
+  if (!getRuntimeStatus().supabaseConfigured) return { canRecord: false, canFinish: false };
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const [recordPermission, finishPermission] = await Promise.all([
+      supabase.rpc("can_current_user", { p_action_key: "pcp.cq.record" }),
+      supabase.rpc("can_current_user", { p_action_key: "pcp.op.finish" })
+    ]);
+    return {
+      canRecord: !recordPermission.error && recordPermission.data === true,
+      canFinish: !finishPermission.error && finishPermission.data === true
+    };
+  } catch {
+    return { canRecord: false, canFinish: false };
+  }
+}
+
+export async function getPcpQualityQueue(input: {
+  query?: string;
+  view?: "queue" | "history";
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PcpQualityQueue> {
+  const runtime = getRuntimeStatus();
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(50, Math.max(10, input.pageSize ?? 20));
+  if (!runtime.supabaseConfigured) {
+    return { items: [], total: 0, page, pageSize, source: "not_configured", error: null };
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const queryText = (input.query ?? "").trim();
+    let formulaIds: number[] = [];
+    if (queryText) {
+      const pattern = `%${queryText.replace(/[%_,()]/g, " ")}%`;
+      const { data: products } = await supabase
+        .from("cad_produtos_base")
+        .select("id")
+        .or(`codigo_produto.ilike.${pattern},nome.ilike.${pattern}`)
+        .limit(1000);
+      const productIds = uniqueNumbers((products ?? []).map((row) => row.id));
+      if (productIds.length > 0) {
+        const { data: formulas } = await supabase
+          .from("pcp_formula_versoes")
+          .select("id")
+          .in("produto_id", productIds)
+          .limit(2000);
+        formulaIds = uniqueNumbers((formulas ?? []).map((row) => row.id));
+      }
+    }
+
+    let opQuery = supabase
+      .from("pcp_ordens_producao")
+      .select("id,codigo_op,formula_versao_id,tipo_op,status,quantidade_planejada,cq_status,created_at,started_at,completed_at", { count: "exact" })
+      .order(input.view === "history" ? "completed_at" : "started_at", { ascending: false, nullsFirst: false });
+    opQuery = input.view === "history"
+      ? opQuery.eq("status", "completed")
+      : opQuery.eq("status", "in_process");
+    if (input.status) opQuery = opQuery.eq("cq_status", input.status);
+    if (queryText) {
+      const safe = queryText.replace(/[%_,()]/g, " ");
+      opQuery = formulaIds.length > 0
+        ? opQuery.or(`codigo_op.ilike.%${safe}%,formula_versao_id.in.(${formulaIds.join(",")})`)
+        : opQuery.ilike("codigo_op", `%${safe}%`);
+    }
+    const from = (page - 1) * pageSize;
+    const response = await opQuery.range(from, from + pageSize - 1);
+    if (response.error) {
+      return { items: [], total: 0, page, pageSize, source: "error", error: response.error.message };
+    }
+
+    const opRows = (response.data ?? []) as Array<Record<string, unknown>>;
+    const returnedFormulaIds = uniqueNumbers(opRows.map((row) => row.formula_versao_id));
+    const formulaMap = new Map<number, { formulaLabel: string; productLabel: string }>();
+    if (returnedFormulaIds.length > 0) {
+      const { data: formulas } = await supabase
+        .from("pcp_formula_versoes")
+        .select("id,versao,tipo_receita,produto_id,cad_produtos_base(codigo_produto,nome)")
+        .in("id", returnedFormulaIds);
+      for (const formula of (formulas ?? []) as Array<Record<string, unknown>>) {
+        const product = firstNested(formula.cad_produtos_base);
+        const productLabel = product
+          ? `${String(product.codigo_produto)} - ${String(product.nome)}`
+          : "Produto não identificado";
+        formulaMap.set(Number(formula.id), {
+          formulaLabel: `${productLabel} / versão ${Number(formula.versao)}`,
+          productLabel
+        });
+      }
+    }
+
+    return {
+      items: opRows.map((row) => {
+        const formula = formulaMap.get(Number(row.formula_versao_id));
+        return {
+          id: Number(row.id),
+          codigoOp: String(row.codigo_op),
+          produtoLabel: formula?.productLabel ?? "Produto não identificado",
+          formulaLabel: formula?.formulaLabel ?? "Fórmula não identificada",
+          tipoOp: String(row.tipo_op),
+          status: String(row.status),
+          cqStatus: nullableString(row.cq_status),
+          quantidadePlanejada: nullableNumber(row.quantidade_planejada),
+          createdAt: String(row.created_at),
+          startedAt: nullableString(row.started_at),
+          completedAt: nullableString(row.completed_at)
+        };
+      }),
+      total: response.count ?? 0,
+      page,
+      pageSize,
+      source: "supabase",
+      error: null
+    };
+  } catch (error) {
+    return {
+      items: [], total: 0, page, pageSize, source: "error",
+      error: error instanceof Error ? error.message : "Não foi possível consultar o Controle de Qualidade."
+    };
+  }
+}
+
+export async function getPcpOrderQueue(input: {
+  query?: string;
+  status?: string;
+  type?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PcpOrderQueue> {
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(50, Math.max(10, input.pageSize ?? 20));
+  const empty = (source: PcpOrderQueue["source"], error: string | null): PcpOrderQueue => ({
+    items: [], total: 0, page, pageSize, source, error, statusCounts: {}
+  });
+  if (!getRuntimeStatus().supabaseConfigured) return empty("not_configured", null);
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const queryText = (input.query ?? "").trim();
+    let formulaIds: number[] = [];
+    if (queryText) {
+      const pattern = `%${queryText.replace(/[%_,()]/g, " ")}%`;
+      const { data: products } = await supabase
+        .from("cad_produtos_base")
+        .select("id")
+        .or(`codigo_produto.ilike.${pattern},nome.ilike.${pattern}`)
+        .limit(1000);
+      const productIds = uniqueNumbers((products ?? []).map((row) => row.id));
+      let formulaQuery = supabase.from("pcp_formula_versoes").select("id");
+      if (productIds.length > 0) formulaQuery = formulaQuery.in("produto_id", productIds);
+      const { data: formulas } = productIds.length > 0
+        ? await formulaQuery.limit(2000)
+        : { data: [] as Array<{ id: number }> };
+      formulaIds = uniqueNumbers((formulas ?? []).map((row) => row.id));
+    }
+
+    const statuses = ["draft", "planned", "in_process", "completed", "cancelled"];
+    const countResponses = await Promise.all(statuses.map((status) => supabase
+      .from("pcp_ordens_producao")
+      .select("id", { count: "exact", head: true })
+      .eq("status", status)));
+    const statusCounts = Object.fromEntries(statuses.map((status, index) => [status, countResponses[index].count ?? 0]));
+
+    let opQuery = supabase
+      .from("pcp_ordens_producao")
+      .select("id,codigo_op,formula_versao_id,tipo_op,status,quantidade_planejada,cq_status,created_at,started_at,completed_at", { count: "exact" })
+      .order("created_at", { ascending: false });
+    const status = input.status ?? "open";
+    if (status === "open") opQuery = opQuery.in("status", ["draft", "planned", "in_process"]);
+    else if (status !== "all") opQuery = opQuery.eq("status", status);
+    if (input.type && input.type !== "all") opQuery = opQuery.eq("tipo_op", input.type);
+    if (queryText) {
+      const safe = queryText.replace(/[%_,()]/g, " ");
+      opQuery = formulaIds.length > 0
+        ? opQuery.or(`codigo_op.ilike.%${safe}%,formula_versao_id.in.(${formulaIds.join(",")})`)
+        : opQuery.ilike("codigo_op", `%${safe}%`);
+    }
+    const from = (page - 1) * pageSize;
+    const response = await opQuery.range(from, from + pageSize - 1);
+    if (response.error) return { ...empty("error", response.error.message), statusCounts };
+
+    const opRows = (response.data ?? []) as Array<Record<string, unknown>>;
+    const returnedFormulaIds = uniqueNumbers(opRows.map((row) => row.formula_versao_id));
+    const formulaMap = new Map<number, { formulaLabel: string; productLabel: string }>();
+    if (returnedFormulaIds.length > 0) {
+      const { data: formulas } = await supabase
+        .from("pcp_formula_versoes")
+        .select("id,versao,produto_id,cad_produtos_base(codigo_produto,nome)")
+        .in("id", returnedFormulaIds);
+      for (const formula of (formulas ?? []) as Array<Record<string, unknown>>) {
+        const product = firstNested(formula.cad_produtos_base);
+        const productLabel = product ? `${String(product.codigo_produto)} - ${String(product.nome)}` : "Produto não identificado";
+        formulaMap.set(Number(formula.id), { productLabel, formulaLabel: `${productLabel} / versão ${Number(formula.versao)}` });
+      }
+    }
+
+    return {
+      items: opRows.map((row) => {
+        const formula = formulaMap.get(Number(row.formula_versao_id));
+        return {
+          id: Number(row.id), codigoOp: String(row.codigo_op),
+          produtoLabel: formula?.productLabel ?? "Produto não identificado",
+          formulaLabel: formula?.formulaLabel ?? "Fórmula não identificada",
+          tipoOp: String(row.tipo_op), status: String(row.status), cqStatus: nullableString(row.cq_status),
+          quantidadePlanejada: nullableNumber(row.quantidade_planejada), createdAt: String(row.created_at),
+          startedAt: nullableString(row.started_at), completedAt: nullableString(row.completed_at)
+        };
+      }),
+      total: response.count ?? 0, page, pageSize, source: "supabase", error: null, statusCounts
+    };
+  } catch (error) {
+    return empty("error", error instanceof Error ? error.message : "Não foi possível consultar as ordens.");
+  }
+}
+
+export async function canCurrentUserViewPcpDashboard(): Promise<boolean> {
+  if (!getRuntimeStatus().supabaseConfigured) return false;
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("can_current_user", {
+      p_action_key: "pcp.dashboard.view"
+    });
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getPcpSupervisorDashboard(): Promise<PcpSupervisorDashboard> {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    return emptySupervisorDashboard("not_configured", null);
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("get_pcp_supervisor_dashboard");
+    if (error) return emptySupervisorDashboard("error", error.message);
+
+    const row = data && typeof data === "object"
+      ? data as Record<string, unknown>
+      : {};
+
+    return {
+      metrics: {
+        opsAguardando: nullableNumber(row.ops_aguardando),
+        opsEmProducao: nullableNumber(row.ops_em_producao),
+        componentesSemReserva: nullableNumber(row.componentes_sem_reserva),
+        lotesBloqueados: nullableNumber(row.lotes_bloqueados)
+      },
+      source: "supabase",
+      error: null
+    };
+  } catch (error) {
+    return emptySupervisorDashboard(
+      "error",
+      error instanceof Error ? error.message : "Não foi possível carregar o painel supervisor."
+    );
+  }
+}
 
 export async function getPcpDashboard(): Promise<PcpDashboard> {
   const runtime = getRuntimeStatus();
@@ -171,10 +625,20 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       ops,
       opComponents,
       opReservations,
+      opConsumptions,
+      opParticipants,
       opOutputs,
       lotesMp,
       lotesPa,
-      lotesPi
+      lotesPi,
+      pessoas,
+      nutrientes,
+      unidades,
+      productGuarantees,
+      mpLotGuarantees,
+      mpLotParameters,
+      historicalGuarantees,
+      opGuaranteeResults
     ] = await Promise.all([
       supabase
         .from("cad_produtos_base")
@@ -232,6 +696,16 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         .order("created_at", { ascending: false })
         .limit(900),
       supabase
+        .from("pcp_op_consumos_componentes")
+        .select("id,op_id,op_componente_id,reserva_id,quantidade_consumida,created_at")
+        .order("created_at", { ascending: false })
+        .limit(900),
+      supabase
+        .from("pcp_op_cq_participantes")
+        .select("id,op_id,papel,ordem,nome_snapshot,pessoa_comercial_id,created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase
         .from("pcp_op_produtos_gerados")
         .select(
           "id,op_id,tipo_produto,produto_embalagem_id,produto_id,lote_pa_id,lote_pi_id,quantidade,status_lote,created_at"
@@ -241,24 +715,76 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       supabase
         .from("est_lotes_mp_saldos")
         .select(
-          "lote_mp_id,materia_prima_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,updated_at"
+          "lote_mp_id,materia_prima_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
         )
         .order("updated_at", { ascending: false })
         .limit(300),
       supabase
         .from("est_lotes_pa_saldos")
         .select(
-          "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,updated_at"
+          "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
         )
         .order("updated_at", { ascending: false })
         .limit(300),
       supabase
         .from("est_lotes_pi_saldos")
         .select(
-          "lote_pi_id,produto_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,updated_at"
+          "lote_pi_id,produto_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
         )
         .order("updated_at", { ascending: false })
-        .limit(300)
+        .limit(300),
+      supabase
+        .from("cad_pessoas_comerciais")
+        .select("id,nome,tipo_comercial,status")
+        .eq("status", "active")
+        .order("nome", { ascending: true })
+        .limit(300),
+      supabase
+        .from("cad_nutrientes")
+        .select("id,nome,simbolo,status")
+        .eq("status", "active")
+        .order("nome", { ascending: true })
+        .limit(300),
+      supabase
+        .from("cad_unidades_medida")
+        .select("id,codigo,nome,simbolo,status")
+        .eq("status", "active")
+        .order("codigo", { ascending: true })
+        .limit(300),
+      supabase
+        .from("cad_garantias_produto_mapa_atuais")
+        .select(
+          "id,produto_id,nutriente,tipo_limite,valor,valor_maximo,unidade,fonte,vigencia_inicio,vigencia_fim,documento_referencia,justificativa,created_at"
+        )
+        .order("produto_id", { ascending: true })
+        .order("nutriente", { ascending: true })
+        .limit(500),
+      supabase
+        .from("cad_garantias_lote_mp_atuais")
+        .select(
+          "id,materia_prima_id,lote_mp_id,nutriente,valor,unidade,fonte,data_referencia,documento_referencia,justificativa,created_at"
+        )
+        .order("data_referencia", { ascending: false })
+        .limit(800),
+      supabase
+        .from("cad_lote_mp_parametros_tecnicos_atuais")
+        .select("id,lote_mp_id,densidade_kg_l,data_referencia,fonte,documento_referencia,justificativa,created_at")
+        .order("data_referencia", { ascending: false })
+        .limit(800),
+      supabase
+        .from("pcp_garantias_historicas_conciliacao_atual")
+        .select(
+          "id,produto_id,codigo_produto,produto_nome,descricao_origem,valor_pp_percentual_l,valor_pv_kg_l,decisao,nutriente_nome,nutriente_simbolo,unidade_pp_codigo,unidade_pv_codigo,justificativa,source_batch_id,source_row_id,linha_excel"
+        )
+        .order("id", { ascending: false })
+        .limit(500),
+      supabase
+        .from("pcp_op_garantia_resultados_atuais")
+        .select(
+          "id,op_id,produto_gerado_id,produto_id,calculo_versao,nutriente,unidade,valor_calculado,tipo_limite,valor_referencia,valor_maximo_referencia,status_resultado,atende,justificativa,created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(800)
     ]);
 
     const produtoRows = rows(produtos);
@@ -270,7 +796,17 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     const opRows = rows(ops);
     const opComponentRows = rows(opComponents);
     const opReservationRows = rows(opReservations);
+    const opConsumptionRows = rows(opConsumptions);
+    const opParticipantRows = rows(opParticipants);
     const opOutputRows = rows(opOutputs);
+    const personRows = rows(pessoas);
+    const nutrientRows = rows(nutrientes);
+    const unitRows = rows(unidades);
+    const productGuaranteeRows = rows(productGuarantees);
+    const mpLotGuaranteeRows = rows(mpLotGuarantees);
+    const mpLotParameterRows = rows(mpLotParameters);
+    const historicalGuaranteeRows = rows(historicalGuarantees);
+    const opGuaranteeResultRows = rows(opGuaranteeResults);
 
     const produtoMap = new Map<number, string>(
       produtoRows.map((row) => [Number(row.id), productLabel(row)])
@@ -303,11 +839,14 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
     const formulaVersions = formulaRows.map((row) => {
       const id = Number(row.id);
       const produtoId = Number(row.produto_id);
+      const tipoReceita = String(row.tipo_receita);
+      const components = formulaComponentsByVersion.get(id) ?? [];
       return {
         id,
         produtoId,
         produtoLabel: produtoMap.get(produtoId) ?? `produto ${produtoId}`,
-        tipoReceita: String(row.tipo_receita),
+        tipoReceita,
+        baseCalculo: formulaBasis(tipoReceita, components.length),
         versao: Number(row.versao),
         justificativa: String(row.justificativa),
         observacao: nullableString(row.observacao),
@@ -315,7 +854,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         entryHash: String(row.entry_hash),
         createdAt: String(row.created_at),
         isActive: formulaActiveIds.has(id),
-        components: formulaComponentsByVersion.get(id) ?? []
+        components
       } satisfies PcpFormulaVersion;
     });
 
@@ -334,9 +873,24 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       } satisfies PcpActiveFormula;
     });
 
+    const consumedByReservation = new Map<number, number>(
+      opConsumptionRows.map((row) => [Number(row.reserva_id), Number(row.quantidade_consumida ?? 0)])
+    );
     const reservationsByComponent = groupBy(
-      opReservationRows.map((row) => mapReservation(row, lotMap)),
+      opReservationRows.map((row) => mapReservation(row, lotMap, consumedByReservation)),
       (reservation) => reservation.opComponentId
+    );
+    const participantsByOp = groupBy(
+      opParticipantRows.map((row) => ({
+        id: Number(row.id),
+        opId: Number(row.op_id),
+        pessoaId: nullableNumber(row.pessoa_comercial_id),
+        papel: String(row.papel),
+        ordem: Number(row.ordem),
+        nome: String(row.nome_snapshot),
+        registradoEm: String(row.created_at)
+      } satisfies PcpOpParticipant)),
+      (participant) => participant.opId
     );
 
     const componentsByOp = groupBy(
@@ -352,6 +906,11 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       (output) => output.opId
     );
 
+    const guaranteeResultsByOp = groupBy(
+      opGuaranteeResultRows.map((row) => mapOpGuaranteeResult(row, produtoMap)),
+      (result) => result.opId
+    );
+
     const recentOps = opRows.map((row) => {
       const id = Number(row.id);
       const formula = formulaById.get(Number(row.formula_versao_id));
@@ -360,6 +919,7 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         codigoOp: String(row.codigo_op),
         formulaVersionId: Number(row.formula_versao_id),
         formulaLabel: formula ? `${formula.produtoLabel} / ${formula.tipoReceita} v${formula.versao}` : `formula ${row.formula_versao_id}`,
+        produtoId: formula?.produtoId ?? 0,
         produtoLabel: formula?.produtoLabel ?? "produto nao carregado",
         tipoOp: String(row.tipo_op),
         status: String(row.status),
@@ -370,9 +930,16 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         startedAt: nullableString(row.started_at),
         completedAt: nullableString(row.completed_at),
         components: componentsByOp.get(id) ?? [],
-        outputs: outputsByOp.get(id) ?? []
+        participants: participantsByOp.get(id) ?? [],
+        outputs: outputsByOp.get(id) ?? [],
+        guaranteeResults: guaranteeResultsByOp.get(id) ?? [],
+        procedures: []
       } satisfies PcpRecentOp;
     });
+
+    const currentProductGuarantees = productGuaranteeRows.map((row) => mapProductGuarantee(row, produtoMap));
+    const currentMpLotGuarantees = mpLotGuaranteeRows.map((row) => mapMpLotGuarantee(row, lotMap));
+    const currentMpLotParameters = mpLotParameterRows.map((row) => mapMpLotParameters(row, lotMap));
 
     const lookups: PcpLookups = {
       produtos: produtoRows.map((row) => ({
@@ -390,47 +957,26 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         label: packageLabel(row),
         detail: `${row.status ?? "sem status"}`
       })),
-      componentTargets: [
-        ...materiaPrimaRows.map((row) => ({
-          id: Number(row.id),
-          label: `MP - ${materialLabel(row)}`,
-          detail: `${row.unidade_base_estoque ?? "sem unidade"} / ${row.status ?? "sem status"}`
-        })),
-        ...produtoEmbalagemRows.map((row) => ({
-          id: Number(row.id),
-          label: `PA - ${packageLabel(row)}`,
-          detail: `${row.status ?? "sem status"}`
-        })),
-        ...produtoRows.map((row) => ({
-          id: Number(row.id),
-          label: `PI - ${productLabel(row)}`,
-          detail: `${row.status ?? "sem status"}`
-        }))
-      ],
-      outputTargets: [
-        ...produtoEmbalagemRows.map((row) => ({
-          id: Number(row.id),
-          label: `PA - ${packageLabel(row)}`,
-          detail: `${row.status ?? "sem status"}`
-        })),
-        ...produtoRows.map((row) => ({
-          id: Number(row.id),
-          label: `PI - ${productLabel(row)}`,
-          detail: `${row.status ?? "sem status"}`
-        }))
-      ],
+      pessoas: personRows.map((row) => ({
+        id: Number(row.id),
+        label: String(row.nome),
+        detail: `${row.tipo_comercial ?? "sem tipo"}`
+      })),
       formulas: formulaVersions.map((formula) => ({
         id: formula.id,
         label: `${formula.produtoLabel} / ${formula.tipoReceita} v${formula.versao}`,
         detail: `${formula.isActive ? "ativa" : "versao"} / ${formula.components.length} componente(s)`
       })),
-      ops: recentOps
-        .filter((op) => ["draft", "planned", "in_process"].includes(op.status))
-        .map((op) => ({
-          id: op.id,
-          label: `${op.codigoOp} - ${op.produtoLabel}`,
-          detail: `${op.tipoOp} / ${op.status}`
-        }))
+      nutrientes: nutrientRows.map((row) => ({
+        id: Number(row.id),
+        label: String(row.simbolo ?? row.nome),
+        detail: String(row.nome)
+      })),
+      unidades: unitRows.map((row) => ({
+        id: Number(row.id),
+        label: String(row.codigo),
+        detail: String(row.nome)
+      }))
     };
 
     const openOps = recentOps.filter((op) => ["draft", "planned", "in_process"].includes(op.status));
@@ -444,10 +990,20 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
       ops,
       opComponents,
       opReservations,
+      opConsumptions,
+      opParticipants,
       opOutputs,
       lotesMp,
       lotesPa,
-      lotesPi
+      lotesPi,
+      pessoas,
+      nutrientes,
+      unidades,
+      productGuarantees,
+      mpLotGuarantees,
+      mpLotParameters,
+      historicalGuarantees,
+      opGuaranteeResults
     ]);
 
     return {
@@ -457,19 +1013,303 @@ export async function getPcpDashboard(): Promise<PcpDashboard> {
         opsAbertas: openOps.length,
         opsEmProcesso: recentOps.filter((op) => op.status === "in_process").length,
         componentesPendentes: openOps.flatMap((op) => op.components).filter((component) => component.status !== "reserved").length,
-        lotesBloqueados: availableLots.filter((lot) => lot.status === "bloqueado").length
+        lotesBloqueados: availableLots.filter((lot) => lot.status === "bloqueado").length,
+        garantiasVigentes: currentProductGuarantees.length + currentMpLotGuarantees.length,
+        transformacoesAbertas: openOps.filter((op) => op.tipoOp === "reprocessamento").length
       },
       lookups,
       activeFormulas: active,
       formulaVersions,
       recentOps,
       availableLots,
+      productGuarantees: currentProductGuarantees,
+      mpLotGuarantees: currentMpLotGuarantees,
+      mpLotParameters: currentMpLotParameters,
+      historicalGuarantees: historicalGuaranteeRows.map((row) => ({
+        id: Number(row.id),
+        produtoLabel: `${row.codigo_produto} - ${row.produto_nome}`,
+        descricaoOrigem: String(row.descricao_origem),
+        valorPpPercentualL: nullableNumber(row.valor_pp_percentual_l),
+        valorPvKgL: nullableNumber(row.valor_pv_kg_l),
+        decisao: String(row.decisao),
+        nutrienteLabel: row.nutriente_id === null || row.nutriente_id === undefined
+          ? null
+          : String(row.nutriente_simbolo ?? row.nutriente_nome),
+        unidadePp: nullableString(row.unidade_pp_codigo),
+        unidadePv: nullableString(row.unidade_pv_codigo),
+        justificativa: nullableString(row.justificativa),
+        sourceBatchId: Number(row.source_batch_id),
+        sourceRowId: Number(row.source_row_id),
+        linhaExcel: nullableNumber(row.linha_excel)
+      })),
+      opGuaranteeResults: opGuaranteeResultRows.map((row) => mapOpGuaranteeResult(row, produtoMap)),
       source: firstError ? "error" : "supabase",
       error: firstError
     };
   } catch (error) {
     return emptyDashboard("error", error instanceof Error ? error.message : "Erro desconhecido");
   }
+}
+
+export async function getPcpOrderPrintData(orderId: number): Promise<PcpRecentOp | null> {
+  if (!Number.isInteger(orderId) || orderId <= 0 || !getRuntimeStatus().supabaseConfigured) {
+    return null;
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const orderResponse = await supabase
+      .from("pcp_ordens_producao")
+      .select(
+        "id,codigo_op,formula_versao_id,tipo_op,status,quantidade_planejada,observacao,cq_status,created_at,started_at,completed_at"
+      )
+      .eq("id", orderId)
+      .limit(1);
+    const order = rows(orderResponse)[0];
+    if (orderResponse.error || !order) return null;
+
+    const formulaVersionId = Number(order.formula_versao_id);
+    const [formulaResponse, componentResponse, reservationResponse, consumptionResponse, participantResponse] =
+      await Promise.all([
+        supabase
+          .from("pcp_formula_versoes")
+          .select("id,produto_id,tipo_receita,versao")
+          .eq("id", formulaVersionId)
+          .limit(1),
+        supabase
+          .from("pcp_op_componentes_planejados")
+          .select(
+            "id,op_id,tipo_componente,materia_prima_id,produto_embalagem_id,produto_id,quantidade_planejada,unidade,status"
+          )
+          .eq("op_id", orderId)
+          .order("id", { ascending: true }),
+        supabase
+          .from("pcp_op_reservas_componentes")
+          .select(
+            "id,op_id,op_componente_id,tipo_componente,lote_mp_id,lote_pa_id,lote_pi_id,quantidade_reservada,status,created_at"
+          )
+          .eq("op_id", orderId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("pcp_op_consumos_componentes")
+          .select("id,op_id,op_componente_id,reserva_id,quantidade_consumida,created_at")
+          .eq("op_id", orderId),
+        supabase
+          .from("pcp_op_cq_participantes")
+          .select("id,op_id,papel,ordem,nome_snapshot,pessoa_comercial_id,created_at")
+          .eq("op_id", orderId)
+          .order("papel", { ascending: true })
+          .order("ordem", { ascending: true })
+      ]);
+    if (firstResponseError([
+      formulaResponse,
+      componentResponse,
+      reservationResponse,
+      consumptionResponse,
+      participantResponse
+    ])) return null;
+
+    const formula = rows(formulaResponse)[0];
+    if (!formula) return null;
+
+    const componentRows = rows(componentResponse);
+    const reservationRows = rows(reservationResponse);
+    const materiaPrimaIds = uniqueNumbers(componentRows.map((row) => row.materia_prima_id));
+    const produtoEmbalagemIds = uniqueNumbers(componentRows.map((row) => row.produto_embalagem_id));
+    const produtoIds = uniqueNumbers([formula.produto_id, ...componentRows.map((row) => row.produto_id)]);
+    const loteMpIds = uniqueNumbers(reservationRows.map((row) => row.lote_mp_id));
+    const lotePaIds = uniqueNumbers(reservationRows.map((row) => row.lote_pa_id));
+    const lotePiIds = uniqueNumbers(reservationRows.map((row) => row.lote_pi_id));
+
+    const [produtoResponse, materiaPrimaResponse, produtoEmbalagemResponse, loteMpResponse, lotePaResponse, lotePiResponse] =
+      await Promise.all([
+        supabase
+          .from("cad_produtos_base")
+          .select("id,codigo_produto,nome")
+          .in("id", produtoIds.length > 0 ? produtoIds : [-1]),
+        supabase
+          .from("cad_materias_primas")
+          .select("id,sku_corrigido,nome")
+          .in("id", materiaPrimaIds.length > 0 ? materiaPrimaIds : [-1]),
+        supabase
+          .from("cad_produto_embalagens")
+          .select("id,codigo_item,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)")
+          .in("id", produtoEmbalagemIds.length > 0 ? produtoEmbalagemIds : [-1]),
+        supabase
+          .from("est_lotes_mp_saldos")
+          .select(
+            "lote_mp_id,materia_prima_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
+          )
+          .in("lote_mp_id", loteMpIds.length > 0 ? loteMpIds : [-1]),
+        supabase
+          .from("est_lotes_pa_saldos")
+          .select(
+            "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
+          )
+          .in("lote_pa_id", lotePaIds.length > 0 ? lotePaIds : [-1]),
+        supabase
+          .from("est_lotes_pi_saldos")
+          .select(
+            "lote_pi_id,produto_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,origem_ref,created_at,updated_at"
+          )
+          .in("lote_pi_id", lotePiIds.length > 0 ? lotePiIds : [-1])
+      ]);
+    if (firstResponseError([
+      produtoResponse,
+      materiaPrimaResponse,
+      produtoEmbalagemResponse,
+      loteMpResponse,
+      lotePaResponse,
+      lotePiResponse
+    ])) return null;
+
+    const produtoMap = new Map<number, string>(
+      rows(produtoResponse).map((row) => [Number(row.id), productLabel(row)])
+    );
+    const materiaPrimaMap = new Map<number, string>(
+      rows(materiaPrimaResponse).map((row) => [Number(row.id), materialLabel(row)])
+    );
+    const produtoEmbalagemMap = new Map<number, string>(
+      rows(produtoEmbalagemResponse).map((row) => [Number(row.id), packageLabel(row)])
+    );
+    const lotMap = new Map<string, string>();
+    for (const row of rows(loteMpResponse)) {
+      lotMap.set(`MP:${Number(row.lote_mp_id)}`, `${row.codigo_lote} - ${materiaPrimaMap.get(Number(row.materia_prima_id)) ?? "Matéria-prima"}`);
+    }
+    for (const row of rows(lotePaResponse)) {
+      lotMap.set(`PA:${Number(row.lote_pa_id)}`, `${row.codigo_lote} - ${produtoEmbalagemMap.get(Number(row.produto_embalagem_id)) ?? "Produto acabado"}`);
+    }
+    for (const row of rows(lotePiResponse)) {
+      lotMap.set(`PI:${Number(row.lote_pi_id)}`, `${row.codigo_lote} - ${produtoMap.get(Number(row.produto_id)) ?? "Produto intermediário"}`);
+    }
+
+    const consumedByReservation = new Map<number, number>(
+      rows(consumptionResponse).map((row) => [Number(row.reserva_id), Number(row.quantidade_consumida ?? 0)])
+    );
+    const reservationsByComponent = groupBy(
+      reservationRows.map((row) => mapReservation(row, lotMap, consumedByReservation)),
+      (reservation) => reservation.opComponentId
+    );
+    const components = componentRows.map((row) =>
+      mapOpComponent(row, reservationsByComponent, materiaPrimaMap, produtoEmbalagemMap, produtoMap)
+    );
+    const participants = rows(participantResponse).map((row) => ({
+      id: Number(row.id),
+      opId: Number(row.op_id),
+      pessoaId: nullableNumber(row.pessoa_comercial_id),
+      papel: String(row.papel),
+      ordem: Number(row.ordem),
+      nome: String(row.nome_snapshot),
+      registradoEm: String(row.created_at)
+    } satisfies PcpOpParticipant));
+    const produtoId = Number(formula.produto_id);
+    const produtoLabelValue = produtoMap.get(produtoId) ?? "Produto não carregado";
+
+    return {
+      id: Number(order.id),
+      codigoOp: String(order.codigo_op),
+      formulaVersionId,
+      formulaLabel: `${produtoLabelValue} / ${String(formula.tipo_receita)} v${Number(formula.versao)}`,
+      produtoId,
+      produtoLabel: produtoLabelValue,
+      tipoOp: String(order.tipo_op),
+      status: String(order.status),
+      quantidadePlanejada: nullableNumber(order.quantidade_planejada),
+      observacao: nullableString(order.observacao),
+      cqStatus: nullableString(order.cq_status),
+      createdAt: String(order.created_at),
+      startedAt: nullableString(order.started_at),
+      completedAt: nullableString(order.completed_at),
+      components,
+      participants,
+      outputs: [],
+      guaranteeResults: [],
+      procedures: []
+    };
+  } catch {
+    return null;
+  }
+}
+
+function mapProductGuarantee(
+  row: Record<string, unknown>,
+  produtoMap: Map<number, string>
+): PcpProductGuarantee {
+  const produtoId = Number(row.produto_id);
+  return {
+    id: Number(row.id),
+    produtoId,
+    produtoLabel: produtoMap.get(produtoId) ?? `produto ${produtoId}`,
+    nutriente: String(row.nutriente),
+    tipoLimite: String(row.tipo_limite),
+    valor: Number(row.valor),
+    valorMaximo: nullableNumber(row.valor_maximo),
+    unidade: String(row.unidade),
+    fonte: String(row.fonte),
+    vigenciaInicio: nullableString(row.vigencia_inicio),
+    vigenciaFim: nullableString(row.vigencia_fim),
+    documentoReferencia: nullableString(row.documento_referencia),
+    justificativa: nullableString(row.justificativa),
+    createdAt: String(row.created_at)
+  };
+}
+
+function mapMpLotGuarantee(row: Record<string, unknown>, lotMap: Map<string, string>): PcpMpLotGuarantee {
+  const loteMpId = Number(row.lote_mp_id);
+  return {
+    id: Number(row.id),
+    materiaPrimaId: Number(row.materia_prima_id),
+    loteMpId,
+    loteLabel: lotMap.get(`MP:${loteMpId}`) ?? `lote MP ${loteMpId}`,
+    nutriente: String(row.nutriente),
+    valor: Number(row.valor),
+    unidade: String(row.unidade),
+    fonte: String(row.fonte),
+    dataReferencia: nullableString(row.data_referencia),
+    documentoReferencia: nullableString(row.documento_referencia),
+    justificativa: nullableString(row.justificativa),
+    createdAt: String(row.created_at)
+  };
+}
+
+function mapMpLotParameters(row: Record<string, unknown>, lotMap: Map<string, string>): PcpMpLotParameters {
+  const loteMpId = Number(row.lote_mp_id);
+  return {
+    id: Number(row.id),
+    loteMpId,
+    loteLabel: lotMap.get(`MP:${loteMpId}`) ?? `lote MP ${loteMpId}`,
+    densidadeKgL: Number(row.densidade_kg_l),
+    dataReferencia: String(row.data_referencia),
+    fonte: String(row.fonte),
+    documentoReferencia: nullableString(row.documento_referencia),
+    justificativa: String(row.justificativa),
+    createdAt: String(row.created_at)
+  };
+}
+
+function mapOpGuaranteeResult(
+  row: Record<string, unknown>,
+  produtoMap: Map<number, string>
+): PcpOpGuaranteeResult {
+  const produtoId = Number(row.produto_id);
+  return {
+    id: Number(row.id),
+    opId: Number(row.op_id),
+    produtoGeradoId: Number(row.produto_gerado_id),
+    produtoId,
+    produtoLabel: produtoMap.get(produtoId) ?? `produto ${produtoId}`,
+    calculoVersao: Number(row.calculo_versao),
+    nutriente: String(row.nutriente),
+    unidade: String(row.unidade),
+    valorCalculado: nullableNumber(row.valor_calculado),
+    tipoLimite: nullableString(row.tipo_limite),
+    valorReferencia: nullableNumber(row.valor_referencia),
+    valorMaximoReferencia: nullableNumber(row.valor_maximo_referencia),
+    statusResultado: String(row.status_resultado),
+    atende: row.atende === null || row.atende === undefined ? null : Boolean(row.atende),
+    justificativa: String(row.justificativa),
+    createdAt: String(row.created_at)
+  };
 }
 
 function mapFormulaComponent(
@@ -518,17 +1358,23 @@ function mapOpComponent(
   };
 }
 
-function mapReservation(row: Record<string, unknown>, lotMap: Map<string, string>): PcpOpReservation {
+function mapReservation(
+  row: Record<string, unknown>,
+  lotMap: Map<string, string>,
+  consumedByReservation: Map<number, number>
+): PcpOpReservation {
   const type = componentType(row.tipo_componente);
   const loteId =
     type === "MP" ? Number(row.lote_mp_id) : type === "PA" ? Number(row.lote_pa_id) : Number(row.lote_pi_id);
+  const id = Number(row.id);
   return {
-    id: Number(row.id),
+    id,
     opComponentId: Number(row.op_componente_id),
     tipoComponente: type,
     loteId,
     loteLabel: lotMap.get(`${type}:${loteId}`) ?? `lote ${loteId}`,
     quantidadeReservada: Number(row.quantidade_reservada ?? 0),
+    quantidadeUtilizada: consumedByReservation.has(id) ? consumedByReservation.get(id) ?? 0 : null,
     status: String(row.status),
     createdAt: String(row.created_at)
   };
@@ -575,7 +1421,8 @@ function mapLot(
     saldoDisponivel: Number(row.saldo_disponivel ?? 0),
     dataValidade: nullableString(row.data_validade),
     origemRef: nullableString(row.origem_ref),
-    updatedAt: String(row.updated_at ?? "")
+    updatedAt: String(row.updated_at ?? ""),
+    entryAt: String(row.created_at ?? "")
   };
 }
 
@@ -633,6 +1480,14 @@ function rows(response: { data: unknown[] | null; error: { message: string } | n
   return response.error ? [] : ((response.data ?? []) as Array<Record<string, unknown>>);
 }
 
+function uniqueNumbers(values: unknown[]): number[] {
+  return [...new Set(
+    values
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0)
+  )];
+}
+
 function firstResponseError(responses: Array<{ error: { message: string } | null }>): string | null {
   return responses.find((response) => response.error)?.error?.message ?? null;
 }
@@ -658,12 +1513,33 @@ function firstNested(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
+function formulaBasis(tipoReceita: string, componentCount: number): string {
+  if (tipoReceita === "mapa") return "documental_mapa";
+  return componentCount > 0 ? "por_litro" : "legado_nao_comprovado";
+}
+
 function nullableString(value: unknown): string | null {
   return value === null || value === undefined ? null : String(value);
 }
 
 function nullableNumber(value: unknown): number | null {
   return value === null || value === undefined ? null : Number(value);
+}
+
+function emptySupervisorDashboard(
+  source: PcpSupervisorDashboard["source"],
+  error: string | null
+): PcpSupervisorDashboard {
+  return {
+    metrics: {
+      opsAguardando: null,
+      opsEmProducao: null,
+      componentesSemReserva: null,
+      lotesBloqueados: null
+    },
+    source,
+    error
+  };
 }
 
 function emptyDashboard(source: PcpDashboard["source"], error: string | null): PcpDashboard {
@@ -674,13 +1550,20 @@ function emptyDashboard(source: PcpDashboard["source"], error: string | null): P
       opsAbertas: null,
       opsEmProcesso: null,
       componentesPendentes: null,
-      lotesBloqueados: null
+      lotesBloqueados: null,
+      garantiasVigentes: null,
+      transformacoesAbertas: null
     },
     lookups: EMPTY_LOOKUPS,
     activeFormulas: [],
     formulaVersions: [],
     recentOps: [],
     availableLots: [],
+    productGuarantees: [],
+    mpLotGuarantees: [],
+    mpLotParameters: [],
+    historicalGuarantees: [],
+    opGuaranteeResults: [],
     source,
     error
   };

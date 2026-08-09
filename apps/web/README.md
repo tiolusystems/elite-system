@@ -11,18 +11,20 @@ Aplicacao Next.js do Elite System.
 
 ## Configuracao local
 
-Copie `.env.example` para `.env.local` e configure as variaveis do projeto Supabase.
+Na raiz do repositorio, use o iniciador controlado:
 
 ```powershell
-npm install
-npm run dev
+.\iniciar-elite-local.cmd
 ```
 
-Abra `http://localhost:3000`.
+Ele inicia Supabase, gera `.env.local` sem versionar chaves e valida `/api/health`. O primeiro administrador e criado pelo procedimento de `docs/operacao_local_modulos.md`. Abra `http://127.0.0.1:3000`.
 
 ## Telas
 
 - `/`: painel operacional inicial com status do banco, KPIs, fila critica e atalhos dos modulos.
+- `/modulos`: ambiente autoritativo, maturidade, acesso efetivo, dependencias e promocao auditada.
+- `/modulo-indisponivel`: bloqueio seguro para rota sem rollout ou dependencia.
+- `/health` e `/api/health`: liveness da aplicacao sem expor credenciais.
 - `/cadastros`: tela operacional de cadastros mestres.
 - `/pedidos`: primeira tela operacional de pedidos, com rascunho auditavel, item vendavel, comissao prevista, decisao de credito, recebimento parcial e liberacao proporcional de comissao.
 - A tela mostra a condicao visual/analitica do banco conforme `ELITE_DATABASE_MODE`.
@@ -37,3 +39,5 @@ Abra `http://localhost:3000`.
 ## Regra de seguranca
 
 Nao versionar `.env.local`, chaves, dumps, bancos ou dados comerciais. A tela inicial mostra a condicao do banco para evitar confundir local, teste, homologacao e producao.
+
+O banco novo nasce `unconfigured`. Somente um usuario com `system.admin` pode escolher o ambiente em `/modulos`. Modulo em `read_only` continua consultavel, mas suas action keys de escrita sao recusadas no PostgreSQL.

@@ -11,6 +11,8 @@ export type AuthProfile = {
 export type AuthStatus = {
   isConfigured: boolean;
   isAuthenticated: boolean;
+  requiresAccountActivation: boolean;
+  requiresPasswordChange: boolean;
   email: string | null;
   profile: AuthProfile | null;
   source: "supabase" | "not_configured" | "anonymous" | "error";
@@ -23,6 +25,8 @@ export async function getAuthStatus(): Promise<AuthStatus> {
     return {
       isConfigured: false,
       isAuthenticated: false,
+      requiresAccountActivation: false,
+      requiresPasswordChange: false,
       email: null,
       profile: null,
       source: "not_configured",
@@ -39,6 +43,8 @@ export async function getAuthStatus(): Promise<AuthStatus> {
       return {
         isConfigured: true,
         isAuthenticated: false,
+        requiresAccountActivation: false,
+        requiresPasswordChange: false,
         email: null,
         profile: null,
         source: "anonymous",
@@ -55,6 +61,8 @@ export async function getAuthStatus(): Promise<AuthStatus> {
     return {
       isConfigured: true,
       isAuthenticated: true,
+      requiresAccountActivation: user.user_metadata?.invitation_pending === true,
+      requiresPasswordChange: user.user_metadata?.temporary_password_bootstrap === true,
       email: user.email ?? null,
       profile: profileResult.data
         ? {
@@ -65,16 +73,18 @@ export async function getAuthStatus(): Promise<AuthStatus> {
           }
         : null,
       source: profileResult.error ? "error" : "supabase",
-      error: profileResult.error?.message ?? null
+      error: profileResult.error ? "Não foi possível carregar o perfil desta conta." : null
     };
-  } catch (error) {
+  } catch {
     return {
       isConfigured: true,
       isAuthenticated: false,
+      requiresAccountActivation: false,
+      requiresPasswordChange: false,
       email: null,
       profile: null,
       source: "error",
-      error: error instanceof Error ? error.message : "Erro desconhecido"
+      error: "O serviço de acesso não respondeu. Tente novamente em alguns instantes."
     };
   }
 }

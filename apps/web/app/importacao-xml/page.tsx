@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import {
   confirmNfeItemMatchAction,
   generateMpLotFromNfeItemAction,
@@ -8,16 +6,18 @@ import {
   stageNfeHeaderAction,
   stageNfeItemAction
 } from "@/app/importacao-xml/actions";
+import { LocalEntityLookup } from "@/app/corporate-search/local-entity-lookup";
 import {
   getImportacaoXmlDashboard,
   type PendingXmlItem,
   type XmlLookupOption
 } from "@/lib/importacao-xml";
 import { getRuntimeStatus } from "@/lib/runtime";
+import { internalValueLabel } from "@/lib/labels-ptbr";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-export default async function ImportacaoXmlPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function ImportacaoXmlPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
   const dashboard = await getImportacaoXmlDashboard();
@@ -26,33 +26,6 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Importacao XML</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml" aria-current="page">
-            XML MP
-          </a>
-          <a href="/pcp">PCP</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace dashboard-workspace">
         <div className="dashboard-header">
           <div>
@@ -72,7 +45,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
           </div>
         </div>
 
-        <LookupDatalists nfeOptions={dashboard.nfeOptions} materiasPrimas={dashboard.materiasPrimas} />
+
 
         <section className="kpi-grid" aria-label="Resumo da importacao XML">
           <article className="kpi-card accent-blue">
@@ -153,7 +126,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
                       <span>{summary.emitenteNome ?? summary.emitenteCnpj ?? summary.chaveAcesso}</span>
                     </div>
                     <div className="module-card-meta">
-                      <span>{summary.status}</span>
+                      <span>{internalValueLabel(summary.status)}</span>
                       <strong>{moneyOrDash(summary.valorTotalXml)}</strong>
                     </div>
                     <div className="tag-row">
@@ -222,10 +195,15 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
             </div>
             <form action={stageNfeItemAction}>
               <div className="form-grid">
-                <label className="wide-field">
-                  NF XML
-                  <input name="nfe_id" list="nfe-options" placeholder="Buscar NF" required />
-                </label>
+                <LocalEntityLookup
+                  className="wide-field"
+                  name="nfe_id"
+                  label="NF XML"
+                  placeholder="Abra a lista ou pesquise a NF"
+                  options={dashboard.nfeOptions}
+                  defaultValue={null}
+                  required
+                />
                 <label>
                   Item
                   <input name="numero_item" inputMode="numeric" placeholder="1" required />
@@ -281,7 +259,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
           </section>
         </section>
 
-        <section className="panel" id="fila-xml" aria-labelledby="fila-xml-title">
+        <section className="panel lookup-surface" id="fila-xml" aria-labelledby="fila-xml-title">
           <div className="panel-header">
             <h2 id="fila-xml-title">Fila de conferencia</h2>
             <span className="pill">{dashboard.pendingItems.length} pendente(s)</span>
@@ -289,7 +267,7 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
           {dashboard.pendingItems.length > 0 ? (
             <div className="xml-review-list">
               {dashboard.pendingItems.map((item) => (
-                <XmlReviewCard key={item.itemId} item={item} />
+                <XmlReviewCard key={item.itemId} item={item} materiasPrimas={dashboard.materiasPrimas} />
               ))}
             </div>
           ) : (
@@ -304,10 +282,11 @@ export default async function ImportacaoXmlPage({ searchParams }: { searchParams
   );
 }
 
-function XmlReviewCard({ item }: { item: PendingXmlItem }) {
-  const suggestedMpValue = item.materiaPrimaSugeridaId
-    ? `${item.materiaPrimaSugeridaId} | ${item.materiaPrimaSugeridaSku ?? "MP"} | ${item.materiaPrimaSugeridaNome ?? ""}`
-    : "";
+function XmlReviewCard({ item, materiasPrimas }: { item: PendingXmlItem; materiasPrimas: XmlLookupOption[] }) {
+  const suggestedMpId = item.materiaPrimaSugeridaId !== null
+    && materiasPrimas.some((option) => option.id === item.materiaPrimaSugeridaId)
+    ? item.materiaPrimaSugeridaId
+    : null;
 
   return (
     <article className="xml-review-card">
@@ -331,7 +310,7 @@ function XmlReviewCard({ item }: { item: PendingXmlItem }) {
         </div>
         <div className="xml-score">
           <strong>{item.melhorScore === null ? "-" : `${item.melhorScore}`}</strong>
-          <span>{item.status}</span>
+          <span>{internalValueLabel(item.status)}</span>
         </div>
       </div>
 
@@ -339,10 +318,15 @@ function XmlReviewCard({ item }: { item: PendingXmlItem }) {
 
       <form className="inline-form-grid" action={confirmNfeItemMatchAction}>
         <input type="hidden" name="item_id" value={item.itemId} />
-        <label className="wide-field">
-          MP confirmada
-          <input name="materia_prima_id" list="materias-primas-options" defaultValue={suggestedMpValue} required />
-        </label>
+        <LocalEntityLookup
+          className="wide-field"
+          name="materia_prima_id"
+          label="MP confirmada"
+          placeholder="Abra a lista ou pesquise por SKU ou nome"
+          options={materiasPrimas}
+          defaultValue={suggestedMpId}
+          required
+        />
         <label>
           Unidade destino
           <input name="unidade_destino" placeholder="KG" />
@@ -376,8 +360,8 @@ function XmlReviewCard({ item }: { item: PendingXmlItem }) {
         <form action={generateMpLotFromNfeItemAction}>
           <input type="hidden" name="item_id" value={item.itemId} />
           <select name="status" defaultValue="disponivel" aria-label="Status inicial do lote MP">
-            <option value="disponivel">disponivel</option>
-            <option value="bloqueado">bloqueado</option>
+            <option value="disponivel">Disponível</option>
+            <option value="bloqueado">Bloqueado</option>
           </select>
           <input name="observacao" placeholder="observacao do lote MP" />
           <button className="secondary-button" type="submit">
@@ -396,34 +380,7 @@ function XmlReviewCard({ item }: { item: PendingXmlItem }) {
   );
 }
 
-function LookupDatalists({
-  nfeOptions,
-  materiasPrimas
-}: {
-  nfeOptions: XmlLookupOption[];
-  materiasPrimas: XmlLookupOption[];
-}) {
-  return (
-    <>
-      <LookupDatalist id="nfe-options" options={nfeOptions} />
-      <LookupDatalist id="materias-primas-options" options={materiasPrimas} />
-    </>
-  );
-}
 
-function LookupDatalist({ id, options }: { id: string; options: XmlLookupOption[] }) {
-  return (
-    <datalist id={id}>
-      {options.map((option) => (
-        <option key={option.id} value={lookupValue(option)} />
-      ))}
-    </datalist>
-  );
-}
-
-function lookupValue(option: XmlLookupOption): string {
-  return option.detail ? `${option.id} | ${option.label} | ${option.detail}` : `${option.id} | ${option.label}`;
-}
 
 function singleValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;

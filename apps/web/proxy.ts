@@ -1,7 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = new Set(["/login", "/health", "/api/health"]);
+const PUBLIC_ROUTES = new Set([
+  "/auth/confirm",
+  "/login",
+  "/login/recuperar-senha",
+  "/health",
+  "/api/health"
+]);
+const TEMP_PASSWORD_CHANGE_ROUTE = "/login/trocar-senha";
+const MODULE_GUARD_RECOVERY_ROUTE = "/modulo-indisponivel";
+
+type RouteModuleAccess = {
+  module_key: string | null;
+  available: boolean;
+  reason: string;
+};
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -59,6 +73,38 @@ export async function proxy(request: NextRequest) {
     return redirectToLogin(request, "profile_required");
   }
 
+  const invitationPending = user.user_metadata?.invitation_pending === true;
+  const temporaryPasswordPending = user.user_metadata?.temporary_password_bootstrap === true;
+
+  if ((invitationPending || temporaryPasswordPending) && pathname !== TEMP_PASSWORD_CHANGE_ROUTE) {
+    const changeUrl = request.nextUrl.clone();
+    changeUrl.pathname = TEMP_PASSWORD_CHANGE_ROUTE;
+    changeUrl.search = "";
+    changeUrl.searchParams.set("mode", invitationPending ? "invitation" : "temporary");
+    changeUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(changeUrl);
+  }
+
+  if (pathname === MODULE_GUARD_RECOVERY_ROUTE || pathname.startsWith(`${MODULE_GUARD_RECOVERY_ROUTE}/`)) {
+    return response;
+  }
+if (pathname.startsWith("/api/lookups/")) {
+  return response;
+}
+  const moduleAccessResult = await supabase.rpc("get_current_route_module_access", {
+    p_pathname: pathname
+  });
+  const moduleAccess = Array.isArray(moduleAccessResult.data)
+    ? (moduleAccessResult.data[0] as RouteModuleAccess | undefined)
+    : undefined;
+
+  if (moduleAccessResult.error || !moduleAccess) {
+    return redirectToModuleUnavailable(request, null, "runtime_contract_unavailable");
+  }
+  if (!moduleAccess.available) {
+    return redirectToModuleUnavailable(request, moduleAccess.module_key, moduleAccess.reason);
+  }
+
   return response;
 }
 
@@ -79,6 +125,20 @@ function redirectToLogin(request: NextRequest, result: string): NextResponse {
   loginUrl.searchParams.set("result", result);
   loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
   return NextResponse.redirect(loginUrl);
+}
+
+function redirectToModuleUnavailable(
+  request: NextRequest,
+  moduleKey: string | null,
+  reason: string
+): NextResponse {
+  const unavailableUrl = request.nextUrl.clone();
+  unavailableUrl.pathname = MODULE_GUARD_RECOVERY_ROUTE;
+  unavailableUrl.search = "";
+  unavailableUrl.searchParams.set("module", moduleKey ?? "rota");
+  unavailableUrl.searchParams.set("reason", reason);
+  unavailableUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+  return NextResponse.redirect(unavailableUrl);
 }
 
 export const config = {

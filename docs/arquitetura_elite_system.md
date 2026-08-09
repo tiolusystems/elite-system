@@ -164,20 +164,27 @@ Entidades principais:
 
 ## Banco de dados
 
-Fase atual:
+Produto operacional:
 
-- SQLite local para desenvolvimento e auditoria.
-- Todos os imports preservam camada bruta.
-- Todas as entidades normalizadas guardam `source_row_id`.
-- Usuarios, senha e `action_logs` ja existem no schema local.
+- PostgreSQL gerenciado via Supabase;
+- migrations versionadas e reconstruidas do zero no CI;
+- RLS de leitura e escrita somente por RPC auditada;
+- relacoes operacionais por PK, FK e constraints;
+- backups automatizados e restore ainda a homologar no ambiente cloud.
 
-Fase cloud:
+Ferramentas locais:
 
-- PostgreSQL gerenciado via Supabase.
-- Backups automatizados.
-- Migrações versionadas.
-- Controle de acesso por perfil.
-- Banco online com multiplos usuarios e trilha de auditoria.
+- SQLite permanece apenas para migracao, reconciliacao e auditoria do Excel legado;
+- PostgreSQL descartavel valida migrations e smokes sem tocar banco real;
+- camada bruta preserva workbook, tabela, linha, batch e payload original.
+
+O gate `0039/0040` e sua matriz de propriedade estao documentados em `docs/decisao_gate_arquitetura_integridade.md` e `docs/matriz_propriedade_modulos.md`.
+
+## Operacao incremental
+
+A migration `0041` permite homologar e liberar modulos de forma independente. O banco guarda ambiente, maturidade, acesso e dependencias; o frontend nao decide sozinho se um modulo esta pronto.
+
+Banco novo nasce `unconfigured`. Rotas autenticadas sao vinculadas a modulos, action keys declaram leitura ou escrita e os ledgers de rollout sao append-only. Detalhes: `docs/decisao_operacao_incremental_modulos.md` e `docs/operacao_gradual_modulos.md`.
 
 ## Perfis de usuario previstos
 

@@ -2,6 +2,12 @@
 
 Base inicial do Elite System, o novo software comercial, industrial e auditavel criado a partir do historico preservado localmente.
 
+## Comece pelo mapa
+
+Antes de alterar codigo ou procurar um modulo, consulte `docs/arquitetura/ARQUITETURA_GERAL.md`. O documento mostra as camadas, os dominios proprietarios, as dependencias, os fluxos ponta a ponta, a maturidade e o localizador rapido de arquivos.
+
+A tela `/modulos` apresenta o mesmo sistema de forma visual e consulta no PostgreSQL o ambiente, a maturidade e o acesso efetivo de cada modulo.
+
 ## Decisao principal
 
 A stack operacional definida e PostgreSQL, Supabase, Next.js e Vercel.
@@ -37,6 +43,14 @@ python -m elite_system.cli audit --db .\data\elite.sqlite
 
 A auditoria inclui reconciliacoes de valores para pedidos, faturamento, entradas MP, saidas MP, saidas PA, producao e saldos de estoque.
 
+Analisar o historico de MP sem gravar ou promover dados:
+
+```powershell
+python -m elite_system.cli analyze-mp-history --db .\data\elite.sqlite --batch-id 1
+```
+
+O comando abre o SQLite em modo somente leitura e relata identidades, sugestoes de MP canonica, lotes, destinos, saldo derivado, valor da mercadoria, frete, DIFAL e diferenca contra o total legado. Ele nao altera cadastro nem estoque.
+
 Criar usuario local:
 
 ```powershell
@@ -69,15 +83,13 @@ python -m elite_system.cli admin --db .\data\elite.sqlite --port 8765
 
 Quando essa tela operar com banco local, temporario ou descartavel, ela exibe aviso visual e resumo analitico do ambiente. Essa regra evita confundir teste com banco operacional.
 
-Preparar app web Next.js:
+Iniciar o ambiente web e o Supabase local:
 
 ```powershell
-cd .\apps\web
-npm install
-npm run dev
+.\iniciar-elite-local.cmd
 ```
 
-Antes disso, copie `.env.example` para `.env.local` e configure as variaveis do Supabase.
+O script gera `apps/web/.env.local` somente com as chaves locais e espera o health-check antes de informar sucesso. O bootstrap auditado do primeiro administrador esta documentado em `docs/operacao_local_modulos.md`.
 
 ## Supabase/PostgreSQL
 
@@ -89,7 +101,7 @@ Verificar CLI local:
 .\.tools\supabase-cli\supabase.exe --version
 ```
 
-O projeto Supabase fica configurado em `supabase/config.toml` e as migrations ficam em `supabase/migrations`.
+O projeto Supabase fica configurado em `supabase/config.toml` e as migrations ficam em `supabase/migrations`. O banco novo nasce fechado em `unconfigured`; modulos sao liberados por ambiente na tela `/modulos`.
 
 Validacao estrutural sem dados reais:
 

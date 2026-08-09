@@ -101,3 +101,5 @@ Esse comportamento nao persistia escrita indevida, mas revelava detalhes de vali
 ## Observacao tecnica
 
 O script mantem `permission_actions` porque essa tabela e catalogo de action keys e e referenciada por `action_logs`. O estado "zero grant" e representado por ator sem overrides e `default_allowed = false` no escopo do sweep, executado apenas em banco descartavel.
+
+A `0038` centralizou duas escolhas de alcada em helpers `resolve_*_action_key`. O descobridor foi ampliado no gate `0039/0040` para seguir esses helpers. Sem essa correcao, a cobertura cairia silenciosamente de 58 para 56 RPCs; depois da correcao, o resultado voltou a `targets=58, denied=58`.

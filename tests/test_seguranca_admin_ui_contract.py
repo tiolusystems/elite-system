@@ -39,6 +39,10 @@ class SecurityAdminUiContractTests(unittest.TestCase):
         self.assertIn("Seguranca e alcadas", page)
         self.assertIn("getSecurityDashboard", page)
         self.assertIn("setSecurityPermissionOverrideAction", page)
+        self.assertIn("upsertSecurityUserProfileAction", page)
+        self.assertIn("Reativar usuÃ¡rio", page)
+        self.assertIn("Inativar usuÃ¡rio", page)
+        self.assertIn('name="status"', page)
         self.assertIn('href="/seguranca"', home)
         self.assertIn("Seguranca", home)
 
@@ -49,6 +53,25 @@ class SecurityAdminUiContractTests(unittest.TestCase):
         self.assertIn('supabase.rpc("list_security_effective_permissions"', text)
         self.assertNotIn('.from("user_profiles")', text)
         self.assertNotIn('.from("user_permission_overrides")', text)
+
+    def test_permissions_are_not_presented_as_account_blocking(self) -> None:
+        page = SECURITY_PAGE.read_text(encoding="utf-8")
+
+        self.assertIn("Alterações individuais afetam somente este usuário e não bloqueiam a conta.", page)
+        self.assertIn('permission.defaultAllowed ? "Permitido" : "Negado"', page)
+        self.assertIn('permission.effectiveAllowed ? "Permitido" : "Negado"', page)
+        self.assertIn("Negar para este usuário", page)
+        self.assertIn("securityRoleLabel", page)
+        self.assertNotIn('permission.effectiveAllowed ? "permitido" : "bloqueado"', page)
+
+    def test_account_control_is_attached_to_selected_user_without_physical_delete(self) -> None:
+        page = SECURITY_PAGE.read_text(encoding="utf-8")
+
+        self.assertIn("Acesso da conta selecionada", page)
+        self.assertIn("Alterar alçadas não bloqueia a conta", page)
+        self.assertIn('name="user_id" type="hidden" value={dashboard.selectedProfile.id}', page)
+        self.assertNotIn("deleteSecurityUserAction", page)
+        self.assertNotIn("Excluir usuário", page)
 
 
 if __name__ == "__main__":

@@ -507,11 +507,50 @@ Quando o dado historico nao tiver essa informacao, o campo deve ser opcional ou 
 
 Registros importados do Excel devem apontar para ator de sistema nao-humano, como `Migracao Historica`, em vez de atribuir a venda original ao usuario que apenas operou a importacao.
 
+## Credenciais e boundary administrativo
+
+Credenciais nunca fazem parte do estado auditavel do sistema operacional. Senha temporaria, token de convite, service role key e qualquer segredo equivalente nao podem ser gravados em `action_logs`, metadata, URL, documento operacional, screenshot de validacao ou output de teste.
+
+Quando um fluxo precisar tocar Supabase Auth por boundary administrativo, a ordem obrigatoria e:
+
+1. validar alcada por RPC auditada usando usuario logado;
+2. executar a chamada administrativa server-only;
+3. registrar apenas o fato operacional sem segredo, preferindo hash para email quando a identificacao completa nao for necessaria;
+4. documentar explicitamente qualquer falha que deixe Auth e perfil operacional em estados diferentes.
+
+O fluxo 0038 de senha temporaria e historico e atende apenas contas legadas. A partir da 0047, novos acessos usam convite verificavel do Supabase Auth: o servidor valida `security.manage_users`, envia o convite, cria o perfil vinculado e registra somente o fato com hash do email. Nenhuma senha temporaria e criada ou transmitida pela aplicacao.
+
+Senha temporaria deve exigir troca no primeiro acesso. Enquanto `user_metadata.temporary_password_bootstrap = true`, o proxy deve redirecionar para tela de troca antes de qualquer modulo operacional. A troca registra somente o fato auditavel, nunca a senha nova.
+
+Convite novo deve manter `user_metadata.invitation_pending = true` ate o destinatario confirmar o email e criar a propria senha. A conta pode existir tecnicamente no Auth, mas nao e considerada ativada nem recebe acesso operacional antes desses dois fatos.
+
+Troca de email de usuario e fluxo administrativo governado desde a `0048`: o usuario registra motivo sem fornecer endereco; somente perfil `admin` define ou rejeita o novo email; a aplicacao chama `auth.updateUser` apenas com o valor retornado pela aprovacao persistida; o titular confirma esse endereco. Solicitacao, revisao, envio e conclusao geram eventos append-only. RPC direta que aceite email digitado pelo proprio usuario e anti-pattern bloqueado.
+
+Administracao de seguranca e excecao permanente a autonomia operacional. Desde
+a `0049`, action keys de usuarios, permissoes, revisao de email e runtime nascem
+negadas. Toda RPC administrativa exige papel humano `admin` e grant explicito.
+Uma action key isolada nunca pode elevar um perfil operacional a administrador.
+Promocao de admin exige `manage_users` + `manage_permissions`, implementacoes
+internas nao ficam executaveis e o ultimo administrador capaz nao pode ser
+desativado nem perder os grants centrais.
+
+Senha existente nunca e recuperada ou exibida. A recuperacao usa link de uso limitado emitido pelo Supabase Auth; o callback aceita somente o tipo `recovery`, remove codigo/token da URL antes de abrir a tela de nova senha e apresenta resposta neutra para email existente ou inexistente. Solicitacao e validacao do link pertencem ao log nativo do Supabase Auth. A mudanca concluida tambem registra `record_security_own_password_changed()` no ledger operacional, sem senha, token ou segredo.
+
+## Leitura minima antes de guard
+
+Algumas wrappers precisam resolver a action key antes de negar permissao, por exemplo `pedidos.create.own` vs `pedidos.create.any` ou `pcp.formula.create` vs `pcp.formula.change`. Essa leitura pre-guard so e permitida quando:
+
+- nao retorna dados operacionais ao usuario;
+- existe apenas para escolher a action key correta;
+- esta centralizada em helper nomeado (`resolve_*_action_key`);
+- a wrapper nega por `require_current_user_permission(...)` antes de qualquer validacao de dominio ou escrita.
+
 ## Checklist de migration
 
 Antes de considerar uma migration pronta:
 
 1. action keys novas em `permission_actions`;
+   - declarar `runtime_module_key` e `runtime_access_kind` (`read` ou `write`);
 2. uma RPC por eixo real de alcada;
 3. `revoke all on function ... from public`;
 4. `grant execute ... to authenticated`;
@@ -523,6 +562,21 @@ Antes de considerar uma migration pronta:
 10. teste estatico contra regressao relevante;
 11. smoke em PostgreSQL descartavel limpo;
 12. documento de validacao.
+
+Uma action key sem modulo proprietario ou tipo de acesso deve falhar na migration. O gate de rollout fica dentro de `require_current_user_permission`, depois da decisao de alcada, e nao em condicionais de tela.
+
+Bloqueio de escrita inclui `TRUNCATE`, que nao passa por RLS, alem de `INSERT`, `UPDATE` e `DELETE`. Roles web tambem nao recebem `REFERENCES` ou `TRIGGER` em tabelas operacionais. Toda tabela nova deve nascer com esses privilegios revogados.
+
+## Normalizacao e JSON
+
+Relacionamento operacional deve usar FK tipada e tabela filha. JSON e permitido para fonte bruta, snapshot, metadata e memoria de calculo, mas nao como unica fonte de verdade de uma lista operacional.
+
+Redundancia deliberada em ledger/evento so e aceita quando:
+
+- melhora rastreabilidade historica ou consulta;
+- a fonte canonica esta documentada;
+- FK composta, `CHECK` ou trigger impede combinacoes contraditorias;
+- a tabela e append-only quando representa fato historico.
 
 Para estoque, o teste estatico tambem deve impedir nova funcao SQL com `insert into public.est_movimentos_*` sem `begin_audited_rpc(...)`, salvo divida tecnica declarada explicitamente.
 
@@ -554,6 +608,7 @@ Contrato do sweep:
 - remover qualquer override desse ator;
 - forcar `default_allowed = false` apenas para os modulos do escopo do sweep;
 - descobrir RPCs por catalogo (`pg_proc`), por action keys dos dominios e por uso de `begin_audited_rpc(...)` ou `require_current_user_permission(...)`;
+- seguir helpers `resolve_*_action_key` para nao perder wrappers cuja action key e resolvida indiretamente;
 - chamar cada RPC com argumentos dummy tipados;
 - exigir erro `not allowed: <action_key>`;
 - chamar `log_permission_denied(...)` depois de capturar a excecao;
@@ -561,7 +616,7 @@ Contrato do sweep:
 - confirmar que nenhuma tabela operacional teve contagem alterada pela tentativa negada;
 - falhar de forma barulhenta quando uma RPC retorna sucesso ou valida regra de dominio antes de negar permissao.
 
-O sweep inicial cobre `cadastros`, `estoque`, `pcp`, `faturamento`, `financeiro` e `pedidos`, incluindo action keys satelites ja acopladas a esses fluxos (`romaneios`, `importacao` e `metas`). O dominio `seguranca` fica explicitamente fora desse sweep ate o fechamento proprio do dominio.
+O sweep inicial cobre `cadastros`, `estoque`, `pcp`, `faturamento`, `financeiro` e `pedidos`, incluindo action keys satelites ja acopladas a esses fluxos (`romaneios`, `importacao` e `metas`). O dominio `seguranca` recebeu smoke proprio de escalada na `0049`, porque sua regra adicional exige papel admin mesmo quando um grant critico e concedido propositalmente a um perfil operacional.
 
 ## Ordem recomendada apos cadastros
 

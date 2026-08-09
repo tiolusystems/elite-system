@@ -1,43 +1,12 @@
-import Link from "next/link";
-
 import { getKanbanDashboard, type KanbanOrder } from "@/lib/kanban";
-import { getRuntimeStatus } from "@/lib/runtime";
 
 export const dynamic = "force-dynamic";
 
 export default async function KanbanPage() {
-  const runtime = getRuntimeStatus();
   const dashboard = await getKanbanDashboard();
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Kanban comercial</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban" aria-current="page">
-            Kanban
-          </a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace kanban-workspace">
         <div className="dashboard-header">
           <div>

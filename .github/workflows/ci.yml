@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  tests:
+  python-tests:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,3 +14,225 @@ jobs:
           python-version: "3.12"
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+
+  web-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Enable pinned pnpm
+        run: corepack enable && corepack prepare pnpm@11.11.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint web application
+        run: pnpm lint
+      - name: Build web application
+        run: pnpm build
+
+  database-contract:
+    runs-on: ubuntu-latest
+    env:
+      ELITE_DB_PORT: "56522"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+      - name: Start disposable Supabase
+        run: supabase start
+      - name: Rebuild through 0118 and validate the 0119 upgrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration="supabase/migrations/0119_corporate_search_and_romaneio_filters.sql"
+          pending="$RUNNER_TEMP/0119_corporate_search_and_romaneio_filters.sql"
+          restore_migration() {
+            if [ -f "$pending" ]; then
+              mv "$pending" "$migration"
+            fi
+          }
+          trap restore_migration EXIT
+          mv "$migration" "$pending"
+          supabase db reset
+          restore_migration
+          supabase migration up --local
+          trap - EXIT
+      - name: Lint PostgreSQL schema
+        run: supabase db lint --local --level warning
+      - name: Generate database TypeScript contract
+        run: |
+          mkdir -p artifacts
+          for attempt in 1 2 3; do
+            if supabase gen types --local --schema public > artifacts/database.types.tmp; then
+              mv artifacts/database.types.tmp artifacts/database.types.ts
+              break
+            fi
+            rm -f artifacts/database.types.tmp
+            if [ "$attempt" -eq 3 ]; then
+              echo "Database type generation failed after 3 attempts" >&2
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
+          grep -q "export type Database" artifacts/database.types.ts
+      - name: Run architecture integrity smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/architecture_integrity_gate.sql
+      - name: Run progressive module rollout smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/module_rollout_runtime.sql
+      - name: Run first administrator bootstrap smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/first_admin_operational_bootstrap.sql
+      - name: Run schema lint hardening smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/schema_lint_hardening.sql
+      - name: Run production module release smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/production_module_release.sql
+      - name: Run production supervisor dashboard access smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/pcp_supervisor_dashboard_access.sql
+      - name: Run controlled procedures governance smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/controlled_procedures_governance.sql
+      - name: Run production FIFO reservation smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/pcp_fifo_component_reservation.sql
+      - name: Run integrated production chain smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/production_end_to_end_chain.sql
+      - name: Run order commission assignment smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_commission_assignment.sql
+      - name: Run integrated commercial chain smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/commercial_end_to_end_chain.sql
+      - name: Run governed order delivery schedules smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_delivery_schedules.sql
+      - name: Run governed client workbench search smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/client_workbench_search.sql
+      - name: Run financial operations workbench smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/finance_ops_gate_01b.sql
+      - name: Run atomic credit limit permission smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/credit_limit_atomic_permission.sql
+      - name: Run operational stock and external fiscal reference smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/operational_stock_external_fiscal_refs.sql
+      - name: Run total traceability permission smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/total_traceability_contract.sql
+      - name: Run staging rollout default-deny smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/staging_rollout_default_deny.sql
+
+      - name: Run governed vehicle registration smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/vehicle_registration_governance.sql
+
+      - name: Run governed identity and client commercial link smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/identity_client_link_governance.sql
+
+      - name: Run governed stock adjustment access smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/stock_adjustment_rpc_access.sql
+
+      - name: Run blocked order and exchange idempotency smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/validate_0086_orders_blocked_creation.sql
+      - name: Run historical MP import foundation smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/historical_mp_import_foundation.sql
+      - name: Run master data source lineage smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/master_data_source_lineage.sql
+      - name: Run DEC-007 technical catalogs smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_007_technical_catalogs.sql
+      - name: Run DEC-008 packaging and logistics smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_008_packaging_logistics.sql
+      - name: Run DEC-011 client seller temporal links smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_011_client_seller_temporal_links.sql
+      - name: Run DEC-010 campaign rewards smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_010_campaign_rewards.sql
+      - name: Run DEC-006 historical formulas and OPs smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_006_historical_formulas_ops.sql
+      - name: Run DEC-009 legacy financial and fiscal smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/dec_009_legacy_financial_fiscal.sql
+      - name: Run technical catalog operational workbench smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/technical_catalog_operational_workbench.sql
+      - name: Run production catalog view access smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/production_catalog_view_access.sql
+      - name: Run romaneio logistics operational smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/romaneio_logistics_operational_contract.sql
+      - name: Run romaneio quantity integrity smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/romaneio_quantity_integrity_contract.sql
+      - name: Run administrator email change workflow smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/security_admin_email_change_workflow.sql
+      - name: Run security administrator privilege boundary smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/security_admin_privilege_boundary.sql
+      - uses: actions/upload-artifact@v4
+        with:
+          name: elite-database-types
+          path: artifacts/database.types.ts
+          if-no-files-found: error
+      - name: Stop disposable Supabase
+        if: always()
+        run: supabase stop --no-backup

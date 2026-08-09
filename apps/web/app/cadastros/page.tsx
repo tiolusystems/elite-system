@@ -1,101 +1,170 @@
 import Link from "next/link";
 
-import {
-  createClienteAction,
-  createConversaoUnidadeMpAction,
-  createEmbalagemAction,
-  createMateriaPrimaAction,
-  createPessoaComercialAction,
-  createProdutoBaseAction,
-  createProdutoEmbalagemAction
-} from "@/app/cadastros/actions";
-import { getMasterDataDashboard, type LookupOption, type MasterDataLookups } from "@/lib/master-data";
+import { ClientesSection } from "@/app/cadastros/clientes-section";
+import { PessoasSection } from "@/app/cadastros/pessoas-section";
+import { VehiclesSection } from "@/app/cadastros/vehicles-section";
+import { searchCorporateLookup } from "@/lib/corporate-lookups";
+import { getMasterDataClientWorkspace, getMasterDataDashboard } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
+type GlobalSearchResult = {
+  id: number;
+  label: string;
+  detail: string | null;
+  status: string | null;
+  kind: string;
+  initials: string;
+  href: string;
+};
 
-export default async function CadastrosPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+const GLOBAL_SEARCH_TARGETS = [
+  {
+    entity: "clientes",
+    kind: "Cliente",
+    initials: "CL",
+    href: (id: number) => `/cadastros?grupo=clientes&cliente=${id}`
+  },
+  {
+    entity: "pessoas",
+    kind: "Pessoa",
+    initials: "PV",
+    href: (id: number) => `/cadastros?grupo=pessoas&pessoa=${id}`
+  },
+  {
+    entity: "produtos",
+    kind: "Produto",
+    initials: "PA",
+    href: (id: number) => `/cadastros/produtos?selected=${id}#editar-produto`
+  },
+  {
+    entity: "materias-primas",
+    kind: "Matéria-prima",
+    initials: "MP",
+    href: (id: number) => `/cadastros/materias-primas?selected=${id}`
+  }
+] as const;
+
+type CadastroGroupKey =
+  | "clientes"
+  | "pessoas"
+  | "materias-primas"
+  | "produtos"
+  | "embalagens"
+  | "logistica"
+  | "tecnicos"
+  | "validacao";
+
+const CADASTRO_GROUPS: Array<{
+  key: CadastroGroupKey;
+  title: string;
+  description: string;
+  action: string;
+}> = [
+  { key: "clientes", title: "Clientes e propriedades", description: "Identidade, fazendas, enderecos, contatos e credito.", action: "Novo cliente" },
+  { key: "pessoas", title: "Pessoas e vinculos comerciais", description: "Vendedores, agentes, gerentes, tecnicos e papeis.", action: "Nova pessoa" },
+  { key: "materias-primas", title: "Materias-primas e insumos", description: "SKU, unidade, densidade, estoque e dados regulatorios.", action: "Nova materia-prima" },
+  { key: "produtos", title: "Produtos e apresentacoes", description: "Produto-base, validade e combinacao produto + embalagem.", action: "Novo produto" },
+  { key: "embalagens", title: "Embalagens e conversoes", description: "Volumes, insumos de embalagem e conversoes de unidade.", action: "Nova embalagem" },
+  { key: "logistica", title: "Veiculos e logistica", description: "Cadastros de apoio para entrega, carga e expedicao.", action: "Novo veiculo" },
+  { key: "tecnicos", title: "Cadastros tecnicos", description: "Unidades, nutrientes, garantias e catalogos industriais.", action: "Abrir catalogos" },
+  { key: "validacao", title: "Validacao e pendencias", description: "Duplicidades, revisoes e cadastros incompletos.", action: "Abrir fila" }
+];
+
+export default async function CadastrosPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const runtime = getRuntimeStatus();
-  const dashboard = await getMasterDataDashboard();
-  const lookups = dashboard.lookups;
-  const pendingCount = dashboard.validationIssues.length;
   const result = singleValue(params.result);
   const formMessage = messageForResult(result);
+  const requestedGroup = singleValue(params.grupo);
+  const activeGroup = CADASTRO_GROUPS.find((group) => group.key === requestedGroup) ?? null;
+const searchText = (singleValue(params.busca) ?? "").trim();
+const query = searchText.toLocaleLowerCase("pt-BR");
+  const selectedClientId = positiveInteger(singleValue(params.cliente));
+  const selectedPersonId = positiveInteger(singleValue(params.pessoa));
+  const newClientMode = activeGroup?.key === "clientes" && singleValue(params.modo) === "novo";
+  const newPersonMode = activeGroup?.key === "pessoas" && singleValue(params.modo) === "novo";
+  const clientStatus = singleValue(params.situacao) ?? "";
+  const clientSort = singleValue(params.ordem) ?? "nome_asc";
+  const clientPage = positiveInteger(singleValue(params.pagina)) ?? 1;
+const [dashboard, clientWorkspace, globalResults] = await Promise.all([
+    getMasterDataDashboard({ lightweight: activeGroup?.key === "clientes" }),
+    activeGroup?.key === "clientes"
+      ? getMasterDataClientWorkspace({
+          busca: singleValue(params.busca) ?? "",
+          situacao: clientStatus,
+          ordenacao: clientSort,
+          pagina: clientPage,
+          clienteId: selectedClientId,
+          carregarLista: !selectedClientId && !newClientMode
+        })
+      : Promise.resolve(null),
+    !activeGroup && searchText ? searchGlobalCadastros(searchText) : Promise.resolve([])
+  ]);
+  const pendingCount = dashboard.validationIssues.length;
+  const visibleGroups = query
+    ? CADASTRO_GROUPS.filter((group) => `${group.title} ${group.description}`.toLocaleLowerCase("pt-BR").includes(query))
+    : CADASTRO_GROUPS;
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Cadastros mestres</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/cadastros" aria-current="page">
-            Cadastros
-          </a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-          <a href="#validacao">Validacao</a>
-          <a href="#credito">Credito</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace">
-        <div className="toolbar">
+        <div className="cadastros-heading">
           <div>
-            <h1>Cadastros mestres</h1>
+            <span className="eyebrow">Dados mestres</span>
+            <h1>{activeGroup?.title ?? "Cadastros"}</h1>
             <p className="muted">
-              Operacao inicial para revisar, cadastrar e auditar clientes, pessoas comerciais, MP, produtos,
-              embalagens, itens vendaveis, conversoes e credito.
+              {activeGroup?.description ?? "Encontre, revise e mantenha os dados que sustentam toda a operacao Elite."}
             </p>
           </div>
-          <div className="toolbar-actions" aria-label="Acoes de cadastro">
-            <a className="secondary-button" href="#validacao">
-              Fila
-            </a>
-            <a className="primary-button" href="#novo-cadastro">
-              Novo cadastro
-            </a>
+          <div className="cadastros-heading-actions">
+            {activeGroup ? <Link className="secondary-button" href="/cadastros">Visao geral</Link> : null}
+            {activeGroup ? (
+              <a
+                className="primary-button"
+                href={
+                  activeGroup.key === "clientes"
+                    ? clientNewHref({
+                        busca: singleValue(params.busca) ?? "",
+                        situacao: clientStatus,
+                        ordenacao: clientSort,
+                        pagina: clientPage
+                      })
+                    : actionHref(activeGroup.key)
+                }
+              >
+                {activeGroup.action}
+              </a>
+            ) : (
+              <Link className="primary-button" href="/cadastros?grupo=clientes&modo=novo#cadastro-cliente">Novo cliente</Link>
+            )}
           </div>
         </div>
 
-        <section className="summary-grid" aria-label="Resumo dos cadastros">
-          <div className="summary-card">
-            <span>Modulos prontos</span>
-            <strong>{dashboard.modules.length}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Alertas pendentes</span>
-            <strong>{pendingCount}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Fonte</span>
-            <strong>{dashboard.source === "supabase" ? "Supabase" : "Aguardando ambiente"}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Alcadas</span>
-            <strong>Autonomia inicial</strong>
-          </div>
-        </section>
+        {activeGroup?.key !== "clientes" ? (
+          <form className="cadastros-search" action="/cadastros" method="get" role="search">
+            {activeGroup ? <input type="hidden" name="grupo" value={activeGroup.key} /> : null}
+            <label htmlFor="cadastros-search-input">Buscar nos cadastros</label>
+            <div>
+              <input id="cadastros-search-input" name="busca" defaultValue={singleValue(params.busca)} placeholder="Cliente, produto, materia-prima ou area" />
+              <button className="secondary-button" type="submit">Buscar</button>
+              {query ? <Link className="text-button" href={activeGroup ? `/cadastros?grupo=${activeGroup.key}` : "/cadastros"}>Limpar</Link> : null}
+            </div>
+          </form>
+        ) : null}
+
+        {activeGroup?.key !== "clientes" ? (
+          <section className="cadastros-context" aria-label="Situacao dos cadastros">
+            <div><strong>{dashboard.modules.length}</strong><span>cadastros monitorados</span></div>
+            <div className={pendingCount > 0 ? "attention" : ""}><strong>{pendingCount}</strong><span>pendencias relevantes</span></div>
+            <div><strong>{dashboard.source === "supabase" ? "Conectado" : "Indisponivel"}</strong><span>estado da consulta</span></div>
+          </section>
+        ) : null}
 
         {dashboard.error ? (
           <section className="notice-panel" role="status">
-            <strong>Conexao pendente</strong>
-            <span>{dashboard.error}</span>
+            <strong>Cadastros temporariamente indisponíveis</strong>
+            <span>Não foi possível carregar todos os dados. Tente novamente ou solicite análise ao administrador.</span>
           </section>
         ) : null}
 
@@ -106,42 +175,41 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
           </section>
         ) : null}
 
-        <LookupDatalists lookups={lookups} />
-
-        <section className="two-column">
-          <section className="panel" aria-labelledby="modulos-title">
-            <div className="panel-header">
-              <h2 id="modulos-title">Modulos de cadastro</h2>
-              <span className="pill">cad_*</span>
-            </div>
-            <div className="module-list">
-              {dashboard.modules.map((module) => {
-                const metric = dashboard.metrics.find((item) => item.moduleKey === module.key);
-                return (
-                  <article className="module-card" key={module.key}>
-                    <div className="module-card-main">
-                      <h3>{module.title}</h3>
-                      <span>{module.table}</span>
-                    </div>
-                    <div className="module-card-meta">
-                      <span>{module.owner}</span>
-                      <strong>{metric?.count ?? "sem conexao"}</strong>
-                    </div>
-                    <p>{module.audit}</p>
-                    <div className="tag-row" aria-label={`Campos obrigatorios de ${module.title}`}>
-                      {module.requiredFields.map((field) => (
-                        <span className="tag" key={field}>
-                          {field}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+        {!activeGroup ? (
+          <section className="cadastros-group-grid" aria-label="Areas de cadastro">
+            {globalResults.map((result) => (
+              <Link className="cadastros-group-card" href={result.href} key={`${result.kind}-${result.id}`}>
+                <span className="cadastros-group-icon" aria-hidden="true">{result.initials}</span>
+                <span className="cadastros-group-copy">
+                  <strong>{result.label}</strong>
+                  <small>{result.kind}{result.detail ? ` · ${result.detail}` : ""}</small>
+                </span>
+                <span className="cadastros-group-meta">Abrir</span>
+              </Link>
+            ))}
+            {visibleGroups.map((group) => {
+              const groupCount = countForGroup(group.key, dashboard.metrics);
+              return (
+                <Link className="cadastros-group-card" href={groupHref(group.key)} key={group.key}>
+                  <span className="cadastros-group-icon" aria-hidden="true">{groupInitials(group.key)}</span>
+                  <span className="cadastros-group-copy"><strong>{group.title}</strong><small>{group.description}</small></span>
+                  <span className="cadastros-group-meta">{group.key === "validacao" ? `${pendingCount} pendente(s)` : groupCount}</span>
+                </Link>
+              );
+            })}
+            {visibleGroups.length === 0 && globalResults.length === 0 ? (
+              <div className="shell-state shell-state-empty cadastros-no-results">
+                <span className="shell-state-label">Sem resultados</span>
+                <h2>Nenhum cadastro encontrado</h2>
+                <p>Revise a busca ou limpe o filtro para ver todos os grupos.</p>
+                <div className="shell-state-actions"><Link className="secondary-button" href="/cadastros">Limpar busca</Link></div>
+              </div>
+            ) : null}
           </section>
+        ) : null}
 
-          <section className="panel" id="validacao" aria-labelledby="validacao-title">
+        {activeGroup?.key === "validacao" ? (
+          <section className="panel cadastros-focused-panel" id="validacao" aria-labelledby="validacao-title">
             <div className="panel-header">
               <h2 id="validacao-title">Fila de validacao</h2>
               <span className="pill">{pendingCount} pendente(s)</span>
@@ -163,467 +231,183 @@ export default async function CadastrosPage({ searchParams }: { searchParams?: S
               <div className="empty-state">
                 <strong>Nenhum alerta carregado</strong>
                 <span>
-                  Quando Supabase estiver configurado, esta lista mostrara duplicidades, SKU de MP para revisar e
-                  cadastros pendentes.
+                  Nao ha duplicidades, revisoes de SKU ou cadastros incompletos aguardando tratamento.
                 </span>
               </div>
             )}
           </section>
-        </section>
+        ) : null}
 
-        <section className="panel form-panel" id="novo-cadastro" aria-labelledby="novo-title">
-          <div className="panel-header">
-            <h2 id="novo-title">Novo cliente</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createClienteAction}>
-            <div className="form-grid">
-              <label>
-                Tipo
-                <select name="tipo" defaultValue="cliente">
-                  <option value="cliente">Cliente</option>
-                </select>
-              </label>
-              <label>
-                Nome principal
-                <input name="nome" placeholder="Nome do cliente" required />
-              </label>
-              <label>
-                Codigo legado
-                <input name="codigo_legado" placeholder="Codigo do Excel, se houver" />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                Cidade
-                <input name="cidade" placeholder="Cidade" required />
-              </label>
-              <label>
-                UF
-                <input name="uf" placeholder="SP" required maxLength={2} />
-              </label>
-              <label className="wide-field">
-                Apelidos e grafias
-                <input name="apelidos" placeholder="Separar por virgula, ponto e virgula ou linha" />
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Salvar chama funcao PostgreSQL auditavel e registra `action_logs`.</span>
-              <button className="primary-button" type="submit">
-                Salvar cliente
-              </button>
-            </div>
-          </form>
-        </section>
+        {activeGroup?.key === "clientes" ? (
+          <ClientesSection
+            busca={singleValue(params.busca) ?? ""}
+            clienteSelecionadoId={selectedClientId}
+            clienteSelecionado={clientWorkspace?.cliente ?? null}
+            clientes={clientWorkspace?.pagina.clientes ?? []}
+            commercialLinksManageAvailable={clientWorkspace?.commercialLinksManageAvailable ?? false}
+            contatos={clientWorkspace?.contatos ?? []}
+            creditos={clientWorkspace?.creditos ?? []}
+            creditoEventos={clientWorkspace?.creditoEventos ?? []}
+            creditoGravacaoDisponivel={clientWorkspace?.creditoGravacaoDisponivel ?? false}
+            documentos={clientWorkspace?.documentos ?? []}
+            enderecos={clientWorkspace?.enderecos ?? []}
+            erroConsulta={clientWorkspace?.erro ?? null}
+            estabelecimentos={clientWorkspace?.estabelecimentos ?? []}
+            gravacaoDisponivel={runtime.supabaseConfigured}
+            identificacoes={clientWorkspace?.identificacoes ?? []}
+            linkRoles={clientWorkspace?.linkRoles ?? []}
+            modoNovo={newClientMode}
+            ordenacao={clientSort}
+            pagina={clientWorkspace?.pagina.pagina ?? clientPage}
+            pessoas={clientWorkspace?.pessoas ?? []}
+            propriedades={clientWorkspace?.propriedades ?? []}
+            secao={singleValue(params.secao) ?? undefined}
+            situacao={clientStatus}
+            tamanhoPagina={clientWorkspace?.pagina.tamanhoPagina ?? 25}
+            totalClientes={clientWorkspace?.pagina.total ?? 0}
+            vinculos={clientWorkspace?.vinculos ?? []}
+          />
+        ) : null}
 
-        <section className="panel form-panel" aria-labelledby="nova-pessoa-title">
-          <div className="panel-header">
-            <h2 id="nova-pessoa-title">Nova pessoa comercial</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createPessoaComercialAction} id="nova-pessoa">
-            <div className="form-grid">
-              <label>
-                Nome
-                <input name="nome" placeholder="Nome da pessoa" required />
-              </label>
-              <label>
-                Codigo legado
-                <input name="codigo_legado" placeholder="Codigo, se houver" />
-              </label>
-              <label>
-                Tipo comercial
-                <select name="tipo_comercial" defaultValue="vendedor_direto_elite">
-                  <option value="funcionario_elite">funcionario_elite</option>
-                  <option value="agente_vinculado">agente_vinculado</option>
-                  <option value="agente_direto_elite">agente_direto_elite</option>
-                  <option value="vendedor_direto_elite">vendedor_direto_elite</option>
-                  <option value="tecnico_campo">tecnico_campo</option>
-                  <option value="entregador">entregador</option>
-                  <option value="gerente">gerente</option>
-                  <option value="vendedor_gerente">vendedor_gerente</option>
-                </select>
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                Vendedor responsavel
-                <input
-                  name="vendedor_responsavel_id"
-                  list="pessoas-comerciais-options"
-                  placeholder="Buscar por ID, nome ou tipo"
-                />
-              </label>
-              <label className="wide-field">
-                Apelidos
-                <input name="apelidos" placeholder="Separar por virgula, ponto e virgula ou linha" />
-              </label>
-              <label className="wide-field">
-                Grafias incorretas
-                <input name="grafias_incorretas" placeholder="Grafias usadas historicamente" />
-              </label>
-            </div>
-            <fieldset className="check-grid">
-              <legend>Papeis</legend>
-              <label>
-                <input name="papeis" type="checkbox" value="vendedor" defaultChecked />
-                Vendedor
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="agente" />
-                Agente
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="gerente" />
-                Gerente
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="tecnico_campo" />
-                Tecnico campo
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="entregador" />
-                Entregador
-              </label>
-              <label>
-                <input name="papeis" type="checkbox" value="comissionado" defaultChecked />
-                Comissionado
-              </label>
-            </fieldset>
-            <div className="form-footer">
-              <span>Entregador nao vira vendedor automaticamente; papeis ficam separados para auditoria.</span>
-              <button className="primary-button" type="submit">
-                Salvar pessoa
-              </button>
-            </div>
-          </form>
-        </section>
+        {activeGroup?.key === "pessoas" ? (
+          <PessoasSection
+            areas={dashboard.areasComerciais}
+            busca={singleValue(params.busca) ?? ""}
+            filtroPapel={singleValue(params.papel) ?? ""}
+            filtroSituacao={singleValue(params.situacao) ?? ""}
+            gravacaoDisponivel={runtime.supabaseConfigured}
+            modoNovo={newPersonMode}
+            papeis={dashboard.pessoaPapeis}
+            pessoaSelecionadaId={selectedPersonId}
+            pessoas={dashboard.pessoas}
+            vinculosAreas={dashboard.pessoaAreas}
+          />
+        ) : null}
 
-        <section className="panel form-panel" id="nova-mp" aria-labelledby="nova-mp-title">
-          <div className="panel-header">
-            <h2 id="nova-mp-title">Nova materia-prima</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createMateriaPrimaAction}>
-            <div className="form-grid">
-              <label>
-                Nome
-                <input name="nome" placeholder="Nome da MP" required />
-              </label>
-              <label>
-                SKU corrigido
-                <input name="sku_corrigido" placeholder="Codigo unico" required />
-              </label>
-              <label>
-                Codigo legado
-                <input name="codigo_legado" placeholder="Codigo antigo, se houver" />
-              </label>
-              <label>
-                Unidade base
-                <input name="unidade_base_estoque" placeholder="KG" required />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                Tipo
-                <input name="tipo" placeholder="Liquido, solido, embalagem..." />
-              </label>
-              <label>
-                Densidade
-                <input name="densidade" placeholder="1,20" inputMode="decimal" />
-              </label>
-              <label>
-                Estoque minimo
-                <input name="estoque_minimo" placeholder="0" inputMode="decimal" />
-              </label>
-              <label>
-                NCM
-                <input name="ncm" />
-              </label>
-              <label>
-                IBAMA
-                <input name="ibama" />
-              </label>
-              <label>
-                Codigo ADS
-                <input name="codigo_ads" />
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>SKU corrigido passa a ser a chave unica operacional da materia-prima.</span>
-              <button className="primary-button" type="submit">
-                Salvar MP
-              </button>
-            </div>
-          </form>
-        </section>
+        {activeGroup?.key === "tecnicos" ? (
+          <section className="cadastros-destination-grid" aria-label="Catalogos tecnicos disponiveis">
+            <Link href="/cadastros/unidades"><strong>Unidades e conversoes</strong><span>Padroes de medida usados em XML, estoque e formulas.</span></Link>
+            <Link href="/cadastros/materias-primas"><strong>Materias-primas</strong><span>Edicao completa por identidade, SKU, tecnica e regulatorio.</span></Link>
+            <Link href="/cadastros/embalagens"><strong>Embalagens</strong><span>Volumes e controle como insumo de estoque.</span></Link>
+            <Link href="/cadastros/produtos"><strong>Produtos PA/PI</strong><span>Produto-base, validade e apresentacoes vendaveis.</span></Link>
+            <Link href="/cadastros/grupos-produto"><strong>Grupos de produto</strong><span>Familias governadas usadas em produtos e relatorios.</span></Link>
+            <Link href="/producao/garantias"><strong>Garantias</strong><span>Referencias MAPA e garantias dos lotes de MP.</span></Link>
+            <Link href="/producao/formulas"><strong>Formulas</strong><span>Receitas de producao e documentacao tecnica.</span></Link>
+          </section>
+        ) : null}
 
-        <section className="panel form-panel" id="novo-produto" aria-labelledby="novo-produto-title">
-          <div className="panel-header">
-            <h2 id="novo-produto-title">Novo produto-base</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createProdutoBaseAction}>
-            <div className="form-grid">
-              <label>
-                Codigo produto
-                <input name="codigo_produto" placeholder="0001" required />
-              </label>
-              <label>
-                Nome
-                <input name="nome" placeholder="Nome do produto" required />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                Grupo
-                <input name="grupo" placeholder="Linha ou familia" />
-              </label>
-              <label>
-                Densidade kg/L
-                <input name="densidade_kg_l" placeholder="1,20" inputMode="decimal" />
-              </label>
-              <label>
-                Validade PA/PI em meses
-                <input name="prazo_validade_meses" placeholder="12" inputMode="numeric" />
-              </label>
-              <label>
-                Registro MAPA
-                <input name="reg_mapa" />
-              </label>
-              <label>
-                NCM
-                <input name="ncm" />
-              </label>
-              <label>
-                IBAMA
-                <input name="ibama" />
-              </label>
-              <label>
-                ADS
-                <input name="ads" />
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Produto-base fica separado das embalagens; o item vendavel sera produto + embalagem.</span>
-              <button className="primary-button" type="submit">
-                Salvar produto
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="panel form-panel" id="nova-embalagem" aria-labelledby="nova-embalagem-title">
-          <div className="panel-header">
-            <h2 id="nova-embalagem-title">Nova embalagem</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createEmbalagemAction}>
-            <div className="form-grid">
-              <label>
-                Descricao
-                <input name="descricao" placeholder="Balde 20L" required />
-              </label>
-              <label>
-                Unidade
-                <input name="unidade" placeholder="UN" required />
-              </label>
-              <label>
-                Volume litros
-                <input name="volume_litros" placeholder="20" inputMode="decimal" />
-              </label>
-              <label>
-                Codigo legado
-                <input name="codigo_legado" />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-              <label>
-                MP vinculada
-                <input
-                  name="materia_prima_id"
-                  list="materias-primas-options"
-                  placeholder="Obrigatoria se controlar estoque"
-                />
-              </label>
-              <label className="checkbox-line">
-                <input name="controla_estoque" type="checkbox" value="1" />
-                Controla estoque como insumo
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Embalagem pode ser insumo de MP e depois compor PA/PI.</span>
-              <button className="primary-button" type="submit">
-                Salvar embalagem
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="panel form-panel" id="novo-item-vendavel" aria-labelledby="novo-item-vendavel-title">
-          <div className="panel-header">
-            <h2 id="novo-item-vendavel-title">Novo item vendavel</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createProdutoEmbalagemAction}>
-            <div className="form-grid">
-              <label>
-                Produto
-                <input name="produto_id" list="produtos-options" placeholder="Buscar produto-base" required />
-              </label>
-              <label>
-                Embalagem
-                <input name="embalagem_id" list="embalagens-options" placeholder="Buscar embalagem" required />
-              </label>
-              <label>
-                Codigo do item
-                <input name="codigo_item" placeholder="0001-20L" required />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue="active">
-                  <option value="active">active</option>
-                  <option value="pending_review">pending_review</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Produto + embalagem passa a ser o item usado em pedido, faturamento e estoque PA.</span>
-              <button className="primary-button" type="submit">
-                Salvar item
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="panel form-panel" id="nova-conversao-mp" aria-labelledby="nova-conversao-mp-title">
-          <div className="panel-header">
-            <h2 id="nova-conversao-mp-title">Nova conversao de MP</h2>
-            <span className="pill">{runtime.supabaseConfigured ? "gravacao ativa" : "aguardando Supabase"}</span>
-          </div>
-          <form action={createConversaoUnidadeMpAction}>
-            <div className="form-grid">
-              <label>
-                Materia-prima
-                <input name="materia_prima_id" list="materias-primas-options" placeholder="Buscar MP cadastrada" required />
-              </label>
-              <label>
-                Unidade origem
-                <input name="unidade_origem" placeholder="SC" required />
-              </label>
-              <label>
-                Unidade destino
-                <input name="unidade_destino" placeholder="KG" required />
-              </label>
-              <label>
-                Fator
-                <input name="fator" placeholder="50" required inputMode="decimal" />
-              </label>
-              <label>
-                Vigencia inicio
-                <input name="vigencia_inicio" type="date" />
-              </label>
-              <label>
-                Vigencia fim
-                <input name="vigencia_fim" type="date" />
-              </label>
-            </div>
-            <div className="form-footer">
-              <span>Conversao define como XML/NF em outra unidade entra no estoque base da MP.</span>
-              <button className="primary-button" type="submit">
-                Salvar conversao
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="panel" id="credito" aria-labelledby="credito-title">
-          <div className="panel-header">
-            <h2 id="credito-title">Credito e alcadas</h2>
-            <span className="pill">controle inicial</span>
-          </div>
-          <dl className="status-list">
-            <div className="status-row">
-              <dt>Vendedor</dt>
-              <dd>Cria rascunho, ve limite autorizado e nao aprova bloqueio.</dd>
-            </div>
-            <div className="status-row">
-              <dt>Gerente</dt>
-              <dd>Aprova excecoes conforme alcada e acompanha equipe/regiao.</dd>
-            </div>
-            <div className="status-row">
-              <dt>Financeiro</dt>
-              <dd>Define limite manual, bloqueio, reducao e motivo auditado.</dd>
-            </div>
-            <div className="status-row">
-              <dt>Auditoria</dt>
-              <dd>Compara snapshot de credito, pedido, recebimento, comissao e devolucao.</dd>
-            </div>
-          </dl>
-        </section>
+        {activeGroup?.key === "logistica" ? (
+          <VehiclesSection
+            busca={singleValue(params.busca) ?? ""}
+            canCreate={dashboard.vehicleCreateAvailable}
+            canManageStatus={dashboard.vehicleStatusManageAvailable}
+            vehicles={dashboard.vehicles}
+          />
+        ) : null}
       </section>
     </main>
   );
 }
+async function searchGlobalCadastros(query: string): Promise<GlobalSearchResult[]> {
+  const resultGroups = await Promise.all(
+    GLOBAL_SEARCH_TARGETS.map(async (target) => {
+      try {
+        const page = await searchCorporateLookup({
+          entity: target.entity,
+          query,
+          page: 1,
+          pageSize: 10
+        });
 
-function LookupDatalists({ lookups }: { lookups: MasterDataLookups }) {
-  return (
-    <>
-      <LookupDatalist id="materias-primas-options" options={lookups.materiasPrimas} />
-      <LookupDatalist id="produtos-options" options={lookups.produtos} />
-      <LookupDatalist id="embalagens-options" options={lookups.embalagens} />
-      <LookupDatalist id="pessoas-comerciais-options" options={lookups.pessoasComerciais} />
-    </>
+        return page.options.map((option) => ({
+          ...option,
+          kind: target.kind,
+          initials: target.initials,
+          href: target.href(option.id)
+        }));
+      } catch {
+        return [];
+      }
+    })
   );
+
+  return resultGroups.flat();
+}
+function actionHref(group: CadastroGroupKey): string {
+  const hrefs: Record<CadastroGroupKey, string> = {
+    clientes: "/cadastros?grupo=clientes&modo=novo#cadastro-cliente",
+    pessoas: "/cadastros?grupo=pessoas&modo=novo#cadastro-pessoa",
+    "materias-primas": "/cadastros/materias-primas?modo=novo#nova-mp",
+    produtos: "/cadastros/produtos?modo=novo#novo-produto",
+    embalagens: "/cadastros/embalagens?modo=novo#nova-embalagem",
+    logistica: "/cadastros?grupo=logistica#novo-veiculo",
+    tecnicos: "/cadastros/tecnicos",
+    validacao: "#validacao"
+  };
+  return hrefs[group];
 }
 
-function LookupDatalist({ id, options }: { id: string; options: LookupOption[] }) {
-  return (
-    <datalist id={id}>
-      {options.map((option) => (
-        <option key={option.id} value={lookupValue(option)} />
-      ))}
-    </datalist>
-  );
+function clientNewHref(input: {
+  busca: string;
+  situacao: string;
+  ordenacao: string;
+  pagina: number;
+}): string {
+  const query = new URLSearchParams({ grupo: "clientes", modo: "novo" });
+  if (input.busca.trim()) query.set("busca", input.busca.trim());
+  if (input.situacao) query.set("situacao", input.situacao);
+  if (input.ordenacao === "nome_desc") query.set("ordem", "nome_desc");
+  if (input.pagina > 1) query.set("pagina", String(input.pagina));
+  return `/cadastros?${query.toString()}#cadastro-cliente`;
 }
 
-function lookupValue(option: LookupOption): string {
-  return option.detail ? `${option.id} | ${option.label} | ${option.detail}` : `${option.id} | ${option.label}`;
+function groupHref(group: CadastroGroupKey): string {
+  const canonicalRoutes: Partial<Record<CadastroGroupKey, string>> = {
+    "materias-primas": "/cadastros/materias-primas",
+    produtos: "/cadastros/produtos",
+    embalagens: "/cadastros/embalagens",
+    tecnicos: "/cadastros/tecnicos"
+  };
+  return canonicalRoutes[group] ?? `/cadastros?grupo=${group}`;
+}
+
+function groupInitials(group: CadastroGroupKey): string {
+  const initials: Record<CadastroGroupKey, string> = {
+    clientes: "CL",
+    pessoas: "PV",
+    "materias-primas": "MP",
+    produtos: "PA",
+    embalagens: "EM",
+    logistica: "LG",
+    tecnicos: "CT",
+    validacao: "VP"
+  };
+  return initials[group];
+}
+
+function countForGroup(group: CadastroGroupKey, metrics: Array<{ moduleKey: string; count: number | null }>): string {
+  const moduleKeys: Partial<Record<CadastroGroupKey, string[]>> = {
+    clientes: ["clientes", "credito"],
+    pessoas: ["pessoas"],
+    "materias-primas": ["materias-primas"],
+    produtos: ["produtos", "produto-embalagens"],
+    embalagens: ["embalagens", "conversoes-mp"],
+    logistica: ["veiculos"]
+  };
+  const counts = (moduleKeys[group] ?? []).map((key) => metrics.find((metric) => metric.moduleKey === key)?.count);
+  if (counts.length === 0) return "Abrir";
+  if (counts.some((count) => count === null || count === undefined)) return "Sem leitura";
+  return `${counts.reduce<number>((total, count) => total + (count ?? 0), 0)} registro(s)`;
 }
 
 function singleValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function positiveInteger(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 function messageForResult(result: string | undefined): { kind: "ok" | "warning"; title: string; detail: string } | null {
@@ -633,18 +417,73 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
   const messages: Record<string, { kind: "ok" | "warning"; title: string; detail: string }> = {
     cliente_created: {
       kind: "ok",
-      title: "Cliente salvo",
-      detail: "Cadastro criado via funcao auditavel. A fila e as contagens serao atualizadas pelo Supabase."
+      title: "Cliente cadastrado",
+      detail: "O cadastro foi criado e já está disponível para consulta."
     },
     cliente_updated: {
       kind: "ok",
       title: "Cliente atualizado",
-      detail: "Cadastro editado via funcao auditavel com before/after registrado em action_logs."
+      detail: "As alterações foram salvas e o histórico da operação foi preservado."
     },
     cliente_deactivated: {
       kind: "ok",
       title: "Cliente desativado",
-      detail: "Cadastro preservado como historico e marcado como inactive por funcao auditavel."
+      detail: "O cadastro foi preservado para consulta e não poderá ser usado em novas operações."
+    },
+    identification_saved: {
+      kind: "ok",
+      title: "Identificação atualizada",
+      detail: "Os dados de identificação foram salvos e a origem da informação foi registrada."
+    },
+    document_created: {
+      kind: "ok",
+      title: "Documento adicionado",
+      detail: "O documento foi vinculado ao cliente e já pode ser localizado pela busca."
+    },
+    contact_created: {
+      kind: "ok",
+      title: "Contato adicionado",
+      detail: "O contato foi vinculado à ficha do cliente."
+    },
+    property_created: {
+      kind: "ok",
+      title: "Propriedade adicionada",
+      detail: "A propriedade foi vinculada ao cliente e permanece disponível no histórico cadastral."
+    },
+    establishment_created: {
+      kind: "ok",
+      title: "Estabelecimento adicionado",
+      detail: "O estabelecimento foi vinculado à ficha do cliente."
+    },
+    address_created: {
+      kind: "ok",
+      title: "Endereço adicionado",
+      detail: "O endereço foi vinculado ao cliente e à entidade selecionada."
+    },
+    credit_limit_adjusted: {
+      kind: "ok",
+      title: "Limite de crédito atualizado",
+      detail: "O novo limite e a justificativa foram registrados no histórico financeiro auditado."
+    },
+    client_commercial_link_created: {
+      kind: "ok",
+      title: "Responsável vinculado",
+      detail: "A carteira comercial foi registrada por pessoa, papel e vigência."
+    },
+    client_commercial_link_closed: {
+      kind: "ok",
+      title: "Vínculo comercial encerrado",
+      detail: "A vigência foi encerrada sem excluir o histórico do cliente."
+    },
+    missing_commercial_link_required: {
+      kind: "warning",
+      title: "Dados do vínculo incompletos",
+      detail: "Selecione pessoa, papel e vigência e informe uma justificativa com pelo menos dez caracteres."
+    },
+    invalid_credit_limit: {
+      kind: "warning",
+      title: "Limite de crédito inválido",
+      detail: "Informe um valor não negativo e uma justificativa com pelo menos dez caracteres."
     },
     pessoa_created: {
       kind: "ok",
@@ -664,7 +503,22 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     pessoa_deactivated: {
       kind: "ok",
       title: "Pessoa desativada",
-      detail: "Cadastro preservado como historico e marcado como inactive por funcao auditavel."
+      detail: "O cadastro foi preservado para consulta e deixou de participar de novas operações."
+    },
+    pessoa_reactivated: {
+      kind: "ok",
+      title: "Pessoa reativada",
+      detail: "O mesmo cadastro voltou a ficar ativo; vínculos encerrados permaneceram históricos."
+    },
+    pessoa_area_linked: {
+      kind: "ok",
+      title: "Área comercial vinculada",
+      detail: "O vínculo temporal foi registrado com autoria e justificativa."
+    },
+    pessoa_area_closed: {
+      kind: "ok",
+      title: "Vínculo encerrado",
+      detail: "A vigência foi encerrada sem excluir o histórico comercial."
     },
     mp_created: {
       kind: "ok",
@@ -721,6 +575,21 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       title: "Conversao salva",
       detail: "Conversao de unidade criada para entrada de MP em XML/NF e estoque base."
     },
+    vehicle_created: {
+      kind: "ok",
+      title: "Veiculo cadastrado",
+      detail: "O veiculo ja pode ser selecionado em novas atribuicoes de entrega."
+    },
+    vehicle_deactivated: {
+      kind: "ok",
+      title: "Veiculo inativado",
+      detail: "O historico foi preservado e o veiculo deixou de aparecer em novas atribuicoes."
+    },
+    vehicle_reactivated: {
+      kind: "ok",
+      title: "Veiculo reativado",
+      detail: "O mesmo cadastro voltou a ficar disponivel para novas atribuicoes."
+    },
     duplicated: {
       kind: "warning",
       title: "Cadastro duplicado",
@@ -728,8 +597,8 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     },
     invalid_status: {
       kind: "warning",
-      title: "Status invalido",
-      detail: "Use active, pending_review ou inactive."
+      title: "Situação inválida",
+      detail: "Escolha uma das situações disponíveis no cadastro."
     },
     invalid_uf: {
       kind: "warning",
@@ -765,6 +634,16 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "warning",
       title: "Campos obrigatorios",
       detail: "Produto, embalagem e codigo do item sao obrigatorios."
+    },
+    missing_vehicle_required: {
+      kind: "warning",
+      title: "Campos obrigatorios",
+      detail: "Descricao e placa sao obrigatorias para cadastrar o veiculo."
+    },
+    invalid_vehicle_status_reason: {
+      kind: "warning",
+      title: "Justificativa obrigatoria",
+      detail: "Informe uma justificativa com pelo menos dez caracteres para alterar a situacao."
     },
     missing_conversion_required: {
       kind: "warning",
@@ -844,7 +723,7 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
     save_failed: {
       kind: "warning",
       title: "Falha ao salvar",
-      detail: "O cadastro nao foi gravado. Consulte logs do Supabase para o detalhe tecnico."
+      detail: "O cadastro não foi gravado. Tente novamente ou solicite análise ao administrador."
     }
   };
   return messages[result] ?? messages.save_failed;

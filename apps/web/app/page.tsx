@@ -1,75 +1,31 @@
-import Link from "next/link";
-
 import { getAuthStatus } from "@/lib/auth";
 import { getMasterDataDashboard } from "@/lib/master-data";
+import { getModuleRuntimeDashboard, moduleRuntimeFor } from "@/lib/modules";
 import { getOrdersDashboard } from "@/lib/orders";
 import { getReportsDashboard } from "@/lib/reports";
-import { getRuntimeStatus } from "@/lib/runtime";
 import { getImportacaoXmlDashboard } from "@/lib/importacao-xml";
 import { getKanbanDashboard } from "@/lib/kanban";
 import { getPcpDashboard } from "@/lib/pcp";
 import { getRomaneioDashboard } from "@/lib/romaneios";
 import { getSecurityDashboard } from "@/lib/security";
+import { internalValueLabel } from "@/lib/labels-ptbr";
+import { moduleMaturityPercent } from "@/lib/system-map";
 
 export const dynamic = "force-dynamic";
-
-const FLOW_STEPS = [
-  {
-    title: "Cadastros",
-    status: "em uso",
-    detail: "Clientes, pessoas comerciais, MP, produtos, embalagens, credito e conversoes."
-  },
-  {
-    title: "Pedidos",
-    status: "codando",
-    detail: "Cliente, propriedade, sequencia propria, credito, recebimento e comissao proporcional."
-  },
-  {
-    title: "XML MP",
-    status: "em uso",
-    detail: "Importacao semiautomatica, match de MP, conversao e lote apenas apos conferencia."
-  },
-  {
-    title: "Kanban",
-    status: "em uso",
-    detail: "Status visual por vendedor, gerente vinculado e area comercial."
-  },
-  {
-    title: "PCP",
-    status: "em uso",
-    detail: "Formula versionada, OP, reserva de componentes, CQ e geracao de PA/PI."
-  },
-  {
-    title: "Romaneio",
-    status: "em uso",
-    detail: "Separacao parcial ou total, multi-item, reserva multilote e confirmacao para baixa de PA."
-  },
-  {
-    title: "Relatorios",
-    status: "em uso",
-    detail: "Vencimento de PA/PI/MP, candidatos a reprocessamento e catalogo inicial."
-  },
-  {
-    title: "Seguranca",
-    status: "em uso",
-    detail: "Perfis, usuarios e checks de alcada com RPC auditada."
-  }
-];
 
 const AUDIT_STEPS = [
   "Cada gravacao critica passa por funcao SQL auditavel.",
   "Banco operacional, teste e homologacao aparecem no topo da tela.",
   "Recebimentos e comissoes guardam snapshot proporcional.",
   "NF XML entra em staging e so gera lote depois de confirmacao.",
-  "PCP baixa estoque apenas na finalizacao de OP com CQ.",
+  "Producao baixa estoque apenas na finalizacao de OP com CQ.",
   "Romaneio baixa PA apenas na confirmacao com reserva fechada.",
   "Login Supabase identifica o usuario por sessao e perfil.",
-  "Proxima etapa: status encadeado e financeiro/comissoes."
+  "Rollout de modulos e dependencias e governado no PostgreSQL."
 ];
 
 export default async function HomePage() {
-  const runtime = getRuntimeStatus();
-  const [auth, cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios, seguranca] = await Promise.all([
+  const [auth, cadastros, pedidos, relatorios, importacaoXml, kanban, pcp, romaneios, seguranca, moduleRuntime] = await Promise.all([
     getAuthStatus(),
     getMasterDataDashboard(),
     getOrdersDashboard(),
@@ -78,42 +34,19 @@ export default async function HomePage() {
     getKanbanDashboard(),
     getPcpDashboard(),
     getRomaneioDashboard(),
-    getSecurityDashboard()
+    getSecurityDashboard(),
+    getModuleRuntimeDashboard()
   ]);
   const cadastrosProntos = cadastros.modules.filter((module) => module.status === "ready").length;
   const pedidosAbertos = pedidos.metrics.abertos;
   const pendentesXml = importacaoXml.metrics.itensPendentes;
   const opsAbertas = pcp.metrics.opsAbertas;
+  const rolloutModules = moduleRuntime.modules.filter((module) => !module.isCore);
+  const maturityWidth = (moduleKey: string) =>
+    `${moduleMaturityPercent(moduleRuntimeFor(moduleRuntime, moduleKey)?.lifecycle ?? null)}%`;
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Painel operacional</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/" aria-current="page">
-            Inicio
-          </Link>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios">Relatorios</a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace dashboard-workspace">
         <div className="dashboard-header">
           <div>
@@ -158,7 +91,7 @@ export default async function HomePage() {
           <article className="kpi-card accent-red">
             <span>OP abertas</span>
             <strong>{valueOrDash(opsAbertas)}</strong>
-            <p>PCP em rascunho, planejado ou em processo.</p>
+            <p>Producao em rascunho, planejada ou em processo.</p>
           </article>
         </section>
 
@@ -169,15 +102,15 @@ export default async function HomePage() {
               <span className="pill">passo a passo</span>
             </div>
             <div className="flow-board">
-              {FLOW_STEPS.map((step, index) => (
-                <div className="flow-step" key={step.title}>
+              {rolloutModules.map((step, index) => (
+                <div className="flow-step" key={step.moduleKey}>
                   <div className="flow-marker">{index + 1}</div>
                   <div>
                     <div className="flow-title">
-                      <strong>{step.title}</strong>
-                      <span>{step.status}</span>
+                      <strong>{step.displayName}</strong>
+                      <span>{step.effectiveAccess === "read_write" ? "operacao" : step.effectiveAccess === "read_only" ? "leitura" : "bloqueado"}</span>
                     </div>
-                    <p>{step.detail}</p>
+                    <p>{step.description} · {step.lifecycle ? internalValueLabel(step.lifecycle) : "Sem liberação definida"}</p>
                   </div>
                 </div>
               ))}
@@ -200,7 +133,7 @@ export default async function HomePage() {
               <div className="queue-row">
                 <span className="queue-status ok"></span>
                 <div>
-                  <strong>PCP</strong>
+                  <strong>Producao</strong>
                   <p>Tela inicial codada para formula, OP, reserva, CQ e geracao de PA/PI.</p>
                 </div>
               </div>
@@ -219,70 +152,84 @@ export default async function HomePage() {
           <article className="panel">
             <div className="panel-header">
               <h2>Modulos ativos</h2>
-              <span className="pill">{cadastros.source === "supabase" ? "Supabase" : "preview"}</span>
+              <span className="pill">{moduleRuntime.metrics.available}/{moduleRuntime.metrics.total}</span>
             </div>
             <div className="module-radar">
+              <a className="module-tile" href="/modulos">
+                <strong>Implantacao</strong>
+                <span>{moduleRuntime.metrics.readWrite} modulo(s) com escrita</span>
+                <div className="progress-rail">
+                  <span style={{ width: `${moduleRuntime.metrics.total === 0 ? 0 : Math.round((moduleRuntime.metrics.available / moduleRuntime.metrics.total) * 100)}%` }}></span>
+                </div>
+              </a>
               <a className="module-tile" href="/cadastros">
                 <strong>Cadastros</strong>
                 <span>{cadastrosProntos} blocos prontos</span>
                 <div className="progress-rail">
-                  <span style={{ width: `${Math.round((cadastrosProntos / cadastros.modules.length) * 100)}%` }}></span>
+                  <span style={{ width: maturityWidth("cadastros") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/pedidos">
                 <strong>Pedidos</strong>
                 <span>{moneyOrDash(pedidos.metrics.faturamentoPrevisto)} previsto</span>
                 <div className="progress-rail">
-                  <span style={{ width: "42%" }}></span>
+                  <span style={{ width: maturityWidth("pedidos") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/importacao-xml">
                 <strong>XML MP</strong>
                 <span>{valueOrDash(importacaoXml.metrics.itensPendentes)} item(ns) pendente(s)</span>
                 <div className="progress-rail">
-                  <span style={{ width: "46%" }}></span>
+                  <span style={{ width: maturityWidth("importacao") }}></span>
+                </div>
+              </a>
+              <a className="module-tile" href="/importacao-historica/mp">
+                <strong>Historico MP</strong>
+                <span>Conciliar aliases, lotes, frete e DIFAL</span>
+                <div className="progress-rail">
+                  <span style={{ width: maturityWidth("auditoria") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/kanban">
                 <strong>Kanban</strong>
                 <span>{valueOrDash(kanban.metrics.total)} pedido(s) no quadro</span>
                 <div className="progress-rail">
-                  <span style={{ width: "44%" }}></span>
+                  <span style={{ width: maturityWidth("pedidos") }}></span>
                 </div>
               </a>
-              <a className="module-tile" href="/pcp">
-                <strong>PCP</strong>
+              <a className="module-tile" href="/producao">
+                <strong>Producao</strong>
                 <span>{valueOrDash(pcp.metrics.opsAbertas)} OP(s) aberta(s)</span>
                 <div className="progress-rail">
-                  <span style={{ width: "48%" }}></span>
+                  <span style={{ width: maturityWidth("pcp") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/romaneios">
                 <strong>Romaneio</strong>
                 <span>{valueOrDash(romaneios.metrics.romaneiosSeparacao)} em separacao</span>
                 <div className="progress-rail">
-                  <span style={{ width: "46%" }}></span>
+                  <span style={{ width: maturityWidth("expedicao") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/relatorios">
                 <strong>Relatorios</strong>
                 <span>{valueOrDash(relatorios.metrics.catalogados)} catalogados</span>
                 <div className="progress-rail">
-                  <span style={{ width: "28%" }}></span>
+                  <span style={{ width: maturityWidth("relatorios") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/login">
                 <strong>Login</strong>
                 <span>{auth.profile?.displayName ?? auth.email ?? "entrar no sistema"}</span>
                 <div className="progress-rail">
-                  <span style={{ width: auth.isAuthenticated ? "70%" : "24%" }}></span>
+                  <span style={{ width: maturityWidth("seguranca") }}></span>
                 </div>
               </a>
               <a className="module-tile" href="/seguranca">
                 <strong>Seguranca</strong>
                 <span>{valueOrDash(seguranca.metrics.activeProfiles)} perfil(is) ativo(s)</span>
                 <div className="progress-rail">
-                  <span style={{ width: seguranca.source === "supabase" ? "58%" : "20%" }}></span>
+                  <span style={{ width: maturityWidth("seguranca") }}></span>
                 </div>
               </a>
             </div>
@@ -309,6 +256,7 @@ export default async function HomePage() {
           pcp.error ||
           romaneios.error ||
           seguranca.error ||
+          moduleRuntime.error ||
           auth.error) && (
           <section className="notice-panel warning" role="status">
             <strong>Conexao parcial</strong>
@@ -321,6 +269,7 @@ export default async function HomePage() {
                 pcp.error ??
                 romaneios.error ??
                 seguranca.error ??
+                moduleRuntime.error ??
                 auth.error}
             </span>
           </section>

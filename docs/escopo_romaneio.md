@@ -80,12 +80,12 @@ Fundacao criada:
 - `exp_romaneios`: cabecalho do romaneio, pedido vinculado, tipo de separacao e ciclo de status.
 - `exp_romaneio_itens`: pedido, item, produto/embalagem, lote PA informado e quantidade romaneada.
 - `exp_romaneio_movimentos_pa`: movimentos auditaveis de baixa e estorno de PA gerados por romaneio confirmado ou estornado.
-- `exp_pedido_item_romaneio_saldos`: view de quantidade do pedido, quantidade confirmada, quantidade em separacao e saldo pendente.
+- `exp_pedido_item_romaneio_saldos`: view de quantidade pedida, confirmada, comprometida, pendente de atendimento e livre para novo romaneio.
 
 Funcoes auditaveis:
 
-- `create_exp_romaneio`: cria romaneio em rascunho ou separacao, sem baixar estoque.
-- `registrar_exp_romaneio_separacao`: coloca romaneio em separacao e reserva lote PA informado.
+- `create_exp_romaneio`: cria romaneio somente em rascunho, sem baixar ou reservar estoque.
+- `registrar_exp_romaneio_separacao`: contrato textual legado indisponivel para a API; a reserva relacional usa `registrar_est_reserva_pa`.
 - `confirmar_exp_romaneio`: confirma romaneio e gera movimento positivo de baixa PA.
 - `cancelar_exp_romaneio`: cancela romaneio antes da confirmacao e libera reserva logica.
 - `estornar_exp_romaneio`: estorna romaneio confirmado com movimento inverso auditado.
@@ -132,6 +132,25 @@ A partir desta etapa, um mesmo item de romaneio pode ser atendido por mais de um
 4. `confirmar_exp_romaneio` exige que a soma das reservas ativas seja exatamente igual a quantidade romaneada.
 5. A confirmacao gera uma baixa PA por lote reservado.
 6. O saldo PA considera reservas de romaneio e reservas de PCP.
+
+## Integridade quantitativa do pedido
+
+Migration complementar: `supabase/migrations/0060_romaneio_quantity_integrity_contract.sql`.
+
+A quantidade de um item de pedido possui tres leituras diferentes e elas nao
+podem ser confundidas:
+
+1. `quantidade_pendente`: pedido menos o que ja foi confirmado; representa o
+   que ainda nao foi atendido fisicamente.
+2. `quantidade_comprometida`: soma dos itens em romaneios `draft`,
+   `separacao` ou `confirmado` ainda ativos.
+3. `quantidade_disponivel_romaneio`: pedido menos toda quantidade
+   comprometida; e o unico saldo que pode originar outro romaneio.
+
+O PostgreSQL trava o item do pedido e rejeita qualquer insercao ou alteracao
+que faca a soma ativa ultrapassar a quantidade pedida. Cancelamento e estorno
+retiram o romaneio da soma ativa e liberam o saldo correspondente. A tela pode
+antecipar a validacao, mas o banco permanece como autoridade final.
 
 Validacao descartavel:
 

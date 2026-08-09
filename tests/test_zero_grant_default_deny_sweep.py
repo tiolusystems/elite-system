@@ -20,6 +20,8 @@ class ZeroGrantDefaultDenySweepTests(unittest.TestCase):
         self.assertIn("pg_get_functiondef", sql)
         self.assertIn("regexp_matches", sql)
         self.assertIn("zero_grant_sweep_targets", sql)
+        self.assertIn("resolve_[a-z0-9_]+_action_key", sql)
+        self.assertIn("helper_match", sql)
         self.assertNotIn("array['create_cad_cliente'", sql)
         self.assertIn("proname not like '%_impl_0037'", sql)
 
@@ -81,7 +83,7 @@ class ZeroGrantDefaultDenySweepTests(unittest.TestCase):
         self.assertIn("perform public.require_current_user_permission('pcp.op.finish')", sql)
         self.assertIn("perform public.require_current_user_permission('financeiro.receipts.register')", sql)
 
-    def test_docs_record_sweep_contract_and_security_invite_decision(self) -> None:
+    def test_docs_record_sweep_contract_and_verified_email_decision(self) -> None:
         docs = "\n".join(
             (
                 VALIDATION_DOC.read_text(encoding="utf-8"),
@@ -93,9 +95,11 @@ class ZeroGrantDefaultDenySweepTests(unittest.TestCase):
         self.assertIn("zero grant", docs.lower())
         self.assertIn("`seguranca` fica fora", docs)
         self.assertIn("PostgreSQL descartavel", docs)
+        self.assertIn("senha temporaria", docs.lower())
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY", docs)
+        self.assertIn("Nenhuma senha temporaria, token, service role key ou credencial", docs)
         self.assertIn("inviteUserByEmail", docs)
-        self.assertIn("nao senha temporaria", docs)
-        self.assertIn("Nenhuma senha, token de convite ou credencial", docs)
+        self.assertIn("0047", docs)
 
 
 if __name__ == "__main__":

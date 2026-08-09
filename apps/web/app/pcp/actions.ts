@@ -10,9 +10,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const DECIMAL_SEPARATOR = /,/g;
 const ALLOWED_FORMULA_TYPES = new Set(["producao", "mapa"]);
 const ALLOWED_COMPONENT_TYPES = new Set(["MP", "PA", "PI"]);
-const ALLOWED_OP_TYPES = new Set(["estoque", "experimental", "desenvolvimento", "reprocessamento", "mapa_documental"]);
+const ALLOWED_OP_TYPES = new Set(["estoque", "experimental", "desenvolvimento", "reprocessamento"]);
 const ALLOWED_CQ_STATUS = new Set(["aprovado", "bloqueado", "reprovado"]);
+const ALLOWED_POP_CQ_RESULTS = new Set(["conforme", "desvio", "nao_conforme"]);
 const ALLOWED_OUTPUT_TYPES = new Set(["PA", "PI"]);
+const ALLOWED_GUARANTEE_LIMITS = new Set(["minimo", "maximo", "faixa", "declarado"]);
+const ALLOWED_GUARANTEE_SOURCES = new Set(["mapa", "manual", "laboratorio", "fornecedor", "calculado"]);
 
 type FormulaComponentPayload = {
   tipo_componente: string;
@@ -20,7 +23,7 @@ type FormulaComponentPayload = {
   produto_embalagem_id?: number;
   produto_id?: number;
   quantidade: number;
-  unidade?: string;
+  unidade_id?: number;
   observacao?: string;
 };
 
@@ -32,28 +35,44 @@ type OutputPayload = {
   observacao?: string;
 };
 
+type PopCqResultPayload = {
+  op_pop_congelado_id: number;
+  resultado: string;
+  etapa_controle: string;
+  observacao?: string;
+  acao_corretiva?: string;
+};
+
+type OpReturnTarget = {
+  path: "/producao/ordens" | "/producao/transformacoes";
+  createAnchor: "nova-op" | "nova-transformacao";
+  queueAnchor: "ops" | "transformacoes";
+};
+
 export async function createPcpFormulaAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#nova-formula");
+    redirect("/producao/formulas?result=not_configured#nova-formula");
   }
 
   const produtoId = optionalInteger(formData, "produto_id");
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const tipoReceita = field(formData, "tipo_receita") || "producao";
   const justificativa = field(formData, "justificativa");
   const componentes = parseFormulaComponents(formData);
 
-  if (!produtoId || !Number.isInteger(produtoId) || produtoId <= 0 || !justificativa) {
-    redirect("/pcp?result=missing_formula_required#nova-formula");
+  if (!idempotencyKey || !produtoId || !Number.isInteger(produtoId) || produtoId <= 0 || !justificativa) {
+    redirect("/producao/formulas?result=missing_formula_required#nova-formula");
   }
   if (!ALLOWED_FORMULA_TYPES.has(tipoReceita)) {
-    redirect("/pcp?result=invalid_formula_type#nova-formula");
+    redirect("/producao/formulas?result=invalid_formula_type#nova-formula");
   }
   if (tipoReceita === "producao" && componentes.length === 0) {
-    redirect("/pcp?result=missing_formula_components#nova-formula");
+    redirect("/producao/formulas?result=missing_formula_components#nova-formula");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_pcp_formula_versao", {
+  const { error } = await auditedRpc(supabase, "create_pcp_formula_versao_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_componentes_jsonb: componentes,
     p_justificativa: justificativa,
     p_observacao: optionalField(formData, "observacao"),
@@ -62,22 +81,22 @@ export async function createPcpFormulaAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#nova-formula`);
+    redirect(`/producao/formulas?result=${encodeURIComponent(mapPcpError(error.message))}#nova-formula`);
   }
 
   revalidatePath("/pcp");
-  redirect("/pcp?result=formula_created#formulas");
+  redirect("/producao/formulas?result=formula_created#formulas");
 }
 
 export async function activatePcpFormulaAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#formulas");
+    redirect("/producao/formulas?result=not_configured#formulas");
   }
 
   const formulaVersionId = optionalInteger(formData, "formula_versao_id");
   const motivo = field(formData, "motivo");
   if (!formulaVersionId || formulaVersionId <= 0 || !motivo) {
-    redirect("/pcp?result=missing_activation_required#formulas");
+    redirect("/producao/formulas?result=missing_activation_required#formulas");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -87,34 +106,37 @@ export async function activatePcpFormulaAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#formulas`);
+    redirect(`/producao/formulas?result=${encodeURIComponent(mapPcpError(error.message))}#formulas`);
   }
 
   revalidatePath("/pcp");
-  redirect("/pcp?result=formula_activated#formulas");
+  redirect("/producao/formulas?result=formula_activated#formulas");
 }
 
 export async function createPcpOpAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#nova-op");
+    redirectWithResult(returnTarget.path, "not_configured", returnTarget.createAnchor);
   }
 
   const formulaVersionId = optionalInteger(formData, "formula_versao_id");
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const tipoOp = field(formData, "tipo_op") || "estoque";
   const quantidadePlanejada = optionalNumber(formData, "quantidade_planejada");
 
-  if (!formulaVersionId || formulaVersionId <= 0) {
-    redirect("/pcp?result=missing_op_required#nova-op");
+  if (!idempotencyKey || !formulaVersionId || formulaVersionId <= 0) {
+    redirectWithResult(returnTarget.path, "missing_op_required", returnTarget.createAnchor);
   }
   if (!ALLOWED_OP_TYPES.has(tipoOp)) {
-    redirect("/pcp?result=invalid_op_type#nova-op");
+    redirectWithResult(returnTarget.path, "invalid_op_type", returnTarget.createAnchor);
   }
-  if (quantidadePlanejada !== null && (!Number.isFinite(quantidadePlanejada) || quantidadePlanejada <= 0)) {
-    redirect("/pcp?result=invalid_positive_number#nova-op");
+  if (quantidadePlanejada === null || !Number.isFinite(quantidadePlanejada) || quantidadePlanejada <= 0) {
+    redirectWithResult(returnTarget.path, "invalid_positive_number", returnTarget.createAnchor);
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_pcp_op", {
+  const { error } = await auditedRpc(supabase, "create_pcp_op_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_formula_versao_id: formulaVersionId,
     p_observacao: optionalField(formData, "observacao"),
     p_quantidade_planejada: quantidadePlanejada,
@@ -122,16 +144,24 @@ export async function createPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#nova-op`);
+    redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.createAnchor);
   }
 
-  revalidatePath("/pcp");
-  redirect("/pcp?result=op_created#ops");
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "op_created", returnTarget.queueAnchor);
+}
+
+function uuid(formData: FormData, name: string): string | null {
+  const value = field(formData, name);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : null;
 }
 
 export async function reservePcpComponentAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#ops");
+    redirectWithResult(returnTarget.path, "not_configured", returnTarget.queueAnchor);
   }
 
   const opComponentId = optionalInteger(formData, "op_componente_id");
@@ -140,13 +170,13 @@ export async function reservePcpComponentAction(formData: FormData) {
   const quantidadeReservada = optionalNumber(formData, "quantidade_reservada");
 
   if (!opComponentId || opComponentId <= 0 || !loteId || loteId <= 0) {
-    redirect("/pcp?result=missing_reservation_required#ops");
+    redirectWithResult(returnTarget.path, "missing_reservation_required", returnTarget.queueAnchor);
   }
   if (!ALLOWED_COMPONENT_TYPES.has(tipoComponente)) {
-    redirect("/pcp?result=invalid_component_type#ops");
+    redirectWithResult(returnTarget.path, "invalid_component_type", returnTarget.queueAnchor);
   }
   if (quantidadeReservada !== null && (!Number.isFinite(quantidadeReservada) || quantidadeReservada <= 0)) {
-    redirect("/pcp?result=invalid_positive_number#ops");
+    redirectWithResult(returnTarget.path, "invalid_positive_number", returnTarget.queueAnchor);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -160,21 +190,37 @@ export async function reservePcpComponentAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.queueAnchor);
   }
 
-  revalidatePath("/pcp");
-  redirect("/pcp?result=component_reserved#ops");
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "component_reserved", returnTarget.queueAnchor);
+}
+
+export async function reservePcpComponentFifoAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
+  const opComponentId = optionalInteger(formData, "op_componente_id");
+  if (!getRuntimeStatus().supabaseConfigured || !opComponentId) {
+    redirectWithResult(returnTarget.path, "missing_reservation_required", returnTarget.queueAnchor);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "reservar_pcp_op_componente_fifo", {
+    p_op_componente_id: opComponentId
+  });
+  if (error) redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.queueAnchor);
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "component_reserved_fifo", returnTarget.queueAnchor);
 }
 
 export async function startPcpOpAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#ops");
+    redirectWithResult(returnTarget.path, "not_configured", returnTarget.queueAnchor);
   }
 
   const opId = optionalInteger(formData, "op_id");
   if (!opId || opId <= 0) {
-    redirect("/pcp?result=missing_op_required#ops");
+    redirectWithResult(returnTarget.path, "missing_op_required", returnTarget.queueAnchor);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -184,16 +230,16 @@ export async function startPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.queueAnchor);
   }
 
-  revalidatePath("/pcp");
-  redirect("/pcp?result=op_started#ops");
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "op_started", returnTarget.queueAnchor);
 }
 
 export async function finishPcpOpAction(formData: FormData) {
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#ops");
+    redirect("/producao/qualidade?result=not_configured#cq-pendente");
   }
 
   const opId = optionalInteger(formData, "op_id");
@@ -203,37 +249,72 @@ export async function finishPcpOpAction(formData: FormData) {
   const volume = optionalNumber(formData, "volume_l");
   const massa = optionalNumber(formData, "massa_kg");
   const temperatura = optionalNumber(formData, "temperatura_c");
-  const separadorMp = field(formData, "separador_mp");
-  const conferenteMp = field(formData, "conferente_mp");
-  const formuladores = parsePeopleList(field(formData, "formuladores"));
-  const outputs = parseOutputs(formData);
+  const separadorPessoaId = optionalInteger(formData, "separador_pessoa_id");
+  const conferentePessoaId = optionalInteger(formData, "conferente_pessoa_id");
+  const formuladorIds = Array.from({ length: 3 }, (_, index) =>
+    optionalInteger(formData, `formulador_${index + 1}_pessoa_id`)
+  ).filter((value): value is number => value !== null);
+  const responsavelCqPessoaId = optionalInteger(formData, "responsavel_cq_pessoa_id");
+  const responsavelLiberacaoPessoaId = optionalInteger(formData, "responsavel_liberacao_pessoa_id");
+  const parsedOutputs = parseOutputs(formData);
+  const popResults = parsePopCqResults(formData);
 
-  if (!opId || opId <= 0 || !separadorMp || !conferenteMp || formuladores.length === 0) {
-    redirect("/pcp?result=missing_finish_required#ops");
+  if (
+    !opId
+    || opId <= 0
+    || !separadorPessoaId
+    || !conferentePessoaId
+    || formuladorIds.length === 0
+    || !responsavelCqPessoaId
+    || !responsavelLiberacaoPessoaId
+  ) {
+    redirect("/producao/qualidade?result=missing_finish_required#cq-pendente");
   }
   if (!ALLOWED_CQ_STATUS.has(cqStatus)) {
-    redirect("/pcp?result=invalid_cq_status#ops");
+    redirect("/producao/qualidade?result=invalid_cq_status#cq-pendente");
   }
   if ([ph, densidade, volume, massa, temperatura].some((value) => value === null || !Number.isFinite(value))) {
-    redirect("/pcp?result=missing_cq_numbers#ops");
+    redirect("/producao/qualidade?result=missing_cq_numbers#cq-pendente");
   }
-  if (outputs.length === 0) {
-    redirect("/pcp?result=missing_outputs#ops");
+  if (parsedOutputs.length === 0) {
+    redirect("/producao/qualidade?result=missing_outputs#cq-pendente");
+  }
+  if (parsedOutputs.length !== 1) {
+    redirect("/producao/qualidade?result=single_output_required#cq-pendente");
   }
 
   const supabase = await createSupabaseServerClient();
+  const participantIds = [...new Set([
+    separadorPessoaId,
+    conferentePessoaId,
+    ...formuladorIds,
+    responsavelCqPessoaId,
+    responsavelLiberacaoPessoaId
+  ])];
+  const participants = await supabase
+    .from("cad_pessoas_comerciais")
+    .select("id,status")
+    .in("id", participantIds)
+    .eq("status", "active");
+  if (participants.error || (participants.data ?? []).length !== participantIds.length) {
+    redirect("/producao/qualidade?result=invalid_participants#cq-pendente");
+  }
   const correlationId = `pcp_op:${opId}:finish`;
-  const { error } = await auditedRpc(supabase, "finalizar_pcp_op", {
-    p_conferente_mp: conferenteMp,
+  const outputs = parsedOutputs.map((output) => ({ ...output, quantidade: volume }));
+  const { error } = await auditedRpc(supabase, "finalizar_pcp_op_relacional_com_pops", {
+    p_conferente_pessoa_id: conferentePessoaId,
     p_cq_status: cqStatus,
     p_densidade_kg_l: densidade,
-    p_formuladores_jsonb: formuladores,
+    p_formulador_pessoa_ids: formuladorIds,
     p_massa_kg: massa,
     p_observacao: optionalField(formData, "observacao_finalizacao"),
     p_op_id: opId,
     p_outputs_jsonb: outputs,
+    p_pop_resultados_jsonb: popResults,
     p_ph: ph,
-    p_separador_mp: separadorMp,
+    p_responsavel_cq_pessoa_id: responsavelCqPessoaId,
+    p_responsavel_liberacao_pessoa_id: responsavelLiberacaoPessoaId,
+    p_separador_pessoa_id: separadorPessoaId,
     p_temperatura_c: temperatura,
     p_volume_l: volume
   }, {
@@ -250,23 +331,27 @@ export async function finishPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirect(`/producao/qualidade?result=${encodeURIComponent(mapPcpError(error.message))}#cq-pendente`);
   }
 
   revalidatePath("/pcp");
+  revalidatePath("/producao");
+  revalidatePath("/producao/ordens");
+  revalidatePath("/producao/qualidade");
   revalidatePath("/relatorios");
-  redirect("/pcp?result=op_finished#ops");
+  redirect("/producao/qualidade?result=op_finished#historico-cq");
 }
 
 export async function cancelPcpOpAction(formData: FormData) {
+  const returnTarget = opReturnTarget(formData);
   if (!getRuntimeStatus().supabaseConfigured) {
-    redirect("/pcp?result=not_configured#ops");
+    redirectWithResult(returnTarget.path, "not_configured", returnTarget.queueAnchor);
   }
 
   const opId = optionalInteger(formData, "op_id");
   const motivo = field(formData, "motivo");
   if (!opId || opId <= 0 || !motivo) {
-    redirect("/pcp?result=missing_cancel_required#ops");
+    redirectWithResult(returnTarget.path, "missing_cancel_required", returnTarget.queueAnchor);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -276,11 +361,228 @@ export async function cancelPcpOpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/pcp?result=${encodeURIComponent(mapPcpError(error.message))}#ops`);
+    redirectWithResult(returnTarget.path, mapPcpError(error.message), returnTarget.queueAnchor);
   }
 
-  revalidatePath("/pcp");
-  redirect("/pcp?result=op_cancelled#ops");
+  revalidateProductionPaths();
+  redirectWithResult(returnTarget.path, "op_cancelled", returnTarget.queueAnchor);
+}
+
+export async function registerProductGuaranteeAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/producao/garantias?result=not_configured");
+  }
+
+  const produtoId = optionalInteger(formData, "produto_id");
+  const tipoLimite = field(formData, "tipo_limite").toLowerCase();
+  const valor = optionalNumber(formData, "valor");
+  const valorMaximo = optionalNumber(formData, "valor_maximo");
+  const fonte = field(formData, "fonte").toLowerCase() || "mapa";
+  const justificativa = field(formData, "justificativa");
+  const documentoReferencia = optionalField(formData, "documento_referencia");
+
+  if (!produtoId || !field(formData, "nutriente") || valor === null || valor < 0 || !field(formData, "unidade") || !justificativa) {
+    redirect("/producao/garantias?result=missing_guarantee_required");
+  }
+  if (!ALLOWED_GUARANTEE_LIMITS.has(tipoLimite) || !ALLOWED_GUARANTEE_SOURCES.has(fonte)) {
+    redirect("/producao/garantias?result=invalid_guarantee_type");
+  }
+  if ((fonte === "laboratorio" || fonte === "fornecedor") && !documentoReferencia) {
+    redirect("/producao/garantias?result=missing_guarantee_document");
+  }
+  if (tipoLimite === "faixa" ? valorMaximo === null || valorMaximo < valor : valorMaximo !== null) {
+    redirect("/producao/garantias?result=invalid_guarantee_range");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_pcp_garantia_produto", {
+    p_documento_referencia: documentoReferencia,
+    p_fonte: fonte,
+    p_justificativa: justificativa,
+    p_nutriente: field(formData, "nutriente"),
+    p_produto_id: produtoId,
+    p_tipo_limite: tipoLimite,
+    p_unidade: field(formData, "unidade"),
+    p_valor: valor,
+    p_valor_maximo: valorMaximo,
+    p_vigencia_fim: optionalField(formData, "vigencia_fim"),
+    p_vigencia_inicio: optionalField(formData, "vigencia_inicio")
+  });
+
+  if (error) {
+    redirect(`/producao/garantias?result=${encodeURIComponent(mapPcpError(error.message))}`);
+  }
+
+  revalidateProductionPaths();
+  redirect("/producao/garantias?result=product_guarantee_registered");
+}
+
+export async function registerMpLotGuaranteeAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/producao/garantias?result=not_configured");
+  }
+
+  const loteMpId = optionalInteger(formData, "lote_mp_id");
+  const valor = optionalNumber(formData, "valor");
+  const fonte = field(formData, "fonte").toLowerCase();
+  const justificativa = field(formData, "justificativa");
+  const documentoReferencia = optionalField(formData, "documento_referencia");
+  if (!loteMpId || !field(formData, "nutriente") || valor === null || valor < 0 || !field(formData, "unidade") || !fonte || !field(formData, "data_referencia") || !justificativa) {
+    redirect("/producao/garantias?result=missing_guarantee_required");
+  }
+  if (!ALLOWED_GUARANTEE_SOURCES.has(fonte)) {
+    redirect("/producao/garantias?result=invalid_guarantee_type");
+  }
+  if ((fonte === "laboratorio" || fonte === "fornecedor") && !documentoReferencia) {
+    redirect("/producao/garantias?result=missing_guarantee_document");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_pcp_garantia_lote_mp", {
+    p_data_referencia: field(formData, "data_referencia"),
+    p_documento_referencia: documentoReferencia,
+    p_fonte: fonte,
+    p_justificativa: justificativa,
+    p_lote_mp_id: loteMpId,
+    p_nutriente: field(formData, "nutriente"),
+    p_unidade: field(formData, "unidade"),
+    p_valor: valor
+  });
+
+  if (error) {
+    redirect(`/producao/garantias?result=${encodeURIComponent(mapPcpError(error.message))}`);
+  }
+
+  revalidateProductionPaths();
+  redirect("/producao/garantias?result=mp_lot_guarantee_registered");
+}
+
+export async function registerMpLotParametersAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/producao/garantias?result=not_configured");
+  }
+
+  const loteMpId = optionalInteger(formData, "lote_mp_id");
+  const densidadeKgL = optionalNumber(formData, "densidade_kg_l");
+  const dataReferencia = field(formData, "data_referencia");
+  const fonte = field(formData, "fonte").toLowerCase();
+  const documentoReferencia = optionalField(formData, "documento_referencia");
+  const justificativa = field(formData, "justificativa");
+
+  if (!loteMpId || densidadeKgL === null || densidadeKgL <= 0 || !dataReferencia || !justificativa) {
+    redirect("/producao/garantias?result=missing_lot_parameters");
+  }
+  if (!new Set(["manual", "laboratorio", "fornecedor"]).has(fonte)) {
+    redirect("/producao/garantias?result=invalid_guarantee_type");
+  }
+  if ((fonte === "laboratorio" || fonte === "fornecedor") && !documentoReferencia) {
+    redirect("/producao/garantias?result=missing_guarantee_document");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_pcp_parametros_lote_mp", {
+    p_data_referencia: dataReferencia,
+    p_densidade_kg_l: densidadeKgL,
+    p_documento_referencia: documentoReferencia,
+    p_fonte: fonte,
+    p_justificativa: justificativa,
+    p_lote_mp_id: loteMpId
+  });
+
+  if (error) {
+    redirect(`/producao/garantias?result=${encodeURIComponent(mapPcpError(error.message))}`);
+  }
+
+  revalidateProductionPaths();
+  redirect("/producao/garantias?result=mp_lot_parameters_registered");
+}
+
+export async function reviewHistoricalGuaranteeAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/producao/garantias?result=not_configured#conciliacao-historica");
+  }
+
+  const fonteHistoricaId = optionalInteger(formData, "fonte_historica_id");
+  const decisao = field(formData, "decisao");
+  const justificativa = field(formData, "justificativa");
+  const classified = decisao === "classificada";
+  const nutrienteId = classified ? optionalInteger(formData, "nutriente_id") : null;
+  const unidadePpId = classified ? optionalInteger(formData, "unidade_pp_id") : null;
+  const unidadePvId = classified ? optionalInteger(formData, "unidade_pv_id") : null;
+
+  if (!fonteHistoricaId || !new Set(["classificada", "manter_pendente", "descartada"]).has(decisao) || justificativa.length < 10) {
+    redirect("/producao/garantias?result=invalid_historical_review#conciliacao-historica");
+  }
+  if (classified && (!nutrienteId || !unidadePpId || !unidadePvId)) {
+    redirect("/producao/garantias?result=missing_historical_catalogs#conciliacao-historica");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "revisar_pcp_garantia_historica", {
+    p_decisao: decisao,
+    p_fonte_historica_id: fonteHistoricaId,
+    p_justificativa: justificativa,
+    p_nutriente_id: nutrienteId,
+    p_unidade_pp_id: unidadePpId,
+    p_unidade_pv_id: unidadePvId
+  });
+  if (error) {
+    redirect(`/producao/garantias?result=${encodeURIComponent(mapPcpError(error.message))}#conciliacao-historica`);
+  }
+
+  revalidateProductionPaths();
+  redirect("/producao/garantias?result=historical_guarantee_reviewed#conciliacao-historica");
+}
+
+export async function calculateOpGuaranteesAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/producao/qualidade?result=not_configured#historico-cq");
+  }
+
+  const opId = optionalInteger(formData, "op_id");
+  const justificativa = field(formData, "justificativa");
+  if (!opId || !justificativa) {
+    redirect("/producao/qualidade?result=missing_guarantee_calculation#historico-cq");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "calcular_pcp_garantias_op", {
+    p_justificativa: justificativa,
+    p_op_id: opId
+  });
+  if (error) {
+    redirect(`/producao/qualidade?result=${encodeURIComponent(mapPcpError(error.message))}#historico-cq`);
+  }
+
+  revalidateProductionPaths();
+  revalidatePath("/producao/qualidade");
+  redirect("/producao/qualidade?result=guarantees_calculated#historico-cq");
+}
+
+export async function releaseBlockedLotAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/producao/estoque?result=not_configured#lotes");
+  }
+
+  const tipoLote = field(formData, "tipo_lote").toUpperCase();
+  const loteId = optionalInteger(formData, "lote_id");
+  const motivo = field(formData, "motivo");
+  if (!ALLOWED_OUTPUT_TYPES.has(tipoLote) || !loteId || !motivo) {
+    redirect("/producao/estoque?result=missing_release_required#lotes");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "liberar_pcp_lote_bloqueado", {
+    p_lote_id: loteId,
+    p_motivo: motivo,
+    p_tipo_lote: tipoLote
+  });
+  if (error) {
+    redirect(`/producao/estoque?result=${encodeURIComponent(mapPcpError(error.message))}#lotes`);
+  }
+
+  revalidateProductionPaths();
+  redirect("/producao/estoque?result=blocked_lot_released#lotes");
 }
 
 function parseFormulaComponents(formData: FormData): FormulaComponentPayload[] {
@@ -289,23 +591,21 @@ function parseFormulaComponents(formData: FormData): FormulaComponentPayload[] {
     const tipo = field(formData, `component_${index}_tipo`).toUpperCase();
     const targetId = optionalInteger(formData, `component_${index}_target_id`);
     const quantidade = optionalNumber(formData, `component_${index}_quantidade`);
-    const unidade = optionalField(formData, `component_${index}_unidade`);
+    const unidadeId = optionalInteger(formData, `component_${index}_unidade_id`);
     const observacao = optionalField(formData, `component_${index}_observacao`);
 
     if (!tipo && !targetId && quantidade === null) {
       continue;
     }
-    if (!ALLOWED_COMPONENT_TYPES.has(tipo) || !targetId || targetId <= 0 || quantidade === null || quantidade <= 0) {
-      redirect("/pcp?result=invalid_component_row#nova-formula");
+    if (!ALLOWED_COMPONENT_TYPES.has(tipo) || !targetId || targetId <= 0 || quantidade === null || quantidade <= 0 || !unidadeId) {
+      redirect("/producao/formulas?result=invalid_component_row#nova-formula");
     }
 
     const payload: FormulaComponentPayload = {
       tipo_componente: tipo,
       quantidade
     };
-    if (unidade) {
-      payload.unidade = unidade;
-    }
+    payload.unidade_id = unidadeId;
     if (observacao) {
       payload.observacao = observacao;
     }
@@ -323,7 +623,7 @@ function parseFormulaComponents(formData: FormData): FormulaComponentPayload[] {
 
 function parseOutputs(formData: FormData): OutputPayload[] {
   const outputs: OutputPayload[] = [];
-  for (let index = 1; index <= 3; index += 1) {
+  for (let index = 1; index <= 1; index += 1) {
     const tipo = field(formData, `output_${index}_tipo`).toUpperCase();
     const targetId = optionalInteger(formData, `output_${index}_target_id`);
     const quantidade = optionalNumber(formData, `output_${index}_quantidade`);
@@ -333,7 +633,7 @@ function parseOutputs(formData: FormData): OutputPayload[] {
       continue;
     }
     if (!ALLOWED_OUTPUT_TYPES.has(tipo) || !targetId || targetId <= 0 || quantidade === null || quantidade <= 0) {
-      redirect("/pcp?result=invalid_output_row#ops");
+      redirect("/producao/qualidade?result=invalid_output_row#cq-pendente");
     }
 
     const payload: OutputPayload = {
@@ -353,11 +653,27 @@ function parseOutputs(formData: FormData): OutputPayload[] {
   return outputs;
 }
 
-function parsePeopleList(value: string): string[] {
-  return value
-    .split(/[,\n;]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+function parsePopCqResults(formData: FormData): PopCqResultPayload[] {
+  return formData.getAll("pop_snapshot_id").map((rawId) => {
+    const snapshotId = Number(String(rawId));
+    const result = field(formData, `pop_resultado_${snapshotId}`);
+    const stage = field(formData, `pop_etapa_${snapshotId}`);
+    const observation = optionalField(formData, `pop_observacao_${snapshotId}`);
+    const correctiveAction = optionalField(formData, `pop_acao_${snapshotId}`);
+    if (!Number.isSafeInteger(snapshotId) || snapshotId <= 0 || !ALLOWED_POP_CQ_RESULTS.has(result) || !stage) {
+      redirect("/producao/qualidade?result=invalid_pop_result#cq-pendente");
+    }
+    if (result !== "conforme" && !observation) {
+      redirect("/producao/qualidade?result=missing_pop_observation#cq-pendente");
+    }
+    return {
+      op_pop_congelado_id: snapshotId,
+      resultado: result,
+      etapa_controle: stage,
+      ...(observation ? { observacao: observation } : {}),
+      ...(correctiveAction ? { acao_corretiva: correctiveAction } : {})
+    };
+  });
 }
 
 function field(formData: FormData, name: string): string {
@@ -383,8 +699,39 @@ function optionalInteger(formData: FormData, name: string): number | null {
   if (value === null) {
     return null;
   }
-  const idPrefix = value.match(/^\s*(\d+)/);
-  return Number(idPrefix ? idPrefix[1] : value);
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && String(parsed) === value ? parsed : null;
+}
+
+function revalidateProductionPaths() {
+  revalidatePath("/pcp");
+  revalidatePath("/producao");
+  revalidatePath("/producao/formulas");
+  revalidatePath("/producao/garantias");
+  revalidatePath("/producao/ordens");
+  revalidatePath("/producao/qualidade");
+  revalidatePath("/producao/estoque");
+  revalidatePath("/producao/transformacoes");
+  revalidatePath("/relatorios");
+}
+
+function opReturnTarget(formData: FormData): OpReturnTarget {
+  if (field(formData, "return_to") === "transformacoes") {
+    return {
+      path: "/producao/transformacoes",
+      createAnchor: "nova-transformacao",
+      queueAnchor: "transformacoes"
+    };
+  }
+  return {
+    path: "/producao/ordens",
+    createAnchor: "nova-op",
+    queueAnchor: "ops"
+  };
+}
+
+function redirectWithResult(path: OpReturnTarget["path"], result: string, anchor: string): never {
+  redirect(`${path}?result=${encodeURIComponent(result)}#${anchor}`);
 }
 
 function mapPcpError(message: string): string {
@@ -404,17 +751,32 @@ function mapPcpError(message: string): string {
   if (normalized.includes("operational op requires")) {
     return "invalid_operational_formula";
   }
+  if (normalized.includes("legacy formula requires")) {
+    return "legacy_formula_requires_review";
+  }
+  if (normalized.includes("per-liter formula unit")) {
+    return "invalid_formula_unit";
+  }
   if (normalized.includes("exceeds planned") || normalized.includes("reservations must match")) {
     return "reservation_mismatch";
   }
   if (normalized.includes("insufficient stock")) {
     return "insufficient_stock";
   }
+  if (normalized.includes("fifo override requires")) {
+    return "fifo_override_requires_justification";
+  }
   if (normalized.includes("without full active reservation")) {
     return "missing_full_reservation";
   }
   if (normalized.includes("already has cq")) {
     return "already_finished";
+  }
+  if (normalized.includes("completed operational op") || normalized.includes("generated product")) {
+    return "invalid_guarantee_op";
+  }
+  if (normalized.includes("guarantee") || normalized.includes("garantia")) {
+    return "invalid_guarantee";
   }
   if (normalized.includes("status does not allow")) {
     return "invalid_status";

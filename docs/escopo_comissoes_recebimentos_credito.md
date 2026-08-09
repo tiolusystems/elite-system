@@ -314,7 +314,9 @@ Essa ferramenta deve respeitar alcadas especificas:
 - vendedor nao altera regra de comissao;
 - vendedor nao aprova pedido bloqueado por credito/inadimplencia sem alcada;
 - gerente pode aprovar ou encaminhar conforme alcada;
-- financeiro/comercial autorizado controla limite, bloqueio e liberacoes;
+- pessoa com permissao financeira individual controla o limite cadastral;
+- aprovacao excepcional de pedido nao altera o limite permanente do cliente;
+- revisar pedido e alterar limite sao alcadas independentes;
 - toda criacao, alteracao, aprovacao, bloqueio e rejeicao fica em `action_logs`.
 
 ## Credito e inadimplencia

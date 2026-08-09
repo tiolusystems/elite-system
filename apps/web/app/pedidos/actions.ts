@@ -8,10 +8,195 @@ import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ALLOWED_TIPO_PEDIDO = new Set(["venda", "bonificacao", "devolucao", "mostruario"]);
-const ALLOWED_STATUS_INICIAL = new Set(["draft", "open", "blocked"]);
-const ALLOWED_DECISAO_CREDITO = new Set(["liberado", "bloqueado", "pendente_aprovacao"]);
 const ALLOWED_MOTIVO_TROCA = new Set(["qualidade", "avaria_transporte", "erro_separacao", "erro_comercial", "acordo_comercial", "outro"]);
 const DECIMAL_SEPARATOR = /,/g;
+
+export async function criarPedidoComercialAction(formData: FormData) {
+  const tipoPedido = field(formData, "tipo_pedido") || "venda";
+  if (tipoPedido === "troca") {
+    return criarTrocaPedidoAction(formData);
+  }
+  if (["mostruario", "bonificacao"].includes(tipoPedido)) {
+    return criarPedidoEspecialVendedorAction(formData);
+  }
+  if (tipoPedido !== "venda") {
+    redirectOrder(formData, "invalid_order_type");
+  }
+  return criarPedidoVendedorAction(formData);
+}
+
+export async function criarPedidoEspecialVendedorAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
+  const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
+  const quantidade = optionalNumber(formData, "quantidade");
+  const tipoPedido = field(formData, "tipo_pedido");
+  const dataPedido = field(formData, "data_pedido");
+  const justificativa = field(formData, "observacao");
+  if (!idempotencyKey || !vinculoId || !produtoEmbalagemId || quantidade === null || quantidade <= 0 || !dataPedido || !["bonificacao", "mostruario"].includes(tipoPedido)) {
+    redirectOrder(formData, "missing_order_required");
+  }
+  if (tipoPedido === "bonificacao" && justificativa.length < 10) {
+    redirectOrder(formData, "missing_bonus_reason");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_especial_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_cliente_vendedor_vinculo_id: vinculoId,
+    p_data_pedido: dataPedido,
+    p_justificativa: justificativa || null,
+    p_produto_embalagem_id: produtoEmbalagemId,
+    p_quantidade: quantidade,
+    p_tipo_pedido: tipoPedido
+  }, {
+    metadata: {
+      action_key: "pedidos.create.own",
+      axis: "own_any",
+      domain: "pedidos",
+      entity: "com_pedidos",
+      failure_action: "pedidos.special_create_failed"
+    }
+  });
+  if (error) redirectOrder(formData, mapSupabaseError(error.message));
+  revalidatePath("/pedidos");
+  redirectOrder(formData, "pedido_pending_approval", "#historico");
+}
+
+export async function criarPedidoVendedorAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
+  const itensJson = field(formData, "itens_json");
+  const entregasJson = field(formData, "entregas_json");
+  const dataPedido = field(formData, "data_pedido");
+  let items: Array<{ produto_embalagem_id: number; quantidade: number; valor_unitario: number }> = [];
+  let deliveries: Array<{
+    data_prevista: string;
+    propriedade_id: number | null;
+    estabelecimento_id: number | null;
+    endereco_id: number | null;
+    itens: Array<{ item_index: number; quantidade: number }>;
+  }> = [];
+  try {
+    const parsed: unknown = JSON.parse(itensJson);
+    items = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    items = [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(entregasJson);
+    deliveries = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    deliveries = [];
+  }
+  if (!idempotencyKey || !vinculoId || !dataPedido || !items.length || items.some((item) => !item.produto_embalagem_id || item.quantidade <= 0 || item.valor_unitario < 0)) {
+    redirectOrder(formData, "missing_order_required");
+  }
+  if (!deliveries.length || deliveries.some((delivery) =>
+    !delivery.data_prevista
+    || [delivery.propriedade_id, delivery.estabelecimento_id, delivery.endereco_id].filter((value) => value !== null).length !== 1
+    || !Array.isArray(delivery.itens)
+    || !delivery.itens.length
+    || delivery.itens.some((item) => !Number.isInteger(item.item_index) || item.item_index <= 0 || item.quantidade <= 0)
+  )) {
+    redirectOrder(formData, "missing_delivery_schedule");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_programado_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_cliente_vendedor_vinculo_id: vinculoId,
+    p_data_pedido: dataPedido,
+    p_entregas_jsonb: deliveries,
+    p_itens_jsonb: items,
+    p_observacao: optionalField(formData, "observacao"),
+  }, {
+    metadata: {
+      action_key: "pedidos.create.own",
+      axis: "own_any",
+      domain: "pedidos",
+      entity: "com_pedidos",
+      failure_action: "pedidos.create_failed"
+    }
+  });
+  if (error) redirectOrder(formData, mapSupabaseError(error.message));
+  revalidatePath("/pedidos");
+  redirectOrder(formData, "pedido_pending_approval", "#historico");
+}
+
+export async function decidirPedidoGerencialAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const decisao = field(formData, "decisao");
+  const justificativa = field(formData, "justificativa");
+  if (!idempotencyKey || !pedidoId || !["liberado", "bloqueado"].includes(decisao) || justificativa.length < 10) {
+    redirect("/pedidos?result=invalid_manager_decision#aprovacoes");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_gerencial_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_decisao: decisao,
+    p_justificativa: justificativa,
+    p_pedido_id: pedidoId
+  }, {
+    metadata: {
+      action_key: "pedidos.credit.review",
+      axis: "status_transition",
+      domain: "pedidos",
+      entity: "com_pedido_credito_decisoes",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.credit_review_failed"
+    }
+  });
+  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#aprovacoes`);
+  revalidatePath("/pedidos");
+  redirect(`/pedidos?result=${decisao === "liberado" ? "order_approved" : "order_rejected"}#aprovacoes`);
+}
+
+export async function ajustarLimiteCreditoAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const clienteId = optionalInteger(formData, "cliente_id");
+  const limiteNovo = optionalNumber(formData, "limite_novo");
+  const justificativa = field(formData, "justificativa_limite");
+  const target = creditAdjustmentTarget(formData, clienteId);
+  if (!idempotencyKey || !clienteId || limiteNovo === null || limiteNovo < 0 || justificativa.length < 10) {
+    redirectCreditAdjustment(target, "invalid_credit_limit");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "ajustar_com_limite_credito_cliente_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_cliente_id: clienteId,
+    p_justificativa: justificativa,
+    p_limite_novo: limiteNovo
+  }, {
+    metadata: {
+      action_key: "financeiro.credit_limits.adjust",
+      axis: "change_type",
+      domain: "financeiro",
+      entity: "cad_limites_credito_cliente",
+      entity_id: String(clienteId),
+      failure_action: "financeiro.credit_limit_adjust_failed"
+    }
+  });
+  if (error) redirectCreditAdjustment(target, mapSupabaseError(error.message));
+  revalidatePath("/pedidos");
+  revalidatePath("/cadastros");
+  redirectCreditAdjustment(target, "credit_limit_adjusted");
+}
+
+function creditAdjustmentTarget(formData: FormData, clienteId: number | null): { path: string; hash: string } {
+  const requestedPath = field(formData, "return_to");
+  const clientPath = clienteId
+    ? `/cadastros?grupo=clientes&cliente=${clienteId}&secao=credito`
+    : null;
+  return clientPath && requestedPath === clientPath
+    ? { path: clientPath, hash: "#credito-cliente" }
+    : { path: "/pedidos", hash: "#aprovacoes" };
+}
+
+function redirectCreditAdjustment(target: { path: string; hash: string }, result: string): never {
+  const separator = target.path.includes("?") ? "&" : "?";
+  redirect(`${target.path}${separator}result=${encodeURIComponent(result)}${target.hash}`);
+}
 
 export async function createPedidoRascunhoAction(formData: FormData) {
   const runtime = getRuntimeStatus();
@@ -27,7 +212,7 @@ export async function createPedidoRascunhoAction(formData: FormData) {
   const valorUnitario = optionalNumber(formData, "valor_unitario");
   const percentualComissao = optionalNumber(formData, "percentual_comissao");
   const tipoPedido = field(formData, "tipo_pedido") || "venda";
-  const status = field(formData, "status") || "draft";
+  const status = "blocked";
   const dataPedido = field(formData, "data_pedido");
 
   if (!clienteId || !produtoEmbalagemId || quantidade === null || valorUnitario === null || !dataPedido) {
@@ -54,10 +239,6 @@ export async function createPedidoRascunhoAction(formData: FormData) {
   if (!ALLOWED_TIPO_PEDIDO.has(tipoPedido)) {
     redirect("/pedidos?result=invalid_order_type#novo-pedido");
   }
-  if (!ALLOWED_STATUS_INICIAL.has(status)) {
-    redirect("/pedidos?result=invalid_initial_status#novo-pedido");
-  }
-
   const supabase = await createSupabaseServerClient();
   const { error } = await auditedRpc(supabase, "create_com_pedido_operacional", {
     p_cliente_id: clienteId,
@@ -89,125 +270,22 @@ export async function createPedidoRascunhoAction(formData: FormData) {
   redirect("/pedidos?result=pedido_created#novo-pedido");
 }
 
-export async function registrarCreditoPedidoAction(formData: FormData) {
-  const runtime = getRuntimeStatus();
-  if (!runtime.supabaseConfigured) {
-    redirect("/pedidos?result=not_configured#credito-pedido");
-  }
-
-  const pedidoId = optionalInteger(formData, "pedido_id");
-  const decisao = field(formData, "decisao");
-  const motivo = optionalField(formData, "motivo");
-  const limiteDisponivelSnapshot = optionalNumber(formData, "limite_disponivel_snapshot");
-  const inadimplenciaSnapshot = optionalNumber(formData, "inadimplencia_snapshot");
-
-  if (!pedidoId || !decisao) {
-    redirect("/pedidos?result=missing_credit_required#credito-pedido");
-  }
-  if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#credito-pedido");
-  }
-  if (!ALLOWED_DECISAO_CREDITO.has(decisao)) {
-    redirect("/pedidos?result=invalid_credit_decision#credito-pedido");
-  }
-  if (decisao !== "liberado" && !motivo) {
-    redirect("/pedidos?result=missing_credit_reason#credito-pedido");
-  }
-  if (limiteDisponivelSnapshot !== null && (!Number.isFinite(limiteDisponivelSnapshot) || limiteDisponivelSnapshot < 0)) {
-    redirect("/pedidos?result=invalid_non_negative_number#credito-pedido");
-  }
-  if (inadimplenciaSnapshot !== null && (!Number.isFinite(inadimplenciaSnapshot) || inadimplenciaSnapshot < 0)) {
-    redirect("/pedidos?result=invalid_non_negative_number#credito-pedido");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_credito", {
-    p_decisao: decisao,
-    p_inadimplencia_snapshot: inadimplenciaSnapshot,
-    p_limite_disponivel_snapshot: limiteDisponivelSnapshot,
-    p_motivo: motivo,
-    p_observacao: optionalField(formData, "observacao_credito"),
-    p_pedido_id: pedidoId
-  }, {
-    metadata: {
-      action_key: "pedidos.credit.review",
-      axis: "status_transition",
-      domain: "pedidos",
-      entity: "com_pedido_credito_decisoes",
-      entity_id: String(pedidoId),
-      failure_action: "pedidos.credit_review_failed"
-    }
-  });
-
-  if (error) {
-    redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#credito-pedido`);
-  }
-
-  revalidatePath("/pedidos");
-  redirect("/pedidos?result=credit_decision_registered#credito-pedido");
-}
-
-export async function registrarRecebimentoPedidoAction(formData: FormData) {
-  const runtime = getRuntimeStatus();
-  if (!runtime.supabaseConfigured) {
-    redirect("/pedidos?result=not_configured#recebimento-pedido");
-  }
-
-  const pedidoId = optionalInteger(formData, "pedido_id");
-  const valorRecebido = optionalNumber(formData, "valor_recebido");
-  const dataRecebimento = field(formData, "data_recebimento");
-
-  if (!pedidoId || valorRecebido === null || !dataRecebimento) {
-    redirect("/pedidos?result=missing_receipt_required#recebimento-pedido");
-  }
-  if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#recebimento-pedido");
-  }
-  if (!Number.isFinite(valorRecebido) || valorRecebido <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#recebimento-pedido");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "registrar_com_recebimento", {
-    p_data_recebimento: dataRecebimento,
-    p_forma_recebimento: optionalField(formData, "forma_recebimento"),
-    p_observacao: optionalField(formData, "observacao_recebimento"),
-    p_pedido_id: pedidoId,
-    p_valor_recebido: valorRecebido
-  }, {
-    metadata: {
-      action_key: "financeiro.receipts.register",
-      axis: "financial_event",
-      domain: "financeiro",
-      entity: "com_recebimentos",
-      entity_id: String(pedidoId),
-      failure_action: "financeiro.recebimento_failed"
-    }
-  });
-
-  if (error) {
-    redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#recebimento-pedido`);
-  }
-
-  revalidatePath("/pedidos");
-  redirect("/pedidos?result=receipt_registered#recebimento-pedido");
-}
-
 export async function criarTrocaPedidoAction(formData: FormData) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
     redirect("/pedidos?result=not_configured#troca-pedido");
   }
 
+  const idempotencyKey = uuid(formData, "idempotency_key");
   const pedidoOrigemId = optionalInteger(formData, "pedido_origem_id");
   const pedidoItemOrigemId = optionalInteger(formData, "pedido_item_origem_id");
   const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
   const quantidade = optionalNumber(formData, "quantidade_troca");
-  const status = field(formData, "status_troca") || "open";
+  const status = "blocked";
   const dataPedido = field(formData, "data_troca");
   const motivoTroca = field(formData, "motivo_troca") || "qualidade";
 
-  if (!pedidoOrigemId || !pedidoItemOrigemId || !dataPedido) {
+  if (!idempotencyKey || !pedidoOrigemId || !pedidoItemOrigemId || !dataPedido) {
     redirect("/pedidos?result=missing_exchange_required#troca-pedido");
   }
   if (!Number.isInteger(pedidoOrigemId) || pedidoOrigemId <= 0 || !Number.isInteger(pedidoItemOrigemId) || pedidoItemOrigemId <= 0) {
@@ -219,9 +297,6 @@ export async function criarTrocaPedidoAction(formData: FormData) {
   if (quantidade !== null && (!Number.isFinite(quantidade) || quantidade <= 0)) {
     redirect("/pedidos?result=invalid_positive_number#troca-pedido");
   }
-  if (!ALLOWED_STATUS_INICIAL.has(status)) {
-    redirect("/pedidos?result=invalid_initial_status#troca-pedido");
-  }
   if (!ALLOWED_MOTIVO_TROCA.has(motivoTroca)) {
     redirect("/pedidos?result=invalid_exchange_reason#troca-pedido");
   }
@@ -230,7 +305,8 @@ export async function criarTrocaPedidoAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_troca", {
+  const { error } = await auditedRpc(supabase, "create_com_pedido_troca_idempotente", {
+    p_idempotency_key: idempotencyKey,
     p_data_pedido: dataPedido,
     p_motivo_troca: motivoTroca,
     p_observacao: optionalField(formData, "observacao_troca"),
@@ -287,6 +363,11 @@ function optionalInteger(formData: FormData, name: string): number | null {
   return Number(value);
 }
 
+function uuid(formData: FormData, name: string): string | null {
+  const value = field(formData, name);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null;
+}
+
 function mapSupabaseError(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("duplicate") || normalized.includes("unique")) {
@@ -294,6 +375,21 @@ function mapSupabaseError(message: string): string {
   }
   if (normalized.includes("foreign key")) {
     return "missing_related_record";
+  }
+  if (normalized.includes("delivery schedule") || normalized.includes("delivery items")) {
+    return "missing_delivery_schedule";
+  }
+  if (normalized.includes("delivery date")) {
+    return "invalid_delivery_date";
+  }
+  if (normalized.includes("delivery property") || normalized.includes("delivery establishment") || normalized.includes("delivery address") || normalized.includes("delivery location")) {
+    return "invalid_delivery_location";
+  }
+  if (normalized.includes("sale item is inactive") || normalized.includes("invalid order item")) {
+    return "invalid_sale_item";
+  }
+  if (normalized.includes("idempotency key reused")) {
+    return "idempotency_conflict";
   }
   if (normalized.includes("motivo is required")) {
     return "missing_credit_reason";
@@ -325,5 +421,25 @@ function mapSupabaseError(message: string): string {
   if (normalized.includes("permission") || normalized.includes("row-level security") || normalized.includes("not allowed")) {
     return "permission_denied";
   }
+  if (normalized.includes("outside seller portfolio") || normalized.includes("outside manager team")) {
+    return "permission_denied";
+  }
+  if (normalized.includes("commercial identity not linked")) {
+    return "commercial_identity_required";
+  }
+  if (normalized.includes("justification")) {
+    return "invalid_justification";
+  }
   return "save_failed";
+}
+
+function redirectOrder(formData: FormData, result: string, hash = "#novo-pedido"): never {
+  const linkId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
+  const search = field(formData, "return_search");
+  const page = optionalInteger(formData, "return_page");
+  const query = new URLSearchParams({ result });
+  if (linkId) query.set("cliente", String(linkId));
+  if (search) query.set("busca", search);
+  if (page !== null && page >= 0) query.set("pagina", String(page));
+  redirect(`/pedidos?${query.toString()}${hash}`);
 }

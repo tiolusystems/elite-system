@@ -5,43 +5,32 @@ import {
   type ReprocessamentoRow,
   type ValidityLotRow
 } from "@/lib/reports";
-import { getRuntimeStatus } from "@/lib/runtime";
 
 export const dynamic = "force-dynamic";
 
-export default async function RelatoriosPage() {
-  const runtime = getRuntimeStatus();
-  const dashboard = await getReportsDashboard();
+type ReportsPageProps = {
+  searchParams: Promise<{ familia?: string; data?: string }>;
+};
+
+const LOT_FAMILY_OPTIONS = ["TODOS", "PI", "PA", "MP"] as const;
+type LotFamilyFilter = (typeof LOT_FAMILY_OPTIONS)[number];
+
+export default async function RelatoriosPage({ searchParams }: ReportsPageProps) {
+  const params = await searchParams;
+  const dataCorte = /^\d{4}-\d{2}-\d{2}$/.test(params.data ?? "") ? params.data! : new Date().toISOString().slice(0, 10);
+  const dashboard = await getReportsDashboard(dataCorte);
+  const requestedFamily = params.familia?.toUpperCase();
+  const family: LotFamilyFilter = LOT_FAMILY_OPTIONS.includes(requestedFamily as LotFamilyFilter)
+    ? (requestedFamily as LotFamilyFilter)
+    : "TODOS";
+  const validityRows = filterByFamily(dashboard.validityRows, family);
+  const reprocessamentoRows = filterByFamily(dashboard.reprocessamentoRows, family);
+  const vencidosComSaldo = validityRows.filter((row) => row.statusVencimento === "vencido_com_saldo").length;
+  const vencendo30Dias = validityRows.filter((row) => row.statusVencimento === "vence_30_dias").length;
+  const candidatosAlta = reprocessamentoRows.filter((row) => row.prioridadeReprocessamento === "alta").length;
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>Elite System</strong>
-          <span>Relatorios</span>
-        </div>
-        <nav className="topnav" aria-label="Modulos principais">
-          <Link href="/">Inicio</Link>
-          <a href="/cadastros">Cadastros</a>
-          <a href="/pedidos">Pedidos</a>
-          <a href="/kanban">Kanban</a>
-          <a href="/importacao-xml">XML MP</a>
-          <a href="/pcp">PCP</a>
-          <a href="/romaneios">Romaneio</a>
-          <a href="/relatorios" aria-current="page">
-            Relatorios
-          </a>
-          <a href="/seguranca">Seguranca</a>
-          <a href="/login">Login</a>
-        </nav>
-      </header>
-
-      <aside className={`db-banner ${runtime.isOperationalDatabase ? "operational" : ""}`}>
-        <strong>{runtime.databaseLabel}</strong>
-        <span>{runtime.databaseWarning}</span>
-        <span className="pill">{runtime.databaseMode}</span>
-      </aside>
-
       <section className="workspace dashboard-workspace">
         <div className="dashboard-header">
           <div>
@@ -70,20 +59,32 @@ export default async function RelatoriosPage() {
           </article>
           <article className="kpi-card accent-red">
             <span>Vencidos com saldo</span>
-            <strong>{valueOrDash(dashboard.metrics.vencidosComSaldo)}</strong>
+            <strong>{dashboard.source === "supabase" ? vencidosComSaldo : "sem conexao"}</strong>
             <p>Lotes que devem ser tratados antes de nova expedicao ou producao.</p>
           </article>
           <article className="kpi-card accent-amber">
             <span>Vencem em 30 dias</span>
-            <strong>{valueOrDash(dashboard.metrics.vencendo30Dias)}</strong>
-            <p>Saldo disponivel que pode exigir decisao comercial, CQ ou PCP.</p>
+            <strong>{dashboard.source === "supabase" ? vencendo30Dias : "sem conexao"}</strong>
+            <p>Saldo disponivel que pode exigir decisao comercial, CQ ou producao.</p>
           </article>
           <article className="kpi-card accent-green">
             <span>Candidatos a reprocessar</span>
-            <strong>{valueOrDash(dashboard.metrics.candidatosReprocessamento)}</strong>
-            <p>{valueOrDash(dashboard.metrics.candidatosAlta)} com prioridade alta.</p>
+            <strong>{dashboard.source === "supabase" ? reprocessamentoRows.length : "sem conexao"}</strong>
+            <p>{dashboard.source === "supabase" ? candidatosAlta : "sem conexao"} com prioridade alta.</p>
           </article>
         </section>
+
+        <nav className="segmented-control" aria-label="Filtrar relatórios por família de estoque">
+          {LOT_FAMILY_OPTIONS.map((option) => (
+            <Link
+              key={option}
+              href={option === "TODOS" ? "/relatorios" : `/relatorios?familia=${option}`}
+              aria-current={family === option ? "page" : undefined}
+            >
+              {option === "TODOS" ? "Todos" : option}
+            </Link>
+          ))}
+        </nav>
 
         {dashboard.error ? (
           <section className="notice-panel warning" role="status">
@@ -98,6 +99,25 @@ export default async function RelatoriosPage() {
             <span>Configure Supabase para carregar catalogo, vencimentos e candidatos a reprocessamento.</span>
           </section>
         ) : null}
+
+        {family === "TODOS" || family === "PA" ? <section className="panel" aria-labelledby="posicao-pa-title">
+          <div className="panel-header">
+            <div><h2 id="posicao-pa-title">Posição histórica de estoque PA</h2><p className="muted">Saldo físico, empenhado em romaneio e disponível no fim da data.</p></div>
+            <form method="get">
+              {family !== "TODOS" ? <input type="hidden" name="familia" value={family} /> : null}
+              <label>Data de corte <input type="date" name="data" defaultValue={dataCorte} /></label>
+              <button className="secondary-button" type="submit">Consultar</button>
+            </form>
+          </div>
+          {dashboard.paStockPositionRows.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>Lote</th><th>Físico</th><th>Empenhado</th><th>Disponível</th><th>Litros físicos</th><th>Volumes físicos</th><th>Litros empenhados</th><th>Volumes empenhados</th></tr></thead><tbody>
+            {dashboard.paStockPositionRows.map((row) => <tr key={row.lotePaId}><td>{row.codigoLote}</td><td>{numberOrDash(row.saldoFisico)}</td><td>{numberOrDash(row.saldoEmpenhado)}</td><td>{numberOrDash(row.saldoDisponivel)}</td><td>{numberOrDash(row.litrosFisicos)}</td><td>{row.volumesFisicos === null ? "Pendente" : numberOrDash(row.volumesFisicos)}</td><td>{numberOrDash(row.litrosEmpenhados)}</td><td>{row.volumesEmpenhados === null ? "Pendente" : numberOrDash(row.volumesEmpenhados)}</td></tr>)}
+          </tbody></table></div> : <EmptyState title="Sem posição PA" detail="Lotes e empenhos aparecerão após a movimentação de teste." />}
+        </section> : null}
+
+        {family === "PI" ? <section className="notice-panel" role="status">
+          <strong>Posição corrente de PI</strong>
+          <span>Os saldos de produto intermediário estão na tabela por vencimento abaixo. A posição retroativa por data ainda não faz parte do contrato histórico de PI.</span>
+        </section> : null}
 
         <section className="dashboard-grid">
           <section className="panel" id="catalogo" aria-labelledby="catalogo-title">
@@ -116,7 +136,7 @@ export default async function RelatoriosPage() {
                     <p>{item.descricao}</p>
                     <div className="tag-row">
                       <span className="tag">{item.modulo}</span>
-                      <span className={`status-chip ${item.status}`}>{item.status}</span>
+                      <span className={`status-chip ${item.status}`}>{catalogStatusLabel(item.status)}</span>
                       <span className="tag">{item.fontePrincipal}</span>
                     </div>
                   </article>
@@ -130,11 +150,11 @@ export default async function RelatoriosPage() {
           <section className="panel" id="reprocessamento" aria-labelledby="reprocessamento-title">
             <div className="panel-header">
               <h2 id="reprocessamento-title">Fila de reprocessamento</h2>
-              <span className="pill">{dashboard.reprocessamentoRows.length} lote(s)</span>
+              <span className="pill">{reprocessamentoRows.length} lote(s) de {familyLabel(family)}</span>
             </div>
-            {dashboard.reprocessamentoRows.length > 0 ? (
+            {reprocessamentoRows.length > 0 ? (
               <div className="queue-list">
-                {dashboard.reprocessamentoRows.slice(0, 10).map((row) => (
+                {reprocessamentoRows.slice(0, 10).map((row) => (
                   <ReprocessamentoItem key={`${row.tipoLote}-${row.loteId}`} row={row} />
                 ))}
               </div>
@@ -150,9 +170,9 @@ export default async function RelatoriosPage() {
         <section className="panel" aria-labelledby="vencimentos-title">
           <div className="panel-header">
             <h2 id="vencimentos-title">Lotes por vencimento</h2>
-            <span className="pill">{dashboard.validityRows.length} linha(s)</span>
+            <span className="pill">{validityRows.length} linha(s) de {familyLabel(family)}</span>
           </div>
-          {dashboard.validityRows.length > 0 ? (
+          {validityRows.length > 0 ? (
             <div className="table-scroll">
               <table className="data-table">
                 <thead>
@@ -169,7 +189,7 @@ export default async function RelatoriosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboard.validityRows.slice(0, 80).map((row) => (
+                  {validityRows.slice(0, 80).map((row) => (
                     <ValidityRow key={`${row.tipoLote}-${row.loteId}`} row={row} />
                   ))}
                 </tbody>
@@ -187,6 +207,29 @@ export default async function RelatoriosPage() {
   );
 }
 
+function filterByFamily<T extends ValidityLotRow>(rows: T[], family: LotFamilyFilter): T[] {
+  return family === "TODOS" ? rows : rows.filter((row) => row.tipoLote.toUpperCase() === family);
+}
+
+function familyLabel(family: LotFamilyFilter): string {
+  return family === "TODOS" ? "todas as famílias" : family;
+}
+
+function catalogStatusLabel(value: string): string {
+  return ({ ativo: "Ativo", inativo: "Inativo", rascunho: "Rascunho" } as Record<string, string>)[value]
+    ?? "Situação não reconhecida";
+}
+
+function stockStatusLabel(value: string): string {
+  return ({ disponivel: "Disponível", bloqueado: "Bloqueado", esgotado: "Esgotado", cancelado: "Cancelado" } as Record<string, string>)[value]
+    ?? "Situação não reconhecida";
+}
+
+function priorityLabel(value: string): string {
+  return ({ alta: "Alta", media: "Média", baixa: "Baixa" } as Record<string, string>)[value]
+    ?? "Não classificada";
+}
+
 function ReprocessamentoItem({ row }: { row: ReprocessamentoRow }) {
   return (
     <article className="queue-row">
@@ -199,8 +242,8 @@ function ReprocessamentoItem({ row }: { row: ReprocessamentoRow }) {
           {row.nomeCadastro} - {numberOrDash(row.saldoDisponivel)} disponivel - {statusLabel(row.statusVencimento)}
         </p>
         <div className="tag-row">
-          <span className={`status-chip ${row.prioridadeReprocessamento}`}>{row.prioridadeReprocessamento}</span>
-          <span className="tag">{row.status}</span>
+          <span className={`status-chip ${row.prioridadeReprocessamento}`}>{priorityLabel(row.prioridadeReprocessamento)}</span>
+          <span className="tag">{stockStatusLabel(row.status)}</span>
           <span className="tag">{dateOrDash(row.dataValidade)}</span>
         </div>
       </div>

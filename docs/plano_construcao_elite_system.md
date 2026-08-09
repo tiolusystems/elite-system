@@ -205,9 +205,10 @@ Status atual:
 - Validacao descartavel passou com OP estoque, OP experimental, OP reprocessamento, OP MAPA documental, CQ obrigatorio, append-only e romaneio multilote.
 - PA e PI podem herdar validade automatica do `prazo_validade_meses` do produto quando o lote tem data de fabricacao e nao recebeu validade manual.
 - Camada web PCP criada em `apps/web/lib/pcp.ts`, `apps/web/app/pcp/actions.ts` e `apps/web/app/pcp/page.tsx`.
-- Tela `/pcp` criada para consultar formulas, formulas ativas, OPs, componentes planejados, reservas, produtos gerados e lotes disponiveis de MP/PA/PI.
-- Tela `/pcp` permite criar nova versao de formula, ativar formula, abrir OP, reservar componente, iniciar OP, cancelar OP planejada e finalizar OP com dados de CQ e geracao de PA/PI via funcoes PostgreSQL auditaveis.
-- Pendencia: homologar `/pcp` contra Supabase configurado com usuario logado e dados de teste antes de uso operacional.
+- Rota `/producao` publicada para integrar cadastros tecnicos, formulas, garantias, OPs, CQ, lotes e transformacoes; `/pcp` permanece como alias.
+- Migration `0044_production_module_release.sql` adicionou garantias append-only de produto/lote, calculo ponderado por consumo real da OP e snapshots de resultado.
+- A tela permite criar/ativar formula, abrir OP, reservar componente, iniciar, cancelar, finalizar com CQ, calcular garantias, liberar lote bloqueado e abrir transformacao por reprocessamento.
+- Status: pronta para validacao de negocio no ambiente `test`; ainda nao autorizada para banco operacional.
 
 ## Bloco 6 - Romaneio
 
@@ -251,6 +252,10 @@ Status atual:
 - Confirmacao do romaneio agora exige reserva ativa em `est_reservas_pa` no fluxo novo e gera `saida_romaneio` em `est_movimentos_pa`.
 - Cancelamento libera reservas ativas e estorno devolve saldo fisico ao mesmo lote PA.
 - Migration `0009_pcp_op_foundation.sql` removeu a limitacao de um unico lote por item de romaneio.
+- A DEC-008 criou o ledger relacional append-only de entregador e veiculo por romaneio.
+- Migration `0059_romaneio_logistics_operational_contract.sql` adicionou RPCs auditadas de atribuicao e remocao, sem edicao do historico.
+- `/romaneios` usa IDs relacionais em todos os seletores, exibe a logistica atual e informa se o romaneio aguarda documento fiscal ou ja possui NF vinculada.
+- Instalacao limpa e smoke transacional da 0059 foram aprovados; homologacao visual autenticada no staging permanece pendente.
 - O mesmo item de romaneio agora pode ter varias reservas PA ativas, uma por lote.
 - Confirmacao do romaneio valida que a soma das reservas ativas fecha a quantidade romaneada e baixa cada lote separadamente.
 - Migration `0012_romaneio_multi_item_web.sql` adicionou `add_exp_romaneio_item` para permitir varios itens no mesmo romaneio por RPC auditavel.
@@ -302,6 +307,18 @@ Entregas:
 - Login multiusuario validado contra ambiente cloud.
 - `action_logs` protegido por permissao e backup.
 
+Status de fundacao em 2026-07-10:
+
+- migrations `0001` a `0044` preparadas para reconstrucao com seed em PostgreSQL descartavel;
+- gate global remove escrita direta e `TRUNCATE` das roles web;
+- schema medido com 82 tabelas, todas com PK, 292 FKs e nenhuma constraint pendente;
+- papeis comerciais e participantes CQ ganharam representacao relacional;
+- runtime modular criado com ambiente fail-closed, dependencias e rollout append-only;
+- bootstrap do primeiro administrador restrito a `service_role`, de uso unico e auditado;
+- inicializacao local repetivel definida em `operacao_local_modulos.md`, sem segredos versionados;
+- CI ampliado para Python, Next.js e Supabase descartavel;
+- pendente: aplicar no projeto Supabase cloud de teste, testar backup/restore e incorporar tipos gerados ao cliente.
+
 ## Bloco 9 - App operacional
 
 Objetivo: entregar o sistema para uso diario.
@@ -324,14 +341,22 @@ Direcao visual:
 - Recursos 3D com estruturas moleculares sao viaveis como identidade visual, dashboard, visualizacao de formulas/PCP e modo apresentacao.
 - O 3D nao deve ser a navegacao principal de rotinas criticas como pedido, romaneio, CQ, estoque, recebimento e auditoria.
 
+Status de operacao incremental:
+
+- `/modulos` criado para consultar e promover modulos por ambiente;
+- proxy bloqueia rota sem modulo ou modulo indisponivel;
+- `require_current_user_permission` bloqueia escrita quando modulo esta somente leitura;
+- `/health` e `/api/health` criados para liveness;
+- pendente: aplicar no Supabase cloud de teste e iniciar homologacao modulo a modulo.
+
 ## Sequencia imediata
 
 Referencia de ordem: `docs/fluxo_operacional_elite_system.md`.
 
 1. Homologar `/login` contra Supabase Auth configurado e usuario com `user_profiles` ativo.
 2. Criar telas operacionais de cadastros tecnicos: MP, embalagens, PA e PI.
-3. Homologar tela `/pcp` de formulas PA/PI contra Supabase configurado.
-4. Homologar tela `/pcp` para formulacao, reserva de insumos, CQ e baixa de insumos.
+3. Homologar `/producao` para formulas PA/PI, garantias de produto/lote e calculo por consumo real.
+4. Homologar `/producao` para reserva de insumos, CQ, baixa, transformacao e liberacao de lote bloqueado.
 5. Homologar tela `/romaneios` com separacao por lote e baixa de produtos.
 6. Definir e implementar entregador no romaneio, se o campo existir na planilha canonica.
 7. Implementar atualizacao encadeada de status de pedido, OP, estoque, romaneio, financeiro e comissoes.

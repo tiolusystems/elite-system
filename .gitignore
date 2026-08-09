@@ -1,6 +1,8 @@
 # Dados reais, bancos locais e artefatos de migracao
 data/
 outputs/
+artifacts/
+.validation/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

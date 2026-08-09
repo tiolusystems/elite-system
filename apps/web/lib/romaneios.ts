@@ -18,6 +18,13 @@ export type RomaneioPendingItem = {
   quantidadeConfirmada: number;
   quantidadeEmSeparacao: number;
   quantidadePendente: number;
+  quantidadeComprometida: number;
+  quantidadeDisponivelRomaneio: number;
+  quantidadeExcedente: number;
+  volumeUnitarioL: number | null;
+  unidadesPorVolume: number | null;
+  densidadeReferenciaKgL: number | null;
+  taraVolumeKg: number | null;
 };
 
 export type RomaneioReservation = {
@@ -53,6 +60,24 @@ export type RomaneioMovement = {
   createdAt: string;
 };
 
+export type RomaneioLogistics = {
+  eventId: number;
+  entregadorId: number | null;
+  entregadorNome: string | null;
+  veiculoId: number | null;
+  veiculoLabel: string | null;
+  occurredAt: string;
+};
+
+export type RomaneioFiscalDocument = {
+  id: number;
+  numberLabel: string;
+  type: string;
+  status: string;
+  issuedAt: string;
+  value: number;
+};
+
 export type RomaneioRecord = {
   id: number;
   codigoRomaneio: string;
@@ -67,8 +92,19 @@ export type RomaneioRecord = {
   canceladoAt: string | null;
   estornadoAt: string | null;
   createdAt: string;
+  emissorNome: string;
   items: RomaneioItem[];
   movements: RomaneioMovement[];
+  logistics: RomaneioLogistics | null;
+  fiscalDocuments: RomaneioFiscalDocument[];
+  simpleBillingReferences: RomaneioFiscalDocument[];
+  carga: {
+    volumeLiquidoL: number;
+    volumesLogisticos: number | null;
+    pesoLiquidoKg: number | null;
+    pesoBrutoKg: number | null;
+    pendencias: string[];
+  } | null;
 };
 
 export type RomaneioAvailableLot = {
@@ -88,7 +124,8 @@ export type RomaneioLookups = {
   pendingItems: RomaneioLookupOption[];
   romaneiosAbertos: RomaneioLookupOption[];
   romaneioItemsAbertos: RomaneioLookupOption[];
-  lotesPa: RomaneioLookupOption[];
+  entregadores: RomaneioLookupOption[];
+  veiculos: RomaneioLookupOption[];
 };
 
 export type RomaneioDashboard = {
@@ -98,12 +135,19 @@ export type RomaneioDashboard = {
     romaneiosRascunho: number | null;
     romaneiosSeparacao: number | null;
     romaneiosConfirmados: number | null;
+    romaneiosEncerrados: number | null;
     quantidadePendente: number | null;
+    quantidadeDisponivelRomaneio: number | null;
   };
   lookups: RomaneioLookups;
   pendingItems: RomaneioPendingItem[];
   romaneios: RomaneioRecord[];
-  availableLots: RomaneioAvailableLot[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -112,10 +156,27 @@ const EMPTY_LOOKUPS: RomaneioLookups = {
   pendingItems: [],
   romaneiosAbertos: [],
   romaneioItemsAbertos: [],
-  lotesPa: []
+  entregadores: [],
+  veiculos: []
 };
 
-export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
+export async function getRomaneioDashboard(input: {
+  page?: number;
+  pageSize?: number;
+  status?: string | null;
+  query?: string | null;
+  clientId?: number | null;
+  orderId?: number | null;
+  propertyId?: number | null;
+  shipmentId?: number | null;
+  fiscalReference?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  courierId?: number | null;
+  vehicleId?: number | null;
+  productId?: number | null;
+  finishedLotId?: number | null;
+} = {}): Promise<RomaneioDashboard> {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
     return emptyDashboard("not_configured", null);
@@ -123,21 +184,90 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
 
   try {
     const supabase = await createSupabaseServerClient();
+    const pageSize = Math.min(50, Math.max(10, input.pageSize ?? 20));
+    const page = Math.max(1, input.page ?? 1);
+    const from = (page - 1) * pageSize;
+    const statuses = statusValues(input.status);
+    const normalizedQuery = input.query?.trim();
+    const romaneios = await supabase.rpc("buscar_exp_romaneios_paginada", {
+      p_busca: normalizedQuery || null,
+      p_cliente_id: input.clientId ?? null,
+      p_pedido_id: input.orderId ?? null,
+      p_propriedade_id: input.propertyId ?? null,
+      p_romaneio_id: input.shipmentId ?? null,
+      p_referencia_fiscal: input.fiscalReference?.trim() || null,
+      p_data_inicio: input.startDate || null,
+      p_data_fim: input.endDate || null,
+      p_statuses: statuses.length ? statuses : null,
+      p_entregador_id: input.courierId ?? null,
+      p_veiculo_id: input.vehicleId ?? null,
+      p_produto_id: input.productId ?? null,
+      p_lote_pa_id: input.finishedLotId ?? null,
+      p_limite: pageSize,
+      p_offset: from
+    });
+    const [draftCount, separationCount, confirmedCount, closedCount] = await Promise.all([
+      supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).eq("status", "draft"),
+      supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).eq("status", "separacao"),
+      supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).eq("status", "confirmado"),
+      supabase.from("exp_romaneios").select("id", { count: "exact", head: true }).in("status", ["confirmado", "cancelado", "estornado"])
+    ]);
+    const selectedRomaneioIds = rows(romaneios).map((row) => Number(row.id));
+    const selectedRomaneioFilter = selectedRomaneioIds.length > 0 ? selectedRomaneioIds : [-1];
+    const produtoEmbalagensPromise = (async () => {
+      const completeResult = await supabase
+        .from("cad_produto_embalagens")
+        .select(
+          "id,codigo_item,status,produto_id,embalagem_id,unidades_por_volume_logistico,cad_produtos_base(codigo_produto,nome,densidade_kg_l),cad_embalagens(descricao,volume_litros,unidade)"
+        )
+        .limit(500);
+
+      if (!completeResult.error?.message.includes("unidades_por_volume_logistico")) {
+        return completeResult;
+      }
+
+      // Durante upgrade controlado, a tela continua consultiva e marca a
+      // configuracao logistica como pendente em vez de ocultar todo o painel.
+      return supabase
+        .from("cad_produto_embalagens")
+        .select(
+          "id,codigo_item,status,produto_id,embalagem_id,cad_produtos_base(codigo_produto,nome,densidade_kg_l),cad_embalagens(descricao,volume_litros,unidade)"
+        )
+        .limit(500);
+    })();
+    const cargasPromise = (async () => {
+      const result = await supabase
+        .from("exp_romaneio_carga_resumo")
+        .select("romaneio_id,volume_liquido_l,volumes_logisticos,peso_liquido_kg,peso_bruto_kg,itens_sem_volume_configurado,itens_sem_densidade,itens_sem_tara")
+        .in("romaneio_id", selectedRomaneioFilter);
+
+      if (result.error?.message.includes("exp_romaneio_carga_resumo")) {
+        return { data: [], error: null };
+      }
+
+      return result;
+    })();
     const [
       pendingBalances,
       orders,
       clientes,
       produtoEmbalagens,
-      romaneios,
+      configuracoesEmbalagem,
       romaneioItems,
       reservas,
       movimentos,
-      lotesPa
+      logisticaAtual,
+      pessoasComerciais,
+      papeisAtivos,
+      veiculos,
+      notasFiscais,
+      cargas,
+      usuarios
     ] = await Promise.all([
       supabase
         .from("exp_pedido_item_romaneio_saldos")
         .select(
-          "pedido_item_id,pedido_id,produto_embalagem_id,quantidade_pedido,quantidade_confirmada,quantidade_em_separacao,quantidade_pendente"
+          "pedido_item_id,pedido_id,produto_embalagem_id,quantidade_pedido,quantidade_confirmada,quantidade_em_separacao,quantidade_pendente,quantidade_comprometida,quantidade_disponivel_romaneio,quantidade_excedente"
         )
         .gt("quantidade_pendente", 0)
         .limit(300),
@@ -148,56 +278,130 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         .order("data_pedido", { ascending: false })
         .limit(300),
       supabase.from("cad_clientes").select("id,nome,cidade,uf").limit(500),
+      produtoEmbalagensPromise,
       supabase
-        .from("cad_produto_embalagens")
-        .select(
-          "id,codigo_item,status,produto_id,embalagem_id,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)"
-        )
+        .from("cad_embalagem_configuracoes_atuais")
+        .select("embalagem_id,peso_tara_kg")
         .limit(500),
-      supabase
-        .from("exp_romaneios")
-        .select(
-          "id,codigo_romaneio,pedido_id,tipo_separacao,status,data_romaneio,observacao,confirmado_at,cancelado_at,estornado_at,created_at"
-        )
-        .order("created_at", { ascending: false })
-        .limit(80),
       supabase
         .from("exp_romaneio_itens")
         .select(
           "id,romaneio_id,pedido_id,pedido_item_id,produto_embalagem_id,lote_pa_id,lote_pa_ref,quantidade_romaneada,quantidade_reservada,status,created_at"
         )
-        .order("created_at", { ascending: false })
-        .limit(600),
+        .in("romaneio_id", selectedRomaneioFilter)
+        .order("created_at", { ascending: false }),
       supabase
         .from("est_reservas_pa")
         .select("id,lote_pa_id,romaneio_id,romaneio_item_id,produto_embalagem_id,quantidade_reservada,status,created_at")
-        .order("created_at", { ascending: false })
-        .limit(600),
+        .in("romaneio_id", selectedRomaneioFilter)
+        .order("created_at", { ascending: false }),
       supabase
         .from("exp_romaneio_movimentos_pa")
         .select("id,romaneio_id,romaneio_item_id,lote_pa_ref,lote_pa_id,tipo_movimento,quantidade,created_at")
-        .order("created_at", { ascending: false })
-        .limit(600),
+        .in("romaneio_id", selectedRomaneioFilter)
+        .order("created_at", { ascending: false }),
       supabase
-        .from("est_lotes_pa_saldos")
-        .select(
-          "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,updated_at"
-        )
-        .order("updated_at", { ascending: false })
-        .limit(400)
+        .from("exp_romaneio_logistica_atual")
+        .select("romaneio_id,entregador_id,veiculo_id,ocorrido_em,evento_id")
+        .in("romaneio_id", selectedRomaneioFilter),
+      supabase
+        .from("cad_pessoas_comerciais")
+        .select("id,nome,tipo_comercial,status")
+        .eq("status", "active")
+        .order("nome", { ascending: true })
+        .limit(500),
+      supabase
+        .from("cad_pessoas_comerciais_papeis_ativos")
+        .select("pessoa_id,papel,vigencia_inicio")
+        .eq("papel", "entregador")
+        .limit(500),
+      supabase
+        .from("cad_veiculos")
+        .select("id,descricao,placa,status,capacidade")
+        .eq("status", "active")
+        .order("descricao", { ascending: true })
+        .limit(300),
+      supabase
+        .from("fat_notas_fiscais")
+        .select("id,pedido_id,romaneio_id,numero,serie,tipo,status_atual,data_emissao,valor_nf,origem_registro")
+        .eq("origem_registro", "externa")
+        .or(`romaneio_id.in.(${selectedRomaneioFilter.join(",")}),romaneio_id.is.null`)
+        .order("data_emissao", { ascending: false })
+        .limit(500),
+      cargasPromise,
+      supabase.from("user_profiles").select("id,display_name").limit(500)
     ]);
+
+    const referencedLotIds = [
+      ...rows(reservas).map((row) => Number(row.lote_pa_id)),
+      ...rows(movimentos).map((row) => Number(row.lote_pa_id))
+    ].filter((id, index, values) => Number.isInteger(id) && id > 0 && values.indexOf(id) === index);
+    const lotesPa = referencedLotIds.length
+      ? await supabase
+          .from("est_lotes_pa_saldos")
+          .select(
+            "lote_pa_id,produto_embalagem_id,codigo_lote,status,data_validade,saldo_fisico,quantidade_reservada,saldo_disponivel,updated_at"
+          )
+          .in("lote_pa_id", referencedLotIds)
+          .limit(600)
+      : { data: [], error: null };
 
     const orderRows = rows(orders);
     const clienteMap = new Map(rows(clientes).map((row) => [Number(row.id), String(row.nome)]));
     const orderMap = new Map(orderRows.map((row) => [Number(row.id), mapOrder(row, clienteMap)]));
     const productPackageMap = new Map(rows(produtoEmbalagens).map((row) => [Number(row.id), packageLabel(row)]));
+    const tareByPackageId = new Map(rows(configuracoesEmbalagem).map((row) => [Number(row.embalagem_id), nullableNumber(row.peso_tara_kg)]));
+    const productPackageMetrics = new Map(rows(produtoEmbalagens).map((row) => {
+      const product = firstNested(row.cad_produtos_base);
+      const packaging = firstNested(row.cad_embalagens);
+      return [Number(row.id), {
+        volumeUnitarioL: packaging ? nullableNumber(packaging.volume_litros) : null,
+        unidadesPorVolume: nullableNumber(row.unidades_por_volume_logistico),
+        densidadeReferenciaKgL: product ? nullableNumber(product.densidade_kg_l) : null,
+        taraVolumeKg: tareByPackageId.get(Number(row.embalagem_id)) ?? null
+      }] as const;
+    }));
     const lotRows = rows(lotesPa);
-    const availableLots = lotRows.map((row) => mapLot(row, productPackageMap));
-    const lotMap = new Map(availableLots.map((lot) => [lot.id, `${lot.codigoLote} - ${lot.itemLabel}`]));
+    const referencedLots = lotRows.map((row) => mapLot(row, productPackageMap));
+    const lotMap = new Map(referencedLots.map((lot) => [lot.id, `${lot.codigoLote} - ${lot.itemLabel}`]));
+    const personRows = rows(pessoasComerciais);
+    const personMap = new Map(personRows.map((row) => [Number(row.id), String(row.nome)]));
+    const courierIds = new Set(rows(papeisAtivos).map((row) => Number(row.pessoa_id)));
+    const vehicleRows = rows(veiculos);
+    const vehicleMap = new Map(vehicleRows.map((row) => [Number(row.id), vehicleLabel(row)]));
+    const logisticsByRomaneio = new Map(
+      rows(logisticaAtual).map((row) => {
+        const romaneioId = Number(row.romaneio_id);
+        const entregadorId = nullableNumber(row.entregador_id);
+        const veiculoId = nullableNumber(row.veiculo_id);
+        return [
+          romaneioId,
+          {
+            eventId: Number(row.evento_id),
+            entregadorId,
+            entregadorNome: entregadorId ? personMap.get(entregadorId) ?? `entregador ${entregadorId}` : null,
+            veiculoId,
+            veiculoLabel: veiculoId ? vehicleMap.get(veiculoId) ?? `veiculo ${veiculoId}` : null,
+            occurredAt: String(row.ocorrido_em)
+          } satisfies RomaneioLogistics
+        ] as const;
+      })
+    );
+    const fiscalDocumentsByRomaneio = groupBy(
+      rows(notasFiscais).filter((row) => row.romaneio_id != null).map(mapFiscalDocument),
+      (document) => document.romaneioId
+    );
+    const simpleReferencesByOrder = groupBy(
+      rows(notasFiscais).filter((row) => row.tipo === "simples_faturamento").map(mapFiscalDocument),
+      (document) => document.pedidoId
+    );
+    const cargaByRomaneio = new Map(rows(cargas).map((row) => [Number(row.romaneio_id), mapCarga(row)]));
+    const userNameById = new Map(rows(usuarios).map((row) => [String(row.id), String(row.display_name)]));
 
     const pendingItems = rows(pendingBalances)
-      .map((row) => mapPendingItem(row, orderMap, productPackageMap))
+      .map((row) => mapPendingItem(row, orderMap, productPackageMap, productPackageMetrics))
       .sort((left, right) => right.quantidadePendente - left.quantidadePendente);
+    const allocatableItems = pendingItems.filter((item) => item.quantidadeDisponivelRomaneio > 0);
 
     const reservationsByItem = groupBy(
       rows(reservas).map((row) => mapReservation(row, lotMap)),
@@ -229,8 +433,27 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
         canceladoAt: nullableString(row.cancelado_at),
         estornadoAt: nullableString(row.estornado_at),
         createdAt: String(row.created_at),
+        emissorNome: userNameById.get(String(row.created_by)) ?? "Não informado no registro original",
         items: itemsByRomaneio.get(id) ?? [],
-        movements: movementsByRomaneio.get(id) ?? []
+        movements: movementsByRomaneio.get(id) ?? [],
+        logistics: logisticsByRomaneio.get(id) ?? null,
+        fiscalDocuments: (fiscalDocumentsByRomaneio.get(id) ?? []).map((document) => ({
+          id: document.id,
+          numberLabel: document.numberLabel,
+          type: document.type,
+          status: document.status,
+          issuedAt: document.issuedAt,
+          value: document.value
+        })),
+        simpleBillingReferences: (simpleReferencesByOrder.get(Number(row.pedido_id)) ?? []).map((document) => ({
+          id: document.id,
+          numberLabel: document.numberLabel,
+          type: document.type,
+          status: document.status,
+          issuedAt: document.issuedAt,
+          value: document.value
+        })),
+        carga: cargaByRomaneio.get(id) ?? null
       } satisfies RomaneioRecord;
     });
 
@@ -241,27 +464,40 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
       orders,
       clientes,
       produtoEmbalagens,
+      configuracoesEmbalagem,
       romaneios,
       romaneioItems,
       reservas,
       movimentos,
-      lotesPa
+      lotesPa,
+      logisticaAtual,
+      pessoasComerciais,
+      papeisAtivos,
+      veiculos,
+      notasFiscais,
+      cargas,
+      usuarios
     ]);
 
     return {
       metrics: {
         pedidosComPendencia: new Set(pendingItems.map((item) => item.pedidoId)).size,
         itensPendentes: pendingItems.length,
-        romaneiosRascunho: romaneioRecords.filter((romaneio) => romaneio.status === "draft").length,
-        romaneiosSeparacao: romaneioRecords.filter((romaneio) => romaneio.status === "separacao").length,
-        romaneiosConfirmados: romaneioRecords.filter((romaneio) => romaneio.status === "confirmado").length,
-        quantidadePendente: pendingItems.reduce((sum, item) => sum + item.quantidadePendente, 0)
+        romaneiosRascunho: draftCount.count ?? null,
+        romaneiosSeparacao: separationCount.count ?? null,
+        romaneiosConfirmados: confirmedCount.count ?? null,
+        romaneiosEncerrados: closedCount.count ?? null,
+        quantidadePendente: pendingItems.reduce((sum, item) => sum + item.quantidadePendente, 0),
+        quantidadeDisponivelRomaneio: allocatableItems.reduce(
+          (sum, item) => sum + item.quantidadeDisponivelRomaneio,
+          0
+        )
       },
       lookups: {
-        pendingItems: pendingItems.map((item) => ({
+        pendingItems: allocatableItems.map((item) => ({
           id: item.pedidoItemId,
           label: `${item.codigoPedido} - ${item.clienteNome} - ${item.itemLabel}`,
-          detail: `pendente ${numberText(item.quantidadePendente)} / pedido ${item.pedidoId}`
+          detail: `livre ${numberText(item.quantidadeDisponivelRomaneio)} / pendente ${numberText(item.quantidadePendente)}`
         })),
         romaneiosAbertos: openRomaneios.map((romaneio) => ({
           id: romaneio.id,
@@ -273,17 +509,30 @@ export async function getRomaneioDashboard(): Promise<RomaneioDashboard> {
           label: `${item.itemLabel}`,
           detail: `romaneio ${item.romaneioId} / romaneado ${numberText(item.quantidadeRomaneada)} / reservado ${numberText(item.quantidadeReservada)}`
         })),
-        lotesPa: availableLots
-          .filter((lot) => lot.status === "disponivel" && lot.saldoDisponivel > 0)
-          .map((lot) => ({
-            id: lot.id,
-            label: `${lot.codigoLote} - ${lot.itemLabel}`,
-            detail: `disp ${numberText(lot.saldoDisponivel)} / val ${lot.dataValidade ?? "-"}`
-          }))
+        entregadores: personRows
+          .filter((row) => courierIds.has(Number(row.id)))
+          .map((row) => ({
+            id: Number(row.id),
+            label: String(row.nome),
+            detail: nullableString(row.tipo_comercial)
+          })),
+        veiculos: vehicleRows.map((row) => ({
+          id: Number(row.id),
+          label: vehicleLabel(row),
+          detail:
+            row.capacidade === null || row.capacidade === undefined
+              ? null
+              : `capacidade ${numberText(Number(row.capacidade))}`
+        }))
       },
       pendingItems,
       romaneios: romaneioRecords,
-      availableLots,
+      pagination: {
+        page,
+        pageSize,
+        total: Number(rows(romaneios)[0]?.total_registros ?? 0),
+        totalPages: Math.max(1, Math.ceil(Number(rows(romaneios)[0]?.total_registros ?? 0) / pageSize))
+      },
       source: firstError ? "error" : "supabase",
       error: firstError
     };
@@ -302,14 +551,30 @@ function mapOrder(row: Record<string, unknown>, clienteMap: Map<number, string>)
   };
 }
 
+function mapCarga(row: Record<string, unknown>) {
+  const pendencias: string[] = [];
+  if (Number(row.itens_sem_volume_configurado) > 0) pendencias.push("configuração de volumes");
+  if (Number(row.itens_sem_densidade) > 0) pendencias.push("densidade do lote");
+  if (Number(row.itens_sem_tara) > 0) pendencias.push("tara da embalagem");
+  return {
+    volumeLiquidoL: Number(row.volume_liquido_l ?? 0),
+    volumesLogisticos: nullableNumber(row.volumes_logisticos),
+    pesoLiquidoKg: nullableNumber(row.peso_liquido_kg),
+    pesoBrutoKg: nullableNumber(row.peso_bruto_kg),
+    pendencias
+  };
+}
+
 function mapPendingItem(
   row: Record<string, unknown>,
   orderMap: Map<number, { id: number; label: string; clienteNome: string; status: string }>,
-  productPackageMap: Map<number, string>
+  productPackageMap: Map<number, string>,
+  productPackageMetrics: Map<number, { volumeUnitarioL: number | null; unidadesPorVolume: number | null; densidadeReferenciaKgL: number | null; taraVolumeKg: number | null }>
 ): RomaneioPendingItem {
   const pedidoId = Number(row.pedido_id);
   const order = orderMap.get(pedidoId);
   const produtoEmbalagemId = Number(row.produto_embalagem_id);
+  const metrics = productPackageMetrics.get(produtoEmbalagemId);
   return {
     pedidoItemId: Number(row.pedido_item_id),
     pedidoId,
@@ -320,7 +585,14 @@ function mapPendingItem(
     quantidadePedido: Number(row.quantidade_pedido ?? 0),
     quantidadeConfirmada: Number(row.quantidade_confirmada ?? 0),
     quantidadeEmSeparacao: Number(row.quantidade_em_separacao ?? 0),
-    quantidadePendente: Number(row.quantidade_pendente ?? 0)
+    quantidadePendente: Number(row.quantidade_pendente ?? 0),
+    quantidadeComprometida: Number(row.quantidade_comprometida ?? 0),
+    quantidadeDisponivelRomaneio: Number(row.quantidade_disponivel_romaneio ?? 0),
+    quantidadeExcedente: Number(row.quantidade_excedente ?? 0),
+    volumeUnitarioL: metrics?.volumeUnitarioL ?? null,
+    unidadesPorVolume: metrics?.unidadesPorVolume ?? null,
+    densidadeReferenciaKgL: metrics?.densidadeReferenciaKgL ?? null,
+    taraVolumeKg: metrics?.taraVolumeKg ?? null
   };
 }
 
@@ -371,6 +643,21 @@ function mapMovement(row: Record<string, unknown>, lotMap: Map<number, string>):
   };
 }
 
+function mapFiscalDocument(row: Record<string, unknown>): RomaneioFiscalDocument & { romaneioId: number; pedidoId: number } {
+  const number = nullableString(row.numero);
+  const series = nullableString(row.serie);
+  return {
+    id: Number(row.id),
+    romaneioId: Number(row.romaneio_id),
+    pedidoId: Number(row.pedido_id),
+    numberLabel: number ? `${number}${series ? ` / serie ${series}` : ""}` : "numero pendente",
+    type: String(row.tipo),
+    status: String(row.status_atual),
+    issuedAt: String(row.data_emissao),
+    value: Number(row.valor_nf ?? 0)
+  };
+}
+
 function mapLot(row: Record<string, unknown>, productPackageMap: Map<number, string>): RomaneioAvailableLot {
   const produtoEmbalagemId = Number(row.produto_embalagem_id);
   return {
@@ -393,6 +680,11 @@ function packageLabel(row: Record<string, unknown>): string {
   const produtoLabel = produto ? `${produto.codigo_produto ?? ""} ${produto.nome ?? ""}`.trim() : `produto ${row.produto_id}`;
   const embalagemLabel = embalagem ? `${embalagem.descricao ?? ""}`.trim() : `embalagem ${row.embalagem_id}`;
   return `${row.codigo_item ?? "sem item"} - ${produtoLabel} / ${embalagemLabel}`;
+}
+
+function vehicleLabel(row: Record<string, unknown>): string {
+  const plate = nullableString(row.placa);
+  return plate ? `${row.descricao} - ${plate}` : String(row.descricao);
 }
 
 function rows(response: { data: unknown[] | null; error: { message: string } | null }): Array<Record<string, unknown>> {
@@ -444,13 +736,22 @@ function emptyDashboard(source: RomaneioDashboard["source"], error: string | nul
       romaneiosRascunho: null,
       romaneiosSeparacao: null,
       romaneiosConfirmados: null,
-      quantidadePendente: null
+      romaneiosEncerrados: null,
+      quantidadePendente: null,
+      quantidadeDisponivelRomaneio: null
     },
     lookups: EMPTY_LOOKUPS,
     pendingItems: [],
     romaneios: [],
-    availableLots: [],
+    pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1 },
     source,
     error
   };
+}
+
+function statusValues(value: string | null | undefined): string[] {
+  if (value === "romaneios-rascunho") return ["draft"];
+  if (value === "romaneios-separacao") return ["separacao"];
+  if (value === "romaneios-finalizados") return ["confirmado", "cancelado", "estornado"];
+  return [];
 }

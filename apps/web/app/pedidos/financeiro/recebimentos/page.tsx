@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { ReceiptForm } from "@/app/pedidos/financeiro/finance-forms";
 import { FinancePermissionState, FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
 import { EntityLookup } from "@/app/corporate-search/entity-lookup";
-import { FilterActions, SearchToolbar } from "@/app/corporate-search/search-controls";
+import { FilterActions, PaginatedResultList, SearchToolbar } from "@/app/corporate-search/search-controls";
 import { date, fiscalReferenceTypeLabel, money, orderStatusLabel } from "@/app/pedidos/financeiro/presenters";
 import { getFinanceAccess, searchReceiptOrders } from "@/lib/finance";
 
@@ -74,7 +74,13 @@ export default async function ReceiptsPage({ searchParams }: { searchParams?: Pr
               )) : ordersResult.error ? null : <div className="empty-state"><strong>Nenhum pedido com saldo encontrado</strong><span>Pesquise por outro código, cliente, documento, referência fiscal ou local de entrega.</span></div>}
             </div>
           </section>
-          <Pagination current={page} total={orders[0]?.totalCount ?? 0} query={query} />
+          <PaginatedResultList
+            page={page}
+            total={orders[0]?.totalCount ?? 0}
+            pageSize={20}
+            previousHref={page > 1 ? listHref(query, page - 1) : null}
+            nextHref={page * 20 < (orders[0]?.totalCount ?? 0) ? listHref(query, page + 1) : null}
+          />
         </>
       )}
     </FinanceWorkspace>
@@ -85,11 +91,6 @@ function QueryError({ message }: { message: string }) {
   return <section className="notice-panel warning" role="alert"><strong>Consulta indisponível</strong><span>{message}</span></section>;
 }
 
-function Pagination({ current, total, query }: { current: number; total: number; query: string }) {
-  const pages = Math.max(Math.ceil(total / 20), 1);
-  if (pages <= 1) return null;
-  return <nav className="pagination" aria-label="Paginação"><span>{current > 1 ? <Link className="secondary-button" href={listHref(query, current - 1)}>Anterior</Link> : null}</span><span>Página {current} de {pages}</span><span>{current < pages ? <Link className="secondary-button" href={listHref(query, current + 1)}>Próxima</Link> : null}</span></nav>;
-}
 
 function listHref(query: string, page: number) { return `/pedidos/financeiro/recebimentos?q=${encodeURIComponent(query)}&pagina=${page}`; }
 function single(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }

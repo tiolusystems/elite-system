@@ -70,3 +70,20 @@ Financeiro. Não altera formulários financeiros, banco, migrations, permissões
 RPCs, cálculos, dados, impressão ou regras de negócio.
 
 O objetivo é provar a fundação antes de ampliar a migração.
+
+
+## Fase 2 — Financeiro como operação orientada
+
+A segunda entrega valida o padrão canônico em uma operação financeira real:
+
+- a visão financeira passa a usar o mesmo objeto de filtros das consultas corporativas;
+- o fluxo financeiro principal é explicitado em três passos: comissionamento,
+  recebimento e pagamento de comissão;
+- Recebimentos, Comissionamento e Comissões deixam de manter paginações próprias
+  e passam a usar a paginação corporativa compartilhada;
+- o fluxo é explicativo mesmo quando a alçada do usuário não permite executar uma
+  das etapas; somente o link operacional é omitido;
+- nenhuma regra de cálculo, permissão, RPC, ação financeira ou persistência é alterada.
+
+Esta fase reduz variações de interface sem tornar iguais tarefas que são
+operacionalmente diferentes.

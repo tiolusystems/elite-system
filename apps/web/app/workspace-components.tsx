@@ -35,6 +35,17 @@ type DomainShellProps = PageHeaderProps & {
   className?: string;
 };
 
+export type WorkflowGuideStep = {
+  title: string;
+  description: string;
+  href?: string;
+};
+
+type WorkflowGuideProps = {
+  steps: WorkflowGuideStep[];
+  ariaLabel: string;
+};
+
 export function PageWorkspace({ children, className = "" }: PageWorkspaceProps) {
   return <section className={`workspace page-workspace ${className}`.trim()}>{children}</section>;
 }
@@ -49,6 +60,30 @@ export function PageHeader({ eyebrow, title, description, actions }: PageHeaderP
       </div>
       {actions ? <div className="page-actions">{actions}</div> : null}
     </header>
+  );
+}
+
+export function WorkflowGuide({ steps, ariaLabel }: WorkflowGuideProps) {
+  return (
+    <ol className="workflow-guide" aria-label={ariaLabel}>
+      {steps.map((step, index) => {
+        const content = (
+          <>
+            <span className="workflow-guide-number" aria-hidden="true">{index + 1}</span>
+            <span className="workflow-guide-copy">
+              <strong>{step.title}</strong>
+              <small>{step.description}</small>
+            </span>
+          </>
+        );
+
+        return (
+          <li key={`${index}-${step.title}`}>
+            {step.href ? <Link href={step.href}>{content}</Link> : <div>{content}</div>}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ProductionFeedback, ProductionShell, singleProductionParam } from "@/app/producao/production-shell";
+import { QualityOpSearch } from "@/app/producao/qualidade/quality-op-search";
 import { getPcpQualityQueue } from "@/lib/pcp";
 import { productionStatusLabel } from "@/lib/production-labels";
 
@@ -31,7 +32,7 @@ export default async function ProductionQualityPage({ searchParams }: { searchPa
         <Link className={view === "history" ? "active" : ""} href="/producao/qualidade?visao=historico">Histórico</Link>
       </nav>
 
-      <section className="panel" aria-labelledby="quality-list-title">
+      <section className="panel lookup-surface" aria-labelledby="quality-list-title">
         <div className="panel-header">
           <div>
             <h2 id="quality-list-title">{view === "history" ? "OPs finalizadas" : "OPs aguardando CQ"}</h2>
@@ -40,10 +41,7 @@ export default async function ProductionQualityPage({ searchParams }: { searchPa
         </div>
         <form className="filter-bar" method="get">
           {view === "history" ? <input type="hidden" name="visao" value="historico" /> : null}
-          <label>
-            Buscar
-            <input name="q" defaultValue={query} placeholder="Código da OP ou produto" />
-          </label>
+          <QualityOpSearch defaultValue={query} view={view} />
           {view === "history" ? (
             <label>
               Resultado do CQ

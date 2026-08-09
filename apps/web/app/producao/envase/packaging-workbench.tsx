@@ -1,19 +1,21 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
+
+import { LocalEntityLookup } from "@/app/corporate-search/local-entity-lookup";
 import { finishPackagingAction, issuePackagingOrderAction, reservePackagingAction, startPackagingAction } from "@/app/producao/envase/actions";
 import type { PackagingComponent, PackagingOrder, PackagingOrdersData } from "@/lib/packaging-orders";
 
 export function PackagingWorkbench({ data }: { data: PackagingOrdersData }) {
   const issueRequestKey = randomUUID();
   return <>
-    <section className="panel form-panel" id="emitir">
+    <section className="panel form-panel lookup-surface" id="emitir">
       <div className="panel-header"><h2>Emitir OP MAPA e Ordem de Envase</h2><span className="pill">emissão conjunta</span></div>
       <form action={issuePackagingOrderAction}>
         <input type="hidden" name="idempotency_key" value={issueRequestKey} />
         <div className="form-grid">
-          <label className="wide-field">Fórmula MAPA ativa<select name="formula_mapa_versao_id" defaultValue="" required><option value="">Selecione</option>{data.formulas.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-          <label className="wide-field">Lote PI liberado<select name="lote_pi_origem_id" defaultValue="" required><option value="">Selecione</option>{data.piLots.map((item) => <option key={item.id} value={item.id}>{item.label} - {item.detail}</option>)}</select></label>
-          <label className="wide-field">Produto e embalagem<select name="produto_embalagem_id" defaultValue="" required><option value="">Selecione</option>{data.presentations.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+          <LocalEntityLookup className="wide-field" name="formula_mapa_versao_id" label="Fórmula MAPA ativa" placeholder="Abra a lista ou pesquise a fórmula" options={data.formulas} required />
+          <LocalEntityLookup className="wide-field" name="lote_pi_origem_id" label="Lote PI liberado" placeholder="Abra a lista ou pesquise o lote" options={data.piLots} required />
+          <LocalEntityLookup className="wide-field" name="produto_embalagem_id" label="Produto e embalagem" placeholder="Abra a lista ou pesquise a apresentação" options={data.presentations} required />
           <label>Volume a envasar (L)<input name="volume_planejado_l" inputMode="decimal" required /></label>
           <label className="full-field">Observação<input name="observacao" placeholder="Instrução documental ou operacional" /></label>
         </div>
@@ -53,7 +55,7 @@ function PackagingOrderCard({ order, mpLots }: { order: PackagingOrder; mpLots: 
 function PackagingComponentRow({ component, mpLots, canReserve }: { component: PackagingComponent; mpLots: PackagingOrdersData["mpLots"]; canReserve: boolean }) {
   const remaining = Math.max(component.plannedQuantity - component.reservedQuantity, 0);
   const compatible = mpLots.filter((lot) => lot.targetId === component.materialId);
-  return <div className="pcp-op-component"><div><strong>{component.materialLabel}</strong><span>planejado {number(component.plannedQuantity)} {component.unitLabel} / reservado {number(component.reservedQuantity)}</span></div>{component.reservations.length ? <div className="tag-row">{component.reservations.map((reservation) => <span className="tag" key={reservation.id}>{reservation.lotLabel}: {number(reservation.quantity)}</span>)}</div> : null}{canReserve && remaining > 0 ? <form className="inline-form-grid pcp-reserve-form" action={reservePackagingAction}><input type="hidden" name="embalagem_planejada_id" value={component.id} /><label className="wide-field">Lote da embalagem<select name="lote_mp_id" defaultValue="" required><option value="">Selecione</option>{compatible.map((lot) => <option key={lot.id} value={lot.id}>{lot.label} - {lot.detail}</option>)}</select></label><label>Quantidade<input name="quantidade" inputMode="decimal" defaultValue={inputNumber(remaining)} required /></label><button className="secondary-button" type="submit" disabled={!compatible.length}>Reservar</button></form> : null}</div>;
+  return <div className="pcp-op-component"><div><strong>{component.materialLabel}</strong><span>planejado {number(component.plannedQuantity)} {component.unitLabel} / reservado {number(component.reservedQuantity)}</span></div>{component.reservations.length ? <div className="tag-row">{component.reservations.map((reservation) => <span className="tag" key={reservation.id}>{reservation.lotLabel}: {number(reservation.quantity)}</span>)}</div> : null}{canReserve && remaining > 0 ? <form className="inline-form-grid pcp-reserve-form" action={reservePackagingAction}><input type="hidden" name="embalagem_planejada_id" value={component.id} /><LocalEntityLookup className="wide-field" name="lote_mp_id" label="Lote da embalagem" placeholder="Abra a lista ou pesquise o lote" options={compatible} required /><label>Quantidade<input name="quantidade" inputMode="decimal" defaultValue={inputNumber(remaining)} required /></label><button className="secondary-button" type="submit" disabled={!compatible.length}>Reservar</button></form> : null}</div>;
 }
 
 function FinishForm({ order }: { order: PackagingOrder }) {

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 
+import { SmartSearchField } from "@/app/corporate-search/smart-lookup";
 import { registerValuedMpEntryAction } from "@/app/producao/estoque/actions";
 import {
   StockWorkbench,
@@ -73,10 +74,14 @@ export default async function ProductionStockPage({ searchParams }: { searchPara
       ) : null}
 
       <form className="catalog-filter inventory-filter" method="get">
-        <label>
-          Produto ou materia-prima
-          <input name="q" defaultValue={singleProductionParam(params.q) ?? ""} placeholder="Nome, SKU ou codigo do produto" required />
-        </label>
+        <SmartSearchField
+          name="q"
+          label="Produto ou matéria-prima"
+          defaultValue={singleProductionParam(params.q) ?? ""}
+          placeholder="Nome, SKU ou código do produto"
+          source={{ kind: "remote", entity: "estoque-itens" }}
+          required
+        />
         <label>
           Familia
           <select name="familia" defaultValue={family}>

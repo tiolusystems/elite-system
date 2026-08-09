@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import Link from "next/link";
 
+import { LocalEntityLookup } from "@/app/corporate-search/local-entity-lookup";
 import { createPcpOpAction } from "@/app/pcp/actions";
 import { PlanningOrderCard } from "@/app/producao/ordens/orders-workbench";
 import type {
@@ -40,7 +41,7 @@ export function TransformationWorkbench({
 
       <section className="two-column production-primary-grid">
         {capabilities.canCreate ? (
-        <section className="panel form-panel" id="nova-transformacao" aria-labelledby="new-transformation-title">
+        <section className="panel form-panel lookup-surface" id="nova-transformacao" aria-labelledby="new-transformation-title">
           <div className="panel-header">
             <div>
               <span className="eyebrow">OP de reprocessamento</span>
@@ -53,17 +54,18 @@ export function TransformationWorkbench({
             <input type="hidden" name="tipo_op" value="reprocessamento" />
             <input type="hidden" name="return_to" value="transformacoes" />
             <div className="form-grid">
-              <label className="wide-field">
-                Formula de producao
-                <select name="formula_versao_id" defaultValue="" required>
-                  <option value="">Selecione a formula</option>
-                  {formulas.map((formula) => (
-                    <option key={formula.id} value={formula.id}>
-                      {formula.productLabel} / v{formula.version} - {componentSummary(formula)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <LocalEntityLookup
+                className="wide-field"
+                name="formula_versao_id"
+                label="Fórmula de produção"
+                placeholder="Abra a lista ou pesquise a fórmula"
+                options={formulas.map((formula) => ({
+                  id: formula.id,
+                  label: `${formula.productLabel} / v${formula.version}`,
+                  detail: componentSummary(formula)
+                }))}
+                required
+              />
               <label>
                 Volume planejado (L)
                 <input name="quantidade_planejada" inputMode="decimal" placeholder="Ex.: 1.000" required />

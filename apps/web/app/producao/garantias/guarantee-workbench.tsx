@@ -1,3 +1,4 @@
+import { LocalEntityLookup } from "@/app/corporate-search/local-entity-lookup";
 import {
   registerMpLotGuaranteeAction,
   registerMpLotParametersAction,
@@ -11,21 +12,20 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
   return (
     <>
       <section className="two-column production-forms">
-        <form className="panel production-form" action={registerProductGuaranteeAction}>
+        <form className="panel production-form lookup-surface" action={registerProductGuaranteeAction}>
           <div className="panel-header">
             <h2>Garantia declarada do produto</h2>
             <span className="pill">MAPA / documento</span>
           </div>
           <div className="form-grid">
-            <label className="wide-field">
-              Produto
-              <select name="produto_id" defaultValue="" required>
-                <option value="">Selecione</option>
-                {dashboard.lookups.produtos.map((option) => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
-            </label>
+            <LocalEntityLookup
+              className="wide-field"
+              name="produto_id"
+              label="Produto"
+              placeholder="Abra a lista ou pesquise o produto"
+              options={dashboard.lookups.produtos}
+              required
+            />
             <label>
               Nutriente
               <select name="nutriente" defaultValue="" required>
@@ -91,21 +91,22 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
           <button className="primary-button" type="submit">Registrar versão</button>
         </form>
 
-        <form className="panel production-form" action={registerMpLotGuaranteeAction}>
+        <form className="panel production-form lookup-surface" action={registerMpLotGuaranteeAction}>
           <div className="panel-header">
             <h2>Garantia analisada do lote de MP</h2>
             <span className="pill">por lote</span>
           </div>
           <div className="form-grid">
-            <label className="wide-field">
-              Lote de MP
-              <select name="lote_mp_id" defaultValue="" required>
-                <option value="">Selecione</option>
-                {dashboard.availableLots.filter((lot) => lot.tipo === "MP").map((lot) => (
-                  <option key={lot.id} value={lot.id}>{lot.codigoLote} - {lot.targetLabel}</option>
-                ))}
-              </select>
-            </label>
+            <LocalEntityLookup
+              className="wide-field"
+              name="lote_mp_id"
+              label="Lote de MP"
+              placeholder="Abra a lista ou pesquise o lote"
+              options={dashboard.availableLots
+                .filter((lot) => lot.tipo === "MP")
+                .map((lot) => ({ id: lot.id, label: lot.codigoLote, detail: lot.targetLabel }))}
+              required
+            />
             <label>
               Nutriente
               <select name="nutriente" defaultValue="" required>
@@ -155,7 +156,7 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
         </form>
       </section>
 
-      <section className="panel production-form" aria-labelledby="lot-physical-basis-title">
+      <section className="panel production-form lookup-surface" aria-labelledby="lot-physical-basis-title">
         <div className="panel-header">
           <div>
             <h2 id="lot-physical-basis-title">Base física do lote de matéria-prima</h2>
@@ -164,15 +165,16 @@ export function GuaranteeWorkbench({ dashboard, today }: { dashboard: PcpDashboa
           <span className="pill">versionado por lote</span>
         </div>
         <form action={registerMpLotParametersAction} className="form-grid">
-          <label className="wide-field">
-            Lote de matéria-prima
-            <select name="lote_mp_id" defaultValue="" required>
-              <option value="">Selecione</option>
-              {dashboard.availableLots.filter((lot) => lot.tipo === "MP").map((lot) => (
-                <option key={lot.id} value={lot.id}>{lot.codigoLote} - {lot.targetLabel}</option>
-              ))}
-            </select>
-          </label>
+          <LocalEntityLookup
+            className="wide-field"
+            name="lote_mp_id"
+            label="Lote de matéria-prima"
+            placeholder="Abra a lista ou pesquise o lote"
+            options={dashboard.availableLots
+              .filter((lot) => lot.tipo === "MP")
+              .map((lot) => ({ id: lot.id, label: lot.codigoLote, detail: lot.targetLabel }))}
+            required
+          />
           <label>
             Densidade (kg/L)
             <input name="densidade_kg_l" inputMode="decimal" placeholder="Ex.: 1,20" required />

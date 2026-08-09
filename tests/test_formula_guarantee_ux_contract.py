@@ -58,7 +58,8 @@ class FormulaGuaranteeUxContractTests(unittest.TestCase):
     def test_formula_catalog_is_query_first_and_hides_technical_ids(self) -> None:
         workbench = (ROOT / "apps/web/app/producao/formulas/formula-workbench.tsx").read_text(encoding="utf-8")
         page = (ROOT / "apps/web/app/producao/formulas/page.tsx").read_text(encoding="utf-8")
-        self.assertIn('useState<StatusFilter>("active")', workbench)
+        self.assertIn('initialStatus = "active"', workbench)
+        self.assertIn("useState<StatusFilter>(initialStatus)", workbench)
         self.assertIn("Fórmulas cadastradas", workbench)
         self.assertIn("Somente vigentes", workbench)
         self.assertIn("Todas as versões", workbench)

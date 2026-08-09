@@ -10,19 +10,19 @@ class ProductionManualContractTest(unittest.TestCase):
         page = (ROOT / "apps/web/app/producao/manual/page.tsx").read_text(encoding="utf-8")
 
         for expected in (
-            "Conferir os cadastros",
-            "Registrar garantias",
-            "fórmula de produção",
-            "reservar lotes",
-            "registrar CQ",
-            "OP MAPA e Ordem de Envase",
-            "lotes e estoque",
+            "Cadastros e garantias",
+            "Crie a versão, confira e depois ative",
+            "reserve os lotes necessários",
+            "Registre processo, pessoas e CQ",
+            "Use PI liberado, fórmula MAPA e embalagens",
+            "Consulte físico, reservado e disponível",
         ):
             self.assertIn(expected, page)
 
-        self.assertIn("A fórmula de produção movimenta MP e gera PI", page)
-        self.assertIn("A fórmula MAPA é documental", page)
-        self.assertIn("Reserva não baixa saldo físico", page)
+        self.assertIn("A OP multiplica essas quantidades pelo volume planejado.", page)
+        self.assertIn("Essa fórmula não movimenta estoque sozinha.", page)
+        self.assertIn("Reservar reduz o disponível, mas o saldo físico só é baixado", page)
+        self.assertIn("A produção gera PI. O envase consome PI e embalagens e gera PA.", page)
 
     def test_production_navigation_exposes_contextual_manual(self) -> None:
         shell = (ROOT / "apps/web/app/producao/production-shell.tsx").read_text(encoding="utf-8")

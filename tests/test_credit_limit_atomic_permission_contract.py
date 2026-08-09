@@ -46,9 +46,9 @@ class CreditLimitAtomicPermissionContractTests(unittest.TestCase):
 
     def test_security_screen_distinguishes_role_override_and_origin(self) -> None:
         self.assertIn('LEGACY_PERMISSION_KEYS = new Set(["pedidos.credit.limit.adjust"])', SECURITY_DATA)
-        self.assertIn("Padrão da ação", SECURITY_PAGE)
-        self.assertIn("Decisão individual", SECURITY_PAGE)
-        self.assertIn("Remover decisão individual", SECURITY_PAGE)
+        self.assertIn("Padrão da função", SECURITY_PAGE)
+        self.assertIn("Exceção individual", SECURITY_PAGE)
+        self.assertIn("Voltar ao padrão da função", SECURITY_PAGE)
         self.assertIn('permission.defaultAllowed ? "Permitido" : "Negado"', SECURITY_PAGE)
         self.assertNotIn("padrão do perfil", SECURITY_PAGE.lower())
 

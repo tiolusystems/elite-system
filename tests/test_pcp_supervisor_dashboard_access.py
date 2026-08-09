@@ -90,8 +90,10 @@ class PcpSupervisorDashboardAccessTests(unittest.TestCase):
 
         self.assertNotIn("8 etapas", page)
         self.assertNotIn("StageCard", page)
-        self.assertIn("8. Executar transformações controladas", manual)
-        self.assertIn("Visão geral para supervisão", manual)
+        self.assertIn('title="Transformações e reprocessamentos"', manual)
+        self.assertIn("A transformação é uma OP governada, não um ajuste manual de saldo.", manual)
+        self.assertIn('title="Visão geral"', manual)
+        self.assertIn("Mostrar para a supervisão onde existem pendências.", manual)
 
 
 if __name__ == "__main__":

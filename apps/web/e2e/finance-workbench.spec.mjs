@@ -35,7 +35,11 @@ test("financial workspaces remain clear and responsive for an authorized operato
   await expect(navigation.getByRole("link", { name: /comissionamento/i })).toHaveCount(0);
 
   await page.goto("/pedidos/financeiro/comissoes/relatorio");
-  await expect(page.getByRole("link", { name: /baixar csv/i })).toBeVisible();
+  const exportMenu = page.locator("details.export-menu");
+  await expect(exportMenu.locator("summary")).toContainText(/exportar/i);
+  await exportMenu.locator("summary").click();
+  await expect(exportMenu.getByRole("link", { name: /excel.*xlsx/i })).toBeVisible();
+  await expect(exportMenu.getByRole("link", { name: /csv.*csv/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /imprimir/i })).toBeVisible();
 });
 

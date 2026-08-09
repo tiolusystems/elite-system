@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { FinanceWorkspace } from "@/app/pedidos/financeiro/finance-workspace";
+import { ExportMenu } from "@/app/workspace-components";
 import { PrintButton } from "@/app/pedidos/financeiro/comissoes/relatorio/print-button";
 import { EntityLookup } from "@/app/corporate-search/entity-lookup";
 import { FilterActions, SearchToolbar } from "@/app/corporate-search/search-controls";
@@ -42,7 +43,7 @@ export default async function CommissionReportPage({ searchParams }: { searchPar
   const build = getBuildInfo();
   const runtime = getRuntimeStatus();
   const generatedAt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date());
-  const csvQuery = new URLSearchParams({
+  const exportQuery = new URLSearchParams({
     q: query,
     papel: role,
     corte: cutoffDate,
@@ -60,7 +61,21 @@ export default async function CommissionReportPage({ searchParams }: { searchPar
         <div className="finance-page-actions">
           <Link className="secondary-button" href="/pedidos/financeiro/comissoes">Voltar às comissões</Link>
           {access.commissionsExport ? (
-            <a className="secondary-button" href={`/pedidos/financeiro/comissoes/relatorio/csv?${csvQuery}`}>Baixar CSV</a>
+            <ExportMenu
+              items={[
+                {
+                  label: "Excel (.xlsx)",
+                  href: `/pedidos/financeiro/comissoes/relatorio/export?${exportQuery.toString()}&formato=xlsx`,
+                  description: "Planilha com valores numéricos pronta para análise no Excel.",
+                  primary: true,
+                },
+                {
+                  label: "CSV (.csv)",
+                  href: `/pedidos/financeiro/comissoes/relatorio/export?${exportQuery.toString()}&formato=csv`,
+                  description: "Formato simples para integração e tratamento técnico.",
+                },
+              ]}
+            />
           ) : null}
           <PrintButton />
         </div>

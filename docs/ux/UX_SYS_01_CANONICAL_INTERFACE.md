@@ -87,3 +87,14 @@ A segunda entrega valida o padrão canônico em uma operação financeira real:
 
 Esta fase reduz variações de interface sem tornar iguais tarefas que são
 operacionalmente diferentes.
+
+## Exportação canônica
+
+UX-SYS-01 define um único contrato visual e funcional para dados tabulares exportáveis:
+
+- **Excel (.xlsx)** é a opção principal para uso operacional no Elite System.
+- **CSV (.csv)** permanece como alternativa de integração e tratamento técnico.
+- Impressão continua independente quando a tela representa um documento ou relatório formal.
+- Artefatos de máquina, como revisões JSON da migração histórica, preservam seu formato próprio e não são convertidos artificialmente em planilha.
+- Valores numéricos, datas e campos monetários devem ser gravados no XLSX com tipos nativos, não como CSV renomeado.
+- O comando visível é **Exportar**, com os formatos apresentados dentro do mesmo objeto de interface.

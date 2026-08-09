@@ -46,6 +46,18 @@ type WorkflowGuideProps = {
   ariaLabel: string;
 };
 
+export type ExportMenuItem = {
+  label: string;
+  href: string;
+  description?: string;
+  primary?: boolean;
+};
+
+type ExportMenuProps = {
+  items: ExportMenuItem[];
+  label?: string;
+};
+
 export function PageWorkspace({ children, className = "" }: PageWorkspaceProps) {
   return <section className={`workspace page-workspace ${className}`.trim()}>{children}</section>;
 }
@@ -142,6 +154,32 @@ export function DomainShell({
         {children}
       </PageWorkspace>
     </main>
+  );
+}
+
+export function ExportMenu({ items, label = "Exportar" }: ExportMenuProps) {
+  return (
+    <details className="export-menu">
+      <summary className="secondary-button export-menu-trigger">
+        <span>{label}</span>
+        <span aria-hidden="true">▾</span>
+      </summary>
+      <div className="export-menu-options">
+        {items.map((item) => (
+          <a
+            className={`export-menu-option ${item.primary ? "export-menu-option-primary" : ""}`.trim()}
+            href={item.href}
+            key={`${item.label}-${item.href}`}
+          >
+            <span className="export-menu-option-copy">
+              <strong>{item.label}</strong>
+              {item.description ? <small>{item.description}</small> : null}
+            </span>
+            {item.primary ? <span className="export-menu-badge">Principal</span> : null}
+          </a>
+        ))}
+      </div>
+    </details>
   );
 }
 

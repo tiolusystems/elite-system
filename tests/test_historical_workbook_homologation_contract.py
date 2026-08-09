@@ -111,7 +111,7 @@ class HistoricalWorkbookHomologationContractTests(unittest.TestCase):
             "Aprovadas para I2",
             "Excluídas da carga",
             "Pendentes",
-            "Exportar matriz CSV",
+            "Exportar matriz",
             "Exportar revisão JSON",
             "Importar revisão JSON",
             "Exportar homologação final",
@@ -120,6 +120,9 @@ class HistoricalWorkbookHomologationContractTests(unittest.TestCase):
         ):
             self.assertIn(expected, self.workspace)
         self.assertIn("<WorkbookHomologationWorkspace", self.analysis)
+        self.assertIn("ClientExportMenu", self.workspace)
+        self.assertIn("Matriz Excel exportada", self.workspace)
+        self.assertIn('format === "csv"', self.workspace)
 
     def test_decision_matrix_reflows_without_horizontal_scrolling(self) -> None:
         self.assertIn('data-label="Decis\u00e3o funcional"', self.workspace)

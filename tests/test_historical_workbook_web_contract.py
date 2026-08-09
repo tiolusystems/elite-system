@@ -10,6 +10,7 @@ ACTION = ROOT / "apps" / "web" / "app" / "importacao-historica" / "mp" / "action
 WORKSPACE = ROOT / "apps" / "web" / "app" / "importacao-historica" / "mp" / "workbook-analysis.tsx"
 PAGE = ROOT / "apps" / "web" / "app" / "importacao-historica" / "mp" / "page.tsx"
 CONFIG = ROOT / "apps" / "web" / "next.config.mjs"
+TABULAR_EXPORT = ROOT / "apps" / "web" / "lib" / "tabular-export.ts"
 
 
 class HistoricalWorkbookWebContractTests(unittest.TestCase):
@@ -47,7 +48,7 @@ class HistoricalWorkbookWebContractTests(unittest.TestCase):
         for expected in (
             'type="file"',
             "Analisar arquivo",
-            "Baixar relatório CSV",
+            "ClientExportMenu",
             "Esta etapa apenas analisa o arquivo. Nenhum dado será gravado no banco.",
             "SHA256",
             "Referências classificadas",
@@ -73,13 +74,17 @@ class HistoricalWorkbookWebContractTests(unittest.TestCase):
         self.assertIn("/^[=+\\-@]/", self.workspace)
         self.assertIn("URL.revokeObjectURL", self.workspace)
 
-    def test_upload_limit_is_configured_without_new_dependency(self) -> None:
+    def test_upload_limit_and_excel_export_dependencies_are_explicit(self) -> None:
         config = CONFIG.read_text(encoding="utf-8")
         self.assertIn('allowedDevOrigins: ["127.0.0.1"]', config)
         self.assertIn('bodySizeLimit: "32mb"', config)
         package = (ROOT / "apps" / "web" / "package.json").read_text(encoding="utf-8")
+        export_service = TABULAR_EXPORT.read_text(encoding="utf-8")
         self.assertNotIn('"xlsx"', package)
-        self.assertNotIn('"exceljs"', package)
+        self.assertIn('"exceljs": "4.4.0"', package)
+        self.assertNotIn("exceljs", self.action)
+        self.assertIn('await import("exceljs")', export_service)
+        self.assertIn("XLSX_MIME_TYPE", export_service)
 
     def test_no_real_workbook_or_database_artifact_is_tracked(self) -> None:
         completed = subprocess.run(

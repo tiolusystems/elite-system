@@ -43,12 +43,15 @@ export default async function FinanceManualPage() {
             <p className="muted">O botão “Ajuda desta tela” abre diretamente o assunto correspondente.</p>
           </div>
         </div>
-        <div className="operation-card-grid">
+        <div className="operation-card-grid finance-manual-index-grid">
           {topics.map((topic) => (
-            <article className="operation-stage-card is-operational" key={topic.id}>
-              <h3>{topic.icon} {topic.title}</h3>
-              <p>{topic.route}</p>
-              <a href={`#${topic.id}`}>Ver como usar</a>
+            <article className="operation-stage-card is-operational finance-manual-topic-card" key={topic.id}>
+              <div className="finance-manual-topic-heading">
+                <span className="finance-manual-topic-icon" aria-hidden="true">{topic.icon}</span>
+                <h3>{topic.title}</h3>
+              </div>
+              <p className="finance-manual-topic-purpose">{topic.manual.purpose}</p>
+              <a className="finance-manual-topic-link" href={`#${topic.id}`}>Ver como usar</a>
             </article>
           ))}
         </div>
@@ -107,8 +110,14 @@ export default async function FinanceManualPage() {
 function ManualSection({ id, icon, title, route, manual }: { id: string; icon: string; title: string; route: string; manual: RouteManual }) {
   return (
     <section className="panel" id={id} aria-labelledby={`${id}-title`}>
-      <div className="panel-header">
-        <div><span className="eyebrow">{icon} Manual da tela</span><h2 id={`${id}-title`}>{title}</h2><p className="muted">{route}</p></div>
+      <div className="panel-header finance-manual-panel-header">
+        <div className="finance-manual-section-heading">
+          <span className="finance-manual-section-icon" aria-hidden="true">{icon}</span>
+          <div>
+            <span className="eyebrow">Manual da tela</span>
+            <h2 id={`${id}-title`}>{title}</h2>
+          </div>
+        </div>
         <a className="text-link" href="#finance-manual-index-title">Voltar ao índice</a>
       </div>
       <p><strong>Para que serve:</strong> {manual.purpose}</p>

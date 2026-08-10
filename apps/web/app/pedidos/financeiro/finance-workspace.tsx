@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import {
@@ -7,7 +8,15 @@ import {
 } from "@/app/workspace-components";
 import type { FinanceAccess } from "@/lib/finance";
 
-type FinanceRoute = "overview" | "assignment" | "receipts" | "commissions" | "report";
+type FinanceRoute = "overview" | "assignment" | "receipts" | "commissions" | "report" | "manual";
+
+const FINANCE_HELP_ANCHORS: Partial<Record<FinanceRoute, string>> = {
+  overview: "visao-geral",
+  assignment: "comissionamento",
+  receipts: "recebimentos",
+  commissions: "comissoes",
+  report: "relatorio",
+};
 
 type Props = {
   access: FinanceAccess;
@@ -51,9 +60,27 @@ export function FinanceWorkspace({ access, current, eyebrow, title, description,
       label: "Relatório",
       visible: access.commissionsView,
     },
+    {
+      key: "manual",
+      href: "/pedidos/financeiro/manual",
+      label: "Como operar",
+      visible: access.any,
+    },
   ]
     .filter((item) => item.visible)
     .map(({ key, href, label }) => ({ key, href, label })) satisfies DomainNavigationItem[];
+
+  const helpAnchor = FINANCE_HELP_ANCHORS[current];
+  const headerActions = (current !== "manual" && helpAnchor) || actions ? (
+    <div className="finance-page-actions">
+      {current !== "manual" && helpAnchor ? (
+        <Link className="secondary-button" href={`/pedidos/financeiro/manual#${helpAnchor}`}>
+          ❓ Ajuda desta tela
+        </Link>
+      ) : null}
+      {actions}
+    </div>
+  ) : undefined;
 
   return (
     <DomainShell
@@ -64,7 +91,7 @@ export function FinanceWorkspace({ access, current, eyebrow, title, description,
       eyebrow={eyebrow}
       title={title}
       description={description}
-      actions={actions}
+      actions={headerActions}
       className="finance-workspace"
     >
       {children}

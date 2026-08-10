@@ -58,7 +58,7 @@ export default async function CommissionReportPage({ searchParams }: { searchPar
       title="Relatório de comissões a pagar"
       description="Posição integral por pessoa na data de corte, sem alterar a conta corrente."
       actions={
-        <div className="finance-page-actions">
+        <>
           <Link className="secondary-button" href="/pedidos/financeiro/comissoes">Voltar às comissões</Link>
           {access.commissionsExport ? (
             <ExportMenu
@@ -78,7 +78,7 @@ export default async function CommissionReportPage({ searchParams }: { searchPar
             />
           ) : null}
           <PrintButton />
-        </div>
+        </>
       }
     >
       {reportResult.error ? (

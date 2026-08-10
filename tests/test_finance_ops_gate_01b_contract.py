@@ -118,6 +118,39 @@ class FinanceOpsGate01BContractTests(unittest.TestCase):
             self.assertIn(f'manual("{route}"', manuals)
         self.assertTrue((ROOT / "docs/manuais/financeiro/AJUSTE_MANUAL.md").is_file())
 
+    def test_contextual_finance_help_reuses_the_governed_route_manuals(self):
+        workspace = (FINANCE / "finance-workspace.tsx").read_text(encoding="utf-8")
+        manual_page = (FINANCE / "manual/page.tsx").read_text(encoding="utf-8")
+        report = (FINANCE / "comissoes/relatorio/page.tsx").read_text(encoding="utf-8")
+
+        self.assertIn('href: "/pedidos/financeiro/manual"', workspace)
+        self.assertIn("❓ Ajuda desta tela", workspace)
+        for key, anchor in (
+            ("overview", "visao-geral"),
+            ("assignment", "comissionamento"),
+            ("receipts", "recebimentos"),
+            ("commissions", "comissoes"),
+            ("report", "relatorio"),
+        ):
+            self.assertIn(f'{key}: "{anchor}"', workspace)
+
+        self.assertIn('current="manual"', manual_page)
+        self.assertIn("manualForPath", manual_page)
+        self.assertIn("Da venda liberada ao pagamento da comissão", manual_page)
+        self.assertIn("Comissão prevista não é saldo disponível", manual_page)
+        self.assertIn("Excel (.xlsx)", manual_page)
+        for route in (
+            "/pedidos/financeiro",
+            "/pedidos/financeiro/comissionamento",
+            "/pedidos/financeiro/recebimentos",
+            "/pedidos/financeiro/comissoes",
+            "/pedidos/financeiro/comissoes/relatorio",
+        ):
+            self.assertIn(route, manual_page)
+
+        self.assertIn('redirect("/modulo-indisponivel?module=financeiro&reason=permission")', manual_page)
+        self.assertNotIn('<div className="finance-page-actions">', report)
+
     def test_e2e_covers_atomic_accounts_and_navigation_overflow(self):
         bootstrap = (ROOT / "apps/web/e2e/bootstrap-synthetic-users.mjs").read_text(encoding="utf-8")
         e2e = (ROOT / "apps/web/e2e/finance-workbench.spec.mjs").read_text(encoding="utf-8")

@@ -29,8 +29,8 @@ class CommissionAssignmentRequestIdempotencyContractTests(unittest.TestCase):
         actions = ACTIONS.read_text(encoding="utf-8")
         forms = FORMS.read_text(encoding="utf-8")
         smoke = SMOKE.read_text(encoding="utf-8")
-        self.assertIn('"definir_com_pedido_comissao_idempotente"', actions)
-        self.assertIn("p_idempotency_key: idempotencyKey", actions)
+        self.assertIn('"propor_com_pedido_comissao_idempotente"', actions)
+        self.assertIn("p_request_key: idempotencyKey", actions)
         self.assertIn('name="idempotency_key"', forms)
         self.assertGreaterEqual(smoke.count("definir_com_pedido_comissao_idempotente"), 5)
 

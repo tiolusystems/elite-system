@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   adjustCommissionAction,
   assignOrderCommissionAction,
+  confirmOrderCommissionAction,
   INITIAL_FINANCE_ACTION_STATE,
   payCommissionAction,
   registerReceiptAction,
@@ -22,24 +23,107 @@ export function CommissionAssignmentForm({
   requestKey: string;
 }) {
   const router = useRouter();
-  const [state, action, pending] = useActionState(assignOrderCommissionAction, INITIAL_FINANCE_ACTION_STATE);
+  const [proposalState, proposalAction, proposalPending] = useActionState(
+    assignOrderCommissionAction,
+    INITIAL_FINANCE_ACTION_STATE
+  );
+  const [confirmState, confirmAction, confirmPending] = useActionState(
+    confirmOrderCommissionAction,
+    INITIAL_FINANCE_ACTION_STATE
+  );
   const [key, setKey] = useState(requestKey);
   const [role, setRole] = useState("vendedor");
   const [percentage, setPercentage] = useState("");
   const [reason, setReason] = useState("");
-  const formRef = useFocusFirstError(state);
+  const [dismissedReviewId, setDismissedReviewId] = useState<string | null>(null);
+  const formRef = useFocusFirstError(proposalState);
 
-  useRefreshAfterSuccess(state, router.refresh, () => {
-    setKey(crypto.randomUUID());
-    setPercentage("");
-    setReason("");
-  });
+  useRefreshAfterSuccess(confirmState, router.refresh, () => {});
+
+  const review = proposalState.status === "review"
+    && proposalState.review
+    && proposalState.review.requestId !== dismissedReviewId
+      ? proposalState.review
+      : null;
+
+  if (review) {
+    if (confirmState.status === "success") {
+      return (
+        <div className="finance-operation-form">
+          <ActionFeedback state={confirmState} />
+          <div className="empty-state compact-empty">
+            <strong>Comissionamento atualizado</strong>
+            <span>A relação de participantes acima já pode ser conferida com os valores atualizados.</span>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="finance-operation-form">
+        <section className="notice-panel" role="status">
+          <strong>Revisão obrigatória antes de gravar</strong>
+          <span>Esta etapa ainda não gravou o novo direito de comissão.</span>
+        </section>
+
+        <div className="finance-confirmation-strip" aria-label="Impacto da alteração de comissão">
+          <span>Valor da venda<strong>{money(review.orderTotal)}</strong></span>
+          <span>Comissão prevista<strong>{money(review.expectedValue)}</strong></span>
+          <span>Liberação imediata estimada<strong>{money(review.immediateRelease)}</strong></span>
+        </div>
+
+        <div className="finance-assignment-list">
+          <article>
+            <span>
+              <strong>{review.personName}</strong>
+              <small>{commissionRoleText(review.role)} · {review.percentage.toLocaleString("pt-BR")}%</small>
+            </span>
+            <strong>{money(review.expectedValue)}</strong>
+          </article>
+          <article>
+            <span>
+              <strong>Recebimentos já registrados</strong>
+              <small>Serão considerados somente após a confirmação final.</small>
+            </span>
+            <strong>{money(review.receivedValue)}</strong>
+          </article>
+        </div>
+
+        <section className="notice-panel warning">
+          <strong>Justificativa registrada</strong>
+          <span>{review.justification}</span>
+        </section>
+
+        <ActionFeedback state={confirmState} />
+
+        <form action={confirmAction}>
+          <input type="hidden" name="solicitacao_id" value={review.requestId} />
+          <div className="form-footer">
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={confirmPending}
+              onClick={() => {
+                setKey(crypto.randomUUID());
+                setDismissedReviewId(review.requestId);
+              }}
+            >
+              Corrigir dados
+            </button>
+            <button className="primary-button" disabled={confirmPending}>
+              {confirmPending ? "Confirmando..." : "Confirmar alteração"}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   return (
-    <form action={action} className="finance-operation-form" ref={formRef}>
+    <form action={proposalAction} className="finance-operation-form" ref={formRef}>
       <input type="hidden" name="idempotency_key" value={key} />
       <input type="hidden" name="pedido_id" value={order.id} />
-      <ActionFeedback state={state} />
+      <ActionFeedback state={proposalState} />
       <div className="form-grid finance-form-grid">
         <div>
           <EntityLookup
@@ -51,32 +135,58 @@ export function CommissionAssignmentForm({
             required
             helpText="A seleção mantém o vínculo pela pessoa cadastrada, não por texto livre."
           />
-          <FieldError value={state.fieldErrors.pessoa_id} />
+          <FieldError value={proposalState.fieldErrors.pessoa_id} />
         </div>
         <label>
           Papel na comissão
-          <select name="papel_comissao" value={role} onChange={(event) => setRole(event.target.value)} aria-invalid={Boolean(state.fieldErrors.papel_comissao)}>
+          <select
+            name="papel_comissao"
+            value={role}
+            onChange={(event) => setRole(event.target.value)}
+            aria-invalid={Boolean(proposalState.fieldErrors.papel_comissao)}
+          >
             <option value="vendedor">Vendedor</option>
             <option value="agente">Agente</option>
             <option value="gerente">Gerente</option>
+            <option value="tecnico_campo">Técnico de campo</option>
             <option value="outro">Outro</option>
           </select>
-          <FieldError value={state.fieldErrors.papel_comissao} />
+          <FieldError value={proposalState.fieldErrors.papel_comissao} />
         </label>
         <label>
           Percentual
-          <input name="percentual_comissao" inputMode="decimal" value={percentage} onChange={(event) => setPercentage(event.target.value)} min="0.0001" max="100" step="0.0001" aria-invalid={Boolean(state.fieldErrors.percentual_comissao)} required />
-          <FieldError value={state.fieldErrors.percentual_comissao} />
+          <input
+            name="percentual_comissao"
+            inputMode="decimal"
+            value={percentage}
+            onChange={(event) => setPercentage(event.target.value)}
+            min="0.0001"
+            max="100"
+            step="0.0001"
+            aria-invalid={Boolean(proposalState.fieldErrors.percentual_comissao)}
+            required
+          />
+          <FieldError value={proposalState.fieldErrors.percentual_comissao} />
         </label>
         <label className="wide-field">
           Justificativa
-          <input name="justificativa" value={reason} onChange={(event) => setReason(event.target.value)} minLength={10} placeholder="Regra comercial aprovada para este pedido" aria-invalid={Boolean(state.fieldErrors.justificativa)} required />
-          <FieldError value={state.fieldErrors.justificativa} />
+          <input
+            name="justificativa"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            minLength={10}
+            placeholder="Explique a participação desta pessoa na venda"
+            aria-invalid={Boolean(proposalState.fieldErrors.justificativa)}
+            required
+          />
+          <FieldError value={proposalState.fieldErrors.justificativa} />
         </label>
       </div>
       <div className="form-footer">
-        <span>Usuários com alçada específica podem definir os comissionados após a liberação e antes do primeiro recebimento.</span>
-        <button className="primary-button" disabled={pending}>{pending ? "Registrando..." : "Definir comissionado"}</button>
+        <span>Primeiro revise o impacto. A comissão só será alterada na confirmação seguinte.</span>
+        <button className="primary-button" disabled={proposalPending}>
+          {proposalPending ? "Preparando..." : "Revisar alteração"}
+        </button>
       </div>
     </form>
   );
@@ -232,7 +342,7 @@ export function CommissionAdjustmentForm({ account, requestKey }: { account: Com
 }
 
 function ActionFeedback({ state }: { state: FinanceActionState }) {
-  if (state.status === "idle") return null;
+  if (state.status === "idle" || state.status === "review") return null;
   return <div className={`notice-panel ${state.status === "success" ? "success" : "warning"}`} role={state.status === "error" ? "alert" : "status"}><strong>{state.status === "success" ? "Operação concluída" : "Não foi possível concluir"}</strong><span>{state.message}</span></div>;
 }
 
@@ -261,6 +371,17 @@ function useFocusFirstError(state: FinanceActionState) {
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [state.resultId, state.status]);
   return formRef;
+}
+
+function commissionRoleText(value: string) {
+  const labels: Record<string, string> = {
+    vendedor: "Vendedor",
+    agente: "Agente",
+    gerente: "Gerente",
+    tecnico_campo: "Técnico de campo",
+    outro: "Outro",
+  };
+  return labels[value] ?? value;
 }
 
 function money(value: number) {

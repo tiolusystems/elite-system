@@ -47,7 +47,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
         steps={[
           {
             title: "Definir comissionamento",
-            description: "Depois da liberação do pedido e antes do primeiro recebimento.",
+            description: "A venda liberada recebe regras automáticas e também pode receber participantes adicionais com revisão.",
             href: access.commissionAssign ? "/pedidos/financeiro/comissionamento" : undefined,
           },
           {
@@ -91,7 +91,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: Pro
       </section>
 
       <section className="finance-shortcuts" aria-label="Operações financeiras autorizadas">
-        {access.commissionAssign ? <Shortcut href="/pedidos/financeiro/comissionamento" title="Comissionamento" detail="Definir pessoas e percentuais antes do primeiro recebimento." /> : null}
+        {access.commissionAssign ? <Shortcut href="/pedidos/financeiro/comissionamento" title="Comissionamento" detail="Revisar participantes automáticos ou incluir participação adicional com dupla confirmação." /> : null}
         {access.receiptsView || access.receiptsRegister ? <Shortcut href="/pedidos/financeiro/recebimentos" title="Recebimentos" detail="Pesquisar pedidos, conferir saldo e registrar pagamentos recebidos." /> : null}
         {access.commissionsView || access.commissionsPay || access.commissionsAdjust ? <Shortcut href="/pedidos/financeiro/comissoes" title="Conta corrente" detail="Consultar liberações, pagamentos, estornos e ajustes." /> : null}
       </section>

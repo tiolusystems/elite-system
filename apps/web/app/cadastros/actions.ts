@@ -337,9 +337,6 @@ export async function createPessoaComercialAction(formData: FormData) {
   if (tipoComercial && !ALLOWED_TIPO_COMERCIAL.has(tipoComercial)) {
     redirect("/cadastros?grupo=pessoas&modo=novo&result=invalid_commercial_type#cadastro-pessoa");
   }
-  if (tipoComercial === "agente_vinculado" && !vendedorResponsavelId) {
-    redirect("/cadastros?grupo=pessoas&modo=novo&result=missing_responsible_seller#cadastro-pessoa");
-  }
   if (vendedorResponsavelIdNumber !== null && !Number.isInteger(vendedorResponsavelIdNumber)) {
     redirect("/cadastros?grupo=pessoas&modo=novo&result=invalid_responsible_seller#cadastro-pessoa");
   }
@@ -411,9 +408,6 @@ export async function reviewAndCreatePessoaComercialAction(
   }
   if (!ALLOWED_TIPO_COMERCIAL.has(values.tipo_comercial)) {
     return { status: "error", message: "Selecione um tipo comercial válido.", candidates: [], values, roles };
-  }
-  if (values.tipo_comercial === "agente_vinculado" && !responsibleId) {
-    return { status: "error", message: "Selecione o vendedor responsável pelo agente.", candidates: [], values, roles };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -563,9 +557,6 @@ export async function updatePessoaComercialRoleAction(formData: FormData) {
   if (tipoComercial && !ALLOWED_TIPO_COMERCIAL.has(tipoComercial)) {
     redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=invalid_commercial_type#papeis-pessoa-title`);
   }
-  if (tipoComercial === "agente_vinculado" && !vendedorResponsavelId) {
-    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=missing_responsible_seller#papeis-pessoa-title`);
-  }
   if (vendedorResponsavelIdNumber !== null && !Number.isInteger(vendedorResponsavelIdNumber)) {
     redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=invalid_responsible_seller#papeis-pessoa-title`);
   }
@@ -592,6 +583,164 @@ export async function updatePessoaComercialRoleAction(formData: FormData) {
 
   revalidatePath("/cadastros");
   redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_role_updated#papeis-pessoa-title`);
+}
+
+export async function linkPessoaCommercialRelationshipAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const destinoId = optionalInteger(formData, "pessoa_destino_id");
+  const tipo = field(formData, "tipo_relacionamento");
+  const vigenciaInicio = field(formData, "vigencia_inicio");
+  const motivo = field(formData, "motivo");
+
+  if (!getRuntimeStatus().supabaseConfigured || !pessoaId || !destinoId || !vigenciaInicio || motivo.length < 10) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_person_relationship_required#estrutura-comercial-title`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_cad_pessoa_relacionamento_comercial", {
+    p_pessoa_origem_id: pessoaId,
+    p_pessoa_destino_id: destinoId,
+    p_tipo_relacionamento: tipo,
+    p_vigencia_inicio: vigenciaInicio,
+    p_vigencia_fim: optionalField(formData, "vigencia_fim"),
+    p_motivo: motivo
+  });
+
+  if (error) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#estrutura-comercial-title`);
+  }
+
+  revalidatePath("/cadastros");
+  revalidatePath("/pedidos");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_relationship_linked#estrutura-comercial-title`);
+}
+
+export async function closePessoaCommercialRelationshipAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const relacionamentoId = optionalInteger(formData, "relacionamento_id");
+  const vigenciaFim = field(formData, "vigencia_fim");
+  const motivo = field(formData, "motivo");
+
+  if (!getRuntimeStatus().supabaseConfigured || !pessoaId || !relacionamentoId || !vigenciaFim || motivo.length < 10) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_person_relationship_required#estrutura-comercial-title`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "encerrar_cad_pessoa_relacionamento_comercial", {
+    p_relacionamento_id: relacionamentoId,
+    p_vigencia_fim: vigenciaFim,
+    p_motivo: motivo
+  });
+
+  if (error) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#estrutura-comercial-title`);
+  }
+
+  revalidatePath("/cadastros");
+  revalidatePath("/pedidos");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=pessoa_relationship_closed#estrutura-comercial-title`);
+}
+
+export async function createPessoaCommissionPolicyDraftAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const vigenciaInicio = field(formData, "vigencia_inicio");
+  const motivo = field(formData, "motivo");
+  const comissionavel = field(formData, "comissionavel") === "sim";
+
+  if (!getRuntimeStatus().supabaseConfigured || !pessoaId || !vigenciaInicio || motivo.length < 10) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_commission_policy_required#politica-comissao-title`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "criar_com_comissao_politica_rascunho", {
+    p_pessoa_id: pessoaId,
+    p_comissionavel: comissionavel,
+    p_vigencia_inicio: vigenciaInicio,
+    p_vigencia_fim: optionalField(formData, "vigencia_fim"),
+    p_motivo: motivo
+  });
+
+  if (error) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#politica-comissao-title`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=commission_policy_draft_created#politica-comissao-title`);
+}
+
+export async function setPessoaCommissionPolicyRateAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const politicaId = optionalInteger(formData, "politica_id");
+  const grupoId = optionalInteger(formData, "grupo_produto_id");
+  const percentual = optionalNumber(formData, "percentual");
+  const papel = field(formData, "papel_comissao");
+
+  if (!getRuntimeStatus().supabaseConfigured || !pessoaId || !politicaId || !grupoId || percentual === null || percentual <= 0 || percentual > 100) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=invalid_commission_policy_rate#politica-comissao-title`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "definir_com_comissao_politica_taxa", {
+    p_politica_id: politicaId,
+    p_grupo_produto_id: grupoId,
+    p_papel_comissao: papel,
+    p_percentual: percentual
+  });
+
+  if (error) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#politica-comissao-title`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=commission_policy_rate_saved#politica-comissao-title`);
+}
+
+export async function removePessoaCommissionPolicyRateAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const taxaId = optionalInteger(formData, "taxa_id");
+  const motivo = field(formData, "motivo");
+
+  if (!getRuntimeStatus().supabaseConfigured || !pessoaId || !taxaId || motivo.length < 10) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_commission_policy_required#politica-comissao-title`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "remover_com_comissao_politica_taxa", {
+    p_taxa_id: taxaId,
+    p_motivo: motivo
+  });
+
+  if (error) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#politica-comissao-title`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=commission_policy_rate_removed#politica-comissao-title`);
+}
+
+export async function publishPessoaCommissionPolicyAction(formData: FormData) {
+  const pessoaId = optionalInteger(formData, "pessoa_id");
+  const politicaId = optionalInteger(formData, "politica_id");
+  const motivo = field(formData, "motivo");
+  const confirmacao = field(formData, "confirmar_publicacao") === "sim";
+
+  if (!getRuntimeStatus().supabaseConfigured || !pessoaId || !politicaId || !confirmacao || motivo.length < 10) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId ?? ""}&result=missing_commission_policy_confirmation#politica-comissao-title`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "publicar_com_comissao_politica_v2", {
+    p_politica_id: politicaId,
+    p_confirmacao: true,
+    p_motivo_confirmacao: motivo
+  });
+
+  if (error) {
+    redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=${encodeURIComponent(mapSupabaseError(error.message))}#politica-comissao-title`);
+  }
+
+  revalidatePath("/cadastros");
+  redirect(`/cadastros?grupo=pessoas&pessoa=${pessoaId}&result=commission_policy_published#politica-comissao-title`);
 }
 
 export async function deactivatePessoaComercialAction(formData: FormData) {

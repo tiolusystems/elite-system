@@ -11,7 +11,7 @@ export const UF_OPTIONS = [
 
 export const TIPO_COMERCIAL_OPTIONS = [
   { value: "funcionario_elite", label: "Funcionário Elite" },
-  { value: "agente_vinculado", label: "Agente vinculado" },
+  { value: "agente_vinculado", label: "Agente externo" },
   { value: "agente_direto_elite", label: "Agente direto Elite" },
   { value: "vendedor_direto_elite", label: "Vendedor direto Elite" },
   { value: "tecnico_campo", label: "Técnico de campo" },

@@ -158,6 +158,54 @@ export type MasterDataPersonArea = {
   vigenciaFim: string | null;
 };
 
+export type MasterDataPersonRelationship = {
+  id: number;
+  originPersonId: number;
+  targetPersonId: number;
+  type: string;
+  status: string;
+  startDate: string;
+  endDate: string | null;
+  startReason: string;
+  endReason: string | null;
+};
+
+export type MasterDataCommissionRate = {
+  id: number;
+  policyId: number;
+  productGroupId: number;
+  role: string;
+  percentage: number;
+};
+
+export type MasterDataCommissionPolicy = {
+  id: number;
+  personId: number;
+  version: number;
+  commissionable: boolean;
+  startDate: string;
+  endDate: string | null;
+  status: string;
+  reason: string;
+  rates: MasterDataCommissionRate[];
+};
+
+export type MasterDataProductGroupOption = {
+  id: number;
+  code: string;
+  name: string;
+};
+
+export type MasterDataPersonCommissionWorkspace = {
+  relationships: MasterDataPersonRelationship[];
+  policies: MasterDataCommissionPolicy[];
+  productGroups: MasterDataProductGroupOption[];
+  canManageRelationships: boolean;
+  canViewPolicy: boolean;
+  canManagePolicy: boolean;
+  error: string | null;
+};
+
 export type MasterDataVehicle = {
   id: number;
   legacyCode: string | null;
@@ -449,6 +497,116 @@ async function getPeopleMasterData(
           vigenciaFim: item.vigencia_fim
         }))
   };
+}
+
+export async function getPersonCommissionWorkspace(
+  personId: number
+): Promise<MasterDataPersonCommissionWorkspace> {
+  const empty: MasterDataPersonCommissionWorkspace = {
+    relationships: [],
+    policies: [],
+    productGroups: [],
+    canManageRelationships: false,
+    canViewPolicy: false,
+    canManagePolicy: false,
+    error: null
+  };
+
+  if (!getRuntimeStatus().supabaseConfigured || !Number.isInteger(personId) || personId <= 0) {
+    return empty;
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const [relationshipPermission, policyViewPermission, policyManagePermission] = await Promise.all([
+      supabase.rpc("can_current_user", { p_action_key: "cadastros.pessoas.relationships.manage" }),
+      supabase.rpc("can_current_user", { p_action_key: "financeiro.commissions.policy.view" }),
+      supabase.rpc("can_current_user", { p_action_key: "financeiro.commissions.policy.manage" })
+    ]);
+
+    const canManageRelationships = !relationshipPermission.error && relationshipPermission.data === true;
+    const canViewPolicy = !policyViewPermission.error && policyViewPermission.data === true;
+    const canManagePolicy = !policyManagePermission.error && policyManagePermission.data === true;
+
+    const relationshipsResult = await supabase
+      .from("cad_pessoa_relacionamentos_comerciais")
+      .select("id,pessoa_origem_id,pessoa_destino_id,tipo_relacionamento,status,vigencia_inicio,vigencia_fim,motivo_inicio,motivo_fim")
+      .or(`pessoa_origem_id.eq.${personId},pessoa_destino_id.eq.${personId}`)
+      .order("vigencia_inicio", { ascending: false })
+      .order("id", { ascending: false });
+
+    const groupsResult = (canViewPolicy || canManagePolicy)
+      ? await supabase
+          .from("cad_grupos_produto")
+          .select("id,codigo,nome,status")
+          .eq("status", "active")
+          .order("ordem_exibicao", { ascending: true })
+          .order("nome", { ascending: true })
+      : { data: [], error: null };
+
+    const policiesResult = (canViewPolicy || canManagePolicy)
+      ? await supabase
+          .from("com_comissao_politicas_pessoa")
+          .select("id,pessoa_id,versao,comissionavel,vigencia_inicio,vigencia_fim,status,motivo")
+          .eq("pessoa_id", personId)
+          .order("versao", { ascending: false })
+      : { data: [], error: null };
+
+    const policyIds = (policiesResult.data ?? []).map((row) => Number(row.id));
+    const ratesResult = policyIds.length
+      ? await supabase
+          .from("com_comissao_politica_taxas_grupo")
+          .select("id,politica_id,grupo_produto_id,papel_comissao,percentual")
+          .in("politica_id", policyIds)
+          .order("grupo_produto_id", { ascending: true })
+      : { data: [], error: null };
+
+    const rates: MasterDataCommissionRate[] = (ratesResult.data ?? []).map((row) => ({
+      id: Number(row.id),
+      policyId: Number(row.politica_id),
+      productGroupId: Number(row.grupo_produto_id),
+      role: String(row.papel_comissao),
+      percentage: Number(row.percentual)
+    }));
+
+    const error = relationshipsResult.error ?? groupsResult.error ?? policiesResult.error ?? ratesResult.error;
+
+    return {
+      relationships: (relationshipsResult.data ?? []).map((row) => ({
+        id: Number(row.id),
+        originPersonId: Number(row.pessoa_origem_id),
+        targetPersonId: Number(row.pessoa_destino_id),
+        type: String(row.tipo_relacionamento),
+        status: String(row.status),
+        startDate: String(row.vigencia_inicio),
+        endDate: row.vigencia_fim ? String(row.vigencia_fim) : null,
+        startReason: String(row.motivo_inicio),
+        endReason: row.motivo_fim ? String(row.motivo_fim) : null
+      })),
+      policies: (policiesResult.data ?? []).map((row) => ({
+        id: Number(row.id),
+        personId: Number(row.pessoa_id),
+        version: Number(row.versao),
+        commissionable: row.comissionavel === true,
+        startDate: String(row.vigencia_inicio),
+        endDate: row.vigencia_fim ? String(row.vigencia_fim) : null,
+        status: String(row.status),
+        reason: String(row.motivo),
+        rates: rates.filter((rate) => rate.policyId === Number(row.id))
+      })),
+      productGroups: (groupsResult.data ?? []).map((row) => ({
+        id: Number(row.id),
+        code: String(row.codigo),
+        name: String(row.nome)
+      })),
+      canManageRelationships,
+      canViewPolicy,
+      canManagePolicy,
+      error: error ? "Não foi possível carregar todos os vínculos e políticas desta pessoa." : null
+    };
+  } catch {
+    return { ...empty, error: "Não foi possível carregar os vínculos e políticas desta pessoa." };
+  }
 }
 
 export async function getMasterDataClientWorkspace(input: {

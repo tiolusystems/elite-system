@@ -9,6 +9,7 @@ MIGRATION = ROOT / "supabase" / "migrations" / "0065_govern_commercial_people_re
 ACTIONS = ROOT / "apps" / "web" / "app" / "cadastros" / "actions.ts"
 FORM = ROOT / "apps" / "web" / "app" / "cadastros" / "governed-person-create-form.tsx"
 PEOPLE = ROOT / "apps" / "web" / "app" / "cadastros" / "pessoas-section.tsx"
+STRUCTURE = ROOT / "apps" / "web" / "app" / "cadastros" / "person-commercial-structure-and-commission.tsx"
 
 
 class PeopleGovernance0065ContractTests(unittest.TestCase):
@@ -46,8 +47,11 @@ class PeopleGovernance0065ContractTests(unittest.TestCase):
         actions = ACTIONS.read_text(encoding="utf-8")
         form = FORM.read_text(encoding="utf-8")
         people = PEOPLE.read_text(encoding="utf-8")
-        self.assertIn('name="vendedor_responsavel_id"', form)
+        structure = STRUCTURE.read_text(encoding="utf-8")
+        self.assertNotIn('name="vendedor_responsavel_id"', form)
         self.assertIn('name="candidatos_apresentados"', form)
+        self.assertIn('name="pessoa_destino_id"', structure)
+        self.assertIn('name="tipo_relacionamento"', structure)
         self.assertIn('name="area_id"', people)
         self.assertIn('name="vinculo_id"', people)
         self.assertIn('"find_cad_pessoa_possible_duplicates"', actions)

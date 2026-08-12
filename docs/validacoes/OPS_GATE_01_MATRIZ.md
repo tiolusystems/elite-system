@@ -109,7 +109,7 @@ sao verificados nas RPCs idempotentes e constraints correspondentes.
 | `/login` | entrar, recuperar senha, trocar senha/e-mail, sair e trocar usuario | conta individual | contrato Auth | conta/sessao valida | sessao criada ou encerrada uma vez | token, credencial e Auth indisponivel tratados | Auth E2E | comprovado |
 | `/modulos` | ambiente e rollout | administrador autorizado | `system.admin` | dependencias e justificativa | evento append-only | repeticao nao duplica estado; ambiente incorreto recusado | rollout SQL | comprovado |
 | `/cadastros` | consultar clientes com paginacao, abrir ficha, criar cliente, documentos, contatos, propriedades, enderecos e vinculos | operador autorizado | alçadas de cliente | fonte e relacionamentos ativos | consulta governada e RPC auditada para escrita | documento/relacao duplicados e concorrencia recusados; busca normalizada preserva o contexto | SQL 0117 e Clientes E2E `30465776522` | comprovado |
-| `/cadastros` | pessoa, papeis, areas, inativacao e reativacao | operador autorizado | alçadas de pessoa | identidade governada | RPC auditada | homonimo exige justificativa; codigo legado e vinculo sobreposto recusados | SQL 0065 | comprovado |
+| `/cadastros` | pessoa, papeis, areas, vinculos comerciais temporais, politicas de comissao, inativacao e reativacao | operador autorizado | alçadas de pessoa e comissao | identidade governada; vinculos hierarquicos opcionais | RPC auditada e historico versionado | homonimo exige justificativa; vinculo sobreposto, politica invalida e concorrencia recusados | SQL 0065/0122 + contratos COMM-02B1 | comprovado |
 | `/cadastros/materias-primas` | criar e manter identidade, SKU, tecnico, estoque e regulatorio | operador autorizado | alçadas de MP | tipo/unidade ativos | RPC auditada | SKU e candidato duplicados, valor invalido e inativo recusados | SQL MP | comprovado |
 | `/cadastros/produtos` | produto, grupo, apresentacao e situacao | operador autorizado | alçadas de produto/grupo | catalogos ativos | RPC auditada | duplicidade e relacionamento inativo recusados | SQL produto | comprovado |
 | `/cadastros/embalagens` | embalagem, versao, componente, revisao e ativacao | operador autorizado | alçadas de embalagem | composicao valida | versao ativa e historico preservado | versao publicada nao e reescrita | SQL embalagem | comprovado |
@@ -119,7 +119,7 @@ sao verificados nas RPCs idempotentes e constraints correspondentes.
 | `/importacao-historica/mp` | analisar fonte | Auditoria autorizada | `migration.mp.view` | fonte homologada | relatorio sem ativar saldo | DEC-012 bloqueia corte oficial | contrato historico | bloqueado corretamente |
 | `/pedidos` | criar venda/bonificacao/troca, rascunho, decidir e ajustar credito | vendedor/revisor/autorizado financeiro | alçadas independentes | identidade, carteira, itens e entregas | pedido bloqueado e decisao auditada | duplo clique e payload divergente nao duplicam; limite nao e inferido por cargo | SQL 0116 + smoke | comprovado |
 | `/pedidos/financeiro` | consultar posição integral e acessar operações permitidas | usuário com ao menos uma alçada financeira | alçadas financeiras individuais | dados financeiros governados | indicadores integrais sem escrita | período inválido e falta de alçada recusados | migration 0118 + contrato OPS-FIN | em validação |
-| `/pedidos/financeiro/comissionamento` | pesquisar pedidos e definir comissionados | usuário autorizado | `pedidos.commissions.assign` | pedido e pessoa elegíveis | vínculo idempotente e auditado | pessoa inativa, duplicidade e retry divergente recusados | contrato OPS-FIN | em validação |
+| `/pedidos/financeiro/comissionamento` | pesquisar pedidos, revisar impacto e confirmar comissionados | usuário autorizado | `pedidos.commissions.assign` | pedido e pessoa elegíveis | revisão e confirmação em duas etapas, idempotentes e auditadas | pessoa inativa, contexto alterado, duplicidade e retry divergente recusados | contratos OPS-FIN/COMM-02B | em validação |
 | `/pedidos/financeiro/recebimentos` | pesquisar pedidos e registrar recebimento | usuário autorizado | leitura e registro independentes | saldo aberto e referência documental | recebimento alocado e auditado | zero, excesso, referência vazia e retry divergente recusados | migration 0118 + smoke SQL | em validação |
 | `/pedidos/financeiro/comissoes` | consultar conta corrente, pagar e ajustar | usuário autorizado | leitura, pagamento e ajuste independentes | saldo positivo | movimentos append-only | excesso, falta de alçada e retry divergente recusados | contrato OPS-FIN | em validação |
 | `/pedidos/financeiro/comissoes/relatorio` | filtrar, imprimir e exportar posição | usuário autorizado | leitura e exportação independentes | conta corrente disponível | relatório A4 e CSV com metadados | exportação sem alçada recusada | contrato OPS-FIN | em validação |
@@ -149,6 +149,9 @@ codigo.
 `updatePessoaComercialIdentityAction`, `updatePessoaComercialRoleAction`,
 `deactivatePessoaComercialAction`, `reactivatePessoaComercialAction`,
 `linkPessoaAreaComercialAction`, `closePessoaAreaComercialAction`,
+`linkPessoaCommercialRelationshipAction`, `closePessoaCommercialRelationshipAction`,
+`createPessoaCommissionPolicyDraftAction`, `setPessoaCommissionPolicyRateAction`,
+`removePessoaCommissionPolicyRateAction`, `publishPessoaCommissionPolicyAction`,
 `createMateriaPrimaAction`, `updateMateriaPrimaIdentityAction`,
 `updateMateriaPrimaSkuAction`, `updateMateriaPrimaTechnicalAction`,
 `updateMateriaPrimaStockPolicyAction`, `updateMateriaPrimaRegulatoryAction`,
@@ -208,7 +211,8 @@ codigo.
 `criarPedidoVendedorAction`, `decidirPedidoGerencialAction`,
 `ajustarLimiteCreditoAction`, `createPedidoRascunhoAction`,
 `criarTrocaPedidoAction`, `assignOrderCommissionAction`,
-`registerReceiptAction`, `payCommissionAction`, `adjustCommissionAction`.
+`confirmOrderCommissionAction`, `registerReceiptAction`, `payCommissionAction`,
+`adjustCommissionAction`.
 
 ### Romaneio
 

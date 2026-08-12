@@ -367,7 +367,7 @@ function rpcFailure(
     return failure("A operação já foi processada. Nenhum valor foi duplicado.");
   }
   if (value.includes("commission context changed after review")) {
-    return failure("Os dados da venda mudaram desde a revisão. Refazer a revisão antes de confirmar.");
+    return failure("Os dados deste pedido mudaram desde sua revisão. Confira novamente antes de confirmar.");
   }
   if (value.includes("commission change request expired")) {
     return failure("A revisão expirou. Refazer a revisão antes de confirmar.");

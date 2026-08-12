@@ -45,21 +45,32 @@ jobs:
           version: 2.109.0
       - name: Start disposable Supabase
         run: supabase start
-      - name: Rebuild through 0118 and validate the 0119 upgrade
+      - name: Rebuild through 0118 and validate the forward migration chain
         shell: bash
         run: |
           set -euo pipefail
-          migration="supabase/migrations/0119_corporate_search_and_romaneio_filters.sql"
-          pending="$RUNNER_TEMP/0119_corporate_search_and_romaneio_filters.sql"
-          restore_migration() {
-            if [ -f "$pending" ]; then
-              mv "$pending" "$migration"
-            fi
+          pending_dir="$RUNNER_TEMP/migrations-after-0118"
+          mkdir -p "$pending_dir"
+
+          restore_migrations() {
+            shopt -s nullglob
+            for migration in "$pending_dir"/*.sql; do
+              mv "$migration" "supabase/migrations/$(basename "$migration")"
+            done
           }
-          trap restore_migration EXIT
-          mv "$migration" "$pending"
+
+          trap restore_migrations EXIT
+
+          for migration in supabase/migrations/*.sql; do
+            filename="$(basename "$migration")"
+            version="${filename%%_*}"
+            if (( 10#$version > 118 )); then
+              mv "$migration" "$pending_dir/"
+            fi
+          done
+
           supabase db reset
-          restore_migration
+          restore_migrations
           supabase migration up --local
           trap - EXIT
       - name: Lint PostgreSQL schema

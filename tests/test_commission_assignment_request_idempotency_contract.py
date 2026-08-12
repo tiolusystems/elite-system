@@ -32,7 +32,10 @@ class CommissionAssignmentRequestIdempotencyContractTests(unittest.TestCase):
         self.assertIn('"propor_com_pedido_comissao_idempotente"', actions)
         self.assertIn("p_request_key: idempotencyKey", actions)
         self.assertIn('name="idempotency_key"', forms)
-        self.assertGreaterEqual(smoke.count("definir_com_pedido_comissao_idempotente"), 5)
+        self.assertGreaterEqual(smoke.count("propor_com_pedido_comissao_idempotente"), 5)
+        self.assertGreaterEqual(smoke.count("confirmar_com_pedido_comissao_idempotente"), 4)
+        self.assertIn("commission request key reused with different payload", smoke)
+        self.assertIn("idempotent_replay", smoke)
 
 
 if __name__ == "__main__":

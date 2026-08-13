@@ -1058,7 +1058,7 @@ begin
   v_context := public.begin_audited_rpc(
     'financeiro.commissions.release',
     'financeiro',
-    'com_comissao_liberacoes',
+    'com_pedido_comissionados',
     'financial_event',
     jsonb_build_object('event', 'commission_release_existing_receipts')
   );

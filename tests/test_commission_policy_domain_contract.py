@@ -67,6 +67,30 @@ class CommissionPolicyDomainContract(unittest.TestCase):
         self.assertIn("release.alocacao_id = allocation.id", self.sql)
         self.assertIn("release.comissionado_id = v_assignment.id", self.sql)
 
+    def test_post_receipt_release_audit_context_matches_logged_entity(self):
+        release_section = self.sql.split(
+            "create or replace function public.liberar_fin_comissionado_recebimentos_existentes",
+            1,
+        )[1].split(
+            "create or replace function public.confirmar_com_pedido_comissao",
+            1,
+        )[0]
+
+        self.assertIn(
+            "'com_pedido_comissionados',\n    'financial_event'",
+            release_section,
+        )
+        self.assertIn(
+            "public.log_audited_rpc_change(\n"
+            "    'financeiro',\n"
+            "    'com_pedido_comissionados'",
+            release_section,
+        )
+        self.assertNotIn(
+            "'com_comissao_liberacoes',\n    'financial_event'",
+            release_section,
+        )
+
     def test_order_can_be_resolved_by_id_with_reason(self):
         self.assertIn("consultar_fin_pedido_comissionamento", self.sql)
         self.assertIn("motivo_inelegibilidade", self.sql)

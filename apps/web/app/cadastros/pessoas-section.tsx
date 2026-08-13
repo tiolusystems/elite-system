@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { PersonCommercialStructureAndCommission } from "@/app/cadastros/person-commercial-structure-and-commission";
+
 import {
   closePessoaAreaComercialAction,
   deactivatePessoaComercialAction,
@@ -24,6 +26,7 @@ import type {
   MasterDataCommercialArea,
   MasterDataPerson,
   MasterDataPersonArea,
+  MasterDataPersonCommissionWorkspace,
   MasterDataPersonRole
 } from "@/lib/master-data";
 
@@ -38,6 +41,7 @@ type PessoasSectionProps = {
   pessoaSelecionadaId: number | null;
   modoNovo: boolean;
   gravacaoDisponivel: boolean;
+  commissionWorkspace: MasterDataPersonCommissionWorkspace | null;
 };
 
 export function PessoasSection({
@@ -50,7 +54,8 @@ export function PessoasSection({
   filtroSituacao,
   pessoaSelecionadaId,
   modoNovo,
-  gravacaoDisponivel
+  gravacaoDisponivel,
+  commissionWorkspace
 }: PessoasSectionProps) {
   const consulta = busca.trim().toLocaleLowerCase("pt-BR");
   const papeisPorPessoa = groupRoles(papeis);
@@ -144,9 +149,10 @@ export function PessoasSection({
             pessoa={pessoaSelecionada}
             pessoas={pessoas}
             vinculosAreas={vinculosAreas.filter((vinculo) => vinculo.pessoaId === pessoaSelecionada.id)}
+            commissionWorkspace={commissionWorkspace}
           />
         ) : modoNovo ? (
-          <PersonCreateForm gravacaoDisponivel={gravacaoDisponivel} pessoas={pessoas} papeisPorPessoa={papeisPorPessoa} />
+          <PersonCreateForm gravacaoDisponivel={gravacaoDisponivel} />
         ) : (
           <div className="shell-state shell-state-empty client-selection-state">
             <span className="shell-state-label">Visão detalhada</span>
@@ -164,19 +170,7 @@ export function PessoasSection({
   );
 }
 
-function PersonCreateForm({
-  gravacaoDisponivel,
-  pessoas,
-  papeisPorPessoa
-}: {
-  gravacaoDisponivel: boolean;
-  pessoas: MasterDataPerson[];
-  papeisPorPessoa: Map<number, MasterDataPersonRole[]>;
-}) {
-  const sellers = pessoas.filter((pessoa) =>
-    pessoa.status === "active"
-    && (papeisPorPessoa.get(pessoa.id) ?? []).some((role) => role.papel === "vendedor" || role.papel === "gerente")
-  ).map((pessoa) => ({ id: pessoa.id, nome: pessoa.nome }));
+function PersonCreateForm({ gravacaoDisponivel }: { gravacaoDisponivel: boolean }) {
   return (
     <section className="panel form-panel client-form-panel" id="cadastro-pessoa" aria-labelledby="cadastro-pessoa-title">
       <div className="panel-header">
@@ -186,7 +180,7 @@ function PersonCreateForm({
         </div>
         <span className="pill">{gravacaoDisponivel ? "Gravação disponível" : "Somente consulta"}</span>
       </div>
-      <GovernedPersonCreateForm enabled={gravacaoDisponivel} sellers={sellers} />
+      <GovernedPersonCreateForm enabled={gravacaoDisponivel} />
     </section>
   );
 }
@@ -198,7 +192,8 @@ function PersonDetail({
   pessoas,
   areas,
   vinculosAreas,
-  gravacaoDisponivel
+  gravacaoDisponivel,
+  commissionWorkspace
 }: {
   pessoa: MasterDataPerson;
   papeis: MasterDataPersonRole[];
@@ -207,10 +202,9 @@ function PersonDetail({
   areas: MasterDataCommercialArea[];
   vinculosAreas: MasterDataPersonArea[];
   gravacaoDisponivel: boolean;
+  commissionWorkspace: MasterDataPersonCommissionWorkspace | null;
 }) {
-  const pessoasPorId = new Map(pessoas.map((item) => [item.id, item]));
   const areasPorId = new Map(areas.map((item) => [item.id, item]));
-  const responsible = pessoa.vendedorResponsavelId ? pessoasPorId.get(pessoa.vendedorResponsavelId) : null;
   const roleValues = papeis.map((papel) => papel.papel);
   const activeAreas = areas.filter((area) => area.status === "active");
 
@@ -228,7 +222,7 @@ function PersonDetail({
         <dl className="client-summary-grid">
           <div><dt>Código legado</dt><dd>{formatLegacyCode(pessoa.codigoLegado)}</dd></div>
           <div><dt>Papéis vigentes</dt><dd>{papeis.length}</dd></div>
-          <div><dt>Responsável</dt><dd>{responsible?.nome ?? "Não se aplica"}</dd></div>
+          <div><dt>Estrutura comercial</dt><dd>{(commissionWorkspace?.relationships ?? []).filter((relation) => relation.originPersonId === pessoa.id && relation.status === "active").length} vínculo(s)</dd></div>
           <div><dt>Áreas comerciais</dt><dd>{vinculosAreas.filter((item) => item.status === "active").length}</dd></div>
         </dl>
         <div className="role-chip-list" aria-label="Papéis comerciais vigentes">
@@ -265,7 +259,6 @@ function PersonDetail({
           <input name="pessoa_id" type="hidden" value={pessoa.id} />
           <div className="form-grid client-form-grid">
             <label>Tipo comercial<select name="tipo_comercial" defaultValue={pessoa.tipoComercial ?? ""} required>{TIPO_COMERCIAL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-            <SellerField currentPersonId={pessoa.id} defaultValue={pessoa.vendedorResponsavelId} pessoas={pessoas} papeisPorPessoa={papeisPorPessoa} />
           </div>
           <RoleFields defaultRoles={roleValues} />
           <div className="form-grid client-form-grid role-reason-grid">
@@ -275,6 +268,14 @@ function PersonDetail({
           <div className="form-footer"><span>Esta alteração não muda o perfil de login do usuário.</span><button className="primary-button" disabled={!gravacaoDisponivel} type="submit">Salvar papéis</button></div>
         </form>
       </section>
+
+      <PersonCommercialStructureAndCommission
+        person={pessoa}
+        people={pessoas}
+        rolesByPerson={papeisPorPessoa}
+        personRoles={papeis}
+        workspace={commissionWorkspace}
+      />
 
       <section className="panel related-records-panel" aria-labelledby="acesso-sistema-title">
         <div className="panel-header">
@@ -375,34 +376,6 @@ function RoleFields({ defaultRoles }: { defaultRoles: string[] }) {
         ))}
       </div>
     </fieldset>
-  );
-}
-
-function SellerField({
-  pessoas,
-  papeisPorPessoa,
-  defaultValue,
-  currentPersonId
-}: {
-  pessoas: MasterDataPerson[];
-  papeisPorPessoa: Map<number, MasterDataPersonRole[]>;
-  defaultValue?: number | null;
-  currentPersonId?: number;
-}) {
-  const sellers = pessoas.filter((pessoa) =>
-    pessoa.id !== currentPersonId
-    && pessoa.status === "active"
-    && (papeisPorPessoa.get(pessoa.id) ?? []).some((papel) => papel.papel === "vendedor" || papel.papel === "gerente")
-  );
-  return (
-    <label>
-      Vendedor responsável
-      <select name="vendedor_responsavel_id" defaultValue={defaultValue ?? ""}>
-        <option value="">Não se aplica</option>
-        {sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.nome}</option>)}
-      </select>
-      <small>Obrigatório apenas para agente vinculado.</small>
-    </label>
   );
 }
 

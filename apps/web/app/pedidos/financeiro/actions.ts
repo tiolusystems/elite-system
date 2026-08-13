@@ -7,11 +7,25 @@ import { getRuntimeStatus } from "@/lib/runtime";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export type CommissionChangeReview = {
+  requestId: string;
+  orderCode: string;
+  personName: string;
+  role: string;
+  percentage: number;
+  orderTotal: number;
+  receivedValue: number;
+  expectedValue: number;
+  immediateRelease: number;
+  justification: string;
+};
+
 export type FinanceActionState = {
-  status: "idle" | "success" | "error";
+  status: "idle" | "review" | "success" | "error";
   message: string;
   fieldErrors: Record<string, string>;
   resultId: string;
+  review: CommissionChangeReview | null;
 };
 
 export const INITIAL_FINANCE_ACTION_STATE: FinanceActionState = {
@@ -19,6 +33,7 @@ export const INITIAL_FINANCE_ACTION_STATE: FinanceActionState = {
   message: "",
   fieldErrors: {},
   resultId: "",
+  review: null,
 };
 
 export async function assignOrderCommissionAction(
@@ -35,17 +50,21 @@ export async function assignOrderCommissionAction(
   const reason = field(formData, "justificativa");
   const fieldErrors: Record<string, string> = {};
 
-  if (!orderId) fieldErrors.pedido_id = "Selecione um pedido aprovado.";
+  if (!orderId) fieldErrors.pedido_id = "Selecione uma venda liberada.";
   if (!personId) fieldErrors.pessoa_id = "Selecione a pessoa comissionada.";
   if (!percentage || percentage > 100) fieldErrors.percentual_comissao = "Informe um percentual maior que zero e de até 100%.";
-  if (!new Set(["vendedor", "agente", "gerente", "outro"]).has(role)) fieldErrors.papel_comissao = "Selecione um papel válido.";
-  if (reason.length < 10) fieldErrors.justificativa = "Explique a atribuição com pelo menos 10 caracteres.";
+  if (!new Set(["vendedor", "agente", "gerente", "tecnico_campo", "outro"]).has(role)) {
+    fieldErrors.papel_comissao = "Selecione um papel válido.";
+  }
+  if (reason.length < 10) fieldErrors.justificativa = "Explique a participação com pelo menos 10 caracteres.";
   if (!idempotencyKey) fieldErrors.idempotency_key = "Atualize a página e tente novamente.";
-  if (Object.keys(fieldErrors).length) return failure("Revise os campos destacados para definir a comissão.", fieldErrors);
+  if (Object.keys(fieldErrors).length) {
+    return failure("Revise os campos destacados antes de preparar a alteração.", fieldErrors);
+  }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "definir_com_pedido_comissao_idempotente", {
-    p_idempotency_key: idempotencyKey,
+  const { data, error } = await auditedRpc(supabase, "propor_com_pedido_comissao_idempotente", {
+    p_request_key: idempotencyKey,
     p_pedido_id: orderId,
     p_pessoa_id: personId,
     p_papel_comissao: role,
@@ -53,18 +72,66 @@ export async function assignOrderCommissionAction(
     p_justificativa: reason,
   }, {
     metadata: {
-      action_key: "pedidos.commissions.assign",
+      action_key: "financeiro.commissions.revision.request",
       axis: "change_type",
-      domain: "pedidos",
-      entity: "com_pedido_comissionados",
+      domain: "financeiro",
+      entity: "com_comissao_alteracao_solicitacoes",
       entity_id: String(orderId),
-      failure_action: "pedidos.comissao_definicao_failed",
+      failure_action: "financeiro.comissao_revisao_failed",
     },
   });
   if (error) return rpcFailure(error.message, "assignment");
 
+  const payload = record(data);
+  const preview = record(payload.preview);
+  const requestId = String(payload.solicitacao_id ?? "");
+  if (!requestId) return failure("A revisão foi preparada, mas o identificador da confirmação não foi retornado.");
+
+  return reviewState("Revise o impacto antes da confirmação final.", {
+    requestId,
+    orderCode: String(preview.pedido_codigo ?? ""),
+    personName: String(preview.pessoa_nome ?? ""),
+    role: String(preview.papel_comissao ?? role),
+    percentage: Number(preview.percentual_comissao ?? percentage),
+    orderTotal: Number(preview.pedido_valor_total ?? 0),
+    receivedValue: Number(preview.valor_recebido_ativo ?? 0),
+    expectedValue: Number(preview.valor_previsto ?? 0),
+    immediateRelease: Number(preview.valor_liberavel_imediato_estimado ?? 0),
+    justification: String(preview.justificativa ?? reason),
+  });
+}
+
+export async function confirmOrderCommissionAction(
+  _previous: FinanceActionState,
+  formData: FormData
+): Promise<FinanceActionState> {
+  if (!configured()) return failure("O serviço financeiro está indisponível neste ambiente.");
+
+  const requestId = uuid(formData, "solicitacao_id");
+  if (!requestId) return failure("A revisão não possui um identificador válido. Refazer a revisão.");
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await auditedRpc(supabase, "confirmar_com_pedido_comissao_idempotente", {
+    p_solicitacao_id: requestId,
+  }, {
+    metadata: {
+      action_key: "financeiro.commissions.revision.confirm",
+      axis: "change_type",
+      domain: "financeiro",
+      entity: "com_comissao_alteracao_solicitacoes",
+      entity_id: requestId,
+      failure_action: "financeiro.comissao_confirmacao_failed",
+    },
+  });
+  if (error) return rpcFailure(error.message, "assignment");
+
+  const releases = Number(record(data).liberacoes_recebimentos_existentes ?? 0);
   revalidateFinance();
-  return success("Comissionado definido. A previsão permanece congelada antes do primeiro recebimento.");
+  return success(
+    releases > 0
+      ? "Alteração confirmada. O novo direito foi registrado e os recebimentos existentes foram considerados na liberação proporcional."
+      : "Alteração confirmada. O novo direito de comissão foi registrado."
+  );
 }
 
 export async function registerReceiptAction(
@@ -239,11 +306,21 @@ function uuid(data: FormData, name: string) {
 }
 
 function success(message: string): FinanceActionState {
-  return { status: "success", message, fieldErrors: {}, resultId: randomUUID() };
+  return { status: "success", message, fieldErrors: {}, resultId: randomUUID(), review: null };
+}
+
+function reviewState(message: string, review: CommissionChangeReview): FinanceActionState {
+  return { status: "review", message, fieldErrors: {}, resultId: randomUUID(), review };
 }
 
 function failure(message: string, fieldErrors: Record<string, string> = {}): FinanceActionState {
-  return { status: "error", message, fieldErrors, resultId: randomUUID() };
+  return { status: "error", message, fieldErrors, resultId: randomUUID(), review: null };
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
 function rpcFailure(
@@ -289,8 +366,20 @@ function rpcFailure(
   if (value.includes("already") || value.includes("ja_liberada")) {
     return failure("A operação já foi processada. Nenhum valor foi duplicado.");
   }
-  if (value.includes("commission assignment must precede")) {
-    return failure("Pedido não elegível para comissionamento porque já possui recebimento.");
+  if (value.includes("commission context changed after review")) {
+    return failure("Os dados deste pedido mudaram desde sua revisão. Confira novamente antes de confirmar.");
+  }
+  if (value.includes("commission change request expired")) {
+    return failure("A revisão expirou. Refazer a revisão antes de confirmar.");
+  }
+  if (value.includes("only sale orders generate commission")) {
+    return failure("Somente pedidos de venda podem gerar comissão.");
+  }
+  if (value.includes("commission request key reused")) {
+    return failure("A tentativa anterior foi alterada. Refazer a revisão com uma nova solicitação.");
+  }
+  if (value.includes("commission participant already exists")) {
+    return failure("Esta pessoa já participa da comissão neste papel.");
   }
   if (value.includes("commission percentage")) {
     return failure("Percentual de comissão inválido.", { percentual_comissao: "Informe um percentual maior que zero e de até 100%." });

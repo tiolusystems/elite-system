@@ -175,12 +175,12 @@ export const ROUTE_MANUALS: RouteManual[] = [
     blockers: ["Versao em rascunho ou POP inativo nao pode receber novo vinculo.", "Falta de justificativa impede publicacao, ativacao e mudanca de aplicabilidade."],
     records: ["Versoes, estado, aplicabilidade, congelamento na OP e observacoes do CQ permanecem auditaveis."]
   }),
-  manual("/pedidos/financeiro/comissionamento", "Financeiro", "Comissionamento do pedido", "Definir as pessoas e os percentuais previstos de uma venda antes do primeiro recebimento.", {
-    before: ["O pedido deve estar liberado e ainda não pode possuir recebimento.", "As pessoas comissionadas precisam estar ativas e cadastradas com seus papéis comerciais."],
-    steps: ["Pesquise o pedido pelo código ou cliente.", "Abra o pedido e confira o total da venda.", "Adicione uma pessoa por vez, informando papel e percentual.", "Revise o total distribuído e registre uma justificativa operacional.", "Confirme o comissionamento antes do primeiro recebimento."],
-    after: ["A definição gera somente comissão prevista.", "A comissão será liberada proporcionalmente quando o recebimento for registrado."],
+  manual("/pedidos/financeiro/comissionamento", "Financeiro", "Comissionamento do pedido", "Consultar e revisar os participantes de uma venda liberada, inclusive após recebimentos.", {
+    before: ["O pedido deve ser uma venda liberada; recebimentos parciais ou totais não impedem incluir um participante.", "As pessoas comissionadas precisam estar ativas e cadastradas com seus papéis comerciais."],
+    steps: ["Pesquise o pedido pelo código ou cliente.", "Abra o pedido e confira o total da venda.", "Adicione uma pessoa por vez, informando papel e percentual.", "Revise o total distribuído e registre uma justificativa operacional.", "Revise o impacto e confirme a alteração na segunda etapa."],
+    after: ["A confirmação cria o direito de comissão; recebimentos já existentes podem liberar imediatamente a parcela proporcional.", "A comissão será liberada proporcionalmente quando o recebimento for registrado."],
     roles: ["A operação exige a alçada individual para definir comissionados; nenhum cargo a concede automaticamente."],
-    blockers: ["Pedido sem liberação, pessoa inativa, percentual inválido, duplicidade ou recebimento já existente impedem a alteração."],
+    blockers: ["Pedido que não seja venda ou ainda não esteja liberado, pessoa inativa, percentual inválido ou duplicidade impedem a alteração; mudança de contexto exige nova revisão."],
     records: ["Pessoas, papéis, percentuais, valores previstos, justificativa, usuário e data permanecem auditáveis."],
   }),
   manual("/pedidos/financeiro/recebimentos", "Financeiro", "Recebimentos", "Localizar pedidos com saldo financeiro e registrar valores efetivamente recebidos.", {

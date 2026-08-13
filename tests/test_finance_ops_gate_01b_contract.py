@@ -98,7 +98,7 @@ class FinanceOpsGate01BContractTests(unittest.TestCase):
         assignment_page = (FINANCE / "comissionamento/page.tsx").read_text(encoding="utf-8")
         assignment_form = (FINANCE / "finance-forms.tsx").read_text(encoding="utf-8")
         self.assertIn('entity="pessoas"', assignment_form)
-        self.assertIn('entity="pedidos"', assignment_page)
+        self.assertIn('entity="pedidos-comissionamento"', assignment_page)
         self.assertNotIn("getCommissionPeople(personQuery)", assignment_page)
         for metadata in ("Ambiente", "Emitido por", "Gerado em", "Versão"):
             self.assertIn(metadata, export)

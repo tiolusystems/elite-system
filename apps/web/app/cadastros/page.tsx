@@ -4,7 +4,7 @@ import { ClientesSection } from "@/app/cadastros/clientes-section";
 import { PessoasSection } from "@/app/cadastros/pessoas-section";
 import { VehiclesSection } from "@/app/cadastros/vehicles-section";
 import { searchCorporateLookup } from "@/lib/corporate-lookups";
-import { getMasterDataClientWorkspace, getMasterDataDashboard } from "@/lib/master-data";
+import { getMasterDataClientWorkspace, getMasterDataDashboard, getPersonCommissionWorkspace } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -87,7 +87,7 @@ const query = searchText.toLocaleLowerCase("pt-BR");
   const clientStatus = singleValue(params.situacao) ?? "";
   const clientSort = singleValue(params.ordem) ?? "nome_asc";
   const clientPage = positiveInteger(singleValue(params.pagina)) ?? 1;
-const [dashboard, clientWorkspace, globalResults] = await Promise.all([
+const [dashboard, clientWorkspace, globalResults, personCommissionWorkspace] = await Promise.all([
     getMasterDataDashboard({ lightweight: activeGroup?.key === "clientes" }),
     activeGroup?.key === "clientes"
       ? getMasterDataClientWorkspace({
@@ -99,7 +99,10 @@ const [dashboard, clientWorkspace, globalResults] = await Promise.all([
           carregarLista: !selectedClientId && !newClientMode
         })
       : Promise.resolve(null),
-    !activeGroup && searchText ? searchGlobalCadastros(searchText) : Promise.resolve([])
+    !activeGroup && searchText ? searchGlobalCadastros(searchText) : Promise.resolve([]),
+    activeGroup?.key === "pessoas" && selectedPersonId
+      ? getPersonCommissionWorkspace(selectedPersonId)
+      : Promise.resolve(null)
   ]);
   const pendingCount = dashboard.validationIssues.length;
   const visibleGroups = query
@@ -281,6 +284,7 @@ const [dashboard, clientWorkspace, globalResults] = await Promise.all([
             pessoaSelecionadaId={selectedPersonId}
             pessoas={dashboard.pessoas}
             vinculosAreas={dashboard.pessoaAreas}
+            commissionWorkspace={personCommissionWorkspace}
           />
         ) : null}
 
@@ -519,6 +523,56 @@ function messageForResult(result: string | undefined): { kind: "ok" | "warning";
       kind: "ok",
       title: "Vínculo encerrado",
       detail: "A vigência foi encerrada sem excluir o histórico comercial."
+    },
+    pessoa_relationship_linked: {
+      kind: "ok",
+      title: "Vínculo comercial criado",
+      detail: "A relação comercial foi registrada com tipo, vigência e justificativa."
+    },
+    pessoa_relationship_closed: {
+      kind: "ok",
+      title: "Vínculo comercial encerrado",
+      detail: "A relação deixou de valer na data informada sem apagar o histórico."
+    },
+    commission_policy_draft_created: {
+      kind: "ok",
+      title: "Nova versão em rascunho",
+      detail: "A política ainda não afeta novas vendas até ser publicada."
+    },
+    commission_policy_rate_saved: {
+      kind: "ok",
+      title: "Percentual salvo",
+      detail: "A taxa foi registrada no rascunho para o grupo e papel selecionados."
+    },
+    commission_policy_rate_removed: {
+      kind: "ok",
+      title: "Percentual removido",
+      detail: "A taxa foi removida apenas do rascunho; versões publicadas não foram alteradas."
+    },
+    commission_policy_published: {
+      kind: "ok",
+      title: "Política publicada",
+      detail: "A nova versão passa a valer na vigência informada e a versão anterior permanece histórica."
+    },
+    missing_person_relationship_required: {
+      kind: "warning",
+      title: "Dados do vínculo incompletos",
+      detail: "Informe a pessoa de destino, a vigência e uma justificativa com pelo menos dez caracteres."
+    },
+    missing_commission_policy_required: {
+      kind: "warning",
+      title: "Dados da política incompletos",
+      detail: "Informe vigência e justificativa com pelo menos dez caracteres."
+    },
+    missing_commission_policy_confirmation: {
+      kind: "warning",
+      title: "Confirmação obrigatória",
+      detail: "Revise a política, marque a confirmação e informe o motivo da publicação."
+    },
+    invalid_commission_policy_rate: {
+      kind: "warning",
+      title: "Percentual inválido",
+      detail: "Selecione grupo e papel e informe percentual maior que zero e de até 100%."
     },
     mp_created: {
       kind: "ok",

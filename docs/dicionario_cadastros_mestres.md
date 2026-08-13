@@ -122,7 +122,7 @@ Tipos comerciais previstos:
 | Tipo | Descricao | Pode receber comissao |
 |---|---|---:|
 | `funcionario_elite` | Pessoa do time interno Elite. | Sim |
-| `agente_vinculado` | Agente com vinculo a outro vendedor do time Elite. | Sim |
+| `agente_vinculado` | Agente que pode possuir vinculo comercial temporal com vendedor do time Elite. | Sim |
 | `agente_direto_elite` | Agente direto da Elite. | Sim |
 | `vendedor_direto_elite` | Vendedor de venda direta Elite. | Sim |
 | `tecnico_campo` | Tecnico que faz aplicacoes e pode receber comissao por aplicacao, produto desenvolvido ou parcela de receita. | Sim |
@@ -138,7 +138,7 @@ Tipos comerciais previstos:
 | `grafias_incorretas` | Novo | Nao | Ajuda a migracao a reconhecer nomes digitados errado. |
 | `tipo_comercial` | Novo | Sim para comissionado | Um dos tipos comerciais previstos. |
 | `papeis` | `Funcao` + novo | Sim | Pode incluir vendedor, agente, tecnico, entregador, funcionario etc. |
-| `vendedor_responsavel_id` | Novo | Quando agente vinculado | Vendedor Elite responsavel por agente vinculado. |
+| `vendedor_responsavel_id` | Legado | Nao | Campo legado preservado; novos vinculos agente-vendedor usam relacionamento temporal tipado e auditado. |
 | `status` | `Ativo/Inativo` | Sim | Normalizar para status padrao. |
 | `admissao` | `Admissao` | Nao | Data historica. |
 | `demissao` | `Demissao` | Nao | Data historica. |
@@ -154,7 +154,7 @@ Regras iniciais:
 - entregador nunca vira vendedor automaticamente.
 - vendedor pode acumular papel de entregador.
 - entregador pode ou nao ser funcionario Elite.
-- agente vinculado deve apontar para um vendedor responsavel do time Elite.
+- agente pode existir sem vendedor responsavel; quando houver vinculo agente-vendedor, ele deve ser temporal, tipado e auditado.
 - tecnico de campo pode receber comissao por aplicacao, desenvolvimento de produto ou parcela da receita.
 - gerente pode receber comissao sobre vendedores especificos, regioes de atuacao, clientes sob gestao ou campanhas.
 - vendedor/gerente pode acumular comissao propria de venda e comissao gerencial, conforme regra aprovada.

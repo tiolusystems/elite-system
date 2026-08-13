@@ -52,3 +52,29 @@ Nome igual nao prova duplicidade. O sistema usa codigo legado, nomes
 normalizados, apelidos, grafias historicas e vinculos como sinais para revisao.
 Codigos legados iguais sao bloqueados; homonimos podem prosseguir somente com
 confirmacao justificada e auditada.
+
+
+## Estrutura comercial canônica
+
+A hierarquia comercial não é inferida de um único campo de responsável.
+
+Os vínculos possíveis são independentes e opcionais:
+
+- **Agente → Vendedor**
+- **Vendedor → Gerente**
+
+Cada vínculo possui início e fim de vigência. Encerrar ou criar um novo vínculo
+não altera vendas históricas. O campo `vendedor_responsavel_id` permanece
+somente como compatibilidade para dados anteriores e não deve ser usado como
+fonte canônica por novas funcionalidades.
+
+## Política de comissão da pessoa
+
+A pessoa pode ser marcada como comissionável ou não com uma política versionada.
+
+Quando comissionável, cada versão registra percentuais por grupo de produto,
+papel na comissão e vigência. Uma nova versão publicada encerra a vigência da
+versão anterior sem apagá-la.
+
+A ausência de política ou de taxa para determinado grupo não autoriza o sistema
+a inventar percentual.

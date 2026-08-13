@@ -16,6 +16,7 @@ export const CORPORATE_LOOKUP_CONTRACTS = {
   produtos: { label: "Produto", behavior: "selection", scope: "corporate" },
   "materias-primas": { label: "Matéria-prima", behavior: "selection", scope: "corporate" },
   pedidos: { label: "Pedido", behavior: "selection", scope: "corporate" },
+  "pedidos-comissionamento": { label: "Venda para comissionamento", behavior: "selection", scope: "commercial" },
   "pedidos-romaneio": { label: "Pedido com saldo", behavior: "selection", scope: "corporate" },
   romaneios: { label: "Romaneio", behavior: "selection", scope: "corporate" },
   "lotes-pa": { label: "Lote PA", behavior: "selection", scope: "corporate" },
@@ -309,6 +310,22 @@ export async function searchCorporateLookup(input: LookupInput): Promise<Corpora
     const { data, error, count } = await builder.order("nome", { ascending: true }).range(offset, offset + pageSize - 1);
     if (error) throw error;
     return pageResult(records(data).map((row) => ({ id: Number(row.id), label: String(row.nome), detail: optional(row.sku_corrigido), status: optional(row.status) })), page, pageSize, count ?? 0);
+  }
+
+  if (input.entity === "pedidos-comissionamento") {
+    const response = await supabase.rpc("buscar_fin_pedidos_comissionamento", {
+      p_query: query || null,
+      p_limit: pageSize,
+      p_offset: offset,
+    });
+    if (response.error) throw response.error;
+    const rows = records(response.data);
+    return pageResult(rows.map((row) => ({
+      id: Number(row.pedido_id),
+      label: String(row.codigo_pedido),
+      detail: joinDetail([optional(row.cliente_nome), "Venda liberada"]),
+      status: optional(row.status),
+    })), page, pageSize, Number(rows[0]?.total_count ?? 0));
   }
 
   if (input.entity === "pedidos" || input.entity === "pedidos-romaneio") {

@@ -34,22 +34,23 @@ class CadastroDomainTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "uf must have exactly two letters"):
             Cliente(nome="Cliente A", cidade="Ribeirao Preto", uf="SPO")
 
-    def test_agente_vinculado_requires_responsible_elite_seller(self) -> None:
-        with self.assertRaisesRegex(ValueError, "vendedor_responsavel_id is required"):
-            PessoaComercial(
-                nome="Agente A",
-                papeis=(PapelPessoa.AGENTE, PapelPessoa.COMISSIONADO),
-                tipo_comercial=TipoComercial.AGENTE_VINCULADO,
-            )
-
-        agente = PessoaComercial(
+    def test_agente_vinculado_can_exist_without_responsible_elite_seller(self) -> None:
+        agente_sem_vinculo = PessoaComercial(
             nome="Agente A",
+            papeis=(PapelPessoa.AGENTE, PapelPessoa.COMISSIONADO),
+            tipo_comercial=TipoComercial.AGENTE_VINCULADO,
+        )
+        self.assertIsNone(agente_sem_vinculo.vendedor_responsavel_id)
+
+        agente_com_vinculo_legado = PessoaComercial(
+            nome="Agente B",
             papeis=("agente", "comissionado"),
             tipo_comercial="agente_vinculado",
             vendedor_responsavel_id="VEN001",
         )
-        self.assertEqual(agente.tipo_comercial, TipoComercial.AGENTE_VINCULADO)
-        self.assertIn(PapelPessoa.AGENTE, agente.papeis)
+        self.assertEqual(agente_com_vinculo_legado.tipo_comercial, TipoComercial.AGENTE_VINCULADO)
+        self.assertEqual(agente_com_vinculo_legado.vendedor_responsavel_id, "VEN001")
+        self.assertIn(PapelPessoa.AGENTE, agente_com_vinculo_legado.papeis)
 
     def test_embalagem_controlling_stock_requires_mp_link(self) -> None:
         with self.assertRaisesRegex(ValueError, "materia_prima_id is required"):

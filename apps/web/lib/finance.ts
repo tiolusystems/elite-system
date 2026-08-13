@@ -66,6 +66,7 @@ export type CommissionAssignment = {
   percentage: number;
   expectedValue: number;
   status: string;
+  origin: string | null;
 };
 
 export type CommissionOrder = {
@@ -77,6 +78,13 @@ export type CommissionOrder = {
   assignments: CommissionAssignment[];
   totalPercentage: number;
   totalCount: number;
+};
+
+export type CommissionOrderDetail = CommissionOrder & {
+  type: string;
+  eligible: boolean;
+  ineligibilityReason: string | null;
+  received: number;
 };
 
 export type CommissionPerson = {
@@ -265,6 +273,7 @@ export async function searchCommissionOrders(query: string, page = 1): Promise<F
           percentage: Number(value.percentual ?? 0),
           expectedValue: Number(value.valor_previsto ?? 0),
           status: String(value.status),
+          origin: optionalString(value.origem),
         };
       }),
       totalPercentage: Number(row.total_percentual ?? 0),
@@ -272,6 +281,52 @@ export async function searchCommissionOrders(query: string, page = 1): Promise<F
     })));
   } catch {
     return queryFailure("Não foi possível consultar os pedidos elegíveis agora.");
+  }
+}
+
+export async function getCommissionOrderById(
+  orderId: number
+): Promise<FinanceQueryResult<CommissionOrderDetail | null>> {
+  if (!getRuntimeStatus().supabaseConfigured) return queryFailure("Banco de homologação não configurado.");
+  if (!Number.isInteger(orderId) || orderId <= 0) return querySuccess(null);
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("consultar_fin_pedido_comissionamento", {
+      p_pedido_id: orderId,
+    });
+    if (error) return queryFailure(humanError(error.message));
+
+    const row = ((data ?? []) as Array<Record<string, unknown>>)[0];
+    if (!row) return querySuccess(null);
+
+    return querySuccess({
+      id: Number(row.pedido_id),
+      code: String(row.codigo_pedido),
+      clientName: String(row.cliente_nome),
+      total: Number(row.valor_total ?? 0),
+      status: String(row.status),
+      type: String(row.tipo_pedido),
+      eligible: row.elegivel === true,
+      ineligibilityReason: optionalString(row.motivo_inelegibilidade),
+      received: Number(row.valor_recebido ?? 0),
+      assignments: array(row.comissionados).map((item) => {
+        const value = object(item);
+        return {
+          personId: Number(value.pessoa_id),
+          personName: String(value.pessoa_nome),
+          role: String(value.papel),
+          percentage: Number(value.percentual ?? 0),
+          expectedValue: Number(value.valor_previsto ?? 0),
+          status: String(value.status),
+          origin: optionalString(value.origem),
+        };
+      }),
+      totalPercentage: Number(row.total_percentual ?? 0),
+      totalCount: 1,
+    });
+  } catch {
+    return queryFailure("Não foi possível abrir os dados de comissionamento desta venda agora.");
   }
 }
 

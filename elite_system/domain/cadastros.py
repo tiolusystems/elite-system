@@ -207,8 +207,7 @@ class PessoaComercial:
         if self.tipo_comercial is not None:
             tipo = _coerce_enum(TipoComercial, self.tipo_comercial, "tipo_comercial")
             object.__setattr__(self, "tipo_comercial", tipo)
-            if tipo == TipoComercial.AGENTE_VINCULADO:
-                _validate_required(self.vendedor_responsavel_id, "vendedor_responsavel_id")
+        _validate_optional_text(self.vendedor_responsavel_id, "vendedor_responsavel_id")
         _validate_optional_text(self.codigo_legado, "codigo_legado")
 
 

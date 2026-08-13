@@ -15,11 +15,10 @@ import {
   tipoComercialLabel
 } from "@/lib/master-data-governance";
 
-type SellerOption = { id: number; nome: string };
 
 const INITIAL_STATE: GovernedPersonCreateState = { status: "idle", candidates: [] };
 
-export function GovernedPersonCreateForm({ sellers, enabled }: { sellers: SellerOption[]; enabled: boolean }) {
+export function GovernedPersonCreateForm({ enabled }: { enabled: boolean }) {
   const [state, action, pending] = useActionState(reviewAndCreatePessoaComercialAction, INITIAL_STATE);
   const value = (key: string, fallback = "") => state.values?.[key] ?? fallback;
   const selectedRoles = state.roles ?? ["vendedor", "comissionado"];
@@ -34,14 +33,6 @@ export function GovernedPersonCreateForm({ sellers, enabled }: { sellers: Seller
           <select name="tipo_comercial" defaultValue={value("tipo_comercial", "vendedor_direto_elite")} required>
             {TIPO_COMERCIAL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
-        </label>
-        <label>
-          Vendedor responsável
-          <select name="vendedor_responsavel_id" defaultValue={value("vendedor_responsavel_id")}>
-            <option value="">Não se aplica</option>
-            {sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.nome}</option>)}
-          </select>
-          <small>Obrigatório somente para agente vinculado.</small>
         </label>
         <label className="wide-field">Apelidos<input name="apelidos" defaultValue={value("apelidos")} placeholder="Separe por ponto e vírgula" /></label>
         <label className="wide-field">Grafias históricas<input name="grafias_incorretas" defaultValue={value("grafias_incorretas")} placeholder="Grafias usadas em registros antigos" /></label>
@@ -72,7 +63,6 @@ export function GovernedPersonCreateForm({ sellers, enabled }: { sellers: Seller
                 </div>
                 <dl>
                   <div><dt>Papéis</dt><dd>{candidate.papeis.map(papelComercialLabel).join(", ") || "Não informados"}</dd></div>
-                  <div><dt>Responsável</dt><dd>{candidate.vendedor_responsavel_nome ?? "Não se aplica"}</dd></div>
                   <div><dt>Áreas</dt><dd>{candidate.areas.join(", ") || "Nenhuma área ativa"}</dd></div>
                   <div><dt>Semelhanças</dt><dd>{candidate.motivos.map(duplicateReasonLabel).join(", ")}</dd></div>
                 </dl>
@@ -93,7 +83,7 @@ export function GovernedPersonCreateForm({ sellers, enabled }: { sellers: Seller
       ) : null}
 
       <div className="form-footer">
-        <span>Homônimos são permitidos após revisão; código legado repetido é sempre bloqueado.</span>
+        <span>Homônimos exigem revisão. Vínculos com vendedor ou gerente são configurados separadamente após o cadastro.</span>
         <button className="primary-button" disabled={!enabled || pending} type="submit">
           {pending ? "Verificando..." : state.candidates.length > 0 ? "Confirmar cadastro" : "Cadastrar pessoa"}
         </button>

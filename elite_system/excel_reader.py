@@ -46,6 +46,15 @@ class ExcelTable:
 
 
 @dataclass(frozen=True)
+class ExcelWorksheetRow:
+    sheet_name: str
+    sheet_order: int
+    excel_row_number: int
+    values: dict[str, str | None]
+    formulas: dict[str, str]
+
+
+@dataclass(frozen=True)
 class ExcelColumnStructure:
     column: str
     nonempty_cells: int
@@ -122,6 +131,45 @@ def extract_tables(workbook_path: str | Path, table_names: set[str] | None = Non
                 tables.append(_materialize_table(sheet_name, table, cells))
 
         return tables
+
+
+def extract_worksheet_rows(workbook_path: str | Path) -> list[ExcelWorksheetRow]:
+    """Extract populated worksheet rows while preserving XLSX numeric lexemes as text."""
+
+    path = Path(workbook_path)
+    with zipfile.ZipFile(path) as zf:
+        shared_strings = _load_shared_strings(zf)
+        workbook = _xml(zf, "xl/workbook.xml")
+        workbook_rels = _rels(zf, "xl/_rels/workbook.xml.rels")
+        rows: list[ExcelWorksheetRow] = []
+        for order, sheet in enumerate(workbook.findall("main:sheets/main:sheet", NS), start=1):
+            sheet_name = sheet.attrib["name"]
+            sheet_xml = _workbook_target(workbook_rels[sheet.attrib[RID]]["Target"])
+            row_values: dict[int, dict[str, str | None]] = {}
+            row_formulas: dict[int, dict[str, str]] = {}
+            root = _xml(zf, sheet_xml)
+            for cell in root.findall(".//main:c", NS):
+                address = cell.attrib.get("r")
+                if not address:
+                    continue
+                column, row_number = _cell_parts(address)
+                value, formula = _raw_cell_value(cell, shared_strings)
+                if value is None and formula is None:
+                    continue
+                row_values.setdefault(row_number, {})[column] = value
+                if formula is not None:
+                    row_formulas.setdefault(row_number, {})[column] = formula
+            for row_number in sorted(row_values):
+                rows.append(
+                    ExcelWorksheetRow(
+                        sheet_name=sheet_name,
+                        sheet_order=order,
+                        excel_row_number=row_number,
+                        values=row_values[row_number],
+                        formulas=row_formulas.get(row_number, {}),
+                    )
+                )
+        return rows
 
 
 def inspect_workbook_structure(workbook_path: str | Path) -> ExcelWorkbookStructure:
@@ -377,6 +425,22 @@ def _cell_value(cell: ET.Element, shared_strings: list[str]) -> tuple[object, st
     if value_node is not None:
         return _coerce_scalar(value_node.text), None
     return None, None
+
+
+def _raw_cell_value(cell: ET.Element, shared_strings: list[str]) -> tuple[str | None, str | None]:
+    cell_type = cell.attrib.get("t")
+    formula_node = cell.find("main:f", NS)
+    value_node = cell.find("main:v", NS)
+    formula = formula_node.text if formula_node is not None else None
+    if cell_type == "s" and value_node is not None:
+        try:
+            value = shared_strings[int(value_node.text or "0")]
+        except (ValueError, IndexError):
+            value = value_node.text
+        return value, formula
+    if cell_type == "inlineStr":
+        return "".join(node.text or "" for node in cell.iter(f"{{{NS['main']}}}t")), formula
+    return (value_node.text if value_node is not None else None), formula
 
 
 def _coerce_scalar(value: str | None) -> object:

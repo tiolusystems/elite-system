@@ -209,7 +209,7 @@ codigo.
 
 `criarPedidoComercialAction`, `criarPedidoEspecialVendedorAction`,
 `criarPedidoVendedorAction`, `decidirPedidoGerencialAction`,
-`ajustarLimiteCreditoAction`, `createPedidoRascunhoAction`,
+`ajustarLimiteCreditoAction`,
 `criarTrocaPedidoAction`, `assignOrderCommissionAction`,
 `confirmOrderCommissionAction`, `registerReceiptAction`, `payCommissionAction`,
 `adjustCommissionAction`.

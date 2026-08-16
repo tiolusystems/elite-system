@@ -6,16 +6,19 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class OrdersBlockedCreationGateTest(unittest.TestCase):
-    def test_legacy_rpc_cannot_create_released_order(self):
-        sql = (ROOT / "supabase/migrations/0086_orders_blocked_creation_gate.sql").read_text(encoding="utf-8")
-        self.assertIn("p_status text default 'blocked'", sql)
-        self.assertIn("if p_status <> 'blocked' then raise exception 'order must start blocked'", sql)
-        self.assertIn("'pendente_aprovacao', 'blocked', 'blocked'", sql)
-        self.assertIn("if p_vendedor_id is null then raise exception 'responsible seller is required'", sql)
+    def test_canonical_creation_smoke_requires_blocked_order(self):
+        smoke = (ROOT / "tests/sql/validate_0086_orders_blocked_creation.sql").read_text(encoding="utf-8")
+        self.assertIn("create_com_pedido_vendedor_programado_idempotente", smoke)
+        self.assertIn("operational order did not start blocked", smoke)
+        self.assertIn("operational order did not enter approval queue", smoke)
+        self.assertIn("legacy operational order entrypoint remains executable", smoke)
 
     def test_server_actions_always_send_blocked(self):
         actions = (ROOT / "apps/web/app/pedidos/actions.ts").read_text(encoding="utf-8")
-        self.assertGreaterEqual(actions.count('const status = "blocked";'), 2)
+        self.assertIn('"create_com_pedido_vendedor_programado_idempotente"', actions)
+        self.assertIn('"create_com_pedido_vendedor_especial_idempotente"', actions)
+        self.assertNotIn("createPedidoRascunhoAction", actions)
+        self.assertNotIn('"create_com_pedido_operacional"', actions)
         self.assertNotIn('field(formData, "status_troca")', actions)
         self.assertNotIn('field(formData, "status") || "draft"', actions)
 

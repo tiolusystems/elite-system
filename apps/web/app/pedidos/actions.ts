@@ -7,7 +7,6 @@ import { getRuntimeStatus } from "@/lib/runtime";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const ALLOWED_TIPO_PEDIDO = new Set(["venda", "bonificacao", "devolucao", "mostruario"]);
 const ALLOWED_MOTIVO_TROCA = new Set(["qualidade", "avaria_transporte", "erro_separacao", "erro_comercial", "acordo_comercial", "outro"]);
 const DECIMAL_SEPARATOR = /,/g;
 
@@ -196,78 +195,6 @@ function creditAdjustmentTarget(formData: FormData, clienteId: number | null): {
 function redirectCreditAdjustment(target: { path: string; hash: string }, result: string): never {
   const separator = target.path.includes("?") ? "&" : "?";
   redirect(`${target.path}${separator}result=${encodeURIComponent(result)}${target.hash}`);
-}
-
-export async function createPedidoRascunhoAction(formData: FormData) {
-  const runtime = getRuntimeStatus();
-  if (!runtime.supabaseConfigured) {
-    redirect("/pedidos?result=not_configured#novo-pedido");
-  }
-
-  const clienteId = optionalInteger(formData, "cliente_id");
-  const propriedadeId = optionalInteger(formData, "propriedade_id");
-  const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
-  const vendedorId = optionalInteger(formData, "vendedor_id");
-  const quantidade = optionalNumber(formData, "quantidade");
-  const valorUnitario = optionalNumber(formData, "valor_unitario");
-  const percentualComissao = optionalNumber(formData, "percentual_comissao");
-  const tipoPedido = field(formData, "tipo_pedido") || "venda";
-  const status = "blocked";
-  const dataPedido = field(formData, "data_pedido");
-
-  if (!clienteId || !produtoEmbalagemId || quantidade === null || valorUnitario === null || !dataPedido) {
-    redirect("/pedidos?result=missing_order_required#novo-pedido");
-  }
-  if (!Number.isInteger(clienteId) || clienteId <= 0 || !Number.isInteger(produtoEmbalagemId) || produtoEmbalagemId <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
-  }
-  if (propriedadeId !== null && (!Number.isInteger(propriedadeId) || propriedadeId <= 0)) {
-    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
-  }
-  if (vendedorId !== null && (!Number.isInteger(vendedorId) || vendedorId <= 0)) {
-    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
-  }
-  if (!Number.isFinite(quantidade) || quantidade <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
-  }
-  if (!Number.isFinite(valorUnitario) || valorUnitario < 0) {
-    redirect("/pedidos?result=invalid_non_negative_number#novo-pedido");
-  }
-  if (percentualComissao !== null && (!Number.isFinite(percentualComissao) || percentualComissao < 0)) {
-    redirect("/pedidos?result=invalid_non_negative_number#novo-pedido");
-  }
-  if (!ALLOWED_TIPO_PEDIDO.has(tipoPedido)) {
-    redirect("/pedidos?result=invalid_order_type#novo-pedido");
-  }
-  const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_operacional", {
-    p_cliente_id: clienteId,
-    p_data_pedido: dataPedido,
-    p_observacao: optionalField(formData, "observacao"),
-    p_percentual_comissao: percentualComissao,
-    p_propriedade_id: propriedadeId,
-    p_produto_embalagem_id: produtoEmbalagemId,
-    p_quantidade: quantidade,
-    p_status: status,
-    p_tipo_pedido: tipoPedido,
-    p_valor_unitario: valorUnitario,
-    p_vendedor_id: vendedorId
-  }, {
-    metadata: {
-      action_key: "pedidos.create",
-      axis: "own_any",
-      domain: "pedidos",
-      entity: "com_pedidos",
-      failure_action: "pedidos.create_failed"
-    }
-  });
-
-  if (error) {
-    redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-pedido`);
-  }
-
-  revalidatePath("/pedidos");
-  redirect("/pedidos?result=pedido_created#novo-pedido");
 }
 
 export async function criarTrocaPedidoAction(formData: FormData) {

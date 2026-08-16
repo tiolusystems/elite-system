@@ -139,6 +139,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_delivery_schedules.sql
+      - name: Run canonical price list foundation smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/price_lists_canonical_foundation.sql
       - name: Run governed client workbench search smoke
         env:
           PGPASSWORD: postgres

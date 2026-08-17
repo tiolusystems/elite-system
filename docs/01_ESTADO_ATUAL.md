@@ -1,21 +1,13 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-08-05
+Atualizado em: 2026-08-17
 
 ## Referencia vigente
 
-- branch: `feature/0044-production-module-release`;
-- HEAD funcional publicado: `e2f9d30`;
-- sincronizacao local/remoto: `0/0`;
-- Supabase de staging: ledger `0001` a `0118`;
-- deployment ativo: `dpl_6dpGmux7JoX4QawawKn4kQJ2nLQ6`;
-- rollback preservado na Vercel;
-- URL: `https://elite-system-staging.vercel.app`;
-- CI do HEAD funcional: `31022098770`, com `database-contract`,
-  `python-tests` e `web-contract` aprovados;
-- E2E operacional: `30473086759`, com o contrato dos cadastros canonicos,
-  cinco resolucoes e cadeias SQL aprovados em ambiente descartavel;
-- producao real, `main` e PWA: inalterados.
+- branch: `work/orders-rules-review-20260813`;
+- HEAD local e remoto antes da tranche local: `0e743756ae0316c9bc02fabb2d5751a435e95078`;
+- sincronizacao local/remoto antes da tranche local: `0/0`;
+- producao real, `main`, PWA, staging e bancos persistentes: inalterados nesta tranche.
 
 O estado detalhado acumulado ate esta data foi preservado em
 `docs/historico/01_ESTADO_ATUAL_ATE_2026-07-28.md`. O Git e os documentos de
@@ -23,27 +15,22 @@ validacao preservam as evidencias anteriores.
 
 ## Tarefa em execucao
 
-`OPS-02 - consolidacao profissional das telas operacionais existentes`.
+`ORD-01 1E - unidade comercial generica de precificacao`, concluida e aprovada para integracao.
 
-Escopo congelado:
+### Estado local ORD-01 1E
 
-- concluir o Financeiro operacional preservado do `OPS-GATE-01B`;
-- revisar os workbenches existentes sem criar modulo ou regra de negocio;
-- manter pesquisa e paginacao no servidor para catalogos e filas extensas;
-- separar consulta, manutencao, historico e acoes sensiveis;
-- registrar na matriz os blocos aprovados, corrigidos e pendentes de `SEC-UX`;
-- nao iniciar Relatorios Gerenciais, PWA, importacao historica definitiva,
-  novo modulo ou nova regra de negocio.
-
-A homologacao funcional das fontes historicas e a etapa `I2` permanecem
-bloqueadas; nenhuma decisao de importacao e inferida. A ativacao de saldos
-oficiais depende da `DEC-012`.
+- a unidade e o fator comercial pertencem ao item versionado da lista e sao congelados no snapshot do pedido;
+- o contrato generico suporta `L`, `kg` e `un` pela reutilizacao de `cad_unidades_medida`, mantendo os campos BRL/L como compatibilidade;
+- a normalizacao deterministica de publicacoes BRL/L recompoe somente o checksum do documento apos a evolucao de schema, sem nova publicacao ou mudanca de fatos;
+- instalacao limpa ate `0129`, upgrade `0128 -> 0129`, smoke 1E, regressoes diretas 1A a 1D e testes Python dirigidos foram aprovados no ambiente descartavel;
+- a CI executara o smoke 1E e o upgrade dirigido `0128 -> 0129`;
+- proximo objetivo: revisar e, se aprovado, commitar a tranche ORD-01 1E.
 
 Matriz vigente:
 
 - `docs/validacoes/OPS_GATE_01_MATRIZ.md`.
 
-## Entregas deste gate
+## Entregas historicas preservadas
 
 ### Pedidos
 
@@ -112,7 +99,7 @@ Matriz vigente:
 - a reformulacao integral do ciclo de vida de usuarios continua reservada ao
   `SEC-UX`.
 
-## Validacao vigente
+## Validacao historica preservada
 
 - CI `30472806418`: aprovada;
 - instalacao limpa `0001` a `0117`: aprovada no job `database-contract`;
@@ -143,7 +130,7 @@ Matriz vigente:
 - Playwright financeiro: 15 cenarios aprovados nas cinco resolucoes, sem
   rolagem horizontal no corpo ou na navegacao do dominio.
 
-## Classificacao
+## Classificacao historica preservada
 
 `OPS-GATE-01`: tecnicamente aprovado.
 
@@ -159,5 +146,5 @@ testados. Isso nao constitui declaracao de infalibilidade.
 
 ## Proxima tarefa
 
-Apresentar o pacote consolidado para homologacao visual de Luciano. Nao iniciar
-`MIG-00`, `OPS-03`, `SEC-UX`, Relatorios Gerenciais ou PWA sem nova orientacao.
+Planejar e decidir a ORD-01 F2A: fato de preco praticado por item, usando a
+unidade comercial congelada. Nao implementar a F2A nesta etapa.

@@ -290,8 +290,8 @@ begin
   if v_retry is distinct from v_publication then raise exception 'retry da publicacao duplicou o fato'; end if;
 
   v_document := public.consultar_com_lista_preco_versao(v_version);
-  if v_document#>>'{documento,itens,0,precos,0,prazo_dias}' <> '0'
-     or v_document#>>'{documento,itens,0,precos,0,valor_centavos_por_litro}' <> '3126' then
+  if (v_document#>>'{documento,itens,0,precos,0,prazo_dias}') is distinct from '0'
+     or (v_document#>>'{documento,itens,0,precos,0,valor_centavos_por_litro}') is distinct from '3126' then
     raise exception 'consulta governada nao preservou prazo zero e centavos por litro';
   end if;
   if (select vigencia_inicio from public.com_lista_preco_versoes where id = v_version) >= v_commercial_date then

@@ -2,6 +2,16 @@
 
 Este arquivo define a linha de trabalho obrigatoria para agentes e desenvolvedores no Elite System.
 
+## Protocolo entre agentes
+
+Para trabalho coordenado entre GPT e Codex, consulte:
+
+- `docs/agent-protocol/AXL.md`;
+- `docs/agent-protocol/ELITE_AGENT_PROFILE.md`.
+
+Esses documentos complementam este contrato; nao duplicam nem substituem as
+regras vigentes do repositorio.
+
 ## Orientacao minima
 
 1. Comece por `docs/00_MAPA_EXECUTIVO.md`.

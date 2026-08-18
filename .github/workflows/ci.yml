@@ -151,6 +151,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/commercial_pricing_units.sql
+      - name: Run practiced order price comparison smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_practiced_price_comparison.sql
       - name: Run governed client workbench search smoke
         env:
           PGPASSWORD: postgres

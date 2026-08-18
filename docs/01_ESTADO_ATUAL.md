@@ -1,11 +1,11 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-08-17
+Atualizado em: 2026-08-18
 
 ## Referencia vigente
 
 - branch: `work/orders-rules-review-20260813`;
-- HEAD local e remoto antes da tranche local: `0e743756ae0316c9bc02fabb2d5751a435e95078`;
+- HEAD local e remoto antes da tranche local: `6c7d835c4be129ec104be32f5c481416bc5eedf6`;
 - sincronizacao local/remoto antes da tranche local: `0/0`;
 - producao real, `main`, PWA, staging e bancos persistentes: inalterados nesta tranche.
 
@@ -15,16 +15,17 @@ validacao preservam as evidencias anteriores.
 
 ## Tarefa em execucao
 
-`ORD-01 1E - unidade comercial generica de precificacao`, concluida e aprovada para integracao.
+`ORD-01 F2A - fato de preco praticado e comparacao comercial`, concluida, revisada e aprovada para integracao.
 
-### Estado local ORD-01 1E
+### Estado local ORD-01 F2A
 
-- a unidade e o fator comercial pertencem ao item versionado da lista e sao congelados no snapshot do pedido;
-- o contrato generico suporta `L`, `kg` e `un` pela reutilizacao de `cad_unidades_medida`, mantendo os campos BRL/L como compatibilidade;
-- a normalizacao deterministica de publicacoes BRL/L recompoe somente o checksum do documento apos a evolucao de schema, sem nova publicacao ou mudanca de fatos;
-- instalacao limpa ate `0129`, upgrade `0128 -> 0129`, smoke 1E, regressoes diretas 1A a 1D e testes Python dirigidos foram aprovados no ambiente descartavel;
-- a CI executara o smoke 1E e o upgrade dirigido `0128 -> 0129`;
-- proximo objetivo: revisar e, se aprovado, commitar a tranche ORD-01 1E.
+- o preco praticado de venda e positivo, inteiro em centavos por unidade comercial e congelado por item;
+- referencia, unidade, fator e quantidade comercial sao obtidos somente do snapshot generico 1D/1E;
+- descontos e overprice permanecem separados por item e nos totais, sem mascarar item abaixo da referencia por saldo positivo do pedido;
+- os valores economicos usam arredondamento decimal `HALF_UP` por linha, e os totais somam linhas ja arredondadas;
+- esta tranche nao altera os campos legados do Pedido nem implementa aprovacao, credito ou comissao;
+- validacoes locais incluem instalacao limpa ate 0130, smoke dirigido F2A, regressoes 1B-1E e contrato Python; o lint PostgreSQL preserva somente diagnosticos preexistentes fora deste delta.
+- proximo objetivo: ORD-01 F2B, alerta e apresentacao da comparacao comercial ao vendedor e confirmacao explicita de desconto; nao implementar nesta entrega.
 
 Matriz vigente:
 
@@ -146,5 +147,6 @@ testados. Isso nao constitui declaracao de infalibilidade.
 
 ## Proxima tarefa
 
-Planejar e decidir a ORD-01 F2A: fato de preco praticado por item, usando a
-unidade comercial congelada. Nao implementar a F2A nesta etapa.
+Planejar a ORD-01 F2B: alerta e apresentacao da comparacao comercial ao
+vendedor e confirmacao explicita de desconto. Nao iniciar aprovacao de
+desconto nesta etapa.

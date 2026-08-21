@@ -111,7 +111,7 @@ end $$;
 
 select set_config('request.jwt.claim.sub', '78000000-0000-4000-8000-000000000001', true);
 do $$
-declare v_order bigint; v_client bigint; v_limit_event bigint; v_decision bigint;
+declare v_order bigint; v_client bigint; v_limit_event bigint; v_decisions_before bigint;
 begin
   if not public.current_user_manages_seller((select id from public.cad_pessoas_comerciais where nome = 'Vendedor A')) then raise exception 'direct manager hierarchy failed'; end if;
   if public.current_user_manages_seller((select id from public.cad_pessoas_comerciais where nome = 'Vendedor B')) then raise exception 'manager hierarchy leaked unrelated seller'; end if;
@@ -126,13 +126,21 @@ begin
   if public.ajustar_com_limite_credito_cliente_idempotente(
     '78000000-0000-4000-8000-000000000010', v_client, 5000, 'Aumento aprovado para teste 0078'
   ) <> v_limit_event then raise exception 'credit limit retry duplicated the event'; end if;
-  v_decision := public.registrar_com_pedido_decisao_gerencial_idempotente(
-    '78000000-0000-4000-8000-000000000011', v_order, 'liberado', 'Credito revisado e aprovado no teste'
-  );
-  if public.registrar_com_pedido_decisao_gerencial_idempotente(
-    '78000000-0000-4000-8000-000000000011', v_order, 'liberado', 'Credito revisado e aprovado no teste'
-  ) <> v_decision then raise exception 'manager decision retry duplicated the event'; end if;
-  if (select status from public.com_pedidos where id = v_order) <> 'open' then raise exception 'manager approval failed'; end if;
+  select count(*) into v_decisions_before from public.com_pedido_credito_decisoes where pedido_id = v_order;
+  begin
+    perform public.registrar_com_pedido_decisao_gerencial_idempotente(
+      '78000000-0000-4000-8000-000000000011', v_order, 'liberado', 'Credito revisado e aprovado no teste'
+    );
+    raise exception 'manager decision bypassed commercial confirmation';
+  exception when others then
+    if position('revisao comercial confirmada' in lower(sqlerrm)) = 0 then
+      raise exception 'manager commercial gate failed for an unexpected reason: %', sqlerrm;
+    end if;
+  end;
+  if (select count(*) from public.com_pedido_credito_decisoes where pedido_id = v_order) <> v_decisions_before then
+    raise exception 'denied manager decision left a partial effect';
+  end if;
+  if (select status from public.com_pedidos where id = v_order) <> 'blocked' then raise exception 'manager gate changed blocked order'; end if;
   if not exists (select 1 from public.cad_limite_credito_eventos where cliente_id = v_client and limite_novo = 5000) then raise exception 'credit ledger failed'; end if;
 end $$;
 

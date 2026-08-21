@@ -5,7 +5,7 @@ Atualizado em: 2026-08-18
 ## Referencia vigente
 
 - branch: `work/orders-rules-review-20260813`;
-- HEAD local e remoto antes da tranche local: `6c7d835c4be129ec104be32f5c481416bc5eedf6`;
+- HEAD local e remoto antes da tranche local: `d379f3080fadc0bcafa412f43172c31dcd5928c6`;
 - sincronizacao local/remoto antes da tranche local: `0/0`;
 - producao real, `main`, PWA, staging e bancos persistentes: inalterados nesta tranche.
 
@@ -15,17 +15,17 @@ validacao preservam as evidencias anteriores.
 
 ## Tarefa em execucao
 
-`ORD-01 F2A - fato de preco praticado e comparacao comercial`, concluida, revisada e aprovada para integracao.
+`ORD-01 F2B - revisao comercial do vendedor`, implementada localmente e pendente de revisao antes do commit.
 
-### Estado local ORD-01 F2A
+### Estado local ORD-01 F2B
 
-- o preco praticado de venda e positivo, inteiro em centavos por unidade comercial e congelado por item;
-- referencia, unidade, fator e quantidade comercial sao obtidos somente do snapshot generico 1D/1E;
-- descontos e overprice permanecem separados por item e nos totais, sem mascarar item abaixo da referencia por saldo positivo do pedido;
-- os valores economicos usam arredondamento decimal `HALF_UP` por linha, e os totais somam linhas ja arredondadas;
-- esta tranche nao altera os campos legados do Pedido nem implementa aprovacao, credito ou comissao;
-- validacoes locais incluem instalacao limpa ate 0130, smoke dirigido F2A, regressoes 1B-1E e contrato Python; o lint PostgreSQL preserva somente diagnosticos preexistentes fora deste delta.
-- proximo objetivo: ORD-01 F2B, alerta e apresentacao da comparacao comercial ao vendedor e confirmacao explicita de desconto; nao implementar nesta entrega.
+- a proposta permanece somente no navegador enquanto e editada; a previsualizacao do banco nao cria pedido nem rascunho persistente;
+- a confirmacao final vincula o hash exato da previsualizacao e cria atomicamente pedido bloqueado, condicao financeira, referencias 1D/1E, fatos F2A e versao comercial F2B;
+- item abaixo da referencia permanece visivel mesmo quando o resultado liquido do pedido e positivo e exige justificativa unica e confirmacao explicita do vendedor;
+- a decisao de credito antiga nao abre vendas F2B; aprovacao de desconto, assinatura do comprador e efetividade permanecem fatos futuros e independentes;
+- a versao comercial congela documento canonico e SHA-256, sem usar os campos legados de preco como fonte;
+- validacoes locais aprovadas incluem instalacao limpa ate 0131, smoke dirigido, regressoes 1B/1D/1E/F2A e dos gates de Pedido, contratos Python, lint, TypeScript, build e Playwright nas cinco resolucoes;
+- proximo objetivo apos aprovacao e commit: ORD-01 F2C, decisao governada de desconto; nao implementar nesta entrega.
 
 Matriz vigente:
 
@@ -147,6 +147,5 @@ testados. Isso nao constitui declaracao de infalibilidade.
 
 ## Proxima tarefa
 
-Planejar a ORD-01 F2B: alerta e apresentacao da comparacao comercial ao
-vendedor e confirmacao explicita de desconto. Nao iniciar aprovacao de
-desconto nesta etapa.
+Revisar e integrar a ORD-01 F2B. Depois da aprovacao e do commit, planejar a
+ORD-01 F2C: decisao governada de desconto. Nao iniciar a F2C nesta entrega.

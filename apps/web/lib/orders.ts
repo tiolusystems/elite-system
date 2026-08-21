@@ -158,6 +158,24 @@ export type ExchangeSourceItem = {
   quantity: number;
 };
 
+export type CommercialOriginOption = {
+  id: number;
+  code: string;
+  name: string;
+};
+
+export type CommercialAreaOption = {
+  id: number;
+  name: string;
+};
+
+export type CommercialParticipantOption = {
+  roleId: number;
+  personId: number;
+  name: string;
+  role: string;
+};
+
 export type OrderContractItem = {
   id: number;
   product: string;
@@ -202,12 +220,12 @@ export type OrderContract = {
 export async function getOrderWorkspace(search: string | null, page = 0) {
   const runtime = getRuntimeStatus();
   if (!runtime.supabaseConfigured) {
-    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], commercialPersonId: null as number | null, error: "Banco de homologação indisponível." };
+    return emptyOrderWorkspace("Banco de homologação indisponível.");
   }
   try {
     const supabase = await createSupabaseServerClient();
     const normalizedSearch = search?.trim() ?? "";
-    const [clients, orders, approvals, items, commercialPerson] = await Promise.all([
+    const [clients, orders, approvals, items, commercialPerson, commercialOptions, canPreview, canConfirm] = await Promise.all([
       supabase.rpc("consultar_com_carteira_clientes_paginada", {
         p_busca: normalizedSearch || null,
         p_limite: 20,
@@ -218,7 +236,10 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
       supabase.from("cad_produto_embalagens")
         .select("id,produto_id,codigo_item,status,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)")
         .eq("status", "active").order("codigo_item").limit(250),
-      supabase.rpc("current_commercial_person_id")
+      supabase.rpc("current_commercial_person_id"),
+      supabase.rpc("consultar_com_opcoes_revisao_comercial"),
+      supabase.rpc("can_current_user", { p_action_key: "pedidos.commercial_review.preview" }),
+      supabase.rpc("can_current_user", { p_action_key: "pedidos.commercial_review.confirm" })
     ]);
     const scopedOrders = (orders.data ?? []) as Array<Record<string, unknown>>;
     const orderIds = scopedOrders.map((row) => Number(row.pedido_id)).filter((id) => Number.isInteger(id) && id > 0);
@@ -233,6 +254,9 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
       : { data: [], error: null };
     const orderById = new Map(scopedOrders.map((row) => [Number(row.pedido_id), row]));
     const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? items.error?.message ?? commercialPerson.error?.message ?? exchangeSource.error?.message ?? null;
+    const options = !commercialOptions.error && commercialOptions.data && typeof commercialOptions.data === "object"
+      ? commercialOptions.data as Record<string, unknown>
+      : {};
     return {
       clients: ((clients.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
         linkId: Number(row.vinculo_id), clientId: Number(row.cliente_id), sellerId: Number(row.vendedor_id), clientName: String(row.cliente_nome),
@@ -285,12 +309,44 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
           quantity: Number(row.quantidade ?? 0)
         };
       }),
+      commercialOrigins: arrayRecords(options.origens).map((row) => ({
+        id: Number(row.id), code: String(row.codigo), name: String(row.nome)
+      })),
+      commercialAreas: arrayRecords(options.areas).map((row) => ({
+        id: Number(row.id), name: String(row.nome)
+      })),
+      commercialParticipants: arrayRecords(options.participantes).map((row) => ({
+        roleId: Number(row.pessoa_papel_id), personId: Number(row.pessoa_id), name: String(row.nome), role: String(row.papel)
+      })),
+      canPreviewCommercialReview: !canPreview.error && canPreview.data === true,
+      canConfirmCommercialReview: !canConfirm.error && canConfirm.data === true,
       commercialPersonId: nullableNumber(commercialPerson.data),
       error
     };
   } catch {
-    return { clients: [] as PortfolioClient[], orders: [] as ScopedOrder[], approvals: [] as ApprovalOrder[], items: [] as SalesItem[], exchangeItems: [] as ExchangeSourceItem[], commercialPersonId: null as number | null, error: "Não foi possível carregar Pedidos agora." };
+    return emptyOrderWorkspace("Não foi possível carregar Pedidos agora.");
   }
+}
+
+function emptyOrderWorkspace(error: string) {
+  return {
+    clients: [] as PortfolioClient[],
+    orders: [] as ScopedOrder[],
+    approvals: [] as ApprovalOrder[],
+    items: [] as SalesItem[],
+    exchangeItems: [] as ExchangeSourceItem[],
+    commercialOrigins: [] as CommercialOriginOption[],
+    commercialAreas: [] as CommercialAreaOption[],
+    commercialParticipants: [] as CommercialParticipantOption[],
+    canPreviewCommercialReview: false,
+    canConfirmCommercialReview: false,
+    commercialPersonId: null as number | null,
+    error
+  };
+}
+
+function arrayRecords(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object") : [];
 }
 
 export async function getOrderDeliveryLocations(clientId: number): Promise<DeliveryLocation[]> {

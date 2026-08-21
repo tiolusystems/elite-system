@@ -63,63 +63,60 @@ export async function criarPedidoEspecialVendedorAction(formData: FormData) {
 
 export async function criarPedidoVendedorAction(formData: FormData) {
   const idempotencyKey = uuid(formData, "idempotency_key");
-  const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
-  const itensJson = field(formData, "itens_json");
-  const entregasJson = field(formData, "entregas_json");
-  const dataPedido = field(formData, "data_pedido");
-  let items: Array<{ produto_embalagem_id: number; quantidade: number; valor_unitario: number }> = [];
-  let deliveries: Array<{
-    data_prevista: string;
-    propriedade_id: number | null;
-    estabelecimento_id: number | null;
-    endereco_id: number | null;
-    itens: Array<{ item_index: number; quantidade: number }>;
-  }> = [];
+  const proposalJson = field(formData, "proposta_json");
+  const previewHash = field(formData, "preview_hash");
+  const justification = optionalField(formData, "justificativa_comercial");
+  const discountsConfirmed = field(formData, "confirmacao_descontos") === "on";
+  let proposal: Record<string, unknown> | null = null;
   try {
-    const parsed: unknown = JSON.parse(itensJson);
-    items = Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(proposalJson);
+    proposal = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
   } catch {
-    items = [];
+    proposal = null;
   }
-  try {
-    const parsed: unknown = JSON.parse(entregasJson);
-    deliveries = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    deliveries = [];
-  }
-  if (!idempotencyKey || !vinculoId || !dataPedido || !items.length || items.some((item) => !item.produto_embalagem_id || item.quantidade <= 0 || item.valor_unitario < 0)) {
-    redirectOrder(formData, "missing_order_required");
-  }
-  if (!deliveries.length || deliveries.some((delivery) =>
-    !delivery.data_prevista
-    || [delivery.propriedade_id, delivery.estabelecimento_id, delivery.endereco_id].filter((value) => value !== null).length !== 1
-    || !Array.isArray(delivery.itens)
-    || !delivery.itens.length
-    || delivery.itens.some((item) => !Number.isInteger(item.item_index) || item.item_index <= 0 || item.quantidade <= 0)
-  )) {
-    redirectOrder(formData, "missing_delivery_schedule");
+  if (!idempotencyKey || !proposal || !/^[0-9a-f]{64}$/.test(previewHash)) {
+    redirectOrder(formData, "commercial_review_incomplete");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_programado_idempotente", {
+  const { error } = await auditedRpc(supabase, "confirmar_com_revisao_comercial_venda_idempotente", {
     p_idempotency_key: idempotencyKey,
-    p_cliente_vendedor_vinculo_id: vinculoId,
-    p_data_pedido: dataPedido,
-    p_entregas_jsonb: deliveries,
-    p_itens_jsonb: items,
-    p_observacao: optionalField(formData, "observacao"),
+    p_confirmacao_descontos: discountsConfirmed,
+    p_justificativa_comercial: justification,
+    p_preview_hash: previewHash,
+    p_proposta: proposal
   }, {
     metadata: {
-      action_key: "pedidos.create.own",
-      axis: "own_any",
+      action_key: "pedidos.commercial_review.confirm",
+      axis: "change_type",
       domain: "pedidos",
-      entity: "com_pedidos",
-      failure_action: "pedidos.create_failed"
+      entity: "com_pedido_confirmacoes_comerciais",
+      failure_action: "pedidos.commercial_review_confirm_failed"
     }
   });
   if (error) redirectOrder(formData, mapSupabaseError(error.message));
   revalidatePath("/pedidos");
   redirectOrder(formData, "pedido_pending_approval", "#historico");
+}
+
+export async function preverRevisaoComercialAction(proposal: unknown): Promise<{
+  data: Record<string, unknown> | null;
+  error: string | null;
+}> {
+  if (!proposal || typeof proposal !== "object" || Array.isArray(proposal)) {
+    return { data: null, error: "Complete os dados comerciais antes de calcular a revisão." };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("prever_com_revisao_comercial_venda", {
+    p_proposta: proposal
+  });
+  if (error) return { data: null, error: commercialReviewError(error.message) };
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { data: null, error: "A revisão comercial não retornou um resultado válido." };
+  }
+  return { data: data as Record<string, unknown>, error: null };
 }
 
 export async function decidirPedidoGerencialAction(formData: FormData) {
@@ -318,6 +315,12 @@ function mapSupabaseError(message: string): string {
   if (normalized.includes("idempotency key reused")) {
     return "idempotency_conflict";
   }
+  if (normalized.includes("previsualizacao comercial desatualizada")) {
+    return "commercial_review_stale";
+  }
+  if (normalized.includes("revisao comercial") || normalized.includes("confirmacao comercial")) {
+    return "commercial_review_incomplete";
+  }
   if (normalized.includes("motivo is required")) {
     return "missing_credit_reason";
   }
@@ -358,6 +361,29 @@ function mapSupabaseError(message: string): string {
     return "invalid_justification";
   }
   return "save_failed";
+}
+
+function commercialReviewError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("permission") || normalized.includes("permissao")) {
+    return "Sua conta não possui alçada para calcular esta revisão comercial.";
+  }
+  if (normalized.includes("carteira") || normalized.includes("identidade comercial")) {
+    return "O cliente não está disponível na carteira operacional desta conta.";
+  }
+  if (normalized.includes("lista comercial") || normalized.includes("faixa de preco")) {
+    return "Não existe preço de referência aplicável à condição comercial informada.";
+  }
+  if (normalized.includes("parcela") || normalized.includes("vencimento") || normalized.includes("pmp")) {
+    return "Revise os valores e vencimentos da condição financeira.";
+  }
+  if (normalized.includes("entrega") || normalized.includes("programacao")) {
+    return "Revise o local, a data e a distribuição das entregas.";
+  }
+  if (normalized.includes("apresentacao") || normalized.includes("item")) {
+    return "Revise os produtos, apresentações e quantidades do pedido.";
+  }
+  return "Não foi possível calcular a revisão comercial com os dados informados.";
 }
 
 function redirectOrder(formData: FormData, result: string, hash = "#novo-pedido"): never {

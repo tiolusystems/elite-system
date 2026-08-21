@@ -37,7 +37,7 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
       {workspace.error ? <div className="notice-panel warning"><strong>Não foi possível carregar</strong><span>{workspace.error}</span></div> : null}
 
       <section className="orders-flow" aria-label="Fluxo do pedido">
-        <span className="is-active">1. Cliente</span><span>2. Local de entrega</span><span>3. Itens</span><span>4. Entregas</span><span>5. Revisão</span><span>6. Liberação</span>
+        <span className="is-active">1. Cliente</span><span>2. Local de entrega</span><span>3. Itens</span><span>4. Entregas</span><span>5. Revisão comercial</span><span>6. Confirmação</span>
       </section>
 
       <section className="orders-seller-layout">
@@ -99,6 +99,11 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
                 locations={deliveryLocations}
                 result={result}
                 exchangeItems={workspace.exchangeItems.filter((item) => item.clientId === selected.clientId)}
+                commercialOrigins={workspace.commercialOrigins}
+                commercialAreas={workspace.commercialAreas}
+                commercialParticipants={workspace.commercialParticipants}
+                canPreviewCommercialReview={workspace.canPreviewCommercialReview}
+                canConfirmCommercialReview={workspace.canConfirmCommercialReview}
               />
             </form>
           ) : selected ? (
@@ -114,21 +119,21 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
       </section>
 
       <section className="panel orders-approvals" id="aprovacoes">
-        <div className="panel-header"><div><h2>Liberações gerenciais</h2><p>Pedidos próprios do gerente e de vendedores subordinados conforme alçada.</p></div><span className="pill">{workspace.approvals.length} pendente(s)</span></div>
+        <div className="panel-header"><div><h2>Análise de crédito</h2><p>A decisão é auditada, mas não torna o pedido efetivo nem substitui aprovação de desconto ou assinatura.</p></div><span className="pill">{workspace.approvals.length} pendente(s)</span></div>
         {workspace.approvals.length ? <div className="approval-list">{workspace.approvals.map((order) => (
           <article key={order.id}>
             <div className="approval-summary"><div><strong>{order.code}</strong><span>{order.clientName} · {order.sellerName}</span></div><div><strong>{money(order.total)}</strong><span>Limite: {money(order.availableLimit)}</span></div></div>
             <form className="approval-decision" action={decidirPedidoGerencialAction}>
               <input type="hidden" name="idempotency_key" value={randomUUID()} />
               <input type="hidden" name="pedido_id" value={order.id} /><label><span>Justificativa</span><input name="justificativa" minLength={10} required placeholder="Fundamente a decisão" /></label>
-              <button name="decisao" value="liberado" className="primary-button">Liberar</button><button name="decisao" value="bloqueado" className="secondary-button">Reprovar</button>
+              <button name="decisao" value="liberado" className="primary-button">Aprovar crédito</button><button name="decisao" value="bloqueado" className="secondary-button">Reprovar</button>
             </form>
             <p className="table-subtext">A decisão deste pedido não altera o limite cadastral do cliente.</p>
             <Link className="secondary-button" href={`/cadastros?grupo=clientes&cliente=${order.clientId}&secao=credito#credito-cliente`}>
               Consultar crédito do cliente
             </Link>
           </article>
-        ))}</div> : <div className="empty-state"><strong>Nenhum pedido aguardando sua liberação</strong><span>A fila mostra somente pedidos dentro da hierarquia comercial e alçada efetiva.</span></div>}
+        ))}</div> : <div className="empty-state"><strong>Nenhum pedido aguardando análise de crédito</strong><span>A fila mostra somente pedidos dentro da hierarquia comercial e alçada efetiva.</span></div>}
       </section>
 
       <section className="panel" id="historico"><div className="panel-header"><div><h2>{selected ? `Histórico de ${selected.clientName}` : "Pedidos recentes no seu escopo"}</h2><p>{selected ? "Somente pedidos do cliente selecionado." : "Vendedor: carteira própria. Gerente: carteira própria e equipe autorizada."}</p></div><span className="pill">{visibleOrders.length} pedido(s)</span></div>
@@ -145,8 +150,8 @@ function creditLabel(value: string) { return ({ liberado: "Liberado", reduzido: 
 function clientStatusLabel(value: string) { return ({ ativa: "Cadastro ativo", active: "Cadastro ativo", nao_verificada: "Situação não verificada", suspensa: "Cadastro suspenso", inativa: "Cadastro inativo", inactive: "Cadastro inativo" } as Record<string, string>)[value] ?? "Situação não reconhecida"; }
 function resultMessage(result?: string) {
   const messages: Record<string, { kind: "ok" | "warning"; title: string; detail: string }> = {
-    pedido_pending_approval: { kind: "ok", title: "Pedido enviado", detail: "O responsável com alçada já pode analisar a liberação." },
-    order_approved: { kind: "ok", title: "Pedido liberado", detail: "O pedido está aberto para as próximas etapas operacionais." },
+    pedido_pending_approval: { kind: "ok", title: "Versão comercial confirmada", detail: "O pedido foi criado bloqueado. Aprovações e assinatura do comprador serão fatos independentes nas próximas etapas." },
+    order_approved: { kind: "ok", title: "Decisão de crédito registrada", detail: "O pedido permanece bloqueado até que todos os requisitos da versão comercial e a assinatura aceita sejam atendidos." },
     order_rejected: { kind: "warning", title: "Pedido reprovado", detail: "A justificativa ficou registrada no histórico." },
     credit_limit_adjusted: { kind: "ok", title: "Limite atualizado", detail: "A alteração e a justificativa foram auditadas." },
     invalid_manager_decision: { kind: "warning", title: "Decisão incompleta", detail: "Informe uma justificativa com pelo menos 10 caracteres." },
@@ -160,6 +165,8 @@ function resultMessage(result?: string) {
     invalid_delivery_location: { kind: "warning", title: "Local de entrega inválido", detail: "Escolha um local ativo pertencente ao cliente selecionado." },
     invalid_sale_item: { kind: "warning", title: "Apresentação indisponível", detail: "Revise o produto e escolha uma apresentação ativa e comercializável." },
     idempotency_conflict: { kind: "warning", title: "Pedido alterado durante o envio", detail: "Os dados foram preservados. Revise e envie novamente." },
+    commercial_review_stale: { kind: "warning", title: "Revisão desatualizada", detail: "A proposta mudou. Calcule novamente as condições antes de confirmar." },
+    commercial_review_incomplete: { kind: "warning", title: "Revisão comercial incompleta", detail: "Calcule a comparação, informe os preços e confirme a solicitação de desconto quando aplicável." },
     duplicated: { kind: "warning", title: "Registro já existente", detail: "A solicitação já foi registrada ou contém um item repetido." },
     save_failed: { kind: "warning", title: "Não foi possível gravar", detail: "Os dados foram preservados. Use a referência exibida para o suporte se o problema continuar." }
   };

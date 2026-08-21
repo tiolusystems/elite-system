@@ -15,7 +15,7 @@ class OrdersBlockedCreationGateTest(unittest.TestCase):
 
     def test_server_actions_always_send_blocked(self):
         actions = (ROOT / "apps/web/app/pedidos/actions.ts").read_text(encoding="utf-8")
-        self.assertIn('"create_com_pedido_vendedor_programado_idempotente"', actions)
+        self.assertIn('"confirmar_com_revisao_comercial_venda_idempotente"', actions)
         self.assertIn('"create_com_pedido_vendedor_especial_idempotente"', actions)
         self.assertNotIn("createPedidoRascunhoAction", actions)
         self.assertNotIn('"create_com_pedido_operacional"', actions)

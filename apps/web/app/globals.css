@@ -8664,3 +8664,17 @@ h1 {
     gap: 12px;
   }
 }
+ .order-signature-panel { margin: 24px auto; max-width: 1180px; padding: 24px; border: 1px solid #d5dce5; background: #fff; }
+.order-signature-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+.order-signature-form, .order-signature-review { display: grid; gap: 12px; }
+.order-signature-form label, .order-signature-review { display: grid; gap: 6px; }
+.order-signature-form input, .order-signature-form select, .order-signature-review input { min-height: 42px; padding: 8px 10px; border: 1px solid #b8c4d1; border-radius: 4px; background: #fff; }
+.order-signature-history { display: grid; gap: 12px; }
+.order-signature-history article { display: grid; gap: 6px; padding: 14px; border: 1px solid #d5dce5; }
+.order-signature-history article > div { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.order-signature-review { grid-template-columns: minmax(0, 1fr) auto auto; align-items: end; }
+@media (max-width: 760px) {
+  .order-signature-grid { grid-template-columns: 1fr; }
+  .order-signature-review { grid-template-columns: 1fr; }
+  .order-signature-panel { padding: 16px; }
+}

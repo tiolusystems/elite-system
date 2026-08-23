@@ -163,6 +163,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_discount_review.sql
+      - name: Run buyer signature evidence smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_buyer_signature_evidence.sql
       - name: Run governed client workbench search smoke
         env:
           PGPASSWORD: postgres

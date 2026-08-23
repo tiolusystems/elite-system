@@ -147,6 +147,16 @@ testados. Isso nao constitui declaracao de infalibilidade.
 
 ## Proxima tarefa
 
+### ORD-01 SIG01 — estado local
+
+- SIG01 implementada localmente sobre a migration `0133`, sem commit, push ou deploy;
+- documento comercial congelado disponivel a partir da confirmacao F2B, sem dependencia de credito;
+- evidencias, decisoes e idempotencia append-only, auditadas, default-deny e vinculadas ao `confirmacao_comercial_id` e ao SHA-256 exatos;
+- upload usa bucket privado e mediacao server-side; email nao e aceite; somente `ACCEPTED` satisfaz a assinatura;
+- pedido permanece bloqueado e efetividade continua fora do escopo;
+- validacao proporcional SIG01 pendente; migration remota inalterada;
+- proximo passo: executar gates dirigidos SIG01 e revisar o delta antes de qualquer commit.
+
 Revisar e integrar a ORD-01 F2B. Depois da aprovacao e do commit, planejar a
 ORD-01 F2C: decisao governada de desconto em implementacao local; revisao
 independente vinculada por versao e fingerprint a confirmacao F2B. O commit

@@ -1,5 +1,12 @@
 # Pedidos e aprovação gerencial
 
+## Assinatura do comprador (SIG01)
+
+O documento comercial congelado fica disponivel apos a confirmacao F2B, antes
+da liberacao gerencial. E-mail e canal de comunicacao, nao aceite. Evidencia
+enviada fica `PENDING`; somente `ACCEPTED` satisfaz a assinatura. O aceite nao
+abre o pedido e a evidencia referencia a versao comercial e SHA-256 exatos.
+
 ## Vendedor
 
 1. Abra **Pedidos**.

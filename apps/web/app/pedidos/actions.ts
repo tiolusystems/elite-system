@@ -1,9 +1,11 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getRuntimeStatus } from "@/lib/runtime";
+import { createSupabaseAdminClient, hasSupabaseAdminConfig } from "@/lib/supabase/admin";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -180,6 +182,131 @@ export async function decidirDescontoPedidoAction(formData: FormData) {
   if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#revisao-desconto`);
   revalidatePath("/pedidos");
   redirect("/pedidos?result=discount_review_recorded#revisao-desconto");
+}
+
+export async function registrarEvidenciaAssinaturaAction(formData: FormData) {
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const confirmacaoId = optionalInteger(formData, "confirmacao_comercial_id");
+  const contatoId = optionalInteger(formData, "contato_id");
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const documentHash = field(formData, "documento_canonico_sha256").toLowerCase();
+  const fonte = field(formData, "fonte");
+  const externalHash = field(formData, "artefato_sha256").toLowerCase();
+  const externalReference = optionalField(formData, "referencia_externa");
+  const declaredSignedAt = optionalField(formData, "declarado_assinado_em");
+  const file = formData.get("arquivo");
+  if (!pedidoId || !confirmacaoId || !contatoId || !idempotencyKey || !/^[0-9a-f]{64}$/.test(documentHash) || !["external_digital", "physical_digitized"].includes(fonte)) {
+    redirect(`/pedidos/${pedidoId ?? 0}/contrato?assinatura=invalid#assinatura`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: authData } = await supabase.auth.getUser();
+  const actorId = authData.user?.id;
+  if (!actorId) redirect(`/login?next=/pedidos/${pedidoId}/contrato`);
+
+  const preflight = await auditedRpc(supabase, "autorizar_com_pedido_assinatura_evidencia", {
+    p_pedido_id: pedidoId,
+    p_confirmacao_comercial_id: confirmacaoId,
+    p_documento_canonico_sha256: documentHash
+  }, {
+    metadata: {
+      action_key: "pedidos.buyer_signature.submit",
+      axis: "own_any",
+      domain: "pedidos",
+      entity: "com_pedido_assinatura_evidencias",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.buyer_signature_submit_preflight_failed"
+    }
+  });
+  if (preflight.error || !preflight.data) redirect(`/pedidos/${pedidoId}/contrato?assinatura=${encodeURIComponent(mapSupabaseError(preflight.error?.message ?? "signature_invalid"))}#assinatura`);
+
+  let storagePath: string | null = null;
+  let objectCreatedByAttempt = false;
+  let artifactHash = externalHash;
+  let contentType: string | null = null;
+  let contentLength: number | null = null;
+  if (file instanceof File && file.size > 0) {
+    if (!hasSupabaseAdminConfig()) redirect(`/pedidos/${pedidoId}/contrato?assinatura=storage_unavailable#assinatura`);
+    const bytes = Buffer.from(await file.arrayBuffer());
+    artifactHash = createHash("sha256").update(bytes).digest("hex");
+    contentType = file.type || "application/octet-stream";
+    contentLength = bytes.byteLength;
+    storagePath = `pending/${actorId}/${idempotencyKey}/${artifactHash}`;
+    const admin = createSupabaseAdminClient();
+    const upload = await admin.storage.from("order-signature-evidence").upload(storagePath, bytes, { contentType, upsert: false });
+    if (upload.error) {
+      const existing = await admin.storage.from("order-signature-evidence").download(storagePath);
+      if (existing.error) redirect(`/pedidos/${pedidoId}/contrato?assinatura=storage_failed#assinatura`);
+    } else {
+      objectCreatedByAttempt = true;
+    }
+  }
+  if (!storagePath) redirect(`/pedidos/${pedidoId}/contrato?assinatura=artifact_required#assinatura`);
+  if (!/^[0-9a-f]{64}$/.test(artifactHash)) {
+    redirect(`/pedidos/${pedidoId}/contrato?assinatura=artifact_hash_required#assinatura`);
+  }
+
+  const { error } = await auditedRpc(supabase, "registrar_com_pedido_assinatura_evidencia_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_pedido_id: pedidoId,
+    p_confirmacao_comercial_id: confirmacaoId,
+    p_documento_canonico_sha256: documentHash,
+    p_fonte: fonte,
+    p_contato_id: contatoId,
+    p_artefato_storage_path: storagePath,
+    p_artefato_sha256: artifactHash,
+    p_artefato_content_type: contentType,
+    p_artefato_size_bytes: contentLength,
+    p_referencia_externa: externalReference,
+    p_declarado_assinado_em: declaredSignedAt ? new Date(declaredSignedAt).toISOString() : null
+  }, {
+    metadata: {
+      action_key: "pedidos.buyer_signature.submit",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedido_assinatura_evidencias",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.buyer_signature_submit_failed"
+    }
+  });
+  if (error) {
+    if (objectCreatedByAttempt && storagePath && hasSupabaseAdminConfig()) {
+      await createSupabaseAdminClient().storage.from("order-signature-evidence").remove([storagePath]);
+    }
+    redirect(`/pedidos/${pedidoId}/contrato?assinatura=${encodeURIComponent(mapSupabaseError(error.message))}#assinatura`);
+  }
+  revalidatePath(`/pedidos/${pedidoId}/contrato`);
+  redirect(`/pedidos/${pedidoId}/contrato?assinatura=submitted#assinatura`);
+}
+
+export async function decidirEvidenciaAssinaturaAction(formData: FormData) {
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const evidenciaId = optionalInteger(formData, "evidencia_id");
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const decisao = field(formData, "decisao");
+  const justificativa = field(formData, "justificativa");
+  if (!pedidoId || !evidenciaId || !idempotencyKey || !["ACCEPTED", "REJECTED"].includes(decisao) || (decisao === "REJECTED" && justificativa.length < 10)) {
+    redirect(`/pedidos/${pedidoId ?? 0}/contrato?assinatura=invalid_review#assinatura`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "decidir_com_pedido_assinatura_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_evidencia_id: evidenciaId,
+    p_decisao: decisao,
+    p_justificativa: justificativa
+  }, {
+    metadata: {
+      action_key: "pedidos.buyer_signature.review",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedido_assinatura_decisoes",
+      entity_id: String(evidenciaId),
+      failure_action: "pedidos.buyer_signature_review_failed"
+    }
+  });
+  if (error) redirect(`/pedidos/${pedidoId}/contrato?assinatura=${encodeURIComponent(mapSupabaseError(error.message))}#assinatura`);
+  revalidatePath(`/pedidos/${pedidoId}/contrato`);
+  redirect(`/pedidos/${pedidoId}/contrato?assinatura=reviewed#assinatura`);
 }
 
 export async function ajustarLimiteCreditoAction(formData: FormData) {
@@ -390,6 +517,12 @@ function mapSupabaseError(message: string): string {
   }
   if (normalized.includes("commercial identity not linked")) {
     return "commercial_identity_required";
+  }
+  if (normalized.includes("evidencia antiga") || normalized.includes("versao comercial vigente")) {
+    return "signature_version_stale";
+  }
+  if (normalized.includes("evidencia") || normalized.includes("assinatura")) {
+    return "signature_invalid";
   }
   if (normalized.includes("justification")) {
     return "invalid_justification";

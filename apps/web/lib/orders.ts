@@ -1,4 +1,5 @@
 import { getRuntimeStatus } from "@/lib/runtime";
+import { createSupabaseAdminClient, hasSupabaseAdminConfig } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type OrderLookupOption = {
@@ -226,8 +227,154 @@ export type OrderContract = {
   sellerName: string | null;
   approvedAt: string | null;
   approvedBy: string | null;
+  terms: Array<{ titulo: string; texto: string }>;
   items: OrderContractItem[];
 };
+
+export type OrderSignatureEvidence = {
+  evidenciaId: number;
+  confirmacaoComercialId: number;
+  documentoHash: string;
+  fonte: string;
+  contatoId: number;
+  contatoNome: string;
+  artefatoHash: string;
+  artefatoUrl: string | null;
+  referenciaExterna: string | null;
+  declaradoAssinadoEm: string | null;
+  submittedAt: string;
+  status: string;
+  justificativa: string | null;
+  decidedAt: string | null;
+  isCurrentVersion: boolean;
+};
+
+export type OrderSignatureWorkspace = {
+  contract: OrderContract;
+  confirmationId: number;
+  documentHash: string;
+  evidence: OrderSignatureEvidence[];
+  contacts: Array<{ id: number; name: string; role: string; email: string | null }>;
+};
+
+export async function getOrderSignatureWorkspace(orderId: number): Promise<OrderSignatureWorkspace | null> {
+  const runtime = getRuntimeStatus();
+  if (!runtime.supabaseConfigured || !Number.isInteger(orderId) || orderId <= 0) return null;
+  const supabase = await createSupabaseServerClient();
+  const [documentResult, evidenceResult] = await Promise.all([
+    supabase.rpc("consultar_com_pedido_documento_assinavel", { p_pedido_id: orderId }),
+    supabase.rpc("consultar_com_pedido_assinaturas", { p_pedido_id: orderId })
+  ]);
+  if (documentResult.error || evidenceResult.error || !documentResult.data || typeof documentResult.data !== "object") return null;
+  const envelope = documentResult.data as Record<string, unknown>;
+  const document = recordValue(envelope.documento);
+  const order = recordValue(document.pedido);
+  const items = arrayValue(document.itens);
+  const financial = recordValue(document.condicao_financeira);
+  const deliveries = arrayValue(document.entregas);
+  const comparison = recordValue(document.comparacao_comercial);
+  const terms = arrayValue(document.termos).map((raw) => {
+    const row = recordValue(raw);
+    return { titulo: String(row.titulo ?? ""), texto: String(row.texto ?? "") };
+  }).filter((term) => term.titulo.length > 0 && term.texto.length > 0);
+  const clientId = nullableNumber(order.cliente_id);
+  if (!clientId || terms.length === 0) return null;
+  const firstDelivery = recordValue(deliveries[0]);
+  const contactsResult = await supabase
+    .from("cad_cliente_contatos")
+    .select("id,nome,papel,telefone,email,status")
+    .eq("cliente_id", clientId)
+    .eq("status", "active")
+    .order("id");
+  const canonicalClientName = nullableString(order.cliente_nome);
+  if (!canonicalClientName || contactsResult.error) return null;
+  const comparisonTotals = recordValue(comparison.totais);
+  const contractItems: OrderContractItem[] = items.map((raw) => {
+    const item = recordValue(raw);
+    const quantity = Number(item.quantidade_apresentacoes ?? 0);
+    const factor = nullableNumber(item.quantidade_unidade_precificacao_por_apresentacao);
+    const symbol = String(item.unidade_precificacao_simbolo ?? "");
+    const volumeLiters = symbol.toUpperCase() === "L" && factor !== null ? quantity * factor : null;
+    return {
+      id: Number(item.pedido_item_id),
+      product: String(item.produto_nome ?? item.apresentacao_codigo ?? "Produto"),
+      packaging: String(item.embalagem_nome ?? item.apresentacao_codigo ?? "Apresentacao"),
+      quantity,
+      unitPrice: Number(item.preco_praticado_centavos_por_unidade_precificacao ?? 0) / 100,
+      total: Number(item.valor_praticado_centavos ?? 0) / 100,
+      volumeLiters,
+      logisticVolumes: null,
+      grossWeightKg: null
+    };
+  });
+  const rawEvidence = (evidenceResult.data ?? []) as Array<Record<string, unknown>>;
+  return {
+    contract: {
+      id: Number(order.pedido_id),
+      code: String(order.codigo ?? "Pedido"),
+      status: String(envelope.status_pedido ?? order.status_no_congelamento ?? "blocked"),
+      type: String(order.tipo ?? "venda"),
+      orderDate: String(order.data_pedido ?? ""),
+      deliveryDate: firstDelivery.data_prevista ? String(firstDelivery.data_prevista) : null,
+      paymentTerms: arrayValue(financial.parcelas).map((parcel) => {
+        const row = recordValue(parcel);
+        return `${row.numero_parcela}x ${row.forma_pagamento} em ${row.data_vencimento}`;
+      }).join("; ") || null,
+      observation: nullableString(order.observacao),
+      total: Number(comparisonTotals.total_praticado_centavos ?? 0) / 100,
+      totalVolumeLiters: sumComplete(contractItems.map((item) => item.volumeLiters)),
+      totalLogisticVolumes: null,
+      totalGrossWeightKg: null,
+      client: {
+        name: canonicalClientName,
+        city: "",
+        state: String(recordValue(document.contexto_comercial).uf ?? ""),
+        propertyName: null,
+        propertyCity: null,
+        propertyState: null,
+        documents: [],
+        contacts: []
+      },
+      sellerName: nullableString(order.vendedor_nome),
+      approvedAt: String(envelope.confirmed_at ?? ""),
+      approvedBy: "Confirmação comercial do vendedor",
+      terms,
+      items: contractItems
+    },
+    confirmationId: Number(envelope.confirmacao_comercial_id),
+    documentHash: String(envelope.documento_canonico_sha256),
+    contacts: ((contactsResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({ id: Number(row.id), name: String(row.nome), role: String(row.papel), email: nullableString(row.email) })),
+    evidence: await Promise.all(rawEvidence.map(async (row) => {
+      let artefatoUrl: string | null = null;
+      if (Boolean(row.artefato_disponivel) && hasSupabaseAdminConfig()) {
+        const artifactAccess = await supabase.rpc("consultar_com_pedido_assinatura_artefato", { p_evidencia_id: Number(row.evidencia_id) });
+        const artifactRow = Array.isArray(artifactAccess.data) ? recordValue(artifactAccess.data[0]) : {};
+        const storagePath = nullableString(artifactRow.artefato_storage_path);
+        if (!artifactAccess.error && storagePath) {
+          const signed = await createSupabaseAdminClient().storage.from("order-signature-evidence").createSignedUrl(storagePath, 300);
+          artefatoUrl = signed.data?.signedUrl ?? null;
+        }
+      }
+      return {
+      evidenciaId: Number(row.evidencia_id),
+      confirmacaoComercialId: Number(row.confirmacao_comercial_id),
+      documentoHash: String(row.documento_canonico_sha256),
+      fonte: String(row.fonte),
+      contatoId: Number(row.contato_id),
+      contatoNome: String(row.contato_nome),
+      artefatoHash: String(row.artefato_sha256),
+      artefatoUrl,
+      referenciaExterna: nullableString(row.referencia_externa),
+      declaradoAssinadoEm: nullableString(row.declarado_assinado_em),
+      submittedAt: String(row.submitted_at),
+      status: String(row.status),
+      justificativa: nullableString(row.justificativa),
+      decidedAt: nullableString(row.decided_at),
+      isCurrentVersion: Boolean(row.is_current_version)
+      };
+    }))
+  };
+}
 
 export async function getOrderWorkspace(search: string | null, page = 0) {
   const runtime = getRuntimeStatus();
@@ -500,12 +647,24 @@ export async function getOrderContract(orderId: number): Promise<OrderContract |
     sellerName: sellerResult.data?.nome ? String(sellerResult.data.nome) : null,
     approvedAt: approvalResult.data?.created_at ? String(approvalResult.data.created_at) : null,
     approvedBy: approvalActor.data?.display_name ? String(approvalActor.data.display_name) : null,
+    terms: [],
     items: contractItems
   };
 }
 
 function sumComplete(values: Array<number | null>): number | null {
   return values.some((value) => value === null) ? null : values.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+}
+
+// Supabase JSON envelopes are intentionally dynamic; runtime parsing validates their shape before use.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function recordValue(value: unknown): Record<string, any> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, any> : {};
+}
+
+function arrayValue(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
 const EMPTY_LOOKUPS: OrderLookups = {

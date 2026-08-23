@@ -1,5 +1,4 @@
 # Pedidos e contrato de venda
-
 ## Criar e aprovar
 
 1. O vendedor pesquisa um cliente da própria carteira.
@@ -12,6 +11,12 @@
 6. Uma pessoa com alçada registra a decisão de crédito, sem abrir o pedido.
 
 ## Exportar para assinatura
+
+SIG01: o documento comercial congelado fica disponivel apos a confirmacao F2B,
+mesmo com o pedido bloqueado. E-mail e apenas comunicacao. A evidencia enviada
+fica pendente ate revisao; somente uma evidencia aceita satisfaz a assinatura
+do comprador. Aceitar a evidencia nao abre o pedido nem substitui a aprovacao
+da Elite.
 
 O documento atual só pode ser aberto quando o pedido estiver `open` ou
 `fulfilled`. No histórico de Pedidos, use **Exportar PDF** e depois

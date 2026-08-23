@@ -153,7 +153,7 @@ testados. Isso nao constitui declaracao de infalibilidade.
 - documento comercial congelado disponivel a partir da confirmacao F2B, sem dependencia de credito;
 - evidencias, decisoes e idempotencia append-only, auditadas, default-deny e vinculadas ao `confirmacao_comercial_id` e ao SHA-256 exatos;
 - upload usa bucket privado e mediacao server-side; email nao e aceite; somente `ACCEPTED` satisfaz a assinatura;
-- pedido permanece bloqueado e efetividade continua fora do escopo;
+- pedido permanece bloqueado até que a efetividade governada reconheça todos os gates;
 - validacao proporcional SIG01 pendente; migration remota inalterada;
 - proximo passo: executar gates dirigidos SIG01 e revisar o delta antes de qualquer commit.
 
@@ -161,3 +161,16 @@ Revisar e integrar a ORD-01 F2B. Depois da aprovacao e do commit, planejar a
 ORD-01 F2C: decisao governada de desconto em implementacao local; revisao
 independente vinculada por versao e fingerprint a confirmacao F2B. O commit
 ainda nao foi criado.
+
+### Atualizacao ORD-01 Effectiveness
+
+- F2B, F2C e SIG01 estao fechados no commit remoto `2f79cbf`;
+- a migration `0135_govern_order_effectiveness.sql` implementa o avaliador
+  fail-closed de efetividade para vendas;
+- `pedido_efetivado_em` nasce nulo, recebe `clock_timestamp()` uma unica vez e
+  somente a efetividade governada pode mudar `blocked` para `open`;
+- o avaliador exige a mesma versao F2B, F2A coerente, credito `liberado`,
+  assinatura SIG01 `ACCEPTED` e F2C `APPROVED` quando houver desconto;
+- a implementacao permanece local, sem commit, push, deploy ou banco persistente
+  alterado;
+- nenhum dado historico e efetivado retroativamente.

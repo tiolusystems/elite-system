@@ -148,6 +148,40 @@ export async function decidirPedidoGerencialAction(formData: FormData) {
   redirect(`/pedidos?result=${decisao === "liberado" ? "order_approved" : "order_rejected"}#aprovacoes`);
 }
 
+export async function decidirDescontoPedidoAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const confirmacaoId = optionalInteger(formData, "confirmacao_comercial_id");
+  const comparacaoSha = field(formData, "comparacao_sha256");
+  const decisao = field(formData, "decisao");
+  const justificativa = field(formData, "justificativa");
+  if (!idempotencyKey || !pedidoId || !confirmacaoId || !/^[0-9a-f]{64}$/.test(comparacaoSha)
+      || !["APPROVED", "REJECTED"].includes(decisao) || justificativa.length < 10) {
+    redirect("/pedidos?result=invalid_discount_review#revisao-desconto");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_desconto_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_pedido_id: pedidoId,
+    p_confirmacao_comercial_id: confirmacaoId,
+    p_comparacao_sha256: comparacaoSha,
+    p_decisao: decisao,
+    p_justificativa: justificativa
+  }, {
+    metadata: {
+      action_key: "pedidos.commercial_discount.review",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedido_decisoes_desconto",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.discount_review_failed"
+    }
+  });
+  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#revisao-desconto`);
+  revalidatePath("/pedidos");
+  redirect("/pedidos?result=discount_review_recorded#revisao-desconto");
+}
+
 export async function ajustarLimiteCreditoAction(formData: FormData) {
   const idempotencyKey = uuid(formData, "idempotency_key");
   const clienteId = optionalInteger(formData, "cliente_id");

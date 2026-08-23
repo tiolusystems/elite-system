@@ -48,7 +48,7 @@ select '13100000-0000-4000-8000-000000000001'::uuid, action_key, true, '13100000
     'pedidos.create.own', 'pedidos.price_reference.resolve', 'pedidos.payment_terms.manage',
     'pedidos.commercial_context.manage', 'pedidos.practiced_price.record',
     'pedidos.commercial_review.preview', 'pedidos.commercial_review.confirm',
-    'pedidos.commercial_comparison.view'
+    'pedidos.commercial_comparison.view', 'pedidos.commercial_discount.review'
   ]) action_key
 union all
 select '13100000-0000-4000-8000-000000000002'::uuid, action_key, true, '13100000-0000-4000-8000-000000000003'::uuid
@@ -57,7 +57,8 @@ union all
 select '13100000-0000-4000-8000-000000000003'::uuid, action_key, true, '13100000-0000-4000-8000-000000000003'::uuid
   from unnest(array['system.admin', 'pedidos.price_reference.resolve']) action_key
 union all
-select '13100000-0000-4000-8000-000000000004'::uuid, 'pedidos.credit.review', true, '13100000-0000-4000-8000-000000000003'::uuid
+select '13100000-0000-4000-8000-000000000004'::uuid, action_key, true, '13100000-0000-4000-8000-000000000003'::uuid
+  from unnest(array['pedidos.credit.review', 'pedidos.commercial_discount.review']) action_key
 on conflict (user_id, action_key) do update set allowed = excluded.allowed, updated_by = excluded.updated_by;
 
 select set_config('request.jwt.claim.sub', '13100000-0000-4000-8000-000000000003', true);
@@ -381,10 +382,12 @@ $$;
 drop trigger zz_test_f2b_corromper_fato_persistido on public.com_pedido_item_precos_praticados;
 drop function public.test_f2b_corromper_fato_persistido();
 
+\if :{?f2c_fixture}
+\else
 select set_config('request.jwt.claim.sub', '13100000-0000-4000-8000-000000000004', true);
 set local role authenticated;
 do $$
-declare v f2b_context%rowtype; v_decision_id bigint;
+declare v f2b_context%rowtype; v_decision_id bigint; v_discount_decision_id bigint;
 begin
   select * into v from f2b_context;
   begin
@@ -395,6 +398,11 @@ begin
   exception when others then
     if position('revisao comercial confirmada' in lower(sqlerrm)) = 0 then raise exception 'gate gerencial falhou pelo motivo incorreto: %', sqlerrm; end if;
   end;
+  v_discount_decision_id := public.registrar_com_pedido_decisao_desconto_idempotente(
+    '13100000-0000-4000-8000-000000000022', v.order_id, v.confirmation_id,
+    (select comparacao_sha256 from public.consultar_com_pedidos_revisao_desconto() where pedido_id = v.order_id),
+    'APPROVED', 'Desconto aprovado no smoke F2C integrado.'
+  );
   v_decision_id := public.registrar_com_pedido_decisao_gerencial_idempotente(
     '13100000-0000-4000-8000-000000000021', v.order_id, 'liberado', 'Credito aprovado sem efetivar pedido'
   );
@@ -410,6 +418,7 @@ begin
   ) then raise exception 'decisao de credito nao foi vinculada a versao comercial'; end if;
 end
 $$;
+\endif
 
 reset role;
 do $$
@@ -461,4 +470,7 @@ begin
 end
 $$;
 
+\if :{?f2c_fixture}
+\else
 rollback;
+\endif

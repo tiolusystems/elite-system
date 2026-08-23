@@ -148,4 +148,6 @@ testados. Isso nao constitui declaracao de infalibilidade.
 ## Proxima tarefa
 
 Revisar e integrar a ORD-01 F2B. Depois da aprovacao e do commit, planejar a
-ORD-01 F2C: decisao governada de desconto. Nao iniciar a F2C nesta entrega.
+ORD-01 F2C: decisao governada de desconto em implementacao local; revisao
+independente vinculada por versao e fingerprint a confirmacao F2B. O commit
+ainda nao foi criado.

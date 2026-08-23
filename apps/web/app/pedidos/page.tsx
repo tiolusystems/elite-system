@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 
 import { SmartSearchField } from "@/app/corporate-search/smart-lookup";
-import { criarPedidoComercialAction, decidirPedidoGerencialAction } from "@/app/pedidos/actions";
+import { criarPedidoComercialAction, decidirDescontoPedidoAction, decidirPedidoGerencialAction } from "@/app/pedidos/actions";
 import { OrderEntryEditor } from "@/app/pedidos/order-entry-editor";
 import { getOrderDeliveryLocations, getOrderWorkspace } from "@/lib/orders";
 
@@ -136,6 +136,26 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
         ))}</div> : <div className="empty-state"><strong>Nenhum pedido aguardando análise de crédito</strong><span>A fila mostra somente pedidos dentro da hierarquia comercial e alçada efetiva.</span></div>}
       </section>
 
+      <section className="panel orders-approvals" id="revisao-desconto">
+        <div className="panel-header"><div><h2>Revisao de desconto comercial</h2><p>Itens abaixo da referencia exigem uma decisao independente da analise de credito.</p></div><span className="pill">{workspace.discountReviews.length} pendente(s)</span></div>
+        {workspace.canReviewDiscount && workspace.discountReviews.length ? <div className="approval-list">{workspace.discountReviews.map((order) => (
+          <article key={order.id}>
+            <div className="approval-summary"><div><strong>{order.code}</strong><span>{order.clientName} - {order.sellerName}</span></div><strong>{money(order.total)}</strong></div>
+            <p className="table-subtext">{commercialReviewSummary(order.comparison)}</p>
+            <p className="table-subtext">Justificativa comercial do vendedor: {order.justification ?? "Nao informada"}</p>
+            <form className="approval-decision" action={decidirDescontoPedidoAction}>
+              <input type="hidden" name="idempotency_key" value={randomUUID()} />
+              <input type="hidden" name="pedido_id" value={order.id} />
+              <input type="hidden" name="confirmacao_comercial_id" value={order.confirmationId} />
+              <input type="hidden" name="comparacao_sha256" value={order.comparisonHash} />
+              <label><span>Justificativa da decisao</span><input name="justificativa" minLength={10} required placeholder="Fundamente a decisao" /></label>
+              <button name="decisao" value="APPROVED" className="primary-button">Aprovar desconto</button><button name="decisao" value="REJECTED" className="secondary-button">Rejeitar desconto</button>
+            </form>
+            <p className="table-subtext">A decisao nao abre o pedido e nao substitui a analise de credito.</p>
+          </article>
+        ))}</div> : <div className="empty-state"><strong>{workspace.canReviewDiscount ? "Nenhuma revisao de desconto pendente" : "Revisao de desconto indisponivel"}</strong><span>{workspace.canReviewDiscount ? "Pedidos sem item abaixo da referencia nao exigem esta etapa." : "Sua conta nao possui a alcada individual para esta decisao."}</span></div>}
+      </section>
+
       <section className="panel" id="historico"><div className="panel-header"><div><h2>{selected ? `Histórico de ${selected.clientName}` : "Pedidos recentes no seu escopo"}</h2><p>{selected ? "Somente pedidos do cliente selecionado." : "Vendedor: carteira própria. Gerente: carteira própria e equipe autorizada."}</p></div><span className="pill">{visibleOrders.length} pedido(s)</span></div>
         {visibleOrders.length ? <div className="orders-history"><div className="orders-history-head"><span>Pedido</span><span>Cliente</span><span>Vendedor</span><span>Situação</span><span>Total</span><span>Documento</span></div>{visibleOrders.map((order) => <article key={order.id}><strong>{order.code}</strong><span>{order.clientName}<small>{order.propertyName ?? "Entrega definida na programação"}</small></span><span>{order.sellerName ?? "Não informado"}</span><span className="status-chip">{statusLabel(order.status)}</span><strong>{money(order.total)}</strong>{["open", "fulfilled"].includes(order.status) ? <Link className="secondary-button" href={`/pedidos/${order.id}/contrato`} target="_blank">Exportar PDF</Link> : <span className="orders-document-pending">Disponível após aprovação</span>}</article>)}</div> : <div className="empty-state"><strong>{selected ? "Este cliente ainda não possui pedidos visíveis" : "Nenhum pedido no seu escopo"}</strong><span>Pedidos de outras carteiras não são exibidos.</span></div>}
       </section>
@@ -145,6 +165,17 @@ export default async function PedidosPage({ searchParams }: { searchParams?: Pro
 
 function single(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
 function money(value: number | null) { return value === null ? "Não informado" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value); }
+function commercialReviewSummary(comparison: Record<string, unknown>) {
+  const totals = comparison.totais && typeof comparison.totais === "object" ? comparison.totais as Record<string, unknown> : {};
+  const items = Array.isArray(comparison.itens) ? comparison.itens : [];
+  const itemLabels = items.map((item) => {
+    if (!item || typeof item !== "object") return "Item sem detalhamento";
+    const row = item as Record<string, unknown>;
+    return `${String(row.apresentacao_codigo ?? "Apresentação")} - ${String(row.classificacao ?? "Situação não reconhecida")}`;
+  }).join("; ");
+  return `Referência ${moneyCentavos(totals.total_referencia_centavos)} · Praticado ${moneyCentavos(totals.total_praticado_centavos)} · Desconto bruto ${moneyCentavos(totals.descontos_brutos_centavos)} · Acima da referência ${moneyCentavos(totals.overprice_bruto_centavos)} · Resultado líquido ${moneyCentavos(totals.resultado_liquido_centavos)} · Itens: ${itemLabels || "Nenhum item detalhado"}`;
+}
+function moneyCentavos(value: unknown) { return typeof value === "number" || typeof value === "string" ? money(Number(value) / 100) : "Não informado"; }
 function statusLabel(value: string) { return ({ draft: "Rascunho", open: "Liberado", blocked: "Aguardando liberação", cancelled: "Cancelado", fulfilled: "Atendido" } as Record<string, string>)[value] ?? "Em análise"; }
 function creditLabel(value: string) { return ({ liberado: "Liberado", reduzido: "Reduzido", bloqueado: "Bloqueado", pendente_aprovacao: "Pendente de aprovação" } as Record<string, string>)[value] ?? "Pendente de análise"; }
 function clientStatusLabel(value: string) { return ({ ativa: "Cadastro ativo", active: "Cadastro ativo", nao_verificada: "Situação não verificada", suspensa: "Cadastro suspenso", inativa: "Cadastro inativo", inactive: "Cadastro inativo" } as Record<string, string>)[value] ?? "Situação não reconhecida"; }
@@ -155,6 +186,8 @@ function resultMessage(result?: string) {
     order_rejected: { kind: "warning", title: "Pedido reprovado", detail: "A justificativa ficou registrada no histórico." },
     credit_limit_adjusted: { kind: "ok", title: "Limite atualizado", detail: "A alteração e a justificativa foram auditadas." },
     invalid_manager_decision: { kind: "warning", title: "Decisão incompleta", detail: "Informe uma justificativa com pelo menos 10 caracteres." },
+    invalid_discount_review: { kind: "warning", title: "Revisão incompleta", detail: "Informe uma decisão, a justificativa e a versão comercial apresentada." },
+    discount_review_recorded: { kind: "ok", title: "Decisão de desconto registrada", detail: "O fato foi auditado. O pedido continua bloqueado para as próximas etapas." },
     invalid_credit_limit: { kind: "warning", title: "Limite inválido", detail: "Informe valor não negativo e justificativa completa." },
     missing_bonus_reason: { kind: "warning", title: "Justificativa obrigatória", detail: "Explique a bonificação com pelo menos 10 caracteres." },
     permission_denied: { kind: "warning", title: "Operação não autorizada", detail: "Este cliente ou pedido não pertence ao seu escopo comercial." },

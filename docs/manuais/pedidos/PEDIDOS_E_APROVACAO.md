@@ -96,3 +96,18 @@ individuais.
 - A tela abre somente a primeira página da carteira e pesquisa
   incrementalmente sem carregar todos os clientes do banco.
 - Alterações de limite e decisões de pedido são auditadas separadamente.
+# Revisao comercial e aprovacao de desconto
+
+Quando um item ficar abaixo da referencia comercial, o pedido exige revisao de
+desconto. Essa decisao e separada da analise de credito e nao abre o pedido.
+
+Antes de decidir, confira a versao comercial apresentada, a justificativa do
+vendedor e a comparacao calculada pelo sistema. Aprove ou rejeite com uma
+justificativa de pelo menos dez caracteres. O pedido permanece bloqueado e a
+analise de credito continua sendo uma etapa independente.
+
+Pedidos sem item abaixo da referencia nao exigem esta revisao. Um resultado
+liquido positivo nao elimina a revisao quando houver desconto em qualquer item.
+
+O fato registrado e auditavel, nao pode ser editado e uma nova versao comercial
+torna a decisao anterior inelegivel.

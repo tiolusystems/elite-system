@@ -124,6 +124,18 @@ export type ApprovalOrder = {
   creditStatus: string;
 };
 
+export type DiscountReviewOrder = {
+  id: number;
+  code: string;
+  clientName: string;
+  sellerName: string;
+  total: number;
+  confirmationId: number;
+  comparisonHash: string;
+  justification: string | null;
+  comparison: Record<string, unknown>;
+};
+
 export type SalesItem = {
   id: number;
   productId: number;
@@ -225,7 +237,7 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
   try {
     const supabase = await createSupabaseServerClient();
     const normalizedSearch = search?.trim() ?? "";
-    const [clients, orders, approvals, items, commercialPerson, commercialOptions, canPreview, canConfirm] = await Promise.all([
+    const [clients, orders, approvals, discountReviews, items, commercialPerson, commercialOptions, canPreview, canConfirm, canReviewDiscount] = await Promise.all([
       supabase.rpc("consultar_com_carteira_clientes_paginada", {
         p_busca: normalizedSearch || null,
         p_limite: 20,
@@ -233,13 +245,15 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
       }),
       supabase.rpc("consultar_com_pedidos_escopo", { p_limite: 120 }),
       supabase.rpc("consultar_com_pedidos_aprovacao"),
+      supabase.rpc("consultar_com_pedidos_revisao_desconto"),
       supabase.from("cad_produto_embalagens")
         .select("id,produto_id,codigo_item,status,cad_produtos_base(codigo_produto,nome),cad_embalagens(descricao,volume_litros,unidade)")
         .eq("status", "active").order("codigo_item").limit(250),
       supabase.rpc("current_commercial_person_id"),
       supabase.rpc("consultar_com_opcoes_revisao_comercial"),
       supabase.rpc("can_current_user", { p_action_key: "pedidos.commercial_review.preview" }),
-      supabase.rpc("can_current_user", { p_action_key: "pedidos.commercial_review.confirm" })
+      supabase.rpc("can_current_user", { p_action_key: "pedidos.commercial_review.confirm" }),
+      supabase.rpc("can_current_user", { p_action_key: "pedidos.commercial_discount.review" })
     ]);
     const scopedOrders = (orders.data ?? []) as Array<Record<string, unknown>>;
     const orderIds = scopedOrders.map((row) => Number(row.pedido_id)).filter((id) => Number.isInteger(id) && id > 0);
@@ -253,7 +267,7 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
           .limit(300)
       : { data: [], error: null };
     const orderById = new Map(scopedOrders.map((row) => [Number(row.pedido_id), row]));
-    const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? items.error?.message ?? commercialPerson.error?.message ?? exchangeSource.error?.message ?? null;
+    const error = clients.error?.message ?? orders.error?.message ?? approvals.error?.message ?? discountReviews.error?.message ?? items.error?.message ?? commercialPerson.error?.message ?? exchangeSource.error?.message ?? null;
     const options = !commercialOptions.error && commercialOptions.data && typeof commercialOptions.data === "object"
       ? commercialOptions.data as Record<string, unknown>
       : {};
@@ -312,6 +326,13 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
       commercialOrigins: arrayRecords(options.origens).map((row) => ({
         id: Number(row.id), code: String(row.codigo), name: String(row.nome)
       })),
+      discountReviews: ((discountReviews.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        id: Number(row.pedido_id), code: String(row.codigo_pedido), clientName: String(row.cliente_nome),
+        sellerName: String(row.vendedor_nome), total: Number(row.valor_total ?? 0),
+        confirmationId: Number(row.confirmacao_comercial_id), comparisonHash: String(row.comparacao_sha256),
+        justification: row.justificativa_comercial ? String(row.justificativa_comercial) : null,
+        comparison: (row.comparacao && typeof row.comparacao === "object" ? row.comparacao : {}) as Record<string, unknown>
+      })),
       commercialAreas: arrayRecords(options.areas).map((row) => ({
         id: Number(row.id), name: String(row.nome)
       })),
@@ -320,6 +341,7 @@ export async function getOrderWorkspace(search: string | null, page = 0) {
       })),
       canPreviewCommercialReview: !canPreview.error && canPreview.data === true,
       canConfirmCommercialReview: !canConfirm.error && canConfirm.data === true,
+      canReviewDiscount: !canReviewDiscount.error && canReviewDiscount.data === true,
       commercialPersonId: nullableNumber(commercialPerson.data),
       error
     };
@@ -333,6 +355,7 @@ function emptyOrderWorkspace(error: string) {
     clients: [] as PortfolioClient[],
     orders: [] as ScopedOrder[],
     approvals: [] as ApprovalOrder[],
+    discountReviews: [] as DiscountReviewOrder[],
     items: [] as SalesItem[],
     exchangeItems: [] as ExchangeSourceItem[],
     commercialOrigins: [] as CommercialOriginOption[],
@@ -340,6 +363,7 @@ function emptyOrderWorkspace(error: string) {
     commercialParticipants: [] as CommercialParticipantOption[],
     canPreviewCommercialReview: false,
     canConfirmCommercialReview: false,
+    canReviewDiscount: false,
     commercialPersonId: null as number | null,
     error
   };

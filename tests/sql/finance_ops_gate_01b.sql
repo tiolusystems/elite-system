@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-begin;
+begin transaction isolation level repeatable read;
 
 do $catalog$
 declare
@@ -112,10 +112,24 @@ declare
   v_first_order bigint;
   v_romaneio bigint;
   v_receipt bigint;
+  v_dashboard_baseline jsonb;
   v_dashboard jsonb;
+  v_expected_orders_with_balance bigint;
+  v_expected_open_receivables numeric;
+  v_expected_received_period numeric;
+  v_expected_commission_balance numeric;
   v_commission record;
   v_search_count integer;
 begin
+  -- The dashboard is intentionally global. A stable baseline keeps this smoke
+  -- valid both on clean CI and on configured persistent staging.
+  perform pg_advisory_xact_lock(hashtextextended('tests/sql/finance_ops_gate_01b', 0));
+  v_dashboard_baseline := public.consultar_fin_dashboard(current_date, current_date, current_date);
+  v_expected_orders_with_balance := (v_dashboard_baseline->>'orders_with_balance')::bigint + 305;
+  v_expected_open_receivables := (v_dashboard_baseline->>'open_receivables')::numeric + 30500;
+  v_expected_received_period := (v_dashboard_baseline->>'received_period')::numeric + 40;
+  v_expected_commission_balance := (v_dashboard_baseline->>'commission_balance')::numeric + 4;
+
   insert into public.cad_clientes(nome, nome_norm, cidade, uf, status, created_by, updated_by)
   values (
     'Cliente Financeiro HOM 0118',
@@ -199,8 +213,8 @@ begin
   );
 
   v_dashboard := public.consultar_fin_dashboard(current_date, current_date, current_date);
-  if (v_dashboard->>'orders_with_balance')::integer <> 305
-     or (v_dashboard->>'open_receivables')::numeric <> 30500 then
+  if (v_dashboard->>'orders_with_balance')::bigint <> v_expected_orders_with_balance
+     or (v_dashboard->>'open_receivables')::numeric <> v_expected_open_receivables then
     raise exception 'integral dashboard was truncated by a list limit: %', v_dashboard;
   end if;
 
@@ -297,9 +311,10 @@ begin
   end;
 
   v_dashboard := public.consultar_fin_dashboard(current_date, current_date, current_date);
-  if (v_dashboard->>'open_receivables')::numeric <> 30460
-     or (v_dashboard->>'received_period')::numeric <> 40
-     or (v_dashboard->>'commission_balance')::numeric <> 4 then
+  if (v_dashboard->>'orders_with_balance')::bigint <> v_expected_orders_with_balance
+     or (v_dashboard->>'open_receivables')::numeric <> v_expected_open_receivables - 40
+     or (v_dashboard->>'received_period')::numeric <> v_expected_received_period
+     or (v_dashboard->>'commission_balance')::numeric <> v_expected_commission_balance then
     raise exception 'dashboard did not reconcile receipt and commission: %', v_dashboard;
   end if;
 

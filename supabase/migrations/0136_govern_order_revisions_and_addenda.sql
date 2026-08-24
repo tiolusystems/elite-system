@@ -2486,6 +2486,12 @@ grant execute on function public.efetivar_com_pedido_revisao_idempotente(uuid,bi
 revoke all on function public.encerrar_com_pedido_revisao_idempotente(uuid,bigint,text,text) from public, anon;
 grant execute on function public.encerrar_com_pedido_revisao_idempotente(uuid,bigint,text,text) to authenticated;
 
+-- The idempotent manager-decision RPC remains the only application entrypoint.
+-- Internal SECURITY DEFINER composition continues to call the credit function
+-- as its owner, without exposing the non-idempotent function to app roles.
+revoke all on function public.registrar_com_pedido_decisao_credito(bigint,text,text,numeric,numeric,text)
+  from public, anon, authenticated;
+
 comment on table public.com_pedido_contrato_geneses is
   'ORD-01: H0 imutavel do contrato comercial efetivo. Nao e republicacao nem substitui pedido_efetivado_em.';
 comment on table public.com_pedido_revisoes_governadas is
@@ -2851,6 +2857,21 @@ drop function public.materializar_com_pedido_revisao_pre_efetiva_draft_0136(bigi
 drop function public.ord01_revision_current_contract_state_draft_0136(bigint);
 drop function public.solicitar_com_pedido_revisao_idempotente_draft_0136(uuid, bigint, jsonb);
 drop function public.efetivar_com_pedido_revisao_idempotente_draft_0136(uuid, bigint, jsonb);
+
+-- These governed reads execute permission checks (and, for the resolver,
+-- governed resolution helpers). They are operationally volatile and must not
+-- be planned as stable expressions across authorization or request changes.
+alter function public.resolver_com_referencia_comercial_unidade(
+  date, numeric, bigint, bigint, text, bigint, bigint[], bigint
+) volatile;
+alter function public.resolver_com_referencia_comercial(
+  date, numeric, bigint, bigint, text, bigint, bigint[], bigint
+) volatile;
+alter function public.com_revisao_comercial_venda_calcular(jsonb) volatile;
+alter function public.consultar_com_pedido_documento_assinavel(bigint) volatile;
+alter function public.consultar_com_pedido_assinaturas(bigint) volatile;
+alter function public.consultar_com_pedido_assinatura_artefato(bigint) volatile;
+alter function public.autorizar_com_pedido_assinatura_evidencia(bigint, bigint, text) volatile;
 
 revoke all on function public.ord01_revisao_comparacao_persistida(bigint) from public, anon, authenticated;
 revoke all on function public.ord01_revisao_estado_materializado(bigint) from public, anon, authenticated;

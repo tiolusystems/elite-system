@@ -30,10 +30,21 @@ class ManagerDecisionRequestIdempotencyContractTests(unittest.TestCase):
         self.assertNotIn("registrarCreditoPedidoAction", actions)
         self.assertIn('name="idempotency_key" value={randomUUID()}', page)
 
-    def test_integrated_commercial_smoke_retries_manager_request(self) -> None:
-        smoke = (ROOT / "tests/sql/commercial_end_to_end_chain.sql").read_text(encoding="utf-8")
-        self.assertGreaterEqual(smoke.count("registrar_com_pedido_decisao_gerencial_idempotente"), 4)
-        self.assertIn("manager decision retry duplicated the event", smoke)
+    def test_integrated_smokes_use_only_the_governed_manager_entrypoint(self) -> None:
+        commercial = (ROOT / "tests/sql/commercial_end_to_end_chain.sql").read_text(encoding="utf-8")
+        effectiveness = (ROOT / "tests/sql/order_effectiveness.sql").read_text(encoding="utf-8")
+        seller_review = (ROOT / "tests/sql/order_seller_commercial_confirmation.sql").read_text(encoding="utf-8")
+
+        self.assertIn("manager decision grants are broader than the idempotent contract", commercial)
+        self.assertIn("failed manager decision left a partial effect", commercial)
+        self.assertNotIn("perform public.registrar_com_pedido_decisao_credito(", commercial)
+        self.assertGreaterEqual(
+            effectiveness.count("registrar_com_pedido_decisao_gerencial_idempotente"), 4
+        )
+        self.assertGreaterEqual(
+            seller_review.count("registrar_com_pedido_decisao_gerencial_idempotente"), 3
+        )
+        self.assertIn("retry da decisao gerencial duplicou o fato", seller_review)
 
 
 if __name__ == "__main__":

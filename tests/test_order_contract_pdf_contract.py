@@ -30,7 +30,17 @@ class OrderContractPdfContractTests(unittest.TestCase):
         self.assertIn('from("com_pedidos")', self.data)
         self.assertIn('from("com_pedido_itens")', self.data)
         self.assertIn('from("com_pedido_credito_decisoes")', self.data)
-        self.assertNotIn("createSupabaseAdminClient", self.data)
+        contract_reader = self.data.split("export async function getOrderContract", 1)[1]
+        self.assertNotIn("createSupabaseAdminClient", contract_reader)
+        signature_reader = self.data.split("export async function getOrderSignatureWorkspace", 1)[1].split(
+            "export async function getOrderContract", 1
+        )[0]
+        self.assertIn('supabase.rpc("consultar_com_pedido_assinatura_artefato"', signature_reader)
+        self.assertIn("createSupabaseAdminClient", signature_reader)
+        self.assertLess(
+            signature_reader.index('supabase.rpc("consultar_com_pedido_assinatura_artefato"'),
+            signature_reader.index("createSupabaseAdminClient"),
+        )
         self.assertNotIn("service_role", self.data)
 
     def test_contract_has_two_pages_and_official_sections(self) -> None:

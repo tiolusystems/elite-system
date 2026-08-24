@@ -281,15 +281,30 @@ jobs:
           PGPASSWORD: postgres
         run: |
           set -euo pipefail
-          migration="supabase/migrations/0129_govern_commercial_pricing_units.sql"
-          held_migration="$RUNNER_TEMP/0129_govern_commercial_pricing_units.sql"
-          mv "$migration" "$held_migration"
-          restore_migration() { mv "$held_migration" "$migration"; }
-          trap restore_migration EXIT
+          pending_dir="$RUNNER_TEMP/migrations-after-0128"
+          mkdir -p "$pending_dir"
+
+          restore_migrations() {
+            shopt -s nullglob
+            for migration in "$pending_dir"/*.sql; do
+              mv "$migration" "supabase/migrations/$(basename "$migration")"
+            done
+          }
+
+          trap restore_migrations EXIT
+          for migration in supabase/migrations/*.sql; do
+            filename="$(basename "$migration")"
+            version="${filename%%_*}"
+            if (( 10#$version > 128 )); then
+              mv "$migration" "$pending_dir/"
+            fi
+          done
+
           supabase db reset --local
-          restore_migration
-          trap - EXIT
+          cp "$pending_dir/0129_govern_commercial_pricing_units.sql" supabase/migrations/
           psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/commercial_pricing_units_upgrade.sql
+          restore_migrations
+          trap - EXIT
       - uses: actions/upload-artifact@v4
         with:
           name: elite-database-types

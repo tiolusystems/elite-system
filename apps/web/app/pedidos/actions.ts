@@ -111,8 +111,16 @@ export async function preverRevisaoComercialAction(proposal: unknown): Promise<{
     return { data: null, error: "Complete os dados comerciais antes de calcular a revisão." };
   }
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("prever_com_revisao_comercial_venda", {
+  const { data, error } = await auditedRpc(supabase, "prever_com_revisao_comercial_venda", {
     p_proposta: proposal
+  }, {
+    metadata: {
+      action_key: "pedidos.commercial_review.preview",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedido_confirmacoes_comerciais",
+      failure_action: "pedidos.commercial_review_preview_failed"
+    }
   });
   if (error) return { data: null, error: commercialReviewError(error.message) };
   if (!data || typeof data !== "object" || Array.isArray(data)) {

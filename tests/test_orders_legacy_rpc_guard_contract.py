@@ -30,7 +30,8 @@ class LegacyOrdersRpcGuardTest(unittest.TestCase):
         self.assertNotIn("grant execute on function public.create_com_pedido_operacional", sql.lower())
         self.assertNotIn("createPedidoRascunhoAction", actions)
         self.assertNotIn('"create_com_pedido_operacional"', actions)
-        self.assertIn('"create_com_pedido_vendedor_programado_idempotente"', actions)
+        self.assertIn('"confirmar_com_revisao_comercial_venda_idempotente"', actions)
+        self.assertNotIn('"create_com_pedido_vendedor_programado_idempotente"', actions)
 
 
 if __name__ == "__main__":

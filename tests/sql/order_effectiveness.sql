@@ -178,8 +178,9 @@ declare
 begin
   select * into v from effectiveness_fixture;
   -- Ordem reversa: credito reconhecido primeiro ainda deixa a venda bloqueada.
-  perform public.registrar_com_pedido_decisao_credito(
-    v.reverse_order_id, 'liberado', null, 10000, 0, 'Credito primeiro no smoke'
+  perform public.registrar_com_pedido_decisao_gerencial_idempotente(
+    '13500000-0000-0000-0000-000000000031', v.reverse_order_id,
+    'liberado', 'Credito primeiro no smoke'
   );
   if not exists (
     select 1 from public.com_pedido_credito_decisoes decision
@@ -190,8 +191,9 @@ begin
   if (select status from public.com_pedidos where id = v.reverse_order_id) <> 'blocked' then
     raise exception 'credito reconhecido primeiro abriu pedido';
   end if;
-  perform public.registrar_com_pedido_decisao_credito(
-    v.rejected_order_id, 'liberado', null, 10000, 0, 'Credito antes de F2C rejeitado'
+  perform public.registrar_com_pedido_decisao_gerencial_idempotente(
+    '13500000-0000-0000-0000-000000000032', v.rejected_order_id,
+    'liberado', 'Credito antes de F2C rejeitado'
   );
   if not exists (
     select 1 from public.com_pedido_credito_decisoes decision
@@ -213,8 +215,9 @@ begin
     raise exception 'F2C rejeitado produziu efetividade';
   end if;
   begin
-    perform public.registrar_com_pedido_decisao_credito(
-      v.mixed_order_id, 'liberado', null, 10000, 0, 'Credito sem aprovacao F2C'
+    perform public.registrar_com_pedido_decisao_gerencial_idempotente(
+      '13500000-0000-0000-0000-000000000033', v.mixed_order_id,
+      'liberado', 'Credito sem aprovacao F2C'
     );
     if (select status from public.com_pedidos where id = v.mixed_order_id) <> 'blocked' then
       raise exception 'credito sem F2C abriu pedido';
@@ -284,8 +287,9 @@ declare
   v record;
 begin
   select * into v from effectiveness_fixture;
-  perform public.registrar_com_pedido_decisao_credito(
-    v.no_discount_order_id, 'liberado', null, 10000, 0, 'Credito sem desconto'
+  perform public.registrar_com_pedido_decisao_gerencial_idempotente(
+    '13500000-0000-0000-0000-000000000034', v.no_discount_order_id,
+    'liberado', 'Credito sem desconto'
   );
   if (select status from public.com_pedidos where id = v.no_discount_order_id) <> 'open' then
     raise exception 'credito + assinatura sem desconto nao abriu pedido';

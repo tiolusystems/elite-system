@@ -47,6 +47,11 @@ begin
      or has_function_privilege('anon', 'public.encerrar_com_pedido_revisao_idempotente(uuid,bigint,text,text)', 'EXECUTE') then
     raise exception 'revision RPC must be default deny for anon';
   end if;
+  if has_function_privilege('authenticated', 'public.registrar_com_pedido_decisao_credito(bigint,text,text,numeric,numeric,text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.registrar_com_pedido_decisao_gerencial_idempotente(uuid,bigint,text,text)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.registrar_com_pedido_decisao_gerencial_idempotente(uuid,bigint,text,text)', 'EXECUTE') then
+    raise exception 'manager decision ACL is broader than the governed idempotent entrypoint';
+  end if;
   if exists (
     select 1
       from pg_proc proc
@@ -81,6 +86,24 @@ begin
      or has_table_privilege('authenticated', 'public.com_pedido_revisao_itens', 'INSERT')
      or has_table_privilege('authenticated', 'public.com_pedido_revisao_materializacoes', 'INSERT') then
     raise exception 'revision facts must not be writable directly';
+  end if;
+  if exists (
+    select 1
+      from pg_proc proc
+      join pg_namespace ns on ns.oid = proc.pronamespace
+     where ns.nspname = 'public'
+       and proc.proname in (
+         'resolver_com_referencia_comercial_unidade',
+         'resolver_com_referencia_comercial',
+         'com_revisao_comercial_venda_calcular',
+         'consultar_com_pedido_documento_assinavel',
+         'consultar_com_pedido_assinaturas',
+         'consultar_com_pedido_assinatura_artefato',
+         'autorizar_com_pedido_assinatura_evidencia'
+       )
+       and proc.provolatile <> 'v'
+  ) then
+    raise exception 'governed authorization reads must be volatile';
   end if;
 
   v_alias_financial := jsonb_set(v_base->'financial_condition', '{pmp_dias}', '1');
@@ -321,8 +344,9 @@ begin
   perform public.decidir_com_pedido_assinatura_idempotente(
     '13600000-0000-4000-8000-000000000011', v_evidence_id, 'ACCEPTED', null
   );
-  perform public.registrar_com_pedido_decisao_credito(
-    v.pedido_id, 'liberado', null, 202400, 0, 'Credito H1 para smoke de revisao.'
+  perform public.registrar_com_pedido_decisao_gerencial_idempotente(
+    '13600000-0000-4000-8000-000000000013', v.pedido_id,
+    'liberado', 'Credito H1 para smoke de revisao.'
   );
 end $$;
 

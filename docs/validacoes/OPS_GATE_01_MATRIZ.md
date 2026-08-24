@@ -57,7 +57,7 @@ interface.
 | `/cadastros/embalagens` | A | Manter embalagem e composicao versionada | alçadas de embalagem | composicao incompleta, versao nao revisada e capacidade invalida negadas | 360 a 1920 | N/A | contextual especifico | SQL embalagem + contratos | comprovado |
 | `/cadastros/unidades` | A | Manter conversoes governadas | alçada de conversao | fator zero/negativo e unidade inexistente negados | 360 a 1920 | N/A | contextual especifico | SQL DEC-007 | comprovado |
 | `/cadastros/tecnicos` | B | Portal para rotas canonicas | leitura de Cadastros | nao cria interface paralela nem escrita | 360 a 1920 | N/A | contextual especifico | contrato Central | comprovado |
-| `/pedidos` | A/B | Carteira, pedido, entregas e liberacao | identidade de vendedor e alçadas independentes | formulario incompleto, carteira alheia, distribuicao divergente, duplo envio e retry divergente negados | 360 a 1920 | contrato separado | contextual | SQL 0116, CI `30442260717`, smoke `8d677ae` | comprovado |
+| `/pedidos` | A/B | Carteira, venda com revisao comercial, entregas, credito, desconto e assinatura | identidade de vendedor e alcadas independentes | formulario incompleto, carteira alheia, distribuicao divergente, versao divergente, duplo envio e retry divergente negados | 360 a 1920 | contrato separado | contextual | SQL 0116 e ORD-01 F2A a SIG01 | comprovado |
 | `/pedidos/[id]/contrato` | D | Imprimir pedido liberado | leitura do pedido no escopo | pedido bloqueado nao exporta; layout omite shell | 360 a 1920 e papel | PDF/impressao | herda Pedidos | regressao PDF | comprovado |
 | `/kanban` | B | Consultar pedidos por situacao | escopo comercial | nao altera estado por arraste ou cargo | 360 a 1920 | N/A | contextual especifico | contrato comercial | comprovado |
 | `/pedidos/financeiro` | B | Visão financeira integral e atalhos permitidos | alçadas financeiras individuais | período inválido e falta de alçada negados; sem escrita | 360 a 1920 | N/A | contextual específico | migration 0118 e contrato OPS-FIN | em validação |
@@ -117,7 +117,7 @@ sao verificados nas RPCs idempotentes e constraints correspondentes.
 | `/cadastros/tipos-insumo` | tipo, situacao, vinculo e criacao governada de MP | operador autorizado | alçadas de tipo/MP | catalogo ativo | RPC auditada | ID inexistente, inativo e duplicidade recusados | SQL 0064 | comprovado |
 | `/importacao-xml` | analisar, estagiar, conciliar, ignorar e gerar lote | operador autorizado | alçadas de Importacao | rollout e XML valido | lote somente apos confirmacao | falha anterior nao gera saldo parcial | contratos XML | bloqueado corretamente |
 | `/importacao-historica/mp` | analisar fonte | Auditoria autorizada | `migration.mp.view` | fonte homologada | relatorio sem ativar saldo | DEC-012 bloqueia corte oficial | contrato historico | bloqueado corretamente |
-| `/pedidos` | criar venda/bonificacao/troca, rascunho, decidir e ajustar credito | vendedor/revisor/autorizado financeiro | alçadas independentes | identidade, carteira, itens e entregas | pedido bloqueado e decisao auditada | duplo clique e payload divergente nao duplicam; limite nao e inferido por cargo | SQL 0116 + smoke | comprovado |
+| `/pedidos` | criar venda/bonificacao/troca, confirmar versao comercial, decidir credito/desconto e registrar/revisar assinatura | vendedor/revisor/autorizado financeiro | alcadas independentes | identidade, carteira, itens, entregas e versao comercial | pedido bloqueado; fatos e decisoes auditados | duplo clique, versao antiga e payload divergente nao duplicam nem atravessam gates | SQL 0116 e ORD-01 F2A a SIG01 | comprovado |
 | `/pedidos/financeiro` | consultar posição integral e acessar operações permitidas | usuário com ao menos uma alçada financeira | alçadas financeiras individuais | dados financeiros governados | indicadores integrais sem escrita | período inválido e falta de alçada recusados | migration 0118 + contrato OPS-FIN | em validação |
 | `/pedidos/financeiro/comissionamento` | pesquisar pedidos, revisar impacto e confirmar comissionados | usuário autorizado | `pedidos.commissions.assign` | pedido e pessoa elegíveis | revisão e confirmação em duas etapas, idempotentes e auditadas | pessoa inativa, contexto alterado, duplicidade e retry divergente recusados | contratos OPS-FIN/COMM-02B | em validação |
 | `/pedidos/financeiro/recebimentos` | pesquisar pedidos e registrar recebimento | usuário autorizado | leitura e registro independentes | saldo aberto e referência documental | recebimento alocado e auditado | zero, excesso, referência vazia e retry divergente recusados | migration 0118 + smoke SQL | em validação |
@@ -208,7 +208,9 @@ codigo.
 ### Pedidos e Financeiro
 
 `criarPedidoComercialAction`, `criarPedidoEspecialVendedorAction`,
-`criarPedidoVendedorAction`, `decidirPedidoGerencialAction`,
+`criarPedidoVendedorAction`, `preverRevisaoComercialAction`,
+`decidirPedidoGerencialAction`, `decidirDescontoPedidoAction`,
+`registrarEvidenciaAssinaturaAction`, `decidirEvidenciaAssinaturaAction`,
 `ajustarLimiteCreditoAction`,
 `criarTrocaPedidoAction`, `assignOrderCommissionAction`,
 `confirmOrderCommissionAction`, `registerReceiptAction`, `payCommissionAction`,

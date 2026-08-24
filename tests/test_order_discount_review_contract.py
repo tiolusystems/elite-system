@@ -45,7 +45,7 @@ class OrderDiscountReviewContractTests(unittest.TestCase):
         self.assertIn("pedido_permanece_bloqueado", self.migration)
 
     def test_required_cases_are_present_in_sql_smoke(self):
-        for phrase in ("BELOW_REFERENCE", "mixed below and above", "idempotency", "outside order scope", "append-only", "L and kg/un", "direct write", "pedido sem desconto", "gate sem aprovacao", "fingerprint divergente", "retry divergente", "segunda chave", "pedido fora do escopo"):
+        for phrase in ("BELOW_REFERENCE", "mixed below and above", "idempotency", "outside order scope", "append-only", "L and kg/un", "direct write", "pedido sem desconto", "credito antes de F2C nao preservou o bloqueio de efetividade", "APROVACAO_DESCONTO", "fingerprint divergente", "retry divergente", "segunda chave", "pedido fora do escopo"):
             self.assertIn(phrase, self.sql)
 
     def test_web_uses_the_governed_review_entrypoint_and_keeps_credit_separate(self):

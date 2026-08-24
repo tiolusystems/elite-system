@@ -103,7 +103,9 @@ individuais.
 - A tela abre somente a primeira página da carteira e pesquisa
   incrementalmente sem carregar todos os clientes do banco.
 - Alterações de limite e decisões de pedido são auditadas separadamente.
-# Revisao comercial e aprovacao de desconto
+## Revisão do pedido
+
+### Aprovação de desconto
 
 Quando um item ficar abaixo da referencia comercial, o pedido exige revisao de
 desconto. Essa decisao e separada da analise de credito e nao abre o pedido.

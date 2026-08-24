@@ -1,200 +1,76 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-08-18
+Atualizado em: 2026-08-24
 
-## Referencia vigente
+## Estado vigente em 2026-08-24
 
+- repositorio: `tiolusystems/elite-system`;
 - branch: `work/orders-rules-review-20260813`;
-- HEAD local e remoto antes da tranche local: `d379f3080fadc0bcafa412f43172c31dcd5928c6`;
-- sincronizacao local/remoto antes da tranche local: `0/0`;
-- producao real, `main`, PWA, staging e bancos persistentes: inalterados nesta tranche.
-
-O estado detalhado acumulado ate esta data foi preservado em
-`docs/historico/01_ESTADO_ATUAL_ATE_2026-07-28.md`. O Git e os documentos de
-validacao preservam as evidencias anteriores.
+- HEAD local e remoto: `85e7d31d86dcede091b59f1c3cd8a26e95cb6c1f`;
+- PR cumulativa ORD-01: `#8`, aberta contra `main`;
+- `main`, producao real, PWA e bancos persistentes permanecem inalterados;
+- `apps/web/next-env.d.ts` e uma alteracao local preexistente e permanece fora
+  do delta ORD-01.
 
 ## Tarefa em execucao
 
-`ORD-01 F2B - revisao comercial do vendedor`, implementada localmente e pendente de revisao antes do commit.
+`ORD-01 PR8 - integracao do macrociclo comercial e contratual`.
 
-### Estado local ORD-01 F2B
+A PR integra os 14 commits intencionais da ORD-01, desde o fechamento do
+entrypoint legado ate revisoes e aditivos contratuais. A sequencia inclui:
 
-- a proposta permanece somente no navegador enquanto e editada; a previsualizacao do banco nao cria pedido nem rascunho persistente;
-- a confirmacao final vincula o hash exato da previsualizacao e cria atomicamente pedido bloqueado, condicao financeira, referencias 1D/1E, fatos F2A e versao comercial F2B;
-- item abaixo da referencia permanece visivel mesmo quando o resultado liquido do pedido e positivo e exige justificativa unica e confirmacao explicita do vendedor;
-- a decisao de credito antiga nao abre vendas F2B; aprovacao de desconto, assinatura do comprador e efetividade permanecem fatos futuros e independentes;
-- a versao comercial congela documento canonico e SHA-256, sem usar os campos legados de preco como fonte;
-- validacoes locais aprovadas incluem instalacao limpa ate 0131, smoke dirigido, regressoes 1B/1D/1E/F2A e dos gates de Pedido, contratos Python, lint, TypeScript, build e Playwright nas cinco resolucoes;
-- proximo objetivo apos aprovacao e commit: ORD-01 F2C, decisao governada de desconto; nao implementar nesta entrega.
+- listas de preco, importacao XLSX, condicao financeira, PMP e resolvedor;
+- snapshot comercial e unidade de precificacao generica;
+- preco praticado, confirmacao do vendedor e aprovacao independente de desconto;
+- evidencia de assinatura do comprador e efetividade do pedido;
+- revisoes pre-efetivacao e cadeia contratual `H0 -> H1 -> H2`.
 
-Matriz vigente:
+O commit de protocolo AXL e infraestrutura de trabalho e auditoria do mesmo
+macrociclo. Nao ha commit funcional alheio a ORD-01 na branch.
 
-- `docs/validacoes/OPS_GATE_01_MATRIZ.md`.
+## Validacao vigente
 
-## Entregas historicas preservadas
+- a revisao tecnica da migration `0136` foi aprovada antes do commit;
+- instalacao limpa `0001 -> 0136` e upgrade `0135 -> 0136` foram aprovados em
+  runtime descartavel;
+- a instalacao limpa e o smoke comportamental `order_revision_and_addendum.sql` foram aprovados;
+- smokes F2A, F2B, F2C, SIG01, efetividade e revisao/aditivo foram aprovados;
+- o contrato Python dirigido da revisao aprovou 17 testes;
+- a primeira execucao da CI da PR identificou falhas de integracao em contratos
+  antigos, documentacao, fronteira RPC auditada e ACL de decisao gerencial;
+- as correcoes de integracao permanecem locais, sem commit ou push;
+- a suite Python completa aprovou `823/823` testes;
+- lint e build web foram aprovados, e o contrato TypeScript do banco foi gerado;
+- os 45 smokes SQL padrao e o upgrade dirigido `0128 -> 0129` foram aprovados;
+- o lint PostgreSQL nao registrou diagnostico novo introduzido pela ORD-01;
+- `OPS-GATE-01` permanece como evidencia historica do gate operacional anterior.
 
-### Pedidos
+## Contratos preservados
 
-- `6fd77b7` reorganizou a criacao na sequencia Cliente, Local, Itens,
-  Programacao, Revisao e Liberacao;
-- `7f50fee` separou consulta gerencial de criacao pelo vendedor: a conta sem
-  identidade comercial vinculada nao recebe formulario que o banco recusaria;
-- o staging mostra orientacao em PT-BR e preserva a consulta da carteira;
-- nenhuma alcada foi ampliada e nenhuma migration foi criada.
+- regras comerciais e financeiras permanecem no PostgreSQL governado;
+- fatos financeiros, comerciais, assinaturas, efetividade e revisoes sao
+  append-only quando o contrato determina;
+- aplicacao usa `Server Action -> RPC auditada -> dominio proprietario`;
+- uma venda somente se torna efetiva quando todos os gates da versao comercial
+  exata forem reconhecidos pelo avaliador;
+- `pedido_efetivado_em` e imutavel e nunca deriva da data declarada da assinatura;
+- a migration `0136` nao reescreve migrations `0124` a `0135`.
 
-### Manuais e inventario
+## Limites vigentes
 
-- manuais operacionais genericos foram substituidos por sequencias,
-  bloqueios, efeitos e historico especificos;
-- o teste de cobertura descobre as rotas publicadas em `page.tsx`;
-- a matriz OPS-GATE-01 inventaria paginas, route handlers e 121 Server Actions.
-
-### Clientes
-
-- a busca deixou de depender do recorte previamente carregado e passou a ser
-  paginada, normalizada e executada no servidor;
-- lista, ficha cadastral e novo cliente sao modos separados na mesma rota
-  canonica, sem interface concorrente;
-- a ficha utiliza a largura operacional disponivel e carrega relacoes somente
-  para o cliente selecionado;
-- a migration `0117` adicionou apenas a RPC de leitura governada, sem alterar
-  dados, tabelas ou contratos de escrita;
-- o contexto de busca e preservado ao abrir a ficha e ao retornar para a lista.
-
-### Cadastros canonicos
-
-- Materias-primas, Produtos PA/PI, Embalagens, Grupos de produto, Tipos de
-  insumo e Unidades seguem o mesmo contrato visual homologado em Clientes;
-- consulta, ficha e novo cadastro sao modos exclusivos, sem formularios
-  concorrentes ou paineis laterais comprimindo a area operacional;
-- a Central e a visao de Cadastros tecnicos direcionam explicitamente para as
-  rotas canonicas e para o modo de novo cadastro;
-- a terminologia de Unidades foi simplificada para o operador, sem alterar os
-  valores internos ou contratos do banco;
-- nenhuma migration, regra de negocio ou permissao foi alterada.
-
-### Financeiro operacional
-
-- Visao financeira, Comissionamento, Recebimentos, Comissoes e Relatorio a
-  pagar usam rotas separadas e navegacao condicionada a alcadas atomicas;
-- os indicadores sao calculados sobre toda a base autorizada e nao sobre a
-  pagina de detalhes;
-- recebimentos pesquisam pedido, cliente, documento, referencia fiscal e
-  local de entrega, com referencia documental obrigatoria na gravacao;
-- conta corrente, pagamentos e ajustes permanecem fluxos distintos, auditados
-  e idempotentes;
-- a migration aditiva `0118` organiza consultas, grants minimos e o contrato
-  de recebimento sem alterar fatos financeiros existentes;
-- o pacote foi aplicado unitariamente no Supabase de staging e permanece
-  protegido pelas alcadas atomicas existentes.
-
-### Filas operacionais e Seguranca urgente
-
-- CQ e Ordens usam consulta paginada no servidor e detalhe separado;
-- Romaneio consulta por codigo e situacao, pagina 20 registros e carrega itens,
-  reservas, logistica, fiscal e movimentos somente para os IDs exibidos;
-- Envase consulta por codigo e situacao, pagina 20 ordens e carrega componentes,
-  reservas e lotes PA somente para a pagina atual;
-- a tela de Seguranca esclarece que bloquear a conta selecionada nao equivale a
-  alterar alcadas e nao exclui pessoa, permissoes ou historico;
-- a reformulacao integral do ciclo de vida de usuarios continua reservada ao
-  `SEC-UX`.
-
-## Validacao historica preservada
-
-- CI `30472806418`: aprovada;
-- instalacao limpa `0001` a `0117`: aprovada no job `database-contract`;
-- smokes SQL de integridade, rollout, industrial, comercial, estoque,
-  Romaneio, Seguranca e importacoes: aprovados;
-- regressao Python completa: 695 testes aprovados;
-- E2E `30473086759`: aprovado em `1920 x 1080`, `1366 x 768`,
-  `768 x 1024`, `390 x 844` e `360 x 800`;
-- TypeScript, ESLint e build Next.js: aprovados;
-- o smoke anterior de Pedidos confirmou o SHA `8d677ae` e o estado
-  `Consulta disponivel, criacao indisponivel` para conta sem identidade de
-  vendedor.
-- `/api/health`: `status=ok` e `backendConfigured=true`;
-- cinco verificacoes responsivas adicionais no staging nao encontraram
-  rolagem horizontal, erro tecnico ou divergencia do SHA;
-- o smoke autenticado de Clientes confirmou busca por codigo, abertura da
-  ficha sem lista lateral, retorno preservando o filtro, novo cadastro isolado
-  e SHA `6d5f782`;
-- o smoke autenticado dos cadastros canonicos confirmou consulta, criacao e
-  ficha em modos exclusivos, sem rolagem horizontal ou erro tecnico, no SHA
-  `35a1633`;
-- a migration de leitura `0117` foi aplicada unitariamente no staging.
-- regressao final local: 705 testes Python, ESLint, TypeScript e build aprovados;
-- migration `0118`: instalacao limpa e upgrade `0117 -> 0118` aprovados no
-  projeto, container e volume `elite-validation-finance-0118-clean`;
-- smoke `PG_FINANCE_OPS_GATE_01B_OK` aprovou RLS, grants, escrita direta
-  negada, busca integral, referencia documental, idempotencia e alcadas;
-- Playwright financeiro: 15 cenarios aprovados nas cinco resolucoes, sem
-  rolagem horizontal no corpo ou na navegacao do dominio.
-
-## Classificacao historica preservada
-
-`OPS-GATE-01`: tecnicamente aprovado.
-
-`OPS-02`: tecnicamente concluido com as ressalvas de `SEC-UX` registradas na
-matriz. Nenhuma nova regra de negocio ou migration foi criada neste fechamento.
-
-Todas as rotas e acoes publicadas estao classificadas na matriz. As funcoes
-futuras permanecem bloqueadas de forma explicita. Os defeitos P1 encontrados
-foram corrigidos; nenhum P0 permaneceu aberto.
-
-O sistema esta protegido contra o catalogo de erros humanos previsiveis
-testados. Isso nao constitui declaracao de infalibilidade.
+- aditivos pos-efetivacao permanecem fail-closed enquanto os consumidores
+  downstream nao suportarem o contrato versionado;
+- logistica, producao, Romaneio, estoque, comissao, troca e devolucao nao foram
+  ampliados pela `0136`;
+- o lint PostgreSQL ainda registra o erro preexistente em
+  `consultar_est_estoque_lotes`, por `lote_id` ambiguo; ele nao pertence a ORD-01;
+- importacao historica `I2` permanece bloqueada ate a homologacao funcional das
+  fontes por Luciano e a decisao `DEC-012`;
+- nenhum deploy, migration remota ou alteracao de banco persistente integra a
+  correcao local da PR.
 
 ## Proxima tarefa
 
-### ORD-01 SIG01 — estado local
-
-- SIG01 implementada localmente sobre a migration `0133`, sem commit, push ou deploy;
-- documento comercial congelado disponivel a partir da confirmacao F2B, sem dependencia de credito;
-- evidencias, decisoes e idempotencia append-only, auditadas, default-deny e vinculadas ao `confirmacao_comercial_id` e ao SHA-256 exatos;
-- upload usa bucket privado e mediacao server-side; email nao e aceite; somente `ACCEPTED` satisfaz a assinatura;
-- pedido permanece bloqueado até que a efetividade governada reconheça todos os gates;
-- validacao proporcional SIG01 pendente; migration remota inalterada;
-- proximo passo: executar gates dirigidos SIG01 e revisar o delta antes de qualquer commit.
-
-Revisar e integrar a ORD-01 F2B. Depois da aprovacao e do commit, planejar a
-ORD-01 F2C: decisao governada de desconto em implementacao local; revisao
-independente vinculada por versao e fingerprint a confirmacao F2B. O commit
-ainda nao foi criado.
-
-### Atualizacao ORD-01 Effectiveness
-
-- F2B, F2C e SIG01 estao fechados no commit remoto `2f79cbf`;
-- a migration `0135_govern_order_effectiveness.sql` implementa o avaliador
-  fail-closed de efetividade para vendas;
-- `pedido_efetivado_em` nasce nulo, recebe `clock_timestamp()` uma unica vez e
-  somente a efetividade governada pode mudar `blocked` para `open`;
-- o avaliador exige a mesma versao F2B, F2A coerente, credito `liberado`,
-  assinatura SIG01 `ACCEPTED` e F2C `APPROVED` quando houver desconto;
-- a implementacao permanece local, sem commit, push, deploy ou banco persistente
-  alterado;
-- nenhum dado historico e efetivado retroativamente.
-
-### Atualizacao ORD-01 Revisao e aditivo contratual
-
-- plano de revisao aprovado e migration `0136` implementada localmente sem commit, push ou deploy;
-- a tranche cria a gênese contratual `H0`, revisões governadas, eventos append-only e projeção hash-chain;
-- antes da efetivação, alteração material permanece pendente até materialização governada da nova versão F2B;
-- depois da efetivação, alteração material é registrada como aditivo e nunca reescreve `pedido_efetivado_em`;
-- a máscara de impacto é derivada no banco e dimensões sem consumidor downstream suportado permanecem bloqueadas;
-- próxima etapa: revisão técnica do delta 0136 antes de qualquer commit.
-### Estado vigente em 2026-08-24
-
-- branch: `work/orders-rules-review-20260813`;
-- HEAD: `fb3054f3faa7c4596db3535a28caac03f12b9994`;
-- ORD-01 0136 permanece local e nao commitada; `apps/web/next-env.d.ts` e uma alteracao local preexistente e foi preservada fora do delta;
-- a revisao arquitetural foi autorizada por Luciano; o delta aditivo preserva H0, cadeia de hashes, fatos versionados, append-only, RLS e default-deny;
-- a limpeza de seguranca remove fisicamente as implementacoes temporarias `draft`, `legacy_0136` e `versioned_0136` apos a ativacao canonica; materializadores internos permanecem sem `EXECUTE` para `PUBLIC`, `anon` e `authenticated`;
-- validacao estatica dirigida: 17 testes Python aprovados e `git diff --check` aprovado;
-- o runtime descartavel `elite-validation-ord-1e-p1` foi recuperado pelo fluxo oficial; a instalacao limpa `0001 -> 0136` e o smoke comportamental `order_revision_and_addendum.sql` foram aprovados; o upgrade limpo `0135 -> 0136` tambem foi aprovado, sem tocar staging ou banco persistente;
-- a revisao pre-efetiva materializa H1 com F2B, financeiro, referencias e F2A versionados; aditivos pos-efetividade permanecem fail-closed enquanto consumidores downstream nao suportarem contexto `revisao_id`;
-- a correcao local da 0136 separa o item comercial resultante do item legado, registra o indice de materializacao exato e preserva H0 -> H1 -> H2 por hash e evento; H0 permanece a base comercial original mesmo quando H1 e a primeira versao efetivada;
-- gates pre-efetivacao usam somente fatos da revisao atual; a fixture SQL comportamental prepara H1 com quantidade 100 e H2 pendente com quantidade 120, sem alterar `pedido_efetivado_em`;
-- as regressoes dirigidas F2A, F2B, F2C, SIG01 e efetividade foram aprovadas; F2C agora comprova que credito pode ser registrado antes da aprovacao de desconto, permanece vinculado a F2B e nao efetiva a venda ate que todos os gates exigidos sejam satisfeitos;
-- o lint nao encontrou diagnostico introduzido por `0136`; permanece o erro preexistente em `consultar_est_estoque_lotes` por referencia ambigua a `lote_id`, fora deste delta;
-- proximo objetivo: revisao final do delta 0136 antes de qualquer commit. Nenhum commit sera criado antes disso.
+Revisar o artefato integral das correcoes de integracao da PR `#8` e aguardar
+autorizacao antes de commit ou push. Merge e deploy permanecem fora desta
+tarefa.

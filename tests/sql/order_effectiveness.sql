@@ -48,6 +48,7 @@ begin
     (select documento_canonico_sha256 from public.com_pedido_confirmacoes_comerciais where id = v.confirmation_id),
     v_contact_id
   );
+  grant select, update on effectiveness_fixture to authenticated;
 end $$;
 
 set local role authenticated;
@@ -112,9 +113,9 @@ begin
   v_evidence_id := public.registrar_com_pedido_assinatura_evidencia_idempotente(
     '13500000-0000-4000-8000-000000000010', v.mixed_order_id,
     v.mixed_confirmation_id, v.mixed_hash, 'external_digital', v.contact_id,
-    null, repeat('a', 64), 'application/pdf', 10, 'REF-0135-MIXED', timestamptz '2000-01-01 00:00:00+00'
+    'pending/13100000-0000-4000-8000-000000000001/13500000-0000-4000-8000-000000000010/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', repeat('a', 64), 'application/pdf', 10, 'REF-0135-MIXED', timestamptz '2000-01-01 00:00:00+00'
   );
-  if (select status from public.com_pedido_assinatura_evidencias where id = v_evidence_id) <> 'PENDING' then
+  if (select status from public.consultar_com_pedido_assinaturas(v.mixed_order_id) where evidencia_id = v_evidence_id) <> 'PENDING' then
     raise exception 'evidencia de assinatura nao permaneceu pendente antes da revisao';
   end if;
   perform public.decidir_com_pedido_assinatura_idempotente(
@@ -142,7 +143,7 @@ begin
   v_evidence_id := public.registrar_com_pedido_assinatura_evidencia_idempotente(
     '13500000-0000-0000-0000-000000000012', v.no_discount_order_id,
     v.no_discount_confirmation_id, v.no_discount_hash, 'external_digital', v.contact_id,
-    null, repeat('b', 64), 'application/pdf', 10, 'REF-0135-NODISCOUNT', timestamptz '2000-01-01 00:00:00+00'
+    'pending/13100000-0000-4000-8000-000000000001/13500000-0000-0000-0000-000000000012/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', repeat('b', 64), 'application/pdf', 10, 'REF-0135-NODISCOUNT', timestamptz '2000-01-01 00:00:00+00'
   );
   perform public.decidir_com_pedido_assinatura_idempotente(
     '13500000-0000-0000-0000-000000000013', v_evidence_id, 'ACCEPTED', null
@@ -161,7 +162,7 @@ begin
   v_evidence_id := public.registrar_com_pedido_assinatura_evidencia_idempotente(
     '13500000-0000-0000-0000-000000000016', v.rejected_order_id,
     v.rejected_confirmation_id, v.rejected_hash, 'external_digital', v.contact_id,
-    null, repeat('d', 64), 'application/pdf', 10, 'REF-0135-REJECTED', timestamptz '2000-01-01 00:00:00+00'
+    'pending/13100000-0000-4000-8000-000000000001/13500000-0000-0000-0000-000000000016/dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd', repeat('d', 64), 'application/pdf', 10, 'REF-0135-REJECTED', timestamptz '2000-01-01 00:00:00+00'
   );
   perform public.decidir_com_pedido_assinatura_idempotente(
     '13500000-0000-0000-0000-000000000017', v_evidence_id, 'ACCEPTED', null
@@ -202,7 +203,7 @@ begin
   perform public.registrar_com_pedido_decisao_desconto_idempotente(
     '13500000-0000-0000-0000-000000000021', v.rejected_order_id,
     v.rejected_confirmation_id,
-    (select comparacao_sha256 from public.com_pedido_confirmacoes_comerciais where id = v.rejected_confirmation_id),
+    (select comparacao_sha256 from public.consultar_com_pedidos_revisao_desconto() where pedido_id = v.rejected_order_id),
     'REJECTED', 'Desconto rejeitado no teste comportamental.'
   );
   if (select status from public.com_pedidos where id = v.rejected_order_id) <> 'blocked' then
@@ -265,7 +266,7 @@ begin
   v_evidence_id := public.registrar_com_pedido_assinatura_evidencia_idempotente(
     '13500000-0000-0000-0000-000000000014', v.reverse_order_id,
     v.reverse_confirmation_id, v.reverse_hash, 'external_digital', v.contact_id,
-    null, repeat('c', 64), 'application/pdf', 10, 'REF-0135-REVERSE', timestamptz '2000-01-01 00:00:00+00'
+    'pending/13100000-0000-4000-8000-000000000001/13500000-0000-0000-0000-000000000014/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc', repeat('c', 64), 'application/pdf', 10, 'REF-0135-REVERSE', timestamptz '2000-01-01 00:00:00+00'
   );
   perform public.decidir_com_pedido_assinatura_idempotente(
     '13500000-0000-0000-0000-000000000015', v_evidence_id, 'ACCEPTED', null
@@ -300,7 +301,7 @@ begin
   perform public.registrar_com_pedido_decisao_desconto_idempotente(
     '13500000-0000-0000-0000-000000000020', v.mixed_order_id,
     v.mixed_confirmation_id,
-    (select comparacao_sha256 from public.com_pedido_confirmacoes_comerciais where id = v.mixed_confirmation_id),
+    (select comparacao_sha256 from public.consultar_com_pedidos_revisao_desconto() where pedido_id = v.mixed_order_id),
     'APPROVED', 'Aprovacao F2C para liberar o teste de efetividade.'
   );
   if (select status from public.com_pedidos where id = v.mixed_order_id) <> 'open' then
@@ -309,32 +310,31 @@ begin
   if (select pedido_efetivado_em from public.com_pedidos where id = v.mixed_order_id) is null then
     raise exception 'pedido aberto sem timestamp de efetividade';
   end if;
+  perform set_config('request.jwt.claim.sub', '13100000-0000-4000-8000-000000000001', true);
   if not exists (
     select 1
       from public.com_pedidos order_row
-      join public.com_pedido_assinatura_evidencias evidence on evidence.pedido_id = order_row.id
+      join lateral public.consultar_com_pedido_assinaturas(order_row.id) evidence on true
      where order_row.id = v.mixed_order_id
        and order_row.pedido_efetivado_em > evidence.declarado_assinado_em
   ) then
     raise exception 'efetividade dependeu do horario declarado da assinatura';
   end if;
-  if (select count(*) from public.action_logs event
-       where event.entity_type = 'com_pedidos'
-         and event.entity_id = v.mixed_order_id::text
-         and event.action_key = 'pedidos.pedido_efetivado') <> 1 then
-    raise exception 'efetividade gerou mais de um evento de auditoria';
-  end if;
-  if not exists (
-    select 1 from public.action_logs event
-     where event.entity_type = 'com_pedidos'
-       and event.entity_id = v.mixed_order_id::text
-       and event.action_key = 'pedidos.pedido_efetivado'
-  ) then
-    raise exception 'efetividade nao auditada';
-  end if;
 end $$;
 
 reset role;
+
+do $$
+declare v record;
+begin
+  select * into v from effectiveness_fixture;
+  if (select count(*) from public.action_logs event
+       where event.entity_type = 'com_pedidos'
+         and event.entity_id = v.mixed_order_id::text
+         and event.action = 'pedidos.pedido_efetivado') <> 1 then
+    raise exception 'efetividade gerou mais de um evento de auditoria';
+  end if;
+end $$;
 
 do $$
 declare
@@ -349,14 +349,11 @@ begin
       raise exception 'mutacao do timestamp falhou pelo motivo incorreto: %', sqlerrm;
     end if;
   end;
-  if not exists (
-    select 1 from public.com_pedido_efetividade_estado(v.mixed_order_id) state
-     where state.value->>'credit_decision_id' is not null
-       and state.value->>'signature_evidence_id' is not null
-       and state.value->>'signature_decision_id' is not null
-       and state.value->>'discount_decision_id' is not null
-       and state.value->>'current_f2b_confirmation_id' = v.mixed_confirmation_id::text
-  ) then
+  if public.com_pedido_efetividade_estado(v.mixed_order_id)->>'credit_decision_id' is null
+     or public.com_pedido_efetividade_estado(v.mixed_order_id)->>'signature_evidence_id' is null
+     or public.com_pedido_efetividade_estado(v.mixed_order_id)->>'signature_decision_id' is null
+     or public.com_pedido_efetividade_estado(v.mixed_order_id)->>'discount_decision_id' is null
+     or public.com_pedido_efetividade_estado(v.mixed_order_id)->>'current_f2b_confirmation_id' <> v.mixed_confirmation_id::text then
     raise exception 'estado de efetividade nao expoe IDs exatos dos gates';
   end if;
 end $$;

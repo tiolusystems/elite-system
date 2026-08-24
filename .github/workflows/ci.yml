@@ -171,6 +171,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_effectiveness.sql
+      - name: Run order revision and addendum smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_revision_and_addendum.sql
       - name: Run governed client workbench search smoke
         env:
           PGPASSWORD: postgres

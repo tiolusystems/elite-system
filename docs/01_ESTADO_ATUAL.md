@@ -174,3 +174,27 @@ ainda nao foi criado.
 - a implementacao permanece local, sem commit, push, deploy ou banco persistente
   alterado;
 - nenhum dado historico e efetivado retroativamente.
+
+### Atualizacao ORD-01 Revisao e aditivo contratual
+
+- plano de revisao aprovado e migration `0136` implementada localmente sem commit, push ou deploy;
+- a tranche cria a gênese contratual `H0`, revisões governadas, eventos append-only e projeção hash-chain;
+- antes da efetivação, alteração material permanece pendente até materialização governada da nova versão F2B;
+- depois da efetivação, alteração material é registrada como aditivo e nunca reescreve `pedido_efetivado_em`;
+- a máscara de impacto é derivada no banco e dimensões sem consumidor downstream suportado permanecem bloqueadas;
+- próxima etapa: revisão técnica do delta 0136 antes de qualquer commit.
+### Estado vigente em 2026-08-24
+
+- branch: `work/orders-rules-review-20260813`;
+- HEAD: `fb3054f3faa7c4596db3535a28caac03f12b9994`;
+- ORD-01 0136 permanece local e nao commitada; `apps/web/next-env.d.ts` e uma alteracao local preexistente e foi preservada fora do delta;
+- a revisao arquitetural foi autorizada por Luciano; o delta aditivo preserva H0, cadeia de hashes, fatos versionados, append-only, RLS e default-deny;
+- a limpeza de seguranca remove fisicamente as implementacoes temporarias `draft`, `legacy_0136` e `versioned_0136` apos a ativacao canonica; materializadores internos permanecem sem `EXECUTE` para `PUBLIC`, `anon` e `authenticated`;
+- validacao estatica dirigida: 17 testes Python aprovados e `git diff --check` aprovado;
+- o runtime descartavel `elite-validation-ord-1e-p1` foi recuperado pelo fluxo oficial; a instalacao limpa `0001 -> 0136` e o smoke comportamental `order_revision_and_addendum.sql` foram aprovados; o upgrade limpo `0135 -> 0136` tambem foi aprovado, sem tocar staging ou banco persistente;
+- a revisao pre-efetiva materializa H1 com F2B, financeiro, referencias e F2A versionados; aditivos pos-efetividade permanecem fail-closed enquanto consumidores downstream nao suportarem contexto `revisao_id`;
+- a correcao local da 0136 separa o item comercial resultante do item legado, registra o indice de materializacao exato e preserva H0 -> H1 -> H2 por hash e evento; H0 permanece a base comercial original mesmo quando H1 e a primeira versao efetivada;
+- gates pre-efetivacao usam somente fatos da revisao atual; a fixture SQL comportamental prepara H1 com quantidade 100 e H2 pendente com quantidade 120, sem alterar `pedido_efetivado_em`;
+- as regressoes dirigidas F2A, F2B, F2C, SIG01 e efetividade foram aprovadas; F2C agora comprova que credito pode ser registrado antes da aprovacao de desconto, permanece vinculado a F2B e nao efetiva a venda ate que todos os gates exigidos sejam satisfeitos;
+- o lint nao encontrou diagnostico introduzido por `0136`; permanece o erro preexistente em `consultar_est_estoque_lotes` por referencia ambigua a `lote_id`, fora deste delta;
+- proximo objetivo: revisao final do delta 0136 antes de qualquer commit. Nenhum commit sera criado antes disso.

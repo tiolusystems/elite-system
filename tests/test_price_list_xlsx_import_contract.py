@@ -4,6 +4,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0125_stage_price_list_xlsx_imports.sql"
+OPERATIONAL_MIGRATION = ROOT / "supabase" / "migrations" / "0137_govern_price_list_operational_xlsx.sql"
 SMOKE = ROOT / "tests" / "sql" / "price_list_xlsx_import.sql"
 CI = ROOT / ".github" / "workflows" / "ci.yml"
 
@@ -66,6 +67,16 @@ class PriceListXlsxImportContractTests(unittest.TestCase):
         self.assertIn("revoke all on function public.stage_com_lista_preco_xlsx_import_idempotente", self.sql)
         self.assertIn("grant execute on function public.stage_com_lista_preco_xlsx_import_idempotente", self.sql)
 
+        operational_sql = OPERATIONAL_MIGRATION.read_text(encoding="utf-8").lower()
+        self.assertIn(
+            "revoke execute on function public.stage_com_lista_preco_xlsx_import_idempotente",
+            operational_sql,
+        )
+        self.assertIn(
+            "revoke execute on function public.apply_com_lista_preco_import_idempotente",
+            operational_sql,
+        )
+
     def test_smoke_and_ci_cover_the_governed_import(self) -> None:
         smoke = SMOKE.read_text(encoding="utf-8").lower()
         ci = CI.read_text(encoding="utf-8")
@@ -82,6 +93,7 @@ class PriceListXlsxImportContractTests(unittest.TestCase):
         ):
             self.assertIn(expected, smoke)
         self.assertIn("tests/sql/price_list_xlsx_import.sql", ci)
+        self.assertIn("tests/sql/price_list_operational_xlsx.sql", ci)
 
 
 if __name__ == "__main__":

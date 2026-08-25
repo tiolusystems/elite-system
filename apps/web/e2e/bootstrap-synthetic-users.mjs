@@ -20,6 +20,7 @@ const definitions = [
     "pedidos.practiced_price.record", "pedidos.commercial_review.",
     "pedidos.commercial_comparison.view"
   ]],
+  ["price-list-admin", "comercial", ["pedidos.price_lists."]],
   ["order-reviewer", "comercial", ["pedidos.credit.review"]],
   ["credit-authority", "auditoria", ["financeiro.credit_limits.adjust"]],
   ["stock-operator", "estoque", ["estoque."]],
@@ -88,6 +89,43 @@ begin
   end if;
 end;
 $runtime$;
+
+do $price_list_fixture$
+declare
+  v_actor uuid := ${sqlLiteral(securityAdministrator.id)}::uuid;
+  v_product_a_id bigint;
+  v_product_b_id bigint;
+  v_packaging_a_id bigint;
+  v_packaging_b_id bigint;
+begin
+  insert into public.cad_produtos_base(codigo_produto, nome, nome_norm, status, created_by, updated_by)
+  values ('9137', 'Produto Lista Preco E2E', 'produto lista preco e2e', 'active', v_actor, v_actor)
+  returning id into v_product_a_id;
+  insert into public.cad_produtos_base(codigo_produto, nome, nome_norm, status, created_by, updated_by)
+  values ('9138', 'Produto Alternativo Lista Preco E2E', 'produto alternativo lista preco e2e', 'active', v_actor, v_actor)
+  returning id into v_product_b_id;
+
+  insert into public.cad_embalagens(
+    descricao, descricao_norm, unidade, volume_litros, status, unidade_id, origem_dados, created_by, updated_by
+  ) values (
+    'Embalagem Lista Preco E2E 20 L', 'embalagem lista preco e2e 20 l', 'UN', 20, 'active',
+    (select id from public.cad_unidades_medida where lower(codigo) = 'un'), 'sistema', v_actor, v_actor
+  ) returning id into v_packaging_a_id;
+  insert into public.cad_embalagens(
+    descricao, descricao_norm, unidade, volume_litros, status, unidade_id, origem_dados, created_by, updated_by
+  ) values (
+    'Embalagem Alternativa Lista Preco E2E 10 L', 'embalagem alternativa lista preco e2e 10 l', 'UN', 10, 'active',
+    (select id from public.cad_unidades_medida where lower(codigo) = 'un'), 'sistema', v_actor, v_actor
+  ) returning id into v_packaging_b_id;
+
+  insert into public.cad_produto_embalagens(
+    produto_id, embalagem_id, codigo_item, status, origem_dados, created_by, updated_by
+  ) values (v_product_a_id, v_packaging_a_id, 'PLX137-20L', 'active', 'sistema', v_actor, v_actor);
+  insert into public.cad_produto_embalagens(
+    produto_id, embalagem_id, codigo_item, status, origem_dados, created_by, updated_by
+  ) values (v_product_b_id, v_packaging_b_id, 'PLX138-10L', 'active', 'sistema', v_actor, v_actor);
+end;
+$price_list_fixture$;
 
 do $f2b_fixture$
 declare

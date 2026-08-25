@@ -214,7 +214,7 @@ class OrderRevisionContractTests(unittest.TestCase):
     def test_handoff_contract(self):
         self.assertIn("Handoff entre conversas", self.agents)
         self.assertIn("Recuperacao de nova conversa", self.bootstrap)
-        self.assertIn("Estado vigente em 2026-08-24", self.state)
+        self.assertIn("Estado vigente em 2026-08-25", self.state)
         self.assertIn("o smoke comportamental `order_revision_and_addendum.sql` foram aprovados", self.state)
 
 

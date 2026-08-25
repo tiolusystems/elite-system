@@ -7,6 +7,7 @@ declare
   v_client bigint;
   v_person bigint;
   v_order bigint;
+  v_gate_order bigint;
   v_assignment bigint;
   v_receipt bigint;
   v_receipt_retry bigint;
@@ -15,7 +16,6 @@ declare
   v_adjustment bigint;
   v_adjustment_retry bigint;
   v_credit_event bigint;
-  v_manager_decision bigint;
 begin
   if has_function_privilege('authenticated', 'public.registrar_com_pedido_decisao_gerencial(bigint,text,text)', 'EXECUTE')
      or has_function_privilege('authenticated', 'public.registrar_com_pedido_decisao_credito(bigint,text,text,numeric,numeric,text)', 'EXECUTE')
@@ -60,11 +60,19 @@ begin
 
   insert into public.com_pedidos(
     codigo_pedido, cliente_id, vendedor_gerador_id, tipo_pedido, status,
+    data_pedido, valor_total, origem_dados, pedido_efetivado_em, created_by, updated_by
+  ) values (
+    'PED-CHAIN-0089', v_client, v_person, 'venda', 'open',
+    current_date, 1000, 'excel_legado', clock_timestamp(), v_actor, v_actor
+  ) returning id into v_order;
+
+  insert into public.com_pedidos(
+    codigo_pedido, cliente_id, vendedor_gerador_id, tipo_pedido, status,
     data_pedido, valor_total, created_by, updated_by
   ) values (
-    'PED-CHAIN-0089', v_client, v_person, 'venda', 'blocked',
+    'PED-CHAIN-GATE-0136', v_client, v_person, 'venda', 'blocked',
     current_date, 1000, v_actor, v_actor
-  ) returning id into v_order;
+  ) returning id into v_gate_order;
 
   v_credit_event := public.ajustar_com_limite_credito_cliente_idempotente(
     '89000000-0000-4000-8000-000000000010', v_client, 5000,
@@ -75,16 +83,22 @@ begin
     'Limite sintetico aprovado no smoke integrado'
   ) <> v_credit_event then raise exception 'credit limit retry duplicated the event'; end if;
 
-  v_manager_decision := public.registrar_com_pedido_decisao_gerencial_idempotente(
-    '89000000-0000-4000-8000-000000000011', v_order, 'liberado',
-    'Limite e cadastro aprovados no smoke integrado'
-  );
-  if public.registrar_com_pedido_decisao_gerencial_idempotente(
-    '89000000-0000-4000-8000-000000000011', v_order, 'liberado',
-    'Limite e cadastro aprovados no smoke integrado'
-  ) <> v_manager_decision then raise exception 'manager decision retry duplicated the event'; end if;
-  if (select status from public.com_pedidos where id = v_order) <> 'open' then
-    raise exception 'manager approval did not open the order';
+  begin
+    perform public.registrar_com_pedido_decisao_gerencial_idempotente(
+      '89000000-0000-4000-8000-000000000011', v_gate_order, 'liberado',
+      'Venda sem F2B deve permanecer bloqueada no smoke integrado'
+    );
+    raise exception 'manager decision bypassed the commercial review gate';
+  exception when others then
+    if sqlerrm = 'manager decision bypassed the commercial review gate'
+       or position('revisao comercial confirmada' in lower(sqlerrm)) = 0 then
+      raise;
+    end if;
+  end;
+  if exists (
+    select 1 from public.com_pedido_credito_decisoes where pedido_id = v_gate_order
+  ) or (select status from public.com_pedidos where id = v_gate_order) <> 'blocked' then
+    raise exception 'failed manager decision left a partial effect';
   end if;
 
   v_assignment := public.definir_com_pedido_comissao_idempotente(

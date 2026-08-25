@@ -1,5 +1,12 @@
 # Pedidos e aprovação gerencial
 
+## Assinatura do comprador (SIG01)
+
+O documento comercial congelado fica disponivel apos a confirmacao F2B, antes
+da liberacao gerencial. E-mail e canal de comunicacao, nao aceite. Evidencia
+enviada fica `PENDING`; somente `ACCEPTED` satisfaz a assinatura. O aceite nao
+abre o pedido e a evidencia referencia a versao comercial e SHA-256 exatos.
+
 ## Vendedor
 
 1. Abra **Pedidos**.
@@ -15,18 +22,29 @@
 6. Em venda, selecione o **Local de entrega** entre propriedades,
    estabelecimentos ou endereços ativos do cliente.
 7. Escolha primeiro o produto e depois a apresentação/embalagem cadastrada.
-8. Informe quantidade e valor. O sistema calcula os litros do pedido depois
-   que houver pelo menos um item válido.
+8. Informe a quantidade de apresentações. O sistema mostra os totais físicos
+   conhecidos depois que houver pelo menos um item válido.
 9. Use **Adicionar item** para incluir outros produtos no mesmo pedido.
 10. Na **Programação das entregas**, informe a previsão. Use **Adicionar outra
     entrega** quando houver mais de uma entrega, data ou destino e distribua
     integralmente a quantidade de cada item entre as entregas.
-11. Confira o resumo de cliente, documento, vendedor, locais, datas, itens,
-    quantidades, valores e limite.
-12. Marque a confirmação e clique em **Enviar para liberação**.
-13. Consulte, na mesma tela, o histórico do cliente selecionado.
+11. Informe a origem, o contexto comercial e as parcelas com valores absolutos
+    e vencimentos.
+12. Clique em **Calcular referências**. O banco apresenta unidade, fator,
+    preço de referência e quantidade comercial de cada item.
+13. Informe o preço praticado na unidade apresentada e recalcule as condições.
+14. Confira por item referência, praticado, diferença, percentual e impacto.
+    Confira também descontos brutos, valores acima da referência e resultado
+    líquido do pedido.
+15. Se houver item abaixo da referência, informe uma justificativa e confirme
+    explicitamente a solicitação dos descontos. O alerta permanece visível
+    mesmo quando o resultado líquido do pedido for positivo.
+16. Clique em **Confirmar condições comerciais**.
+17. Consulte, na mesma tela, o histórico do cliente selecionado.
 
-Todo pedido fica como **Aguardando liberação**. Bonificação e mostruário não
+Toda venda confirmada fica bloqueada. A confirmação do vendedor congela a
+versão comercial, mas não aprova desconto, não substitui a assinatura do
+comprador e não torna o pedido efetivo. Bonificação e mostruário não
 geram comissão. O vendedor não escolhe outro vendedor, não aumenta limite e
 não libera o próprio pedido.
 
@@ -50,17 +68,19 @@ O documento para impressão ou PDF somente fica disponível depois da liberaçã
 gerencial. Vendedor e gerente podem emiti-lo quando o pedido estiver aberto ou
 atendido.
 
-## Revisão do pedido
+## Análise de crédito
 
 1. Abra **Pedidos**. A busca mostra clientes próprios e clientes dos vendedores
    subordinados por vínculo direto ou área comercial.
-2. Localize **Liberações gerenciais**.
+2. Localize **Análise de crédito**.
 3. Confira cliente, vendedor, valor do pedido e limite disponível.
 4. Escreva a justificativa.
-5. Clique em **Liberar** ou **Reprovar**.
+5. Clique em **Aprovar crédito** ou **Reprovar**.
 
-A aprovação excepcional vale apenas para o pedido analisado. Ela não altera o
-limite permanente do cliente.
+A aprovação de crédito vale apenas para o pedido analisado. Ela não altera o
+limite permanente do cliente e não abre a venda. Aprovação de desconto e
+assinatura aceita serão etapas independentes vinculadas à mesma versão
+comercial.
 
 ## Limite cadastral do cliente
 
@@ -83,3 +103,20 @@ individuais.
 - A tela abre somente a primeira página da carteira e pesquisa
   incrementalmente sem carregar todos os clientes do banco.
 - Alterações de limite e decisões de pedido são auditadas separadamente.
+## Revisão do pedido
+
+### Aprovação de desconto
+
+Quando um item ficar abaixo da referencia comercial, o pedido exige revisao de
+desconto. Essa decisao e separada da analise de credito e nao abre o pedido.
+
+Antes de decidir, confira a versao comercial apresentada, a justificativa do
+vendedor e a comparacao calculada pelo sistema. Aprove ou rejeite com uma
+justificativa de pelo menos dez caracteres. O pedido permanece bloqueado e a
+analise de credito continua sendo uma etapa independente.
+
+Pedidos sem item abaixo da referencia nao exigem esta revisao. Um resultado
+liquido positivo nao elimina a revisao quando houver desconto em qualquer item.
+
+O fato registrado e auditavel, nao pode ser editado e uma nova versao comercial
+torna a decisao anterior inelegivel.

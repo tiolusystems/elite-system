@@ -94,11 +94,15 @@ class PedidosLifecycleAuditContractTests(unittest.TestCase):
         text = PEDIDOS_ACTIONS.read_text(encoding="utf-8")
 
         for expected in (
-            'action_key: "pedidos.create"',
+            'action_key: "pedidos.create.own"',
             'axis: "own_any"',
             'domain: "pedidos"',
             'entity: "com_pedidos"',
-            'failure_action: "pedidos.create_failed"',
+            'failure_action: "pedidos.special_create_failed"',
+            'action_key: "pedidos.commercial_review.preview"',
+            'failure_action: "pedidos.commercial_review_preview_failed"',
+            'action_key: "pedidos.commercial_review.confirm"',
+            'failure_action: "pedidos.commercial_review_confirm_failed"',
             'action_key: "pedidos.credit.review"',
             'axis: "status_transition"',
             'entity: "com_pedido_credito_decisoes"',

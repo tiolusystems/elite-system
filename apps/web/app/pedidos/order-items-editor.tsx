@@ -9,7 +9,7 @@ export type OrderItemDraft = {
   productId: string;
   presentationId: string;
   quantity: string;
-  unitPrice: string;
+  practicedPrice: string;
 };
 
 type Props = {
@@ -28,7 +28,6 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
     }));
     return [...unique.values()].sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
   }, [items]);
-  const total = rows.reduce((sum, row) => sum + decimal(row.quantity) * decimal(row.unitPrice), 0);
   const totalVolumeLiters = orderVolumeLiters(rows, items);
   const hasVolumeInput = rows.some((row) => row.presentationId && decimal(row.quantity) > 0);
 
@@ -50,7 +49,7 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
       productId: "",
       presentationId: "",
       quantity: "",
-      unitPrice: ""
+      practicedPrice: ""
     }]);
   }
 
@@ -59,7 +58,7 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
       <legend>3. Itens do pedido</legend>
       <p className="section-intro">Escolha primeiro o produto e depois uma apresentação comercial ativa.</p>
       <div className="order-item-head">
-        <span>Produto</span><span>Apresentação</span><span>Quantidade</span><span>Valor unitário</span><span>Subtotal</span><span aria-hidden="true" />
+        <span>Produto</span><span>Apresentação</span><span>Quantidade</span><span aria-hidden="true" />
       </div>
       {rows.map((row, index) => {
         const presentations = items.filter((item) => item.productId === Number(row.productId));
@@ -67,7 +66,6 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
         const duplicate = Boolean(row.presentationId && rows.some((candidate) =>
           candidate.key !== row.key && candidate.presentationId === row.presentationId
         ));
-        const subtotal = decimal(row.quantity) * decimal(row.unitPrice);
         return (
           <article className="order-item-row" key={row.key}>
             <span className="order-item-position">Item {index + 1}</span>
@@ -100,14 +98,10 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
               <span>Quantidade</span>
               <input value={row.quantity} onChange={(event) => change(row.key, "quantity", event.target.value)} inputMode="decimal" min="0.0001" required />
             </label>
-            <label>
-              <span>Valor unitário</span>
-              <input value={row.unitPrice} onChange={(event) => change(row.key, "unitPrice", event.target.value)} inputMode="decimal" min="0" required />
-            </label>
             <div className="order-item-subtotal">
-              <span>Subtotal</span>
-              <strong>{money(subtotal)}</strong>
-              {selected ? <small>{selected.presentationCode}</small> : null}
+              <span>Apresentação selecionada</span>
+              <strong>{selected?.presentationCode ?? "Pendente"}</strong>
+              <small>O preço será informado na revisão comercial.</small>
             </div>
             <button type="button" className="icon-button" title="Remover item" aria-label={`Remover item ${index + 1}`} disabled={rows.length === 1} onClick={() => remove(row.key)}>X</button>
           </article>
@@ -116,8 +110,8 @@ export function OrderItemsEditor({ items, rows, onChange }: Props) {
       <div className="order-items-footer">
         <button type="button" className="secondary-button" onClick={add}>Adicionar item</button>
         <div>
-          <span>Total do pedido</span>
-          <strong>{money(total)}</strong>
+          <span>Quantidade de itens</span>
+          <strong>{rows.length}</strong>
           {hasVolumeInput ? (
             <small>{totalVolumeLiters === null ? "Volume da apresentação pendente no cadastro" : `${number(totalVolumeLiters)} L no pedido`}</small>
           ) : null}
@@ -144,10 +138,6 @@ export function orderVolumeLiters(rows: OrderItemDraft[], items: SalesItem[]) {
     total += quantity * item.volumeLiters;
   }
   return total;
-}
-
-function money(value: number) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
 function number(value: number) {

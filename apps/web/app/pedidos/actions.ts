@@ -1,13 +1,14 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getRuntimeStatus } from "@/lib/runtime";
+import { createSupabaseAdminClient, hasSupabaseAdminConfig } from "@/lib/supabase/admin";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const ALLOWED_TIPO_PEDIDO = new Set(["venda", "bonificacao", "devolucao", "mostruario"]);
 const ALLOWED_MOTIVO_TROCA = new Set(["qualidade", "avaria_transporte", "erro_separacao", "erro_comercial", "acordo_comercial", "outro"]);
 const DECIMAL_SEPARATOR = /,/g;
 
@@ -64,63 +65,68 @@ export async function criarPedidoEspecialVendedorAction(formData: FormData) {
 
 export async function criarPedidoVendedorAction(formData: FormData) {
   const idempotencyKey = uuid(formData, "idempotency_key");
-  const vinculoId = optionalInteger(formData, "cliente_vendedor_vinculo_id");
-  const itensJson = field(formData, "itens_json");
-  const entregasJson = field(formData, "entregas_json");
-  const dataPedido = field(formData, "data_pedido");
-  let items: Array<{ produto_embalagem_id: number; quantidade: number; valor_unitario: number }> = [];
-  let deliveries: Array<{
-    data_prevista: string;
-    propriedade_id: number | null;
-    estabelecimento_id: number | null;
-    endereco_id: number | null;
-    itens: Array<{ item_index: number; quantidade: number }>;
-  }> = [];
+  const proposalJson = field(formData, "proposta_json");
+  const previewHash = field(formData, "preview_hash");
+  const justification = optionalField(formData, "justificativa_comercial");
+  const discountsConfirmed = field(formData, "confirmacao_descontos") === "on";
+  let proposal: Record<string, unknown> | null = null;
   try {
-    const parsed: unknown = JSON.parse(itensJson);
-    items = Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(proposalJson);
+    proposal = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
   } catch {
-    items = [];
+    proposal = null;
   }
-  try {
-    const parsed: unknown = JSON.parse(entregasJson);
-    deliveries = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    deliveries = [];
-  }
-  if (!idempotencyKey || !vinculoId || !dataPedido || !items.length || items.some((item) => !item.produto_embalagem_id || item.quantidade <= 0 || item.valor_unitario < 0)) {
-    redirectOrder(formData, "missing_order_required");
-  }
-  if (!deliveries.length || deliveries.some((delivery) =>
-    !delivery.data_prevista
-    || [delivery.propriedade_id, delivery.estabelecimento_id, delivery.endereco_id].filter((value) => value !== null).length !== 1
-    || !Array.isArray(delivery.itens)
-    || !delivery.itens.length
-    || delivery.itens.some((item) => !Number.isInteger(item.item_index) || item.item_index <= 0 || item.quantidade <= 0)
-  )) {
-    redirectOrder(formData, "missing_delivery_schedule");
+  if (!idempotencyKey || !proposal || !/^[0-9a-f]{64}$/.test(previewHash)) {
+    redirectOrder(formData, "commercial_review_incomplete");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_vendedor_programado_idempotente", {
+  const { error } = await auditedRpc(supabase, "confirmar_com_revisao_comercial_venda_idempotente", {
     p_idempotency_key: idempotencyKey,
-    p_cliente_vendedor_vinculo_id: vinculoId,
-    p_data_pedido: dataPedido,
-    p_entregas_jsonb: deliveries,
-    p_itens_jsonb: items,
-    p_observacao: optionalField(formData, "observacao"),
+    p_confirmacao_descontos: discountsConfirmed,
+    p_justificativa_comercial: justification,
+    p_preview_hash: previewHash,
+    p_proposta: proposal
   }, {
     metadata: {
-      action_key: "pedidos.create.own",
-      axis: "own_any",
+      action_key: "pedidos.commercial_review.confirm",
+      axis: "change_type",
       domain: "pedidos",
-      entity: "com_pedidos",
-      failure_action: "pedidos.create_failed"
+      entity: "com_pedido_confirmacoes_comerciais",
+      failure_action: "pedidos.commercial_review_confirm_failed"
     }
   });
   if (error) redirectOrder(formData, mapSupabaseError(error.message));
   revalidatePath("/pedidos");
   redirectOrder(formData, "pedido_pending_approval", "#historico");
+}
+
+export async function preverRevisaoComercialAction(proposal: unknown): Promise<{
+  data: Record<string, unknown> | null;
+  error: string | null;
+}> {
+  if (!proposal || typeof proposal !== "object" || Array.isArray(proposal)) {
+    return { data: null, error: "Complete os dados comerciais antes de calcular a revisão." };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await auditedRpc(supabase, "prever_com_revisao_comercial_venda", {
+    p_proposta: proposal
+  }, {
+    metadata: {
+      action_key: "pedidos.commercial_review.preview",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedido_confirmacoes_comerciais",
+      failure_action: "pedidos.commercial_review_preview_failed"
+    }
+  });
+  if (error) return { data: null, error: commercialReviewError(error.message) };
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { data: null, error: "A revisão comercial não retornou um resultado válido." };
+  }
+  return { data: data as Record<string, unknown>, error: null };
 }
 
 export async function decidirPedidoGerencialAction(formData: FormData) {
@@ -150,6 +156,165 @@ export async function decidirPedidoGerencialAction(formData: FormData) {
   if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#aprovacoes`);
   revalidatePath("/pedidos");
   redirect(`/pedidos?result=${decisao === "liberado" ? "order_approved" : "order_rejected"}#aprovacoes`);
+}
+
+export async function decidirDescontoPedidoAction(formData: FormData) {
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const confirmacaoId = optionalInteger(formData, "confirmacao_comercial_id");
+  const comparacaoSha = field(formData, "comparacao_sha256");
+  const decisao = field(formData, "decisao");
+  const justificativa = field(formData, "justificativa");
+  if (!idempotencyKey || !pedidoId || !confirmacaoId || !/^[0-9a-f]{64}$/.test(comparacaoSha)
+      || !["APPROVED", "REJECTED"].includes(decisao) || justificativa.length < 10) {
+    redirect("/pedidos?result=invalid_discount_review#revisao-desconto");
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "registrar_com_pedido_decisao_desconto_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_pedido_id: pedidoId,
+    p_confirmacao_comercial_id: confirmacaoId,
+    p_comparacao_sha256: comparacaoSha,
+    p_decisao: decisao,
+    p_justificativa: justificativa
+  }, {
+    metadata: {
+      action_key: "pedidos.commercial_discount.review",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedido_decisoes_desconto",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.discount_review_failed"
+    }
+  });
+  if (error) redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#revisao-desconto`);
+  revalidatePath("/pedidos");
+  redirect("/pedidos?result=discount_review_recorded#revisao-desconto");
+}
+
+export async function registrarEvidenciaAssinaturaAction(formData: FormData) {
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const confirmacaoId = optionalInteger(formData, "confirmacao_comercial_id");
+  const contatoId = optionalInteger(formData, "contato_id");
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const documentHash = field(formData, "documento_canonico_sha256").toLowerCase();
+  const fonte = field(formData, "fonte");
+  const externalHash = field(formData, "artefato_sha256").toLowerCase();
+  const externalReference = optionalField(formData, "referencia_externa");
+  const declaredSignedAt = optionalField(formData, "declarado_assinado_em");
+  const file = formData.get("arquivo");
+  if (!pedidoId || !confirmacaoId || !contatoId || !idempotencyKey || !/^[0-9a-f]{64}$/.test(documentHash) || !["external_digital", "physical_digitized"].includes(fonte)) {
+    redirect(`/pedidos/${pedidoId ?? 0}/contrato?assinatura=invalid#assinatura`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: authData } = await supabase.auth.getUser();
+  const actorId = authData.user?.id;
+  if (!actorId) redirect(`/login?next=/pedidos/${pedidoId}/contrato`);
+
+  const preflight = await auditedRpc(supabase, "autorizar_com_pedido_assinatura_evidencia", {
+    p_pedido_id: pedidoId,
+    p_confirmacao_comercial_id: confirmacaoId,
+    p_documento_canonico_sha256: documentHash
+  }, {
+    metadata: {
+      action_key: "pedidos.buyer_signature.submit",
+      axis: "own_any",
+      domain: "pedidos",
+      entity: "com_pedido_assinatura_evidencias",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.buyer_signature_submit_preflight_failed"
+    }
+  });
+  if (preflight.error || !preflight.data) redirect(`/pedidos/${pedidoId}/contrato?assinatura=${encodeURIComponent(mapSupabaseError(preflight.error?.message ?? "signature_invalid"))}#assinatura`);
+
+  let storagePath: string | null = null;
+  let objectCreatedByAttempt = false;
+  let artifactHash = externalHash;
+  let contentType: string | null = null;
+  let contentLength: number | null = null;
+  if (file instanceof File && file.size > 0) {
+    if (!hasSupabaseAdminConfig()) redirect(`/pedidos/${pedidoId}/contrato?assinatura=storage_unavailable#assinatura`);
+    const bytes = Buffer.from(await file.arrayBuffer());
+    artifactHash = createHash("sha256").update(bytes).digest("hex");
+    contentType = file.type || "application/octet-stream";
+    contentLength = bytes.byteLength;
+    storagePath = `pending/${actorId}/${idempotencyKey}/${artifactHash}`;
+    const admin = createSupabaseAdminClient();
+    const upload = await admin.storage.from("order-signature-evidence").upload(storagePath, bytes, { contentType, upsert: false });
+    if (upload.error) {
+      const existing = await admin.storage.from("order-signature-evidence").download(storagePath);
+      if (existing.error) redirect(`/pedidos/${pedidoId}/contrato?assinatura=storage_failed#assinatura`);
+    } else {
+      objectCreatedByAttempt = true;
+    }
+  }
+  if (!storagePath) redirect(`/pedidos/${pedidoId}/contrato?assinatura=artifact_required#assinatura`);
+  if (!/^[0-9a-f]{64}$/.test(artifactHash)) {
+    redirect(`/pedidos/${pedidoId}/contrato?assinatura=artifact_hash_required#assinatura`);
+  }
+
+  const { error } = await auditedRpc(supabase, "registrar_com_pedido_assinatura_evidencia_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_pedido_id: pedidoId,
+    p_confirmacao_comercial_id: confirmacaoId,
+    p_documento_canonico_sha256: documentHash,
+    p_fonte: fonte,
+    p_contato_id: contatoId,
+    p_artefato_storage_path: storagePath,
+    p_artefato_sha256: artifactHash,
+    p_artefato_content_type: contentType,
+    p_artefato_size_bytes: contentLength,
+    p_referencia_externa: externalReference,
+    p_declarado_assinado_em: declaredSignedAt ? new Date(declaredSignedAt).toISOString() : null
+  }, {
+    metadata: {
+      action_key: "pedidos.buyer_signature.submit",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedido_assinatura_evidencias",
+      entity_id: String(pedidoId),
+      failure_action: "pedidos.buyer_signature_submit_failed"
+    }
+  });
+  if (error) {
+    if (objectCreatedByAttempt && storagePath && hasSupabaseAdminConfig()) {
+      await createSupabaseAdminClient().storage.from("order-signature-evidence").remove([storagePath]);
+    }
+    redirect(`/pedidos/${pedidoId}/contrato?assinatura=${encodeURIComponent(mapSupabaseError(error.message))}#assinatura`);
+  }
+  revalidatePath(`/pedidos/${pedidoId}/contrato`);
+  redirect(`/pedidos/${pedidoId}/contrato?assinatura=submitted#assinatura`);
+}
+
+export async function decidirEvidenciaAssinaturaAction(formData: FormData) {
+  const pedidoId = optionalInteger(formData, "pedido_id");
+  const evidenciaId = optionalInteger(formData, "evidencia_id");
+  const idempotencyKey = uuid(formData, "idempotency_key");
+  const decisao = field(formData, "decisao");
+  const justificativa = field(formData, "justificativa");
+  if (!pedidoId || !evidenciaId || !idempotencyKey || !["ACCEPTED", "REJECTED"].includes(decisao) || (decisao === "REJECTED" && justificativa.length < 10)) {
+    redirect(`/pedidos/${pedidoId ?? 0}/contrato?assinatura=invalid_review#assinatura`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "decidir_com_pedido_assinatura_idempotente", {
+    p_idempotency_key: idempotencyKey,
+    p_evidencia_id: evidenciaId,
+    p_decisao: decisao,
+    p_justificativa: justificativa
+  }, {
+    metadata: {
+      action_key: "pedidos.buyer_signature.review",
+      axis: "change_type",
+      domain: "pedidos",
+      entity: "com_pedido_assinatura_decisoes",
+      entity_id: String(evidenciaId),
+      failure_action: "pedidos.buyer_signature_review_failed"
+    }
+  });
+  if (error) redirect(`/pedidos/${pedidoId}/contrato?assinatura=${encodeURIComponent(mapSupabaseError(error.message))}#assinatura`);
+  revalidatePath(`/pedidos/${pedidoId}/contrato`);
+  redirect(`/pedidos/${pedidoId}/contrato?assinatura=reviewed#assinatura`);
 }
 
 export async function ajustarLimiteCreditoAction(formData: FormData) {
@@ -196,78 +361,6 @@ function creditAdjustmentTarget(formData: FormData, clienteId: number | null): {
 function redirectCreditAdjustment(target: { path: string; hash: string }, result: string): never {
   const separator = target.path.includes("?") ? "&" : "?";
   redirect(`${target.path}${separator}result=${encodeURIComponent(result)}${target.hash}`);
-}
-
-export async function createPedidoRascunhoAction(formData: FormData) {
-  const runtime = getRuntimeStatus();
-  if (!runtime.supabaseConfigured) {
-    redirect("/pedidos?result=not_configured#novo-pedido");
-  }
-
-  const clienteId = optionalInteger(formData, "cliente_id");
-  const propriedadeId = optionalInteger(formData, "propriedade_id");
-  const produtoEmbalagemId = optionalInteger(formData, "produto_embalagem_id");
-  const vendedorId = optionalInteger(formData, "vendedor_id");
-  const quantidade = optionalNumber(formData, "quantidade");
-  const valorUnitario = optionalNumber(formData, "valor_unitario");
-  const percentualComissao = optionalNumber(formData, "percentual_comissao");
-  const tipoPedido = field(formData, "tipo_pedido") || "venda";
-  const status = "blocked";
-  const dataPedido = field(formData, "data_pedido");
-
-  if (!clienteId || !produtoEmbalagemId || quantidade === null || valorUnitario === null || !dataPedido) {
-    redirect("/pedidos?result=missing_order_required#novo-pedido");
-  }
-  if (!Number.isInteger(clienteId) || clienteId <= 0 || !Number.isInteger(produtoEmbalagemId) || produtoEmbalagemId <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
-  }
-  if (propriedadeId !== null && (!Number.isInteger(propriedadeId) || propriedadeId <= 0)) {
-    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
-  }
-  if (vendedorId !== null && (!Number.isInteger(vendedorId) || vendedorId <= 0)) {
-    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
-  }
-  if (!Number.isFinite(quantidade) || quantidade <= 0) {
-    redirect("/pedidos?result=invalid_positive_number#novo-pedido");
-  }
-  if (!Number.isFinite(valorUnitario) || valorUnitario < 0) {
-    redirect("/pedidos?result=invalid_non_negative_number#novo-pedido");
-  }
-  if (percentualComissao !== null && (!Number.isFinite(percentualComissao) || percentualComissao < 0)) {
-    redirect("/pedidos?result=invalid_non_negative_number#novo-pedido");
-  }
-  if (!ALLOWED_TIPO_PEDIDO.has(tipoPedido)) {
-    redirect("/pedidos?result=invalid_order_type#novo-pedido");
-  }
-  const supabase = await createSupabaseServerClient();
-  const { error } = await auditedRpc(supabase, "create_com_pedido_operacional", {
-    p_cliente_id: clienteId,
-    p_data_pedido: dataPedido,
-    p_observacao: optionalField(formData, "observacao"),
-    p_percentual_comissao: percentualComissao,
-    p_propriedade_id: propriedadeId,
-    p_produto_embalagem_id: produtoEmbalagemId,
-    p_quantidade: quantidade,
-    p_status: status,
-    p_tipo_pedido: tipoPedido,
-    p_valor_unitario: valorUnitario,
-    p_vendedor_id: vendedorId
-  }, {
-    metadata: {
-      action_key: "pedidos.create",
-      axis: "own_any",
-      domain: "pedidos",
-      entity: "com_pedidos",
-      failure_action: "pedidos.create_failed"
-    }
-  });
-
-  if (error) {
-    redirect(`/pedidos?result=${encodeURIComponent(mapSupabaseError(error.message))}#novo-pedido`);
-  }
-
-  revalidatePath("/pedidos");
-  redirect("/pedidos?result=pedido_created#novo-pedido");
 }
 
 export async function criarTrocaPedidoAction(formData: FormData) {
@@ -391,6 +484,12 @@ function mapSupabaseError(message: string): string {
   if (normalized.includes("idempotency key reused")) {
     return "idempotency_conflict";
   }
+  if (normalized.includes("previsualizacao comercial desatualizada")) {
+    return "commercial_review_stale";
+  }
+  if (normalized.includes("revisao comercial") || normalized.includes("confirmacao comercial")) {
+    return "commercial_review_incomplete";
+  }
   if (normalized.includes("motivo is required")) {
     return "missing_credit_reason";
   }
@@ -427,10 +526,39 @@ function mapSupabaseError(message: string): string {
   if (normalized.includes("commercial identity not linked")) {
     return "commercial_identity_required";
   }
+  if (normalized.includes("evidencia antiga") || normalized.includes("versao comercial vigente")) {
+    return "signature_version_stale";
+  }
+  if (normalized.includes("evidencia") || normalized.includes("assinatura")) {
+    return "signature_invalid";
+  }
   if (normalized.includes("justification")) {
     return "invalid_justification";
   }
   return "save_failed";
+}
+
+function commercialReviewError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("permission") || normalized.includes("permissao")) {
+    return "Sua conta não possui alçada para calcular esta revisão comercial.";
+  }
+  if (normalized.includes("carteira") || normalized.includes("identidade comercial")) {
+    return "O cliente não está disponível na carteira operacional desta conta.";
+  }
+  if (normalized.includes("lista comercial") || normalized.includes("faixa de preco")) {
+    return "Não existe preço de referência aplicável à condição comercial informada.";
+  }
+  if (normalized.includes("parcela") || normalized.includes("vencimento") || normalized.includes("pmp")) {
+    return "Revise os valores e vencimentos da condição financeira.";
+  }
+  if (normalized.includes("entrega") || normalized.includes("programacao")) {
+    return "Revise o local, a data e a distribuição das entregas.";
+  }
+  if (normalized.includes("apresentacao") || normalized.includes("item")) {
+    return "Revise os produtos, apresentações e quantidades do pedido.";
+  }
+  return "Não foi possível calcular a revisão comercial com os dados informados.";
 }
 
 function redirectOrder(formData: FormData, result: string, hash = "#novo-pedido"): never {

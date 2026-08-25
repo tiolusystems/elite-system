@@ -15,9 +15,11 @@ class OrdersMultiItemContractTest(unittest.TestCase):
         self.assertIn("sale item is inactive or unknown at position 1", sql)
         self.assertIn("order date is required", sql)
         self.assertIn("Adicionar item", editor)
-        self.assertIn('name="itens_json"', entry)
+        self.assertIn('name="proposta_json"', entry)
+        self.assertIn("itens: input.rows.map", entry)
         self.assertIn("Array.isArray(parsed)", action)
-        self.assertIn('"create_com_pedido_vendedor_programado_idempotente"', action)
+        self.assertIn('"confirmar_com_revisao_comercial_venda_idempotente"', action)
+        self.assertNotIn('"create_com_pedido_vendedor_programado_idempotente"', action)
 
     def test_database_smoke_covers_atomic_order_contract(self):
         smoke = (ROOT / "tests/sql/validate_0080_orders_multi_item.sql").read_text(encoding="utf-8")

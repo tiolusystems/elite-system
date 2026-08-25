@@ -3,12 +3,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { OrderContractPrintButton } from "@/app/pedidos/[id]/contrato/print-button";
-import { getOrderContract } from "@/lib/orders";
+import { SignatureEvidencePanel } from "@/app/pedidos/[id]/contrato/signature-evidence-panel";
+import { getOrderSignatureWorkspace } from "@/lib/orders";
 
-export default async function OrderContractPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrderContractPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
-  const contract = await getOrderContract(Number(id));
-  if (!contract) notFound();
+  const workspace = await getOrderSignatureWorkspace(Number(id));
+  if (!workspace) notFound();
+  const contract = workspace.contract;
+  const query = searchParams ? await searchParams : {};
+  const signatureResult = Array.isArray(query.assinatura) ? query.assinatura[0] : query.assinatura;
 
   const primaryContact = contract.client.contacts[0] ?? null;
   const cpfCnpj = contract.client.documents.find((item) => ["cpf", "cnpj"].includes(item.type));
@@ -85,9 +89,10 @@ export default async function OrderContractPage({ params }: { params: Promise<{ 
         </section>
         <div className="order-contract-signature"><span></span><strong>Assinatura do comprador/proprietário</strong></div>
         <section className="order-contract-observation"><strong>Observações</strong><p>{contract.observation ?? "Sem observações comerciais."}</p></section>
-        <Terms />
+        <Terms sections={contract.terms} />
         <ContractFooter page={2} />
       </section>
+      <SignatureEvidencePanel workspace={workspace} result={signatureResult} />
     </main>
   );
 }
@@ -104,11 +109,15 @@ function Field({ label, value, wide = false }: { label: string; value: string; w
   return <div className={wide ? "order-contract-field is-wide" : "order-contract-field"}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-function Terms() {
+function Terms({ sections }: { sections: Array<{ titulo: string; texto: string }> }) {
+  return <section className="order-contract-terms"><h2>Informativo sobre troca, devolução, cancelamento de pedidos e atrasos em pagamentos</h2>{sections.map((section, index) => <div key={`${section.titulo}-${index}`}><h3>{index + 1}. {section.titulo}</h3><p>{section.texto}</p></div>)}</section>;
+}
+/*
+function LegacyTerms() {
   return <section className="order-contract-terms"><h2>Informativo sobre troca, devolução, cancelamento de pedidos e atrasos em pagamentos</h2>
-    <h3>1. Escopo e natureza</h3><p>Aplica-se às operações de venda e fornecimento de insumos agrícolas realizadas com produtores rurais (PF/PJ), revendas, distribuidores e cooperativas agropecuárias. Relação comercial/profissional no âmbito do agronegócio. “Aceite do pedido” é a data da assinatura do pedido e/ou a confirmação por e-mail corporativo cadastrado. Prazos contados em dias corridos após o aceite do pedido, encerrando às 23:59 (fuso America/Sao_Paulo). Se, excepcionalmente, houver enquadramento como relação de consumo, prevalecerão as normas específicas aplicáveis.</p>
+    <h3>1. Escopo e natureza</h3><p>Aplica-se às operações de venda e fornecimento de insumos agrícolas realizadas com produtores rurais (PF/PJ), revendas, distribuidores e cooperativas agropecuárias. Relação comercial/profissional no âmbito do agronegócio. O e-mail corporativo cadastrado é canal de comunicação e não constitui aceite ou assinatura. O aceite do comprador será comprovado exclusivamente por evidência de assinatura registrada e aceita no Elite System. Prazos contados em dias corridos após o aceite do pedido, encerrando às 23:59 (fuso America/Sao_Paulo). Se, excepcionalmente, houver enquadramento como relação de consumo, prevalecerão as normas específicas aplicáveis.</p>
     <h3>2. Troca e devolução</h3><p>Não aceitamos devoluções em nenhuma hipótese. Constatada não conformidade em lote, o produto será substituído por outro idêntico. A constatação poderá ocorrer por laudo interno da VENDEDORA ou por laboratório indicado/aceito pela VENDEDORA.</p>
-    <h3>3. Ciência e consentimento</h3><p>Ao assinar e/ou confirmar por e-mail, o CLIENTE declara ciência e concordância integral com este informativo e com as demais condições do pedido.</p>
+    <h3>3. Ciência e consentimento</h3><p>Ao assinar por meio de evidência registrada e aceita no Elite System, o CLIENTE declara ciência e concordância integral com este informativo e com as demais condições do pedido. O envio de e-mail, isoladamente, não produz aceite.</p>
     <h3>4. Cancelamento de pedidos (simples faturamento - sem remessa)</h3><p>Base de cálculo: valor líquido do pedido (sem tributos recuperáveis e sem frete). Cancelamento até 3 dias após o aceite: multa compensatória de 5%. Do 4º ao 10º dia: multa de 10%. A partir do 11º dia, havendo programação de produção (OP emitida, reserva/compra de insumos, logística agendada): multa de 15%. Havendo execução parcial (OP iniciada, insumo específico já incorporado ao processo ou serviço técnico iniciado): multa de 20%. Produtos/projetos customizados ou com insumo não reaproveitável: multa de até 25%, mediante comprovação documental. Se houver sinal (arras), aplica-se o maior entre a perda do sinal e a multa acima, sem cumulação pelo mesmo fato. O cancelamento deve ser solicitado por e-mail institucional indicado no cabeçalho do pedido. A VENDEDORA responderá com o enquadramento, memória de cálculo e instruções de compensação. Quando o prejuízo efetivo superar a multa pactuada, poderá ser cobrada indenização suplementar limitada ao excedente comprovado.</p>
     <h3>5. Atrasos em pagamentos</h3><p>Atraso superior a 5 dias implicará protesto do título e negativação automática. Encargos por atraso: multa de 2% sobre o valor em aberto e juros de 0,03% ao dia de atraso.</p>
     <h3>6. Tratamento fiscal (simples faturamento)</h3><p>A emissão de NF-e de simples faturamento não implica entrega física. Em caso de cancelamento, as partes firmarão distrato comercial. O procedimento fiscal (cancelamento ou manutenção da NF-e de simples faturamento) seguirá a legislação da UF do remetente, sendo adotada a providência cabível e comunicada ao CLIENTE.</p>
@@ -116,7 +125,7 @@ function Terms() {
     <h3>8. Solução de controvérsias</h3><p>As partes buscarão solução amigável e, não sendo possível, elegem o foro da comarca de Barretos/SP, com renúncia a qualquer outro, por mais privilegiado que seja.</p>
     <h3>9. Disposições finais</h3><p>Este informativo integra o Pedido de Venda, cujo número consta no cabeçalho do documento. Comunicações oficiais devem ocorrer exclusivamente pelo e-mail institucional indicado no cabeçalho do pedido.</p>
   </section>;
-}
+ }*/
 
 function date(value: string) { return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)); }
 function dateTime(value: string) { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }

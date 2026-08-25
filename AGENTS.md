@@ -2,6 +2,16 @@
 
 Este arquivo define a linha de trabalho obrigatoria para agentes e desenvolvedores no Elite System.
 
+## Protocolo entre agentes
+
+Para trabalho coordenado entre GPT e Codex, consulte:
+
+- `docs/agent-protocol/AXL.md`;
+- `docs/agent-protocol/ELITE_AGENT_PROFILE.md`.
+
+Esses documentos complementam este contrato; nao duplicam nem substituem as
+regras vigentes do repositorio.
+
 ## Orientacao minima
 
 1. Comece por `docs/00_MAPA_EXECUTIVO.md`.
@@ -94,3 +104,9 @@ Nao repita comando quando codigo, configuracao, banco e `HEAD` nao mudaram. Uma 
 - Catalogo executavel dos modulos: `apps/web/lib/system-map.ts`.
 - Dependencias e maturidade efetiva: PostgreSQL (`sys_modules`, `sys_module_dependencies` e ledgers de rollout).
 - Evidencia de integridade: testes e CI associados ao commit atual.
+## Handoff entre conversas
+
+Antes de encerrar uma tarefa, atualize `docs/01_ESTADO_ATUAL.md` e consulte
+`docs/agent-protocol/CHATGPT_PROJECT_BOOTSTRAP.md`. Relate branch, HEAD,
+working tree, estado local/remoto, validacoes e artefato completo do delta
+quando houver trabalho nao commitado. Nunca trate trabalho local como publicado.

@@ -139,6 +139,42 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_delivery_schedules.sql
+      - name: Run canonical price list foundation smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/price_lists_canonical_foundation.sql
+      - name: Run XLSX price list import smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/price_list_xlsx_import.sql
+      - name: Run commercial pricing units smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/commercial_pricing_units.sql
+      - name: Run practiced order price comparison smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_practiced_price_comparison.sql
+      - name: Run seller commercial confirmation smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_seller_commercial_confirmation.sql
+      - name: Run order discount review smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_discount_review.sql
+      - name: Run buyer signature evidence smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_buyer_signature_evidence.sql
+      - name: Run order effectiveness smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_effectiveness.sql
+      - name: Run order revision and addendum smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_revision_and_addendum.sql
       - name: Run governed client workbench search smoke
         env:
           PGPASSWORD: postgres
@@ -239,6 +275,36 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/security_admin_privilege_boundary.sql
+      - name: Run commercial pricing units upgrade smoke
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          pending_dir="$RUNNER_TEMP/migrations-after-0128"
+          mkdir -p "$pending_dir"
+
+          restore_migrations() {
+            shopt -s nullglob
+            for migration in "$pending_dir"/*.sql; do
+              mv "$migration" "supabase/migrations/$(basename "$migration")"
+            done
+          }
+
+          trap restore_migrations EXIT
+          for migration in supabase/migrations/*.sql; do
+            filename="$(basename "$migration")"
+            version="${filename%%_*}"
+            if (( 10#$version > 128 )); then
+              mv "$migration" "$pending_dir/"
+            fi
+          done
+
+          supabase db reset --local
+          cp "$pending_dir/0129_govern_commercial_pricing_units.sql" supabase/migrations/
+          psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/commercial_pricing_units_upgrade.sql
+          restore_migrations
+          trap - EXIT
       - uses: actions/upload-artifact@v4
         with:
           name: elite-database-types

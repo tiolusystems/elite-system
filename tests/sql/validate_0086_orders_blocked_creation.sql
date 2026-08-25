@@ -25,6 +25,10 @@ insert into public.cad_cliente_vendedores(cliente_id, pessoa_id, papel_vinculo_i
 select client.id, seller.id, 2, 'active', current_date, 'sistema', '86000000-0000-4000-8000-000000000001'
   from public.cad_clientes client, public.cad_pessoas_comerciais seller
  where client.nome = 'Cliente 0086' and seller.nome = 'Vendedor 0086';
+insert into public.cad_cliente_propriedades(cliente_id, nome, cidade, uf, status, created_by)
+select id, 'Fazenda 0086', 'Campinas', 'SP', 'active', '86000000-0000-4000-8000-000000000001'
+  from public.cad_clientes
+ where nome = 'Cliente 0086';
 insert into public.cad_produtos_base(codigo_produto, nome, nome_norm, status, created_by)
 values ('8686', 'Produto 0086', 'produto 0086', 'active', '86000000-0000-4000-8000-000000000001');
 insert into public.cad_embalagens(descricao, descricao_norm, unidade, volume_litros, status, unidade_id, origem_dados, created_by)
@@ -35,12 +39,13 @@ select product.id, packaging.id, '8686-1L', 'active', 'sistema', '86000000-0000-
  where product.codigo_produto = '8686' and packaging.descricao = 'Frasco 0086 1 L';
 
 set local role authenticated;
-select set_config('request.jwt.claim.sub', '86000000-0000-4000-8000-000000000001', true);
+select set_config('request.jwt.claim.sub', '86000000-0000-4000-8000-000000000002', true);
 do $$
 declare
   v_client bigint;
   v_item bigint;
-  v_seller bigint;
+  v_link bigint;
+  v_property bigint;
   v_order bigint;
   v_order_item bigint;
   v_exchange bigint;
@@ -48,17 +53,44 @@ declare
 begin
   select id into v_client from public.cad_clientes where nome = 'Cliente 0086';
   select id into v_item from public.cad_produto_embalagens where codigo_item = '8686-1L';
-  select id into v_seller from public.cad_pessoas_comerciais where nome = 'Vendedor 0086';
+  select id into v_link
+    from public.cad_cliente_vendedores
+   where cliente_id = v_client;
+  select id into v_property
+    from public.cad_cliente_propriedades
+   where cliente_id = v_client and nome = 'Fazenda 0086';
 
-  begin
-    perform public.create_com_pedido_operacional(v_client, v_item, 1, 100, null, 'venda', 'open', current_date, v_seller, 3, null);
-    raise exception 'released order was accepted at creation';
-  exception when others then
-    if sqlerrm = 'released order was accepted at creation' then raise; end if;
-  end;
+  if has_function_privilege(
+    'authenticated',
+    'public.create_com_pedido_operacional(bigint,bigint,numeric,numeric,bigint,text,text,date,bigint,numeric,text)',
+    'EXECUTE'
+  ) or has_function_privilege(
+    'anon',
+    'public.create_com_pedido_operacional(bigint,bigint,numeric,numeric,bigint,text,text,date,bigint,numeric,text)',
+    'EXECUTE'
+  ) or has_function_privilege(
+    'public',
+    'public.create_com_pedido_operacional(bigint,bigint,numeric,numeric,bigint,text,text,date,bigint,numeric,text)',
+    'EXECUTE'
+  ) then
+    raise exception 'legacy operational order entrypoint remains executable';
+  end if;
 
-  v_order := public.create_com_pedido_operacional(
-    v_client, v_item, 1, 100, null, 'venda', 'blocked', current_date, v_seller, 3, null
+  v_order := public.create_com_pedido_vendedor_programado_idempotente(
+    '86000000-0000-4000-8000-000000000090',
+    v_link,
+    jsonb_build_array(
+      jsonb_build_object('produto_embalagem_id', v_item, 'quantidade', 1, 'valor_unitario', 100)
+    ),
+    jsonb_build_array(
+      jsonb_build_object(
+        'data_prevista', current_date,
+        'propriedade_id', v_property,
+        'itens', jsonb_build_array(jsonb_build_object('item_index', 1, 'quantidade', 1))
+      )
+    ),
+    current_date,
+    'Pedido bloqueado via fluxo programado'
   );
   if (select status from public.com_pedidos where id = v_order) <> 'blocked' then
     raise exception 'operational order did not start blocked';

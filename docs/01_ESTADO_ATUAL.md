@@ -1,48 +1,45 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-08-24
+Atualizado em: 2026-08-25
 
-## Estado vigente em 2026-08-24
+## Estado vigente em 2026-08-25
 
 - repositorio: `tiolusystems/elite-system`;
-- branch: `work/orders-rules-review-20260813`;
-- HEAD local e remoto: `85e7d31d86dcede091b59f1c3cd8a26e95cb6c1f`;
-- PR cumulativa ORD-01: `#8`, aberta contra `main`;
-- `main`, producao real, PWA e bancos persistentes permanecem inalterados;
-- `apps/web/next-env.d.ts` e uma alteracao local preexistente e permanece fora
-  do delta ORD-01.
+- base: `main` no merge `806c9e2a2e7b3b9eda22fd6b22638ac0f4d348ac`;
+- branch local isolada: `work/price-list-xlsx-ui-20260825`;
+- a PR cumulativa ORD-01 `#8` foi integrada a `main`;
+- producao real, PWA e bancos persistentes permanecem inalterados por esta
+  tarefa;
+- os checkouts operacionais anteriores permanecem preservados.
 
 ## Tarefa em execucao
 
-`ORD-01 PR8 - integracao do macrociclo comercial e contratual`.
+`PRICE-LIST.XLSX-OPERATIONAL-UI - workspace operacional de listas de precos`.
 
-A PR integra os 14 commits intencionais da ORD-01, desde o fechamento do
-entrypoint legado ate revisoes e aditivos contratuais. A sequencia inclui:
-
-- listas de preco, importacao XLSX, condicao financeira, PMP e resolvedor;
-- snapshot comercial e unidade de precificacao generica;
-- preco praticado, confirmacao do vendedor e aprovacao independente de desconto;
-- evidencia de assinatura do comprador e efetividade do pedido;
-- revisoes pre-efetivacao e cadeia contratual `H0 -> H1 -> H2`.
-
-O commit de protocolo AXL e infraestrutura de trabalho e auditoria do mesmo
-macrociclo. Nao ha commit funcional alheio a ORD-01 na branch.
+Workspace `Comercial > Listas de precos` implementado e validado localmente,
+ainda sem commit. O fluxo possui modelo XLSX governado, analise por codigos
+canonicos, preview de avisos e erros, publicacao atomica de versao e historico.
+A migration aditiva e a `0137`; migrations `0124` a `0136` nao foram
+reescritas. O delta aguarda revisao tecnica final antes de qualquer integracao.
 
 ## Validacao vigente
 
-- a revisao tecnica da migration `0136` foi aprovada antes do commit;
-- instalacao limpa `0001 -> 0136` e upgrade `0135 -> 0136` foram aprovados em
-  runtime descartavel;
-- a instalacao limpa e o smoke comportamental `order_revision_and_addendum.sql` foram aprovados;
-- smokes F2A, F2B, F2C, SIG01, efetividade e revisao/aditivo foram aprovados;
-- o contrato Python dirigido da revisao aprovou 17 testes;
-- a primeira execucao da CI da PR identificou falhas de integracao em contratos
-  antigos, documentacao, fronteira RPC auditada e ACL de decisao gerencial;
-- as correcoes de integracao permanecem locais, sem commit ou push;
-- a suite Python completa aprovou `823/823` testes;
-- lint e build web foram aprovados, e o contrato TypeScript do banco foi gerado;
-- os 45 smokes SQL padrao e o upgrade dirigido `0128 -> 0129` foram aprovados;
-- o lint PostgreSQL nao registrou diagnostico novo introduzido pela ORD-01;
+- instalacao limpa `0001 -> 0137` e upgrade `0136 -> 0137` aprovados no runtime
+  descartavel `elite-validation-price-list-ui`;
+- na validacao da `0136`, o upgrade e o smoke comportamental `order_revision_and_addendum.sql` foram aprovados;
+- os 46 smokes SQL padrao e o smoke dirigido
+  `price_list_operational_xlsx.sql` foram aprovados;
+- 32 testes Python dirigidos da importacao e dos contratos de lista foram
+  aprovados;
+- TypeScript, ESLint e build de producao foram aprovados, com
+  `apps/web/next-env.d.ts` preservado;
+- o E2E operacional aprovou `10/10` casos em 1920, 1366, 768, 390 e 360 px,
+  incluindo download, erros, avisos, publicacao, historico, retry e acesso
+  negado;
+- o parser aprovou `4/4` casos dirigidos: limite de 10.000 linhas, rejeicao de
+  10.001 linhas/dimensao excessiva, expansao ZIP suspeita e hash canonico;
+- o lint PostgreSQL nao registrou diagnostico novo da migration `0137`; o erro
+  preexistente de `lote_id` ambiguo permanece fora deste escopo;
 - `OPS-GATE-01` permanece como evidencia historica do gate operacional anterior.
 
 ## Contratos preservados
@@ -67,10 +64,9 @@ macrociclo. Nao ha commit funcional alheio a ORD-01 na branch.
 - importacao historica `I2` permanece bloqueada ate a homologacao funcional das
   fontes por Luciano e a decisao `DEC-012`;
 - nenhum deploy, migration remota ou alteracao de banco persistente integra a
-  correcao local da PR.
+  implementacao local do workspace XLSX.
 
 ## Proxima tarefa
 
-Revisar o artefato integral das correcoes de integracao da PR `#8` e aguardar
-autorizacao antes de commit ou push. Merge e deploy permanecem fora desta
-tarefa.
+Revisar o artefato integral do workspace XLSX e aguardar autorizacao antes de
+commit. Push, PR, merge e deploy permanecem fora desta tarefa.

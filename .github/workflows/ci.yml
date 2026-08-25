@@ -147,6 +147,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/price_list_xlsx_import.sql
+      - name: Run operational XLSX price list workspace smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/price_list_operational_xlsx.sql
       - name: Run commercial pricing units smoke
         env:
           PGPASSWORD: postgres

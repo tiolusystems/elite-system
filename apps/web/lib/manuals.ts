@@ -89,6 +89,14 @@ export const ROUTE_MANUALS: RouteManual[] = [
     blockers: ["Cliente fora da carteira, local de outro cliente, data anterior ao pedido, apresentacao inativa ou quantidades nao distribuídas impedem o envio.", "Bonificacao exige justificativa e nao gera comissao.", "PDF permanece indisponivel enquanto o pedido estiver bloqueado."],
     records: ["Pedido, itens, programacao de entregas, decisao de credito e justificativa ficam registrados.", "Uma aprovacao excepcional do pedido nao altera o limite cadastral do cliente."],
   }),
+  manual("/pedidos/listas-precos", "Comercial", "Listas de precos", "Analisar planilhas e publicar versoes imutaveis de listas comerciais.", {
+    before: ["Tenha a alcada individual de consulta e, para importar ou publicar, as permissoes correspondentes.", "Baixe o modelo oficial antes de preencher uma nova versao.", "Cadastre previamente produtos, apresentacoes e unidades que ainda nao existam."],
+    steps: ["Acesse Comercial e Listas de precos.", "Baixe o modelo XLSX e preencha uma linha na aba LISTA.", "Preencha PRECOS usando codigos governados; nomes servem apenas para conferencia.", "Envie o arquivo e analise a previa.", "Corrija toda linha marcada como Erro e envie uma nova planilha.", "Revise e confirme visualmente os avisos de nome quando os codigos estiverem corretos.", "Confira vigencia e abrangencia e use Publicar nova versao da lista de precos."],
+    after: ["Analisar nao publica nem altera a lista vigente.", "A confirmacao publica a versao inteira atomicamente e preserva todas as versoes anteriores."],
+    roles: ["Consulta, analise de XLSX e publicacao sao alcadas independentes e default-deny."],
+    blockers: ["Codigo desconhecido nao e identificado pelo nome e exige cadastro mestre previo.", "Produto e apresentacao divergentes, unidade invalida, formula, preco textual ou faixa PMP sobreposta bloqueiam toda a publicacao.", "Avisos precisam ser reconhecidos antes da confirmacao."],
+    records: ["Hash do arquivo, lineage por linha e celula, resultado da analise, ator, versao e publicacao ficam auditados sem registrar o conteudo integral do arquivo nos logs."],
+  }),
   manual("/kanban", "Pedidos", "Kanban comercial", "Acompanhar pedidos por situação e responsabilidade comercial.", {
     before: ["Os pedidos precisam existir e estar dentro do escopo comercial da conta."],
     steps: ["Filtre a fila pela situação desejada.", "Localize o pedido pelo código ou cliente.", "Abra a operação correspondente em Pedidos.", "Retorne ao Kanban para conferir a mudança de situação."],

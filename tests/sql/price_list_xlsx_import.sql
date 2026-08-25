@@ -14,6 +14,10 @@ begin
      or has_function_privilege('public', 'public.apply_com_lista_preco_import_idempotente(uuid,bigint,bigint,date,date,text,jsonb,text)', 'EXECUTE') then
     raise exception 'RPC de importacao esta exposta a anon ou PUBLIC';
   end if;
+  if has_function_privilege('authenticated', 'public.stage_com_lista_preco_xlsx_import_idempotente(uuid,text,text,bigint,jsonb,jsonb,jsonb,text)', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.apply_com_lista_preco_import_idempotente(uuid,bigint,bigint,date,date,text,jsonb,text)', 'EXECUTE') then
+    raise exception 'RPC legada por nome permaneceu como API operacional autenticada';
+  end if;
   if has_table_privilege('authenticated', 'public.com_lista_preco_import_linhas', 'INSERT') then
     raise exception 'escrita direta no staging de listas esta exposta';
   end if;
@@ -81,9 +85,10 @@ select set_config('request.jwt.claim.sub', '12500000-0000-4000-8000-000000000003
 do $$
 begin
   begin
-    perform public.stage_com_lista_preco_xlsx_import_idempotente(
+    perform public.analisar_com_lista_preco_xlsx_operacional_idempotente(
       '12500000-0000-4000-8000-000000000004', 'negada.xlsx', repeat('0', 64), 10,
-      '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'Tentativa valida sem permissao'
+      jsonb_build_object('codigo_lista','NEGADA','nome_lista','Negada','vigencia_inicio',current_date),
+      jsonb_build_array(jsonb_build_object('excel_row',2)), 'Tentativa valida sem permissao'
     );
     raise exception 'usuario sem alcada registrou importacao';
   exception when others then
@@ -96,6 +101,7 @@ end
 $$;
 
 select set_config('request.jwt.claim.sub', '12500000-0000-4000-8000-000000000001', true);
+reset role;
 do $$
 declare
   v_table jsonb := jsonb_build_array(jsonb_build_object(
@@ -247,7 +253,8 @@ begin
 end
 $$;
 
-set local role authenticated;
+-- Legacy reconciliation remains executable only by the database owner for
+-- historical verification; application roles were revoked by migration 0137.
 select set_config('request.jwt.claim.sub', '12500000-0000-4000-8000-000000000001', true);
 do $$
 declare

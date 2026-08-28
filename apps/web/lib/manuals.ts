@@ -97,6 +97,14 @@ export const ROUTE_MANUALS: RouteManual[] = [
     blockers: ["Codigo desconhecido nao e identificado pelo nome e exige cadastro mestre previo.", "Produto e apresentacao divergentes, unidade invalida, formula, preco textual ou faixa PMP sobreposta bloqueiam toda a publicacao.", "Avisos precisam ser reconhecidos antes da confirmacao."],
     records: ["Hash do arquivo, lineage por linha e celula, resultado da analise, ator, versao e publicacao ficam auditados sem registrar o conteudo integral do arquivo nos logs."],
   }),
+  manual("/custos-precos", "Precificacao", "Custos e precos", "Formar cenarios de custo, calcular precos e revisar memorias de calculo governadas.", {
+    before: ["Tenha a politica de precificacao e as fontes dos 11 componentes documentadas.", "Confirme a apresentacao comercial e a data efetiva de cada fonte.", "Use substituicao manual somente dentro do cenario e com justificativa."],
+    steps: ["Crie uma versao da politica com metodo, juros, risco e arredondamento definidos.", "Encaminhe a politica para revisao por uma pessoa diferente de quem a criou.", "Crie o cenario para a apresentacao e informe valor, unidade, origem, referencia, data e motivo de cada componente.", "Calcule o cenario para congelar entradas, formula, intermediarios, preco a vista e prazos de 30 a 540 dias.", "Revise a memoria e registre aprovacao ou rejeicao com justificativa."],
+    after: ["Politicas, cenarios, calculos e decisoes permanecem imutaveis e auditaveis.", "A aprovacao nesta tela nao publica lista comercial nem altera preco contratado, comissao, estoque ou custo real."],
+    roles: ["Consulta, politica, revisao de politica, cenario, calculo e revisao de calculo usam alcadas independentes.", "O criador da politica, do cenario ou do calculo nao pode aprovar o proprio fato."],
+    blockers: ["Fonte ausente ou invalida bloqueia o calculo e nunca e convertida em zero.", "Componente incompleto, denominador nao positivo, falta de alcada ou retry divergente impedem a operacao."],
+    records: ["Cada politica, componente, cenario, calculo e decisao registra ator, motivo, origem, data efetiva, documento canonico e hash.", "A lista publicada e o preco contratado continuam pertencendo ao dominio Pedidos."],
+  }),
   manual("/kanban", "Pedidos", "Kanban comercial", "Acompanhar pedidos por situação e responsabilidade comercial.", {
     before: ["Os pedidos precisam existir e estar dentro do escopo comercial da conta."],
     steps: ["Filtre a fila pela situação desejada.", "Localize o pedido pelo código ou cliente.", "Abra a operação correspondente em Pedidos.", "Retorne ao Kanban para conferir a mudança de situação."],

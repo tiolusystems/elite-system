@@ -111,7 +111,7 @@ begin
     from public.list_system_module_runtime('production') runtime
    where runtime.environment = 'production'
      and runtime.active_environment = 'unconfigured';
-  if v_count <> 13 then
+  if v_count <> 14 then
     raise exception 'future environment inspection did not return complete catalog: %', v_count;
   end if;
 

@@ -107,6 +107,18 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/schema_lint_hardening.sql
+      - name: Run packaging read helper security smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/packaging_read_helpers_security.sql
+      - name: Run order gate RPC wrapper security smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/order_gate_rpc_wrapper_security.sql
+      - name: Run canonical SQL surface security smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/security_0141_0144_canonical_surfaces.sql
       - name: Run production module release smoke
         env:
           PGPASSWORD: postgres

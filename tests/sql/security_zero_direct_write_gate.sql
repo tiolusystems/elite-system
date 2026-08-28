@@ -5,6 +5,7 @@ declare
   v_table record;
   v_function record;
   v_policy_dependency record;
+  v_contract record;
   v_privilege text;
 begin
   for v_table in
@@ -93,6 +94,66 @@ begin
     end if;
 
     if has_function_privilege('authenticated', v_function.oid, 'EXECUTE') then
+      select *
+        into v_contract
+        from public.security_sql_surface_contracts contract
+       where replace(contract.function_signature, 'public.', '') =
+             v_function.signature::text;
+      if found and v_contract.surface = 'GOVERNED_READ_INVOKER_RLS' then
+        if v_function.prosecdef or not v_contract.read_only
+           or not v_contract.rls_preserved or not v_contract.explicit_contract then
+          raise exception 'governed read contract is invalid: %', v_function.signature;
+        end if;
+        if v_function.definition ~* '\m(insert|update|delete|truncate|merge|perform)\M' then
+          raise exception 'governed read contains a write operation: %', v_function.signature;
+        end if;
+        if v_contract.authorization_marker <> 'RLS'
+           and v_function.definition !~* 'current_actor_id\(\)' then
+          raise exception 'governed read lacks actor marker: %', v_function.signature;
+        end if;
+        if exists (
+          select 1 from unnest(v_contract.dependency_tables) dependency(table_name)
+          left join pg_class dependency_class
+            on dependency_class.relname = dependency.table_name
+           and dependency_class.relnamespace = 'public'::regnamespace
+          where dependency_class.oid is null or not dependency_class.relrowsecurity
+        ) then
+          raise exception 'governed read dependency lacks RLS: %', v_function.signature;
+        end if;
+      elsif found and v_contract.surface = 'READ_SUPPORT_HELPER' then
+        if v_function.prosecdef or v_function.definition ~* '\m(insert|update|delete|truncate|merge|perform)\M' then
+          raise exception 'read support helper is not invoker read-only: %', v_function.signature;
+        end if;
+      elsif found and v_contract.surface in ('GOVERNED_SCOPE_HELPER', 'GOVERNED_RPC_DEFINER') then
+        if not v_contract.explicit_contract or not v_contract.read_only then
+          raise exception 'governed definer surface lacks a read-only explicit contract: %', v_function.signature;
+        end if;
+        if not v_function.prosecdef then
+          raise exception 'governed definer surface is not SECURITY DEFINER: %', v_function.signature;
+        end if;
+        if not exists (
+          select 1 from unnest(coalesce(v_function.proconfig, array[]::text[])) config
+          where lower(config) ~ '^search_path\s*=\s*public$'
+        ) then
+          raise exception 'governed definer surface lacks fixed search_path: %', v_function.signature;
+        end if;
+        if v_function.definition !~* v_contract.authorization_marker then
+          raise exception 'governed definer surface lacks declared guard: %', v_function.signature;
+        end if;
+        if v_function.definition ~* '\\m(insert|update|delete|truncate|merge)\\M' then
+          raise exception 'governed definer surface contains a write operation: %', v_function.signature;
+        end if;
+        if v_contract.rls_preserved and exists (
+          select 1
+            from unnest(v_contract.dependency_tables) dependency(table_name)
+            left join pg_class dependency_class
+              on dependency_class.relname = dependency.table_name
+             and dependency_class.relnamespace = 'public'::regnamespace
+           where dependency_class.oid is null or not dependency_class.relrowsecurity
+        ) then
+          raise exception 'governed definer read dependency lacks RLS: %', v_function.signature;
+        end if;
+      else
       if not v_function.prosecdef then
         raise exception 'authenticated RPC is not SECURITY DEFINER: %', v_function.signature;
       end if;
@@ -105,6 +166,7 @@ begin
       end if;
       if v_function.definition !~* '(begin_audited_rpc|require_current_user_permission|require_current_user_admin_role|require_current_user_security_admin|can_current_user|auth\.uid\(\)|current_actor_id\(\)|registrar_fin_recebimento_alocado\(|log_audit_event\()' then
         raise exception 'authenticated RPC lacks an apparent permission guard: %', v_function.signature;
+      end if;
       end if;
     end if;
   end loop;

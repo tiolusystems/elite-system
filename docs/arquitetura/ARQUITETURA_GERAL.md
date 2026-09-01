@@ -65,6 +65,7 @@ Direcao obrigatoria: `tela -> aplicacao -> RPC auditada -> dominio proprietario 
 | `importacao` | Staging de NF XML, match de MP, conversao e geracao de lote | `imp_*` | `core`, `seguranca`, `cadastros`, `estoque` | `/importacao-xml` | validacao tecnica |
 | `faturamento` | NF total, simples faturamento, remessa vinculada, complemento e eventos fiscais | `fat_*` | `core`, `seguranca`, `pedidos`, `expedicao` | integrada ao pedido; tela dedicada pendente | validacao tecnica |
 | `financeiro` | Recebimentos, alocacoes, liberacao proporcional e conta corrente de comissao | `fin_*` e contratos financeiros | `core`, `seguranca`, `pedidos`, `faturamento` | integrada ao pedido; tela dedicada pendente | validacao tecnica |
+| `precificacao` | Politicas, cenarios, memoria de calculo, revisao e dossie | `prc_*` | `core`, `seguranca`, `cadastros`; leitura opcional de `pcp` e `estoque` | `/custos-precos` | construcao local |
 | `metas` | Periodos customizados e ledger de vendas, cancelamentos e devolucoes | `com_meta_*` | `core`, `seguranca`, `pedidos` | tela dedicada pendente | validacao tecnica |
 | `relatorios` | Read models, reconciliacoes, vendas, estoque e rastreabilidade | views `rel_*` | leitura opcional dos dominios operacionais | `/relatorios` | validacao tecnica |
 | `auditoria` | Fonte historica, batches, aliases, valores de aquisicao, reconciliacao e evidencias | `source_*`, `migration_*`, fatos historicos governados | leitura controlada dos dominios | `/importacao-historica/mp` e Python | validacao tecnica |
@@ -102,6 +103,11 @@ flowchart LR
   seguranca --> financeiro
   pedidos --> financeiro
   faturamento --> financeiro
+  core --> precificacao
+  seguranca --> precificacao
+  cadastros --> precificacao
+  pcp -. leitura opcional .-> precificacao
+  estoque -. leitura opcional .-> precificacao
   core --> metas
   seguranca --> metas
   pedidos --> metas
@@ -205,6 +211,7 @@ O acesso (`disabled`, `read_only`, `read_write`) e independente da maturidade. U
 | Tela de producao | `apps/web/app/pcp`, `apps/web/lib/pcp.ts` | migration/SQL de PCP e estoque chamado |
 | MP/produto/embalagem | `apps/web/app/cadastros`, `apps/web/lib/master-data.ts` | migrations `cad_*` relevantes |
 | Pedido/Kanban/credito | `apps/web/app/pedidos`, `apps/web/lib/orders.ts`, `apps/web/lib/kanban.ts` | RPC de pedido e transicao |
+| Formacao de custos e precos | `apps/web/app/custos-precos`, `apps/web/lib/cost-pricing.ts` | migration `0138` e ADR-015 |
 | Romaneio/lote de expedicao | `apps/web/app/romaneios`, `apps/web/lib/romaneios.ts` | contratos de reserva e movimento PA |
 | XML de entrada MP | `apps/web/app/importacao-xml`, `apps/web/lib/importacao-xml.ts` | staging, conversao e API de estoque MP |
 | Historico Excel de MP | `elite_system/services/historical_mp.py`, `apps/web/app/importacao-historica/mp` | migration `0045` e decisao de migracao historica de MP |

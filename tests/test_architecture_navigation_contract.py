@@ -17,6 +17,7 @@ MODULES_PAGE = ROOT / "apps" / "web" / "app" / "modulos" / "page.tsx"
 IMPLEMENTATION_MAP = ROOT / "docs" / "implantacao" / "00_MAPA_IMPLANTACAO_MODULOS.md"
 HOME_PAGE = ROOT / "apps" / "web" / "app" / "page.tsx"
 MODULE_MIGRATION = ROOT / "supabase" / "migrations" / "0041_module_rollout_runtime.sql"
+PRICING_MIGRATION = ROOT / "supabase" / "migrations" / "0138_govern_cost_pricing_iso_foundation.sql"
 
 EXPECTED_MODULE_KEYS = {
     "core",
@@ -29,6 +30,7 @@ EXPECTED_MODULE_KEYS = {
     "importacao",
     "faturamento",
     "financeiro",
+    "precificacao",
     "metas",
     "relatorios",
     "auditoria",
@@ -79,6 +81,7 @@ class ArchitectureNavigationContractTest(unittest.TestCase):
     def test_executable_catalog_and_database_catalog_use_the_same_keys(self) -> None:
         system_map = SYSTEM_MAP.read_text(encoding="utf-8")
         migration = MODULE_MIGRATION.read_text(encoding="utf-8")
+        pricing_migration = PRICING_MIGRATION.read_text(encoding="utf-8")
 
         key_list_match = re.search(
             r"SYSTEM_MODULE_KEYS\s*=\s*\[(.*?)\]\s*as const",
@@ -95,6 +98,7 @@ class ArchitectureNavigationContractTest(unittest.TestCase):
         )
         self.assertIsNotNone(insert_match)
         database_keys = set(re.findall(r"\('([a-z_]+)'\s*,", insert_match.group(1)))
+        database_keys.update(re.findall(r"values\s*\('([a-z_]+)'\s*,", pricing_migration, re.IGNORECASE))
 
         self.assertEqual(executable_keys, EXPECTED_MODULE_KEYS)
         self.assertEqual(database_keys, EXPECTED_MODULE_KEYS)

@@ -14,6 +14,7 @@ import type { BuildInfo } from "@/lib/build-info";
 import type { FinanceAccess } from "@/lib/finance";
 import type { ModuleRuntimeDashboard } from "@/lib/modules";
 import type { PriceListAccess } from "@/lib/price-lists";
+import type { PricingAccess } from "@/lib/cost-pricing";
 import type { RuntimeStatus } from "@/lib/runtime";
 
 const PUBLIC_PREFIXES = ["/login", "/auth/confirm", "/health", "/api/health"];
@@ -24,11 +25,12 @@ type Props = {
   financeAccess: FinanceAccess | null;
   modules: ModuleRuntimeDashboard | null;
   priceListAccess: PriceListAccess | null;
+  pricingAccess: PricingAccess | null;
   runtime: RuntimeStatus;
   children: React.ReactNode;
 };
 
-export function AuthenticatedAppShell({ auth, build, financeAccess, modules, priceListAccess, runtime, children }: Props) {
+export function AuthenticatedAppShell({ auth, build, financeAccess, modules, priceListAccess, pricingAccess, runtime, children }: Props) {
   const pathname = usePathname();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const userMenuRef = useRef<HTMLDetailsElement>(null);
@@ -104,6 +106,7 @@ export function AuthenticatedAppShell({ auth, build, financeAccess, modules, pri
                 {items.map((item) => {
                   if (item.href === "/pedidos/financeiro" && !financeAccess?.any) return null;
                   if (item.href === "/pedidos/listas-precos" && !priceListAccess?.view) return null;
+                  if (item.href === "/custos-precos" && !pricingAccess?.view) return null;
                   const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
                   const enabled = enabledModules.has(item.moduleKey);
                   return enabled ? (

@@ -12,6 +12,7 @@ Data: 2026-07-10
 | expedicao | `exp_*` | pedidos e API de estoque | somente RPC de romaneio |
 | faturamento | `fat_*` | pedidos e expedicao | somente RPC/evento fiscal |
 | financeiro | `fin_*`, recebimentos e liberacoes legadas | pedidos, faturamento, pessoas comerciais | somente RPC/evento financeiro |
+| precificacao | `prc_*` | cadastros e leitura opcional de PCP/estoque | somente RPC de politica, cenario, calculo ou revisao; nunca publica lista diretamente |
 | metas | `com_meta_*` | pedidos e comissionados | somente RPC/evento de meta |
 | importacao | `imp_*` | cadastros e API de estoque | somente RPC de staging/resolucao |
 | auditoria/migracao | `source_*`, `migration_*`, reconciliacoes | leitura de todos os dominios | somente RPC/ferramenta controlada |

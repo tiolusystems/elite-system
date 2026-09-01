@@ -5,8 +5,8 @@ Atualizado em: 2026-08-25
 ## Estado vigente em 2026-08-25
 
 - repositorio: `tiolusystems/elite-system`;
-- base: `main` no merge `806c9e2a2e7b3b9eda22fd6b22638ac0f4d348ac`;
-- branch local isolada: `work/price-list-xlsx-ui-20260825`;
+- base: `main` no merge `fb17622956b8b8ceb37ddf17d389d18d6097eb4b`;
+- checkout local isolado: detached em `main@fb17622956b8b8ceb37ddf17d389d18d6097eb4b`;
 - a PR cumulativa ORD-01 `#8` foi integrada a `main`;
 - producao real, PWA e bancos persistentes permanecem inalterados por esta
   tarefa;
@@ -14,13 +14,13 @@ Atualizado em: 2026-08-25
 
 ## Tarefa em execucao
 
-`PRICE-LIST.XLSX-OPERATIONAL-UI - workspace operacional de listas de precos`.
+`PRC-01 - fundacao ISO de formacao de custos e precos`.
 
-Workspace `Comercial > Listas de precos` implementado e validado localmente,
-ainda sem commit. O fluxo possui modelo XLSX governado, analise por codigos
-canonicos, preview de avisos e erros, publicacao atomica de versao e historico.
-A migration aditiva e a `0137`; migrations `0124` a `0136` nao foram
-reescritas. O delta aguarda revisao tecnica final antes de qualquer integracao.
+Fundacao local em implementacao pela migration aditiva `0138`. O novo dominio
+`precificacao` possui politica versionada, cenario com fontes congeladas,
+memoria de calculo para margem/markup e 18 prazos, revisao segregada e dossie.
+Nao publica lista comercial, nao movimenta estoque, nao altera formula PCP e
+nao gera pagamento financeiro.
 
 ## Validacao vigente
 
@@ -68,5 +68,12 @@ reescritas. O delta aguarda revisao tecnica final antes de qualquer integracao.
 
 ## Proxima tarefa
 
-Revisar o artefato integral do workspace XLSX e aguardar autorizacao antes de
-commit. Push, PR, merge e deploy permanecem fora desta tarefa.
+Concluir os gates proporcionais do PRC-01 e revisar o artefato local. A proxima
+iniciativa prevista e `MET-01`, sem inicio nesta tarefa.
+
+## Atualizacao PRC-01 P1
+
+A migration aditiva 0145 foi implementada localmente para endurecer origem system, hash do snapshot completo e idempot�ncia concorrente. Validacao runtime ainda pendente nesta tarefa; nenhum commit, push ou banco persistente foi alterado.
+### PRC-01: exportacao auditavel
+
+O workspace `/custos-precos` oferece XLSX e PDF apenas para calculos aprovados. Ambos sao gerados do snapshot `prc-calculation-v2` retornado pela superficie governada 0146; decisao e SHA-256 persistidos sao verificados antes da entrega.

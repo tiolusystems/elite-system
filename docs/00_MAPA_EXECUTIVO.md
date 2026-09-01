@@ -37,6 +37,7 @@ O mapa detalhado continua sendo
 | linguagem PT-BR e campos controlados de Cadastros | `cadastros` | `docs/UX_DATA_GOVERNANCE_PTBR.md` |
 | manuais por processo e tela | modulo proprietario do fluxo | `docs/manuais/README.md` |
 | pedido, credito, Kanban | `pedidos` | `apps/web/app/pedidos` |
+| formacao de custos e precos | `precificacao` | `apps/web/app/custos-precos`, migration `0138` |
 | lotes, movimentos e saldos | `estoque` | RPCs e migrations `est_*` |
 | formula, OP, CQ, POP e transformacao | `pcp` | `apps/web/app/pcp`, `apps/web/app/producao`; `docs/decisao_pops_documentos_controlados.md` |
 | romaneio e expedicao | `expedicao` | `apps/web/app/romaneios` |

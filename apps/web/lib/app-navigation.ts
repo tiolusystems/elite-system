@@ -23,6 +23,7 @@ export const navigationGroups: NavigationGroup[] = [
       { href: "/cadastros", label: "Cadastros", moduleKey: "cadastros" },
       { href: "/pedidos", label: "Pedidos", moduleKey: "pedidos" },
       { href: "/pedidos/listas-precos", label: "Listas de precos", moduleKey: "pedidos" },
+      { href: "/custos-precos", label: "Custos e precos", moduleKey: "precificacao" },
       { href: "/kanban", label: "Kanban", moduleKey: "pedidos" }
     ]
   },

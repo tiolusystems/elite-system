@@ -9,6 +9,7 @@ export const SYSTEM_MODULE_KEYS = [
   "importacao",
   "faturamento",
   "financeiro",
+  "precificacao",
   "metas",
   "relatorios",
   "auditoria"
@@ -218,6 +219,25 @@ export const SYSTEM_MODULE_CATALOG = [
     capabilities: ["Recebimento parcial", "Alocacao por NF", "Comissao proporcional", "Debitos e ajustes auditados"]
   },
   {
+    moduleKey: "precificacao",
+    displayName: "Formacao de custos e precos",
+    shortName: "Custos e precos",
+    description: "Politicas, cenarios, memoria de calculo, revisao e dossie auditavel.",
+    ownerDomain: "precificacao",
+    isCore: false,
+    sortOrder: 850,
+    lane: "resultado",
+    primaryRoute: "/custos-precos",
+    dependencies: [
+      { moduleKey: "core", access: "read_write", required: true },
+      { moduleKey: "seguranca", access: "read_only", required: true },
+      { moduleKey: "cadastros", access: "read_only", required: true },
+      { moduleKey: "pcp", access: "read_only", required: false },
+      { moduleKey: "estoque", access: "read_only", required: false }
+    ],
+    capabilities: ["Politica versionada", "Cenario com fontes congeladas", "Memoria de 18 prazos", "Revisao segregada"]
+  },
+  {
     moduleKey: "metas",
     displayName: "Metas comerciais",
     shortName: "Metas",
@@ -352,7 +372,7 @@ export const SYSTEM_MAP_LANES: ReadonlyArray<{
     laneKey: "resultado",
     label: "4. Resultado",
     description: "Dinheiro recebido, comissoes e metas.",
-    moduleKeys: ["financeiro", "metas"]
+    moduleKeys: ["financeiro", "precificacao", "metas"]
   },
   {
     laneKey: "controle",
@@ -372,7 +392,7 @@ export const SYSTEM_FLOWS: ReadonlyArray<{
     flowKey: "venda",
     title: "Venda ate recebimento",
     description: "Do cadastro do cliente ao resultado comercial.",
-    moduleKeys: ["cadastros", "pedidos", "expedicao", "faturamento", "financeiro", "metas", "relatorios"]
+    moduleKeys: ["cadastros", "precificacao", "pedidos", "expedicao", "faturamento", "financeiro", "metas", "relatorios"]
   },
   {
     flowKey: "producao",

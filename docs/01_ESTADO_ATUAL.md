@@ -74,3 +74,6 @@ iniciativa prevista e `MET-01`, sem inicio nesta tarefa.
 ## Atualizacao PRC-01 P1
 
 A migration aditiva 0145 foi implementada localmente para endurecer origem system, hash do snapshot completo e idempot�ncia concorrente. Validacao runtime ainda pendente nesta tarefa; nenhum commit, push ou banco persistente foi alterado.
+### PRC-01: exportacao auditavel
+
+O workspace `/custos-precos` oferece XLSX e PDF apenas para calculos aprovados. Ambos sao gerados do snapshot `prc-calculation-v2` retornado pela superficie governada 0146; decisao e SHA-256 persistidos sao verificados antes da entrega.

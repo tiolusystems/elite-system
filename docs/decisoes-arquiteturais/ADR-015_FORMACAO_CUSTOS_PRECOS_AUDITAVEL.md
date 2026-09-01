@@ -63,3 +63,7 @@ rastreabilidade, reprodução, retenção e não conformidade.
 ## Hardening P1 em 0145
 
 A migration aditiva 0145 bloqueia fontes system sem adapter can�nico, preserva substituicao_manual como entrada restrita ao cen�rio e registra prc-calculation-v2 com componentes e 18 prazos completos. As RPCs PRC serializam cada chave por lock transacional antes da consulta de idempot�ncia; retry id�ntico retorna o mesmo fato e retry divergente � recusado.
+
+## Exportacao do snapshot aprovado em 0146
+
+A exportacao XLSX/PDF usa exclusivamente `consultar_prc_snapshot_aprovado(bigint)`. A superficie governada exige decisao `APPROVED` e recalcula o SHA-256 do `intermediarios_json` persistido antes de devolve-lo. Calculos pendentes, rejeitados ou com hash divergente permanecem bloqueados; a aplicacao nao consulta diretamente as tabelas PRC nem recalcula precos.

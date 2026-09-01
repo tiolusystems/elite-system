@@ -167,6 +167,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/cost_pricing_iso_foundation.sql
+      - name: Run approved PRC snapshot export smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/cost_pricing_approved_snapshot_export.sql
       - name: Run commercial pricing units smoke
         env:
           PGPASSWORD: postgres

@@ -59,3 +59,7 @@ rastreabilidade, reprodução, retenção e não conformidade.
 - emissão fiscal, pagamento de comissão e prêmio ficam fora do PRC-01;
 - uma integração futura deve consumir APIs dos domínios proprietários, sem
   escrita cruzada.
+
+## Hardening P1 em 0145
+
+A migration aditiva 0145 bloqueia fontes system sem adapter can�nico, preserva substituicao_manual como entrada restrita ao cen�rio e registra prc-calculation-v2 com componentes e 18 prazos completos. As RPCs PRC serializam cada chave por lock transacional antes da consulta de idempot�ncia; retry id�ntico retorna o mesmo fato e retry divergente � recusado.

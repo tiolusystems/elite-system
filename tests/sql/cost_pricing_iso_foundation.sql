@@ -180,4 +180,14 @@ do $$ declare v pg_temp.prc_ids%rowtype; begin
   end if;
 end $$;
 
+
+do $$ declare v_system bigint; begin
+  begin
+    insert into public.prc_cenario_componentes(cenario_id,campo,valor,unidade,source_kind,source_reference,source_effective_date,reason,actor_id)
+    values(0,'materia_prima',1,'BRL_L','system','CALLER-VALUE',current_date,'system source must be resolved by a canonical adapter','13800000-0000-4000-8000-000000000001');
+    raise exception 'system source accepted without canonical adapter';
+  exception when others then
+    if position('foreign key' in lower(sqlerrm))>0 then null; elsif position('adapter canonico' in lower(sqlerrm))=0 then raise; end if;
+  end;
+end $$;
 rollback;

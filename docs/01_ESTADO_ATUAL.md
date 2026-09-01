@@ -70,3 +70,7 @@ nao gera pagamento financeiro.
 
 Concluir os gates proporcionais do PRC-01 e revisar o artefato local. A proxima
 iniciativa prevista e `MET-01`, sem inicio nesta tarefa.
+
+## Atualizacao PRC-01 P1
+
+A migration aditiva 0145 foi implementada localmente para endurecer origem system, hash do snapshot completo e idempot�ncia concorrente. Validacao runtime ainda pendente nesta tarefa; nenhum commit, push ou banco persistente foi alterado.

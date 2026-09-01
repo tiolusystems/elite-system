@@ -88,7 +88,7 @@ begin
   ) then raise exception 'credito independente nao foi vinculado a F2B mantendo o pedido bloqueado'; end if;
   if (select status from public.com_pedidos where id = v.order_id) <> 'blocked'
      or (select pedido_efetivado_em from public.com_pedidos where id = v.order_id) is not null
-     or not ((public.avaliar_com_pedido_efetividade(v.order_id)->'pending_conditions') ? 'APROVACAO_DESCONTO') then
+     or not ((public.consultar_com_pedido_efetividade(v.order_id)->'pending_conditions') ? 'APROVACAO_DESCONTO') then
     raise exception 'credito antes de F2C nao preservou o bloqueio de efetividade';
   end if;
 
@@ -104,7 +104,7 @@ begin
     '13100000-0000-4000-8000-000000000042', v_evidence_id, 'ACCEPTED', null
   );
   if (select status from public.com_pedidos where id = v.order_id) <> 'blocked'
-     or not ((public.avaliar_com_pedido_efetividade(v.order_id)->'pending_conditions') ? 'APROVACAO_DESCONTO') then
+     or not ((public.consultar_com_pedido_efetividade(v.order_id)->'pending_conditions') ? 'APROVACAO_DESCONTO') then
     raise exception 'assinatura aceita nao pode atravessar F2C pendente';
   end if;
 

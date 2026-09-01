@@ -12,8 +12,21 @@ class CostPricingExportsContract(unittest.TestCase):
 
     def test_exports_are_snapshot_only_and_complete(self):
         source = (ROOT / "apps/web/lib/cost-pricing-export.ts").read_text(encoding="utf-8")
-        for value in ("snapshot_json", "c.length!==11", "t.length!==18", "result_sha256", "buildXlsxBytes", "%PDF-1.4"):
+        for value in (
+            "snapshot_json", "c.length!==11", "t.length!==18", "result_sha256",
+            "buildXlsxBytes", "%PDF-1.4", "approved_by", "approved_at",
+            "source_reference", "source_effective_date", "reason", "actor_id",
+            "created_at", "cost_base_exact", "denominator_exact",
+            "cash_price_exact", "cmv_percent_exact", "net_contribution_exact",
+            "cash_price", "prazo_dias", "preco",
+        ):
             self.assertIn(value, source)
+        self.assertIn("exportMetadata(result,s,f,o)", source)
+        self.assertIn('header:"Referencia da origem"', source)
+        self.assertIn('header:"Data efetiva da origem"', source)
+        self.assertIn('header:"Ator"', source)
+        self.assertIn('header:"Criado em"', source)
+        self.assertIn("Preco a vista:", source)
         self.assertNotIn(".from(", source)
 
     def test_routes_are_protected_attachments(self):

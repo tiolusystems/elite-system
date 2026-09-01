@@ -29,6 +29,11 @@ jobs:
         run: corepack enable && corepack prepare pnpm@11.11.0 --activate
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Run PRC export artifact contract
+        working-directory: .
+        env:
+          ELITE_RUN_EXPORT_ARTIFACT_TEST: "1"
+        run: python -m unittest tests.test_cost_pricing_exports_contract.CostPricingExportsContract.test_generated_artifacts_contain_approved_dossier -v
       - name: Lint web application
         run: pnpm lint
       - name: Build web application

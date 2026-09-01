@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -34,6 +35,10 @@ class CostPricingExportsContract(unittest.TestCase):
         self.assertIn('value:String(o?.cash_price??"")', source)
         self.assertNotIn(".from(", source)
 
+    @unittest.skipUnless(
+        os.environ.get("ELITE_RUN_EXPORT_ARTIFACT_TEST") == "1",
+        "runtime export artifact proof runs in web-contract after dependency installation",
+    )
     def test_generated_artifacts_contain_approved_dossier(self):
         with tempfile.TemporaryDirectory() as temp:
             temp_path = Path(temp)

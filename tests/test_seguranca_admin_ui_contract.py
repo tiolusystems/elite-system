@@ -57,7 +57,12 @@ class SecurityAdminUiContractTests(unittest.TestCase):
     def test_permissions_are_not_presented_as_account_blocking(self) -> None:
         page = SECURITY_PAGE.read_text(encoding="utf-8")
 
-        self.assertIn("Alterações individuais afetam somente este usuário e não bloqueiam a conta.", page)
+        self.assertIn("<details", page)
+        self.assertIn("Exce", page)
+        self.assertIn("Resumo das capacidades efetivas", page)
+        self.assertIn("capacidades efetivas pelos perfis de acesso", page)
+        self.assertIn("Base legada", page)
+        self.assertIn("Alterar alçadas não bloqueia a conta", page)
         self.assertIn('permission.defaultAllowed ? "Permitido" : "Negado"', page)
         self.assertIn('permission.effectiveAllowed ? "Permitido" : "Negado"', page)
         self.assertIn("Negar para este usuário", page)

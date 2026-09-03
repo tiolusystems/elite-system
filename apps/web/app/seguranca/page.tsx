@@ -451,7 +451,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                 <tr>
                   <th>Modulo</th>
                   <th>Acao</th>
-                  <th>Padrão da função</th>
+                  <th>Base legada</th>
                   <th>Exceção individual</th>
                   <th>Acesso atual</th>
                   <th>Alterar acesso</th>
@@ -601,7 +601,7 @@ function PermissionRow({
             <input name="user_id" type="hidden" value={selectedProfile.id} />
             <input name="action_key" type="hidden" value={permission.actionKey} />
             <button className="secondary-button" type="submit" disabled={disabled || permission.overrideAllowed === null}>
-              Voltar ao padrão da função
+              Voltar a base legada
             </button>
           </form>
         </div>

@@ -68,8 +68,17 @@ nao gera pagamento financeiro.
 
 ## Proxima tarefa
 
-Concluir os gates proporcionais do PRC-01 e revisar o artefato local. A proxima
-iniciativa prevista e `MET-01`, sem inicio nesta tarefa.
+Homologar IAM-01A em runtime descartavel e planejar IAM-02 (sessoes e
+dispositivos). IAM-02 nao esta implementado nesta tarefa.
+
+## IAM-01A - identidade e perfis de acesso
+
+A migration aditiva `0147_iam01_access_governance.sql` cria catalogo
+versionado de perfis, permissoes relacionais explicitas, atribuicoes multiplas
+por conta humana e RPCs administrativas auditadas. O campo legado
+`user_profiles.role` permanece como fallback de transicao para contas sem
+atribuicao; contas novas recebem perfil de acesso inicial pelo fluxo de convite.
+Perfil de acesso, funcao organizacional e papel comercial continuam separados.
 
 ## Atualizacao PRC-01 P1
 

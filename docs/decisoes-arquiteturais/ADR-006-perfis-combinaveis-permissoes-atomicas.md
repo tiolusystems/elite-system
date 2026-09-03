@@ -1,7 +1,7 @@
 # ADR-006 - Perfis combinaveis com permissoes atomicas
 
 Data: 2026-07-12
-Status: autorizado
+Status: implementado em transicao (IAM-01A)
 Decisao relacionada: `DEC-005`
 
 ## Contexto
@@ -28,15 +28,18 @@ Sera adotado um modelo em que:
 - acoes criticas permanecem auditadas e receberao reautenticacao/MFA quando o
   contrato correspondente estiver disponivel.
 
-Os sete perfis iniciais sao:
+Os perfis iniciais sao:
 
-1. Administrador;
-2. PCP / Producao;
-3. Estoque;
-4. Comercial / Pedidos;
-5. Expedicao / Faturamento;
-6. Financeiro / Recebimentos e Comissoes;
-7. Consulta / Auditoria.
+1. Administrador do Sistema;
+2. Diretoria;
+3. Comercial / Vendedor;
+4. Gerencia Comercial;
+5. PCP / Producao;
+6. Estoque;
+7. Expedicao / Faturamento;
+8. Financeiro;
+9. Qualidade;
+10. Consulta / Auditoria.
 
 ## Alternativas consideradas
 
@@ -89,17 +92,22 @@ Custos:
 - o ultimo administrador capaz nao pode ser removido por acidente;
 - alteracao de privilegio sempre e auditada.
 
-## Implementacao futura
+## Implementacao IAM-01A
 
-A implementacao sera tarefa separada e devera apresentar antes da migration:
+A migration aditiva `0147_iam01_access_governance.sql` materializa catalogo
+versionado, relacao explicita perfil-permissao, atribuicao muitos-para-muitos
+de contas humanas e RPCs administrativas auditadas. A resolucao efetiva usa
+override individual antes da uniao de perfis e preserva fallback legado apenas
+para contas sem atribuicao durante a transicao.
 
-- schema relacional proposto;
-- compatibilidade com `user_profiles.role` e overrides atuais;
-- action keys de cada perfil;
-- regra de conflito e calculo efetivo;
-- plano de backfill e rollback;
+A implementacao devera ser homologada com:
+
 - smokes de usuario combinado, zero-grant e tentativa de escalada;
 - pontos que exigirao `aal2`.
+
+O convite de conta atribui um perfil de acesso inicial pela RPC governada. A
+pessoa comercial continua sendo vinculada separadamente quando necessario;
+perfil de acesso, funcao organizacional e papel comercial sao eixos distintos.
 
 ## Rollback arquitetural
 

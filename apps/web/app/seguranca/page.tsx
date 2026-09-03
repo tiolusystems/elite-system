@@ -1,8 +1,10 @@
 import {
   clearSecurityPermissionOverrideAction,
+  assignSecurityAccessProfileAction,
   inviteSecurityAuthUserAction,
   linkSecurityUserCommercialPersonAction,
   reviewSecurityEmailChangeAction,
+  removeSecurityAccessProfileAction,
   setSecurityPermissionOverrideAction,
   upsertSecurityUserProfileAction,
 } from "@/app/seguranca/actions";
@@ -109,6 +111,17 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                     {ROLES.map((role) => (
                       <option value={role} key={role}>
                         {securityRoleLabel(role)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="wide-field">
+                  Perfil de acesso inicial
+                  <select name="access_profile_id" required defaultValue={dashboard.accessProfiles[0]?.id ?? ""}>
+                    <option value="">Selecione um perfil versionado</option>
+                    {dashboard.accessProfiles.map((accessProfile) => (
+                      <option value={accessProfile.id} key={accessProfile.id}>
+                        {accessProfile.name} · {accessProfile.permissionCount} capacidades
                       </option>
                     ))}
                   </select>
@@ -448,6 +461,49 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="panel" id="perfis-acesso" aria-labelledby="perfis-acesso-title">
+          <div className="panel-header">
+            <div>
+              <h2 id="perfis-acesso-title">Perfis de acesso combinados</h2>
+              <p className="muted">Cada perfil e versionado e concede somente capacidades atomicas cadastradas. A combinacao nao altera a funcao comercial.</p>
+            </div>
+            <span className="pill">{dashboard.selectedAccessProfiles.length} atribuido(s)</span>
+          </div>
+          {!selectedProfile || selectedProfile.isSystemActor ? (
+            <div className="empty-state"><strong>Selecione uma conta operacional</strong><span>Atores de sistema nao recebem perfil humano.</span></div>
+          ) : (
+            <>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead><tr><th>Perfil</th><th>Versao</th><th>Concedido em</th><th>Motivo</th><th>Acao</th></tr></thead>
+                  <tbody>
+                    {dashboard.selectedAccessProfiles.length === 0 ? (
+                      <tr><td colSpan={5}>Nenhum perfil de acesso atribuido.</td></tr>
+                    ) : dashboard.selectedAccessProfiles.map((assigned) => (
+                      <tr key={assigned.profileId}>
+                        <td><strong>{assigned.profileName}</strong><span className="table-subtext">{assigned.profileKey}</span></td>
+                        <td>v{assigned.profileVersion}</td><td>{assigned.assignedAt}</td><td>{assigned.reason}</td>
+                        <td><form action={removeSecurityAccessProfileAction}><input type="hidden" name="user_id" value={selectedProfile.id} /><input type="hidden" name="profile_id" value={assigned.profileId} /><input type="hidden" name="reason" value="Remocao administrativa solicitada" /><button className="secondary-button" type="submit">Remover</button></form></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <form action={assignSecurityAccessProfileAction} className="form-footer">
+                <input type="hidden" name="user_id" value={selectedProfile.id} />
+                <select name="profile_id" defaultValue="" required>
+                  <option value="">Adicionar perfil de acesso</option>
+                  {dashboard.accessProfiles.filter((profile) => !dashboard.selectedAccessProfiles.some((assigned) => assigned.profileId === profile.id)).map((profile) => (
+                    <option value={profile.id} key={profile.id}>{profile.name} · {profile.permissionCount} capacidades</option>
+                  ))}
+                </select>
+                <input name="reason" placeholder="Motivo da atribuição (mínimo 10 caracteres)" minLength={10} required />
+                <button className="primary-button" type="submit">Atribuir perfil</button>
+              </form>
+            </>
+          )}
         </section>
       </section>
     </main>

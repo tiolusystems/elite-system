@@ -101,6 +101,7 @@ begin
   if not public.security_user_has_profile_permission(v_target, v_action_key) then
     raise exception 'creating profile v2 revoked active v1 access';
   end if;
+  perform set_config('request.jwt.claim.sub', v_admin::text, true);
   if not public.assign_security_access_profile(v_target, v_profile_v2_id, 'Migracao explicita para versao dois', 'iam:smoke:v2') then
     raise exception 'explicit profile version migration failed';
   end if;

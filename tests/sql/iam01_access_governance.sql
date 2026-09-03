@@ -66,7 +66,8 @@ begin
          (v_target2, 'IAM Provisioned Human', 'auditoria', 'active', false)
   on conflict (id) do nothing;
   insert into public.user_permission_overrides(user_id, action_key, allowed, updated_by)
-  values (v_admin, 'security.manage_permissions', true, v_admin)
+  values (v_admin, 'security.manage_permissions', true, v_admin),
+         (v_admin, 'security.manage_users', true, v_admin)
   on conflict (user_id, action_key) do update set allowed = true;
 
   select profile.id into v_profile_id from public.security_access_profiles profile where profile.profile_key = 'comercial_vendedor' and profile.version = 1;

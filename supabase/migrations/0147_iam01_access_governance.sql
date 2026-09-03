@@ -42,6 +42,18 @@ create index if not exists idx_security_user_access_profiles_user
 create index if not exists idx_security_user_access_profiles_profile
   on public.security_user_access_profiles(profile_id, user_id);
 
+alter table public.security_user_access_profiles
+  add column if not exists profile_key text;
+update public.security_user_access_profiles assignment
+   set profile_key = profile.profile_key
+  from public.security_access_profiles profile
+ where profile.id = assignment.profile_id
+   and assignment.profile_key is null;
+alter table public.security_user_access_profiles
+  alter column profile_key set not null;
+create unique index if not exists uq_security_user_access_profiles_key
+  on public.security_user_access_profiles(user_id, profile_key);
+
 alter table public.security_access_profiles enable row level security;
 alter table public.security_access_profile_permissions enable row level security;
 alter table public.security_user_access_profiles enable row level security;
@@ -67,23 +79,57 @@ on conflict (profile_key, version) do update set
   status = 'active',
   updated_at = clock_timestamp();
 
--- These rows are the materialized catalog. Patterns are used only while seeding;
--- authorization at runtime joins these explicit rows and never evaluates a wildcard.
+-- This is the materialized least-privilege catalog. The allowlist is explicit;
+-- no wildcard is evaluated by authorization at seed time or at runtime.
 insert into public.security_access_profile_permissions(profile_id, action_key)
-select profile.id, action.action_key
-  from public.security_access_profiles profile
-  join public.permission_actions action on (
-    (profile.profile_key = 'administrador_sistema' and (action.action_key like 'security.%' or action.action_key in ('system.admin', 'audit.view')))
-    or (profile.profile_key = 'diretoria' and (action.action_key like '%.view' or action.module in ('auditoria', 'relatorios')))
-    or (profile.profile_key = 'comercial_vendedor' and action.module in ('cadastros', 'pedidos') and action.action_key not like '%approve%')
-    or (profile.profile_key = 'gerencia_comercial' and action.module in ('cadastros', 'pedidos'))
-    or (profile.profile_key = 'pcp_producao' and (action.module = 'pcp' or action.action_key like 'estoque.%'))
-    or (profile.profile_key = 'estoque' and action.module = 'estoque')
-    or (profile.profile_key = 'expedicao_faturamento' and action.module in ('expedicao', 'faturamento', 'romaneios'))
-    or (profile.profile_key = 'financeiro' and action.module = 'financeiro')
-    or (profile.profile_key = 'qualidade' and (action.module = 'qualidade' or action.action_key like '%cq%'))
-    or (profile.profile_key = 'consulta_auditoria' and (action.action_key like '%.view' or action.module in ('auditoria', 'relatorios')))
-  )
+select profile.id, allowlist.action_key
+  from (values
+    ('administrador_sistema', 'security.manage_users'),
+    ('administrador_sistema', 'security.manage_permissions'),
+    ('administrador_sistema', 'security.change_own_password'),
+    ('administrador_sistema', 'audit.view'),
+    ('administrador_sistema', 'system.admin'),
+    ('diretoria', 'audit.view'), ('diretoria', 'reports.view'),
+    ('diretoria', 'cadastros.grupos_produto.read'), ('diretoria', 'cadastros.pessoas.candidates.read'),
+    ('diretoria', 'estoque.mp.view'), ('diretoria', 'estoque.pi.view'), ('diretoria', 'estoque.pa.view'),
+    ('diretoria', 'pedidos.view'), ('diretoria', 'pedidos.commercial_comparison.view'),
+    ('diretoria', 'pedidos.buyer_signature.view'), ('diretoria', 'pedidos.revision.view'),
+    ('comercial_vendedor', 'pedidos.view.own'), ('comercial_vendedor', 'pedidos.create.own'),
+    ('comercial_vendedor', 'pedidos.status.transition'), ('comercial_vendedor', 'pedidos.exchange.create'),
+    ('comercial_vendedor', 'cadastros.pessoas.candidates.read'), ('comercial_vendedor', 'pedidos.price_lists.view'),
+    ('gerencia_comercial', 'pedidos.view.team'), ('gerencia_comercial', 'pedidos.view'),
+    ('gerencia_comercial', 'pedidos.create.any'), ('gerencia_comercial', 'pedidos.status.transition'),
+    ('gerencia_comercial', 'pedidos.credit.review'), ('gerencia_comercial', 'pedidos.commercial_review.preview'),
+    ('gerencia_comercial', 'pedidos.commercial_review.confirm'), ('gerencia_comercial', 'pedidos.price_lists.view'),
+    ('pcp_producao', 'pcp.formula.create'), ('pcp_producao', 'pcp.formula.change'),
+    ('pcp_producao', 'pcp.op.create'), ('pcp_producao', 'pcp.op.reserve_components'),
+    ('pcp_producao', 'pcp.op.start'), ('pcp_producao', 'pcp.op.finish'),
+    ('pcp_producao', 'pcp.op.cancel'), ('pcp_producao', 'pcp.cq.record'),
+    ('pcp_producao', 'pcp.envase.view'), ('pcp_producao', 'pcp.envase.issue'),
+    ('pcp_producao', 'pcp.envase.reserve'), ('pcp_producao', 'pcp.envase.start'),
+    ('pcp_producao', 'pcp.envase.finish'), ('pcp_producao', 'estoque.mp.view'),
+    ('pcp_producao', 'estoque.pi.view'), ('pcp_producao', 'estoque.pa.view'),
+    ('estoque', 'estoque.mp.view'), ('estoque', 'estoque.pi.view'), ('estoque', 'estoque.pa.view'),
+    ('estoque', 'estoque.mp.lots.create'), ('estoque', 'estoque.pi.lots.create'),
+    ('estoque', 'estoque.pa.lots.create'), ('estoque', 'estoque.mp.adjust'), ('estoque', 'estoque.pi.adjust'),
+    ('expedicao_faturamento', 'romaneios.view'), ('expedicao_faturamento', 'romaneios.create'),
+    ('expedicao_faturamento', 'romaneios.reserve'), ('expedicao_faturamento', 'romaneios.confirm'),
+    ('expedicao_faturamento', 'romaneios.cancel'), ('expedicao_faturamento', 'faturamento.nf.view'),
+    ('expedicao_faturamento', 'faturamento.nf.issue'), ('expedicao_faturamento', 'faturamento.nf.correct'),
+    ('financeiro', 'financeiro.receipts.view'), ('financeiro', 'financeiro.receipts.register'),
+    ('financeiro', 'financeiro.receipts.reverse'), ('financeiro', 'financeiro.commissions.view'),
+    ('financeiro', 'financeiro.commissions.release'), ('financeiro', 'financeiro.commissions.pay'),
+    ('financeiro', 'financeiro.commissions.adjust'), ('financeiro', 'pedidos.customer.credit.view'),
+    ('qualidade', 'qualidade.rastreabilidade.view'), ('qualidade', 'qualidade.rastreabilidade.recall_simulate'),
+    ('qualidade', 'qualidade.rastreabilidade.export'), ('qualidade', 'pcp.cq.record'),
+    ('qualidade', 'pcp.pop.read'), ('qualidade', 'pcp.pop.version.create'), ('qualidade', 'pcp.pop.publish'),
+    ('qualidade', 'pcp.pop.state.manage'), ('qualidade', 'pcp.pop.applicability.manage'),
+    ('consulta_auditoria', 'audit.view'), ('consulta_auditoria', 'reports.view'),
+    ('consulta_auditoria', 'estoque.mp.view'), ('consulta_auditoria', 'estoque.pi.view'),
+    ('consulta_auditoria', 'estoque.pa.view'), ('consulta_auditoria', 'pedidos.view'),
+    ('consulta_auditoria', 'pedidos.price_lists.view')
+  ) allowlist(profile_key, action_key)
+  join public.security_access_profiles profile on profile.profile_key = allowlist.profile_key
 on conflict (profile_id, action_key) do nothing;
 
 create or replace function public.security_user_has_profile_permission(
@@ -102,7 +148,6 @@ as $$
       join public.security_access_profiles profile
         on profile.id = assignment.profile_id
        and profile.status = 'active'
-       and profile.version = (select max(latest.version) from public.security_access_profiles latest where latest.profile_key = profile.profile_key)
       join public.security_access_profile_permissions permission
         on permission.profile_id = profile.id
        and permission.action_key = p_action_key
@@ -160,7 +205,14 @@ begin
     select profile.id, profile.profile_key, profile.name, profile.description, profile.version, profile.status,
            count(permission.action_key)::bigint
       from public.security_access_profiles profile
-      left join public.security_access_profile_permissions permission on permission.profile_id = profile.id and permission.granted
+     left join public.security_access_profile_permissions permission on permission.profile_id = profile.id and permission.granted
+     where profile.status = 'active'
+       and not exists (
+         select 1 from public.security_access_profiles newer
+          where newer.profile_key = profile.profile_key
+            and newer.status = 'active'
+            and newer.version > profile.version
+       )
      group by profile.id, profile.profile_key, profile.name, profile.description, profile.version, profile.status
      order by profile.name;
 end;
@@ -194,6 +246,7 @@ language plpgsql security definer set search_path = public
 as $$
 declare
   v_actor uuid;
+  v_profile_key text;
   v_context jsonb;
   v_correlation_id text := coalesce(nullif(trim(p_correlation_id), ''), 'iam:' || gen_random_uuid()::text);
   v_before jsonb;
@@ -206,12 +259,13 @@ begin
   if not exists (select 1 from public.user_profiles where id = p_user_id and status = 'active' and not coalesce(is_system_actor, false)) then raise exception 'target human profile not active'; end if;
   if not exists (select 1 from public.security_access_profiles where id = p_profile_id and status = 'active') then raise exception 'access profile not active'; end if;
   perform pg_advisory_xact_lock(hashtextextended('iam:user:' || p_user_id::text, 0));
+  select profile.profile_key into v_profile_key from public.security_access_profiles profile where profile.id = p_profile_id;
   select coalesce(jsonb_agg(to_jsonb(assignment) order by assignment.profile_id), '[]'::jsonb) into v_before
     from public.security_user_access_profiles assignment where assignment.user_id = p_user_id;
   v_context := public.begin_audited_rpc('security.manage_permissions', 'seguranca', 'security_user_access_profiles', 'change_type', jsonb_build_object('correlation_id', v_correlation_id));
-  insert into public.security_user_access_profiles(user_id, profile_id, assigned_by, reason, correlation_id)
-  values (p_user_id, p_profile_id, v_actor, btrim(p_reason), v_correlation_id)
-  on conflict (user_id, profile_id) do update set reason = excluded.reason, correlation_id = excluded.correlation_id, assigned_by = excluded.assigned_by, assigned_at = clock_timestamp();
+  insert into public.security_user_access_profiles(user_id, profile_id, profile_key, assigned_by, reason, correlation_id)
+  values (p_user_id, p_profile_id, v_profile_key, v_actor, btrim(p_reason), v_correlation_id)
+  on conflict (user_id, profile_key) do update set profile_id = excluded.profile_id, reason = excluded.reason, correlation_id = excluded.correlation_id, assigned_by = excluded.assigned_by, assigned_at = clock_timestamp();
   select coalesce(jsonb_agg(to_jsonb(assignment) order by assignment.profile_id), '[]'::jsonb) into v_after
     from public.security_user_access_profiles assignment where assignment.user_id = p_user_id;
   perform public.log_audited_rpc_change('seguranca', 'security_user_access_profiles', p_user_id::text, 'seguranca.access_profile_assigned', 'security.manage_permissions', v_context, v_before, v_after, jsonb_build_object('profile_id', p_profile_id, 'reason', btrim(p_reason), 'correlation_id', v_correlation_id));
@@ -233,6 +287,62 @@ begin
   delete from public.security_user_access_profiles where user_id = p_user_id and profile_id = p_profile_id;
   perform public.log_audited_rpc_change('seguranca', 'security_user_access_profiles', p_user_id::text, 'seguranca.access_profile_removed', 'security.manage_permissions', v_context, v_before, null, jsonb_build_object('profile_id', p_profile_id, 'reason', btrim(p_reason)));
   return true;
+end;
+$$;
+
+-- The onboarding boundary composes the existing person and identity-link
+-- contracts, so reuse and creation happen in one audited database operation.
+create or replace function public.provision_security_human_identity(
+  p_user_id uuid,
+  p_profile_id bigint,
+  p_pessoa_id bigint default null,
+  p_display_name text default null,
+  p_reason text default 'Provisionamento administrativo de identidade',
+  p_correlation_id text default null
+)
+returns bigint
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_actor uuid;
+  v_person_id bigint := p_pessoa_id;
+  v_profile_key text;
+  v_correlation_id text := coalesce(nullif(trim(p_correlation_id), ''), 'iam:provision:' || gen_random_uuid()::text);
+  v_context jsonb;
+begin
+  v_actor := public.require_current_user_security_admin('security.manage_users');
+  if p_user_id is null or p_profile_id is null then raise exception 'user and access profile are required'; end if;
+  if length(btrim(coalesce(p_reason, ''))) < 10 then raise exception 'reason must have at least 10 characters'; end if;
+  if p_user_id = v_actor then raise exception 'self identity provisioning is not allowed'; end if;
+  if not exists (select 1 from public.user_profiles where id = p_user_id and status = 'active' and not coalesce(is_system_actor, false)) then
+    raise exception 'target human profile not active';
+  end if;
+  select profile.profile_key into v_profile_key
+    from public.security_access_profiles profile
+   where profile.id = p_profile_id and profile.status = 'active';
+  if v_profile_key is null then raise exception 'access profile not active'; end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('iam:user:' || p_user_id::text, 0));
+  if v_person_id is null then
+    if nullif(trim(coalesce(p_display_name, '')), '') is null then raise exception 'display name is required for new identity'; end if;
+    v_person_id := public.create_cad_pessoa_comercial(
+      trim(p_display_name), upper(trim(p_display_name)), '["funcionario_elite"]'::jsonb,
+      'active', null, null, null, '[]'::jsonb, '[]'::jsonb,
+      jsonb_build_object('source', 'provision_security_human_identity', 'correlation_id', v_correlation_id)
+    );
+  end if;
+  perform public.link_security_user_commercial_person(p_user_id, v_person_id, btrim(p_reason));
+
+  v_context := public.begin_audited_rpc('security.manage_users', 'seguranca', 'user_profiles', 'change_type', jsonb_build_object('correlation_id', v_correlation_id));
+  insert into public.security_user_access_profiles(user_id, profile_id, profile_key, assigned_by, reason, correlation_id)
+  values (p_user_id, p_profile_id, v_profile_key, v_actor, btrim(p_reason), v_correlation_id)
+  on conflict (user_id, profile_key) do update set profile_id = excluded.profile_id, reason = excluded.reason,
+    correlation_id = excluded.correlation_id, assigned_by = excluded.assigned_by, assigned_at = clock_timestamp();
+  perform public.log_audited_rpc_change('seguranca', 'user_profiles', p_user_id::text,
+    'seguranca.human_identity_provisioned', 'security.manage_users', v_context, null,
+    jsonb_build_object('pessoa_id', v_person_id, 'profile_id', p_profile_id, 'profile_key', v_profile_key),
+    jsonb_build_object('correlation_id', v_correlation_id, 'reason', btrim(p_reason)));
+  return v_person_id;
 end;
 $$;
 
@@ -266,6 +376,8 @@ grant execute on function public.list_security_access_profiles() to authenticate
 grant execute on function public.list_security_user_access_profiles(uuid) to authenticated;
 grant execute on function public.assign_security_access_profile(uuid, bigint, text, text) to authenticated;
 grant execute on function public.remove_security_access_profile(uuid, bigint, text) to authenticated;
+revoke all on function public.provision_security_human_identity(uuid, bigint, bigint, text, text, text) from public, anon;
+grant execute on function public.provision_security_human_identity(uuid, bigint, bigint, text, text, text) to authenticated;
 
 comment on table public.security_access_profiles is 'Versioned canonical access profiles; profile assignment is independent from commercial role.';
 comment on table public.security_user_access_profiles is 'Audited many-to-many human account to access profile assignments.';

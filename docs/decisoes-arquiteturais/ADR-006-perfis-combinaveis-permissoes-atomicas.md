@@ -105,9 +105,13 @@ A implementacao devera ser homologada com:
 - smokes de usuario combinado, zero-grant e tentativa de escalada;
 - pontos que exigirao `aal2`.
 
-O convite de conta atribui um perfil de acesso inicial pela RPC governada. A
-pessoa comercial continua sendo vinculada separadamente quando necessario;
-perfil de acesso, funcao organizacional e papel comercial sao eixos distintos.
+O convite de conta atribui um perfil de acesso inicial e conclui o vinculo com
+uma pessoa existente, quando selecionada, ou cria uma identidade humana
+minima pela RPC governada. A pessoa criada recebe apenas a classificacao
+interna `funcionario_elite`, sem inferir carteira, comissao ou papel de
+vendedor. Perfil de acesso, funcao organizacional e papel comercial continuam
+sendo eixos distintos; o vinculo manual permanece somente como reparo
+avancado para legados.
 
 ## Rollback arquitetural
 

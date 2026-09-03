@@ -32,6 +32,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
   const availablePeople = dashboard.commercialPeople.filter(
     (person) => person.status === "active" && (person.userProfileId === null || person.userProfileId === selectedProfile?.id)
   );
+  const effectivePermissionCount = dashboard.permissions.filter((permission) => permission.effectiveAllowed).length;
 
   return (
     <main className="app-shell">
@@ -107,7 +108,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                 </label>
                 <label>
                   Papel
-                  <select name="role" defaultValue="comercial">
+                  <select name="role" defaultValue="auditoria">
                     {ROLES.map((role) => (
                       <option value={role} key={role}>
                         {securityRoleLabel(role)}
@@ -125,6 +126,16 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                       </option>
                     ))}
                   </select>
+                </label>
+                <label className="wide-field">
+                  Pessoa existente (opcional)
+                  <select name="pessoa_id" defaultValue={requestedPersonId ?? ""}>
+                    <option value="">Criar identidade humana automaticamente</option>
+                    {availablePeople.map((person) => (
+                      <option value={person.id} key={person.id}>{person.name}</option>
+                    ))}
+                  </select>
+                  <span className="field-help">Sem seleção, o sistema cria uma pessoa interna sem papel comercial.</span>
                 </label>
               </div>
               <div className="form-footer">
@@ -207,7 +218,8 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
           </section>
         </section>
 
-        <section className="panel form-panel" id="vinculo-pessoa" aria-labelledby="vinculo-pessoa-title">
+        <details className="panel form-panel" id="vinculo-pessoa">
+          <summary>Reparo avançado de vínculo Pessoa - Conta</summary>
           <div className="panel-header">
             <div>
               <h2 id="vinculo-pessoa-title">Identidade operacional</h2>
@@ -272,7 +284,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
               ) : null}
             </form>
           )}
-        </section>
+        </details>
 
         <section className="panel form-panel" id="troca-email" aria-labelledby="troca-email-title">
           <div className="panel-header">
@@ -413,11 +425,12 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
           </div>
         </section>
 
-        <section className="panel" id="alcadas" aria-labelledby="alcadas-title">
+        <details className="panel" id="alcadas">
+          <summary>Exceções avançadas</summary>
           <div className="panel-header">
             <div>
-              <h2 id="alcadas-title">O que este usuário pode fazer</h2>
-              <p className="muted">As permissões padrão vêm da função organizacional. Alterações individuais afetam somente este usuário e não bloqueiam a conta.</p>
+              <h2 id="alcadas-title">Resumo das capacidades efetivas</h2>
+              <p className="muted">{dashboard.selectedProfile ? `${effectivePermissionCount} capacidades efetivas pelos perfis de acesso e exceções individuais.` : "Selecione uma conta para consultar capacidades efetivas."}</p>
             </div>
             <form className="security-user-picker" action="/seguranca" method="get">
               <select name="user_id" defaultValue={selectedProfile?.id ?? ""}>
@@ -461,7 +474,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
               </tbody>
             </table>
           </div>
-        </section>
+        </details>
 
         <section className="panel" id="perfis-acesso" aria-labelledby="perfis-acesso-title">
           <div className="panel-header">

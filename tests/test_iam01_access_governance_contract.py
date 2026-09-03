@@ -37,9 +37,16 @@ class Iam01AccessGovernanceContractTests(unittest.TestCase):
         ):
             self.assertIn(f"('{profile_key}'", self.migration)
         self.assertIn("profile_permission", self.migration)
-        self.assertIn("profile.profile_key = 'administrador_sistema'", self.migration)
+        self.assertIn("('administrador_sistema', 'security.manage_users')", self.migration)
         self.assertIn("security_user_has_profile_permission", self.migration)
-        self.assertNotIn("like '%'", self.migration)
+        self.assertNotIn("like '%.view'", self.migration)
+        self.assertNotIn("like 'security.%'", self.migration)
+        for forbidden in (
+            "cadastros.manage", "cadastros.credit.manage", "pedidos.credit.limit.adjust",
+            "pedidos.price_lists.publish", "pedidos.price_lists.withdraw", "pedidos.commissions.assign",
+            "audit.reconciliation.run",
+        ):
+            self.assertNotIn(f"('{forbidden}'", self.migration)
 
     def test_effective_precedence_and_transition_are_database_rules(self) -> None:
         self.assertIn("if found then return v_override_allowed", self.migration)
@@ -47,6 +54,12 @@ class Iam01AccessGovernanceContractTests(unittest.TestCase):
         self.assertIn("legacy resolution", self.migration)
         self.assertIn("individual deny did not override profile grant", self.smoke)
         self.assertIn("seguranca.access_profile_assigned", self.smoke)
+        self.assertNotIn("profile.version = (select max", self.migration)
+        self.assertIn("uq_security_user_access_profiles_key", self.migration)
+        self.assertIn("on conflict (user_id, profile_key)", self.migration)
+        self.assertIn("profile_id = excluded.profile_id", self.migration)
+        self.assertIn("creating profile v2 revoked active v1 access", self.smoke)
+        self.assertIn("explicit profile version migration", self.smoke)
 
     def test_governed_operations_are_audited_and_private_tables(self) -> None:
         for function in (
@@ -67,9 +80,24 @@ class Iam01AccessGovernanceContractTests(unittest.TestCase):
         self.assertIn('"assign_security_access_profile"', actions)
         self.assertIn('"remove_security_access_profile"', actions)
         self.assertIn('name="access_profile_id"', page)
+        self.assertIn('name="pessoa_id"', page)
+        self.assertIn("Criar identidade humana automaticamente", page)
+        self.assertIn("<details", page)
+        self.assertIn("Exceções avançadas", page)
         self.assertIn("list_security_access_profiles", lib)
         self.assertIn("list_security_user_access_profiles", lib)
         self.assertIn("Perfil de acesso inicial", page)
+        self.assertIn('"provision_security_human_identity"', actions)
+        self.assertIn('p_pessoa_id: pessoaId ? Number(pessoaId) : null', actions)
+
+    def test_identity_provisioning_is_governed_and_audited(self) -> None:
+        self.assertIn("provision_security_human_identity", self.migration)
+        self.assertIn("create_cad_pessoa_comercial", self.migration)
+        self.assertIn("link_security_user_commercial_person", self.migration)
+        self.assertIn("seguranca.human_identity_provisioned", self.migration)
+        self.assertIn("funcionario_elite", self.migration)
+        self.assertIn("link_security_user_commercial_person", self.migration)
+        self.assertIn("new human identity was not created and linked atomically", self.smoke)
 
     def test_ci_executes_iam_smoke(self) -> None:
         self.assertIn("tests/sql/iam01_access_governance.sql", CI.read_text(encoding="utf-8"))

@@ -29,8 +29,9 @@ export async function inviteSecurityAuthUserAction(formData: FormData) {
   }
   const email = field(formData, "email").toLowerCase();
   const displayName = field(formData, "display_name");
-  const role = field(formData, "role") || "comercial";
+  const role = field(formData, "role") || "auditoria";
   const accessProfileId = field(formData, "access_profile_id");
+  const pessoaId = field(formData, "pessoa_id");
   const status = "active";
 
   if (!email || !displayName) {
@@ -108,25 +109,27 @@ export async function inviteSecurityAuthUserAction(formData: FormData) {
     redirect(`/seguranca?result=${encodeURIComponent(mapSecurityError(profile.error.message))}#novo-acesso`);
   }
 
-  const assigned = await auditedRpc(supabase, "assign_security_access_profile", {
+  const provisioned = await auditedRpc(supabase, "provision_security_human_identity", {
     p_user_id: userId,
     p_profile_id: Number(accessProfileId),
-    p_reason: "Perfil inicial atribuido no convite de acesso",
+    p_pessoa_id: pessoaId ? Number(pessoaId) : null,
+    p_display_name: displayName,
+    p_reason: "Provisionamento de identidade e perfil no convite",
     p_correlation_id: `iam:invite:${userId}`
   }, {
     metadata: {
       action_key: "security.manage_permissions",
       axis: "change_type",
       domain: "seguranca",
-      entity: "security_user_access_profiles",
-      entity_id: `${userId}:${accessProfileId}`,
-      failure_action: "seguranca.access_profile_assignment_failed"
+      entity: "user_profiles",
+      entity_id: userId,
+      failure_action: "seguranca.human_identity_provisioning_failed"
     }
   });
 
-  if (assigned.error) {
+  if (provisioned.error) {
     await admin.auth.admin.deleteUser(userId);
-    redirect(`/seguranca?result=${encodeURIComponent(mapSecurityError(assigned.error.message))}#novo-acesso`);
+    redirect(`/seguranca?result=${encodeURIComponent(mapSecurityError(provisioned.error.message))}#novo-acesso`);
   }
 
   const sentLog = await auditedRpc(supabase, "record_security_auth_user_invitation_sent", {

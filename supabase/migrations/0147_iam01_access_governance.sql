@@ -326,9 +326,22 @@ begin
   if v_person_id is null then
     if nullif(trim(coalesce(p_display_name, '')), '') is null then raise exception 'display name is required for new identity'; end if;
     v_person_id := public.create_cad_pessoa_comercial(
-      trim(p_display_name), upper(trim(p_display_name)), '["funcionario_elite"]'::jsonb,
-      'active', null, null, null, '[]'::jsonb, '[]'::jsonb,
-      jsonb_build_object('source', 'provision_security_human_identity', 'correlation_id', v_correlation_id)
+      p_nome => trim(p_display_name),
+      p_nome_norm => upper(trim(p_display_name)),
+      p_papeis_json => '["funcionario_elite"]'::jsonb,
+      p_codigo_legado => null,
+      p_tipo_comercial => null,
+      p_status => 'active',
+      p_vendedor_responsavel_id => null,
+      p_apelidos_json => '[]'::jsonb,
+      p_grafias_incorretas_json => '[]'::jsonb,
+      p_payload_origem_json => jsonb_build_object(
+        'source', 'provision_security_human_identity',
+        'correlation_id', v_correlation_id
+      ),
+      p_confirmar_possivel_duplicidade => false,
+      p_motivo_duplicidade => null,
+      p_candidatos_apresentados => array[]::bigint[]
     );
   end if;
   perform public.link_security_user_commercial_person(p_user_id, v_person_id, btrim(p_reason));

@@ -305,7 +305,7 @@ language plpgsql security definer set search_path = public
 as $$
 declare
   v_actor uuid;
-  v_person_id bigint := p_pessoa_id;
+  v_identity_person bigint := p_pessoa_id;
   v_profile_key text;
   v_correlation_id text := coalesce(nullif(trim(p_correlation_id), ''), 'iam:provision:' || gen_random_uuid()::text);
   v_context jsonb;
@@ -323,9 +323,9 @@ begin
   if v_profile_key is null then raise exception 'access profile not active'; end if;
 
   perform pg_advisory_xact_lock(hashtextextended('iam:user:' || p_user_id::text, 0));
-  if v_person_id is null then
+  if v_identity_person is null then
     if nullif(trim(coalesce(p_display_name, '')), '') is null then raise exception 'display name is required for new identity'; end if;
-    v_person_id := public.create_cad_pessoa_comercial(
+    v_identity_person := public.create_cad_pessoa_comercial(
       p_nome => trim(p_display_name),
       p_nome_norm => upper(trim(p_display_name)),
       p_papeis_json => '["funcionario_elite"]'::jsonb,
@@ -344,7 +344,7 @@ begin
       p_candidatos_apresentados => array[]::bigint[]
     );
   end if;
-  perform public.link_security_user_commercial_person(p_user_id, v_person_id, btrim(p_reason));
+  perform public.link_security_user_commercial_person(p_user_id, v_identity_person, btrim(p_reason));
 
   v_context := public.begin_audited_rpc('security.manage_users', 'seguranca', 'user_profiles', 'change_type', jsonb_build_object('correlation_id', v_correlation_id));
   insert into public.security_user_access_profiles(user_id, profile_id, profile_key, assigned_by, reason, correlation_id)
@@ -353,9 +353,9 @@ begin
     correlation_id = excluded.correlation_id, assigned_by = excluded.assigned_by, assigned_at = clock_timestamp();
   perform public.log_audited_rpc_change('seguranca', 'user_profiles', p_user_id::text,
     'seguranca.human_identity_provisioned', 'security.manage_users', v_context, null,
-    jsonb_build_object('pessoa_id', v_person_id, 'profile_id', p_profile_id, 'profile_key', v_profile_key),
+    jsonb_build_object('pessoa_id', v_identity_person, 'profile_id', p_profile_id, 'profile_key', v_profile_key),
     jsonb_build_object('correlation_id', v_correlation_id, 'reason', btrim(p_reason)));
-  return v_person_id;
+  return v_identity_person;
 end;
 $$;
 

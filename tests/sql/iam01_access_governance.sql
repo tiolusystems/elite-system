@@ -119,6 +119,10 @@ begin
   if public.can_current_user('cadastros.pessoas.create') then
     raise exception 'security smoke admin received generic Cadastros create permission';
   end if;
+  if has_schema_privilege('authenticated', 'cadastros_internal', 'usage')
+     or has_schema_privilege('anon', 'cadastros_internal', 'usage') then
+    raise exception 'private Cadastros schema usage leaked';
+  end if;
   if has_function_privilege('authenticated', 'cadastros_internal.create_security_human_person(text,text)', 'execute')
      or has_function_privilege('anon', 'cadastros_internal.create_security_human_person(text,text)', 'execute') then
     raise exception 'private identity helper is exposed to an application role';

@@ -382,6 +382,7 @@ end;
 $$;
 
 revoke all on function cadastros_internal.create_security_human_person(text, text) from public, anon, authenticated;
+revoke usage, create on schema cadastros_internal from public, anon, authenticated;
 
 create or replace function public.provision_security_human_identity(
   p_user_id uuid,

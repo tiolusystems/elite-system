@@ -92,11 +92,17 @@ class Iam01AccessGovernanceContractTests(unittest.TestCase):
 
     def test_identity_provisioning_is_governed_and_audited(self) -> None:
         self.assertIn("provision_security_human_identity", self.migration)
+        self.assertIn("cadastros_internal.create_security_human_person", self.migration)
+        self.assertIn("revoke all on schema cadastros_internal from public, anon, authenticated", self.migration)
+        self.assertIn("revoke all on function cadastros_internal.create_security_human_person(text, text) from public, anon, authenticated", self.migration)
+        # The public create RPC remains the canonical Cadastros application contract.
         self.assertIn("create_cad_pessoa_comercial", self.migration)
         self.assertIn("link_security_user_commercial_person", self.migration)
         self.assertIn("seguranca.human_identity_provisioned", self.migration)
         self.assertIn("funcionario_elite", self.migration)
         self.assertIn("link_security_user_commercial_person", self.migration)
+        self.assertIn("security smoke admin received generic cadastros create permission", self.smoke)
+        self.assertIn("private identity helper is exposed to an application role", self.smoke)
         self.assertIn("new human identity was not created and linked atomically", self.smoke)
 
     def test_ci_executes_iam_smoke(self) -> None:

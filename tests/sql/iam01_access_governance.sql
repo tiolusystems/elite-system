@@ -116,6 +116,13 @@ begin
   end if;
 
   perform set_config('request.jwt.claim.sub', v_admin::text, true);
+  if public.can_current_user('cadastros.pessoas.create') then
+    raise exception 'security smoke admin received generic Cadastros create permission';
+  end if;
+  if has_function_privilege('authenticated', 'cadastros_internal.create_security_human_person(text,text)', 'execute')
+     or has_function_privilege('anon', 'cadastros_internal.create_security_human_person(text,text)', 'execute') then
+    raise exception 'private identity helper is exposed to an application role';
+  end if;
   v_person_id := public.provision_security_human_identity(
     v_target2, v_profile_id, null, 'IAM Provisioned Human',
     'Provisionamento completo de identidade IAM', 'iam:smoke:provision'

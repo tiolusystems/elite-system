@@ -290,8 +290,99 @@ begin
 end;
 $$;
 
--- The onboarding boundary composes the existing person and identity-link
--- contracts, so reuse and creation happen in one audited database operation.
+-- The public Cadastros creation RPC remains the application contract. Human
+-- onboarding needs a narrower internal Cadastros-owned boundary because a
+-- clean install may still have the Cadastros module unconfigured. The public
+-- create_cad_pessoa_comercial RPC remains the canonical Cadastros application
+-- contract; this helper is the narrower onboarding boundary and is private.
+create schema if not exists cadastros_internal;
+revoke all on schema cadastros_internal from public, anon, authenticated;
+
+create or replace function cadastros_internal.create_security_human_person(
+  p_display_name text,
+  p_correlation_id text
+)
+returns bigint
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_actor uuid := public.current_actor_id();
+  v_name text := btrim(coalesce(p_display_name, ''));
+  v_name_norm text;
+  v_existing_person bigint;
+  v_person_id bigint;
+  v_after jsonb;
+begin
+  if v_actor is null then raise exception 'active actor is required'; end if;
+  if v_name = '' then raise exception 'display name is required for new identity'; end if;
+  v_name_norm := public.normalize_catalog_term(v_name);
+  if v_name_norm is null then raise exception 'display name is not normalizable'; end if;
+  perform public.validate_cad_pessoa_papeis_json('["funcionario_elite"]'::jsonb);
+  perform pg_advisory_xact_lock(hashtextextended('cad_pessoas_comerciais:create', 0));
+
+  select person.id
+    into v_existing_person
+    from public.cad_pessoas_comerciais person
+   where person.status = 'active'
+     and person.user_profile_id is null
+     and public.normalize_catalog_term(person.nome) = v_name_norm
+   order by person.id
+   limit 1
+   for update;
+  if v_existing_person is not null then
+    select to_jsonb(person) into v_after
+      from public.cad_pessoas_comerciais person
+     where person.id = v_existing_person;
+    perform public.log_audit_event(
+      'cadastros', 'cad_pessoas_comerciais', v_existing_person::text,
+      'cadastros.pessoa_comercial_reused_for_identity', 'security.manage_users', 'success',
+      v_after, v_after,
+      jsonb_build_object('alcada_usada', 'security.manage_users', 'axis', 'change_type', 'domain', 'cadastros', 'entity_type', 'cad_pessoas_comerciais'),
+      'database_rpc',
+      jsonb_build_object('source', 'cadastros_internal.create_security_human_person', 'correlation_id', p_correlation_id)
+    );
+    return v_existing_person;
+  end if;
+  if exists (
+    select 1
+      from public.cad_pessoas_comerciais person
+     where person.status = 'active'
+       and public.normalize_catalog_term(person.nome) = v_name_norm
+  ) then
+    raise exception 'active commercial person with this identity is already linked';
+  end if;
+
+  insert into public.cad_pessoas_comerciais(
+    nome, nome_norm, tipo_comercial, papeis_json, status,
+    apelidos_json, grafias_incorretas_json, payload_origem_json,
+    created_by, updated_by
+  ) values (
+    v_name, upper(v_name), null, '["funcionario_elite"]'::jsonb, 'active',
+    '[]'::jsonb, '[]'::jsonb,
+    jsonb_build_object('source', 'provision_security_human_identity', 'correlation_id', p_correlation_id),
+    v_actor, v_actor
+  ) returning id into v_person_id;
+
+  insert into public.cad_pessoa_aliases(pessoa_id, alias, alias_norm, tipo)
+  values (v_person_id, v_name, v_name_norm, 'nome');
+  select to_jsonb(person) into v_after
+    from public.cad_pessoas_comerciais person
+   where person.id = v_person_id;
+  perform public.log_audit_event(
+    'cadastros', 'cad_pessoas_comerciais', v_person_id::text,
+    'cadastros.pessoa_comercial_created', 'security.manage_users', 'success',
+    null, v_after,
+    jsonb_build_object('alcada_usada', 'security.manage_users', 'axis', 'change_type', 'domain', 'cadastros', 'entity_type', 'cad_pessoas_comerciais'),
+    'database_rpc',
+    jsonb_build_object('source', 'cadastros_internal.create_security_human_person', 'correlation_id', p_correlation_id)
+  );
+  return v_person_id;
+end;
+$$;
+
+revoke all on function cadastros_internal.create_security_human_person(text, text) from public, anon, authenticated;
+
 create or replace function public.provision_security_human_identity(
   p_user_id uuid,
   p_profile_id bigint,
@@ -325,23 +416,8 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('iam:user:' || p_user_id::text, 0));
   if v_identity_person is null then
     if nullif(trim(coalesce(p_display_name, '')), '') is null then raise exception 'display name is required for new identity'; end if;
-    v_identity_person := public.create_cad_pessoa_comercial(
-      p_nome => trim(p_display_name),
-      p_nome_norm => upper(trim(p_display_name)),
-      p_papeis_json => '["funcionario_elite"]'::jsonb,
-      p_codigo_legado => null,
-      p_tipo_comercial => null,
-      p_status => 'active',
-      p_vendedor_responsavel_id => null,
-      p_apelidos_json => '[]'::jsonb,
-      p_grafias_incorretas_json => '[]'::jsonb,
-      p_payload_origem_json => jsonb_build_object(
-        'source', 'provision_security_human_identity',
-        'correlation_id', v_correlation_id
-      ),
-      p_confirmar_possivel_duplicidade => false,
-      p_motivo_duplicidade => null,
-      p_candidatos_apresentados => array[]::bigint[]
+    v_identity_person := cadastros_internal.create_security_human_person(
+      trim(p_display_name), v_correlation_id
     );
   end if;
   perform public.link_security_user_commercial_person(p_user_id, v_identity_person, btrim(p_reason));

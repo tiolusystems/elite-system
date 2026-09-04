@@ -29,7 +29,9 @@ export async function inviteSecurityAuthUserAction(formData: FormData) {
   }
   const email = field(formData, "email").toLowerCase();
   const displayName = field(formData, "display_name");
-  const role = field(formData, "role") || "comercial";
+  const role = field(formData, "role") || "auditoria";
+  const accessProfileId = field(formData, "access_profile_id");
+  const pessoaId = field(formData, "pessoa_id");
   const status = "active";
 
   if (!email || !displayName) {
@@ -40,6 +42,9 @@ export async function inviteSecurityAuthUserAction(formData: FormData) {
   }
   if (!ALLOWED_ROLES.has(role)) {
     redirect("/seguranca?result=invalid_role#novo-acesso");
+  }
+  if (!/^[1-9]\d*$/.test(accessProfileId)) {
+    redirect("/seguranca?result=access_profile_required#novo-acesso");
   }
   if (isReservedEmailAddress(email)) {
     redirect("/seguranca?result=fictitious_email#novo-acesso");
@@ -102,6 +107,29 @@ export async function inviteSecurityAuthUserAction(formData: FormData) {
   if (profile.error) {
     await admin.auth.admin.deleteUser(userId);
     redirect(`/seguranca?result=${encodeURIComponent(mapSecurityError(profile.error.message))}#novo-acesso`);
+  }
+
+  const provisioned = await auditedRpc(supabase, "provision_security_human_identity", {
+    p_user_id: userId,
+    p_profile_id: Number(accessProfileId),
+    p_pessoa_id: pessoaId ? Number(pessoaId) : null,
+    p_display_name: displayName,
+    p_reason: "Provisionamento de identidade e perfil no convite",
+    p_correlation_id: `iam:invite:${userId}`
+  }, {
+    metadata: {
+      action_key: "security.manage_permissions",
+      axis: "change_type",
+      domain: "seguranca",
+      entity: "user_profiles",
+      entity_id: userId,
+      failure_action: "seguranca.human_identity_provisioning_failed"
+    }
+  });
+
+  if (provisioned.error) {
+    await admin.auth.admin.deleteUser(userId);
+    redirect(`/seguranca?result=${encodeURIComponent(mapSecurityError(provisioned.error.message))}#novo-acesso`);
   }
 
   const sentLog = await auditedRpc(supabase, "record_security_auth_user_invitation_sent", {
@@ -212,6 +240,67 @@ export async function linkSecurityUserCommercialPersonAction(formData: FormData)
   revalidatePath("/pedidos");
   revalidatePath("/seguranca");
   redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=person_linked#vinculo-pessoa`);
+}
+
+export async function assignSecurityAccessProfileAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/seguranca?result=not_configured#perfis");
+  }
+  const userId = field(formData, "user_id");
+  const profileId = field(formData, "profile_id");
+  const reason = field(formData, "reason");
+  if (!UUID_PATTERN.test(userId) || !/^[1-9]\d*$/.test(profileId) || reason.length < 10) {
+    redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=access_profile_required#perfis`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "assign_security_access_profile", {
+    p_user_id: userId,
+    p_profile_id: Number(profileId),
+    p_reason: reason,
+    p_correlation_id: `iam:assign:${userId}:${profileId}`
+  }, {
+    metadata: {
+      action_key: "security.manage_permissions",
+      axis: "change_type",
+      domain: "seguranca",
+      entity: "security_user_access_profiles",
+      entity_id: `${userId}:${profileId}`,
+      failure_action: "seguranca.access_profile_assignment_failed"
+    }
+  });
+  if (error) redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=${encodeURIComponent(mapSecurityError(error.message))}#perfis`);
+  revalidatePath("/seguranca");
+  redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=access_profile_assigned#perfis`);
+}
+
+export async function removeSecurityAccessProfileAction(formData: FormData) {
+  if (!getRuntimeStatus().supabaseConfigured) {
+    redirect("/seguranca?result=not_configured#perfis");
+  }
+  const userId = field(formData, "user_id");
+  const profileId = field(formData, "profile_id");
+  const reason = field(formData, "reason");
+  if (!UUID_PATTERN.test(userId) || !/^[1-9]\d*$/.test(profileId) || reason.length < 10) {
+    redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=access_profile_required#perfis`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await auditedRpc(supabase, "remove_security_access_profile", {
+    p_user_id: userId,
+    p_profile_id: Number(profileId),
+    p_reason: reason
+  }, {
+    metadata: {
+      action_key: "security.manage_permissions",
+      axis: "change_type",
+      domain: "seguranca",
+      entity: "security_user_access_profiles",
+      entity_id: `${userId}:${profileId}`,
+      failure_action: "seguranca.access_profile_removal_failed"
+    }
+  });
+  if (error) redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=${encodeURIComponent(mapSecurityError(error.message))}#perfis`);
+  revalidatePath("/seguranca");
+  redirect(`/seguranca?user_id=${encodeURIComponent(userId)}&result=access_profile_removed#perfis`);
 }
 
 export async function reviewSecurityEmailChangeAction(formData: FormData) {
@@ -369,6 +458,7 @@ function mapSecurityError(message: string): string {
   if (normalized.includes("system actor")) return "system_actor_blocked";
   if (normalized.includes("permission action not found")) return "permission_action_not_found";
   if (normalized.includes("target user profile not found")) return "target_profile_not_found";
+  if (normalized.includes("access profile")) return "access_profile_required";
   if (normalized.includes("invalid user role")) return "invalid_role";
   if (normalized.includes("invalid user status")) return "invalid_status";
   if (normalized.includes("system administrator role")) return "admin_role_required";

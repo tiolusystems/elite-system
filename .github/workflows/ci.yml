@@ -304,6 +304,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/security_admin_privilege_boundary.sql
+      - name: Run IAM-01A access governance smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/iam01_access_governance.sql
       - name: Run commercial pricing units upgrade smoke
         shell: bash
         env:

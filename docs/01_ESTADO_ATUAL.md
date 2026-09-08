@@ -68,8 +68,37 @@ nao gera pagamento financeiro.
 
 ## Proxima tarefa
 
-Concluir os gates proporcionais do PRC-01 e revisar o artefato local. A proxima
-iniciativa prevista e `MET-01`, sem inicio nesta tarefa.
+Publicar a correcao IAM-01A depois da validacao descartavel aprovada e usar o
+CI remoto como gate. IAM-02 (sessoes e dispositivos) permanece fora deste
+escopo.
+
+## IAM-01A - identidade e perfis de acesso
+
+A migration aditiva `0147_iam01_access_governance.sql` cria catalogo
+versionado de perfis, permissoes relacionais explicitas, atribuicoes multiplas
+por conta humana e RPCs administrativas auditadas. O campo legado
+`user_profiles.role` permanece como fallback de transicao para contas sem
+atribuicao; contas novas recebem perfil de acesso inicial pelo fluxo de convite.
+Perfil de acesso, funcao organizacional e papel comercial continuam separados.
+
+O replay descartavel `0001` a `0147` concluiu as 146 migrations e os smokes de
+Pessoa/Cadastros e IAM passaram. A fixture administrativa recebeu o perfil
+restritivo `consulta_auditoria` v1 para impedir fallback legado. A pessoa criada
+mantem `tipo_comercial = NULL` e usa o papel cadastral `funcionario`, em vez do
+valor de funcao organizacional `funcionario_elite`. O perfil
+`administrador_sistema` agora inclui a permissao atomica
+`security.identity.person.link`, ainda com `default_allowed = false`; nao recebeu
+`cadastros.pessoas.create`. A fronteira privada de Cadastros, RLS, ACL,
+default-deny e auditoria permanecem preservados.
+
+A correcao local dos P1 registra a primeira adocao de perfil em marcador
+persistente: remover ou expirar o ultimo perfil agora falha fechado, enquanto
+contas que nunca adotaram perfis preservam o fallback legado de transicao. O
+onboarding automatico deixou de reutilizar Pessoa por nome ou alias; qualquer
+candidato exige selecao explicita por `p_pessoa_id`. Os contratos Python
+dirigidos passaram em `11/11`, a suite completa passou em `867` testes com uma
+omissao prevista, e o replay limpo `0001 -> 0147`, o smoke Cadastros e o smoke
+IAM passaram no runtime descartavel `elite-validation-iam01-20260908b`.
 
 ## Atualizacao PRC-01 P1
 

@@ -2,7 +2,7 @@
 
 Data: 2026-07-12
 Decisao: `DEC-005`
-Estado: arquitetura autorizada; implementacao pendente
+Estado: arquitetura autorizada; IAM-01A implementado em transicao
 
 ## Objetivo
 
@@ -112,8 +112,10 @@ O schema atual possui `user_profiles.role` como classificacao unica e
 8. reconciliar permissao efetiva antes e depois;
 9. remover dependencia do papel unico somente apos smoke e homologacao.
 
-Nomes de tabelas e assinatura da funcao efetiva serao definidos na tarefa de
-implementation design; este documento nao cria schema.
+O schema aditivo `0147_iam01_access_governance.sql` materializa o catalogo
+versionado, a relacao perfil-permissao, as atribuicoes combinaveis e as RPCs
+auditadas. A funcao efetiva preserva fallback legado apenas para contas ainda
+sem atribuicao, evitando lockout durante a transicao.
 
 ## Auditoria da administracao de perfis
 

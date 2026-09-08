@@ -236,7 +236,8 @@ codigo.
 
 `inviteSecurityAuthUserAction`, `upsertSecurityUserProfileAction`,
 `linkSecurityUserCommercialPersonAction`, `reviewSecurityEmailChangeAction`,
-`setSecurityPermissionOverrideAction`, `clearSecurityPermissionOverrideAction`.
+`setSecurityPermissionOverrideAction`, `clearSecurityPermissionOverrideAction`,
+`assignSecurityAccessProfileAction`, `removeSecurityAccessProfileAction`.
 
 ## Erros humanos previsiveis
 

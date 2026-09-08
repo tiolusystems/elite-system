@@ -1,8 +1,10 @@
 import {
   clearSecurityPermissionOverrideAction,
+  assignSecurityAccessProfileAction,
   inviteSecurityAuthUserAction,
   linkSecurityUserCommercialPersonAction,
   reviewSecurityEmailChangeAction,
+  removeSecurityAccessProfileAction,
   setSecurityPermissionOverrideAction,
   upsertSecurityUserProfileAction,
 } from "@/app/seguranca/actions";
@@ -30,6 +32,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
   const availablePeople = dashboard.commercialPeople.filter(
     (person) => person.status === "active" && (person.userProfileId === null || person.userProfileId === selectedProfile?.id)
   );
+  const effectivePermissionCount = dashboard.permissions.filter((permission) => permission.effectiveAllowed).length;
 
   return (
     <main className="app-shell">
@@ -105,13 +108,34 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                 </label>
                 <label>
                   Papel
-                  <select name="role" defaultValue="comercial">
+                  <select name="role" defaultValue="auditoria">
                     {ROLES.map((role) => (
                       <option value={role} key={role}>
                         {securityRoleLabel(role)}
                       </option>
                     ))}
                   </select>
+                </label>
+                <label className="wide-field">
+                  Perfil de acesso inicial
+                  <select name="access_profile_id" required defaultValue={dashboard.accessProfiles[0]?.id ?? ""}>
+                    <option value="">Selecione um perfil versionado</option>
+                    {dashboard.accessProfiles.map((accessProfile) => (
+                      <option value={accessProfile.id} key={accessProfile.id}>
+                        {accessProfile.name} · {accessProfile.permissionCount} capacidades
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="wide-field">
+                  Pessoa existente (opcional)
+                  <select name="pessoa_id" defaultValue={requestedPersonId ?? ""}>
+                    <option value="">Criar identidade humana automaticamente</option>
+                    {availablePeople.map((person) => (
+                      <option value={person.id} key={person.id}>{person.name}</option>
+                    ))}
+                  </select>
+                  <span className="field-help">Sem seleção, o sistema cria uma pessoa interna sem papel comercial.</span>
                 </label>
               </div>
               <div className="form-footer">
@@ -194,7 +218,8 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
           </section>
         </section>
 
-        <section className="panel form-panel" id="vinculo-pessoa" aria-labelledby="vinculo-pessoa-title">
+        <details className="panel form-panel" id="vinculo-pessoa">
+          <summary>Reparo avançado de vínculo Pessoa - Conta</summary>
           <div className="panel-header">
             <div>
               <h2 id="vinculo-pessoa-title">Identidade operacional</h2>
@@ -259,7 +284,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
               ) : null}
             </form>
           )}
-        </section>
+        </details>
 
         <section className="panel form-panel" id="troca-email" aria-labelledby="troca-email-title">
           <div className="panel-header">
@@ -400,11 +425,12 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
           </div>
         </section>
 
-        <section className="panel" id="alcadas" aria-labelledby="alcadas-title">
+        <details className="panel" id="alcadas">
+          <summary>Exceções avançadas</summary>
           <div className="panel-header">
             <div>
-              <h2 id="alcadas-title">O que este usuário pode fazer</h2>
-              <p className="muted">As permissões padrão vêm da função organizacional. Alterações individuais afetam somente este usuário e não bloqueiam a conta.</p>
+              <h2 id="alcadas-title">Resumo das capacidades efetivas</h2>
+              <p className="muted">{dashboard.selectedProfile ? `${effectivePermissionCount} capacidades efetivas pelos perfis de acesso e exceções individuais.` : "Selecione uma conta para consultar capacidades efetivas."}</p>
             </div>
             <form className="security-user-picker" action="/seguranca" method="get">
               <select name="user_id" defaultValue={selectedProfile?.id ?? ""}>
@@ -425,7 +451,7 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
                 <tr>
                   <th>Modulo</th>
                   <th>Acao</th>
-                  <th>Padrão da função</th>
+                  <th>Base legada</th>
                   <th>Exceção individual</th>
                   <th>Acesso atual</th>
                   <th>Alterar acesso</th>
@@ -448,6 +474,49 @@ export default async function SegurancaPage({ searchParams }: { searchParams?: P
               </tbody>
             </table>
           </div>
+        </details>
+
+        <section className="panel" id="perfis-acesso" aria-labelledby="perfis-acesso-title">
+          <div className="panel-header">
+            <div>
+              <h2 id="perfis-acesso-title">Perfis de acesso combinados</h2>
+              <p className="muted">Cada perfil e versionado e concede somente capacidades atomicas cadastradas. A combinacao nao altera a funcao comercial.</p>
+            </div>
+            <span className="pill">{dashboard.selectedAccessProfiles.length} atribuido(s)</span>
+          </div>
+          {!selectedProfile || selectedProfile.isSystemActor ? (
+            <div className="empty-state"><strong>Selecione uma conta operacional</strong><span>Atores de sistema nao recebem perfil humano.</span></div>
+          ) : (
+            <>
+              <div className="table-scroll">
+                <table className="data-table">
+                  <thead><tr><th>Perfil</th><th>Versao</th><th>Concedido em</th><th>Motivo</th><th>Acao</th></tr></thead>
+                  <tbody>
+                    {dashboard.selectedAccessProfiles.length === 0 ? (
+                      <tr><td colSpan={5}>Nenhum perfil de acesso atribuido.</td></tr>
+                    ) : dashboard.selectedAccessProfiles.map((assigned) => (
+                      <tr key={assigned.profileId}>
+                        <td><strong>{assigned.profileName}</strong><span className="table-subtext">{assigned.profileKey}</span></td>
+                        <td>v{assigned.profileVersion}</td><td>{assigned.assignedAt}</td><td>{assigned.reason}</td>
+                        <td><form action={removeSecurityAccessProfileAction}><input type="hidden" name="user_id" value={selectedProfile.id} /><input type="hidden" name="profile_id" value={assigned.profileId} /><input type="hidden" name="reason" value="Remocao administrativa solicitada" /><button className="secondary-button" type="submit">Remover</button></form></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <form action={assignSecurityAccessProfileAction} className="form-footer">
+                <input type="hidden" name="user_id" value={selectedProfile.id} />
+                <select name="profile_id" defaultValue="" required>
+                  <option value="">Adicionar perfil de acesso</option>
+                  {dashboard.accessProfiles.filter((profile) => !dashboard.selectedAccessProfiles.some((assigned) => assigned.profileId === profile.id)).map((profile) => (
+                    <option value={profile.id} key={profile.id}>{profile.name} · {profile.permissionCount} capacidades</option>
+                  ))}
+                </select>
+                <input name="reason" placeholder="Motivo da atribuição (mínimo 10 caracteres)" minLength={10} required />
+                <button className="primary-button" type="submit">Atribuir perfil</button>
+              </form>
+            </>
+          )}
         </section>
       </section>
     </main>
@@ -532,7 +601,7 @@ function PermissionRow({
             <input name="user_id" type="hidden" value={selectedProfile.id} />
             <input name="action_key" type="hidden" value={permission.actionKey} />
             <button className="secondary-button" type="submit" disabled={disabled || permission.overrideAllowed === null}>
-              Voltar ao padrão da função
+              Voltar a base legada
             </button>
           </form>
         </div>

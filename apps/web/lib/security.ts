@@ -31,6 +31,28 @@ export type SecurityProfile = {
   updatedAt: string;
 };
 
+export type AccessProfile = {
+  id: number;
+  profileKey: string;
+  name: string;
+  description: string;
+  version: number;
+  status: string;
+  permissionCount: number;
+};
+
+export type UserAccessProfile = {
+  profileId: number;
+  profileKey: string;
+  profileName: string;
+  profileVersion: number;
+  assignedAt: string;
+  expiresAt: string | null;
+  assignedBy: string;
+  reason: string;
+  correlationId: string;
+};
+
 export type EffectivePermission = {
   actionKey: string;
   module: string;
@@ -78,6 +100,8 @@ export type SecurityDashboard = {
   permissions: EffectivePermission[];
   commercialPeople: SecurityCommercialPerson[];
   identityLinkAvailable: boolean;
+  accessProfiles: AccessProfile[];
+  selectedAccessProfiles: UserAccessProfile[];
   source: "supabase" | "not_configured" | "error";
   error: string | null;
 };
@@ -106,7 +130,7 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
       profiles[0] ??
       null;
 
-    const [permissionsResult, emailChangeResult, peopleResult, identityLinkPermission] = await Promise.all([
+    const [permissionsResult, emailChangeResult, peopleResult, identityLinkPermission, accessProfilesResult, assignedProfilesResult] = await Promise.all([
       selectedProfile
         ? supabase.rpc("list_security_effective_permissions", { p_user_id: selectedProfile.id })
         : Promise.resolve({ data: [], error: null }),
@@ -122,6 +146,10 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
         .order("nome", { ascending: true })
         .limit(500),
       supabase.rpc("can_current_user", { p_action_key: "security.identity.person.link" })
+      ,supabase.rpc("list_security_access_profiles")
+      ,selectedProfile
+        ? supabase.rpc("list_security_user_access_profiles", { p_user_id: selectedProfile.id })
+        : Promise.resolve({ data: [], error: null })
     ]);
 
     const permissions = permissionsResult.error
@@ -138,8 +166,14 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
           id: Number(row.id),
           name: String(row.nome),
           status: String(row.status),
-          userProfileId: nullableString(row.user_profile_id)
-        }));
+        userProfileId: nullableString(row.user_profile_id)
+      }));
+    const accessProfiles = accessProfilesResult.error
+      ? []
+      : ((accessProfilesResult.data ?? []) as Array<Record<string, unknown>>).map(mapAccessProfile);
+    const selectedAccessProfiles = assignedProfilesResult.error
+      ? []
+      : ((assignedProfilesResult.data ?? []) as Array<Record<string, unknown>>).map(mapUserAccessProfile);
 
     return {
       metrics: {
@@ -158,6 +192,8 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
       permissions,
       commercialPeople,
       identityLinkAvailable: !identityLinkPermission.error && identityLinkPermission.data === true,
+      accessProfiles,
+      selectedAccessProfiles,
       source: "supabase",
       error:
         profilesResult.error?.message ??
@@ -166,6 +202,8 @@ export async function getSecurityDashboard(selectedUserId?: string | null): Prom
         emailChangeResult.error?.message ??
         peopleResult.error?.message ??
         identityLinkPermission.error?.message ??
+        accessProfilesResult.error?.message ??
+        assignedProfilesResult.error?.message ??
         null
     };
   } catch (error) {
@@ -189,6 +227,8 @@ function emptyDashboard(source: "not_configured" | "error", error: string | null
     permissions: [],
     commercialPeople: [],
     identityLinkAvailable: false,
+    accessProfiles: [],
+    selectedAccessProfiles: [],
     source,
     error
   };
@@ -292,6 +332,32 @@ function mapPermission(row: Record<string, unknown>): EffectivePermission {
     overrideAllowed: row.override_allowed === null ? null : Boolean(row.override_allowed),
     effectiveAllowed: Boolean(row.effective_allowed),
     sortOrder: Number(row.sort_order ?? 0)
+  };
+}
+
+function mapAccessProfile(row: Record<string, unknown>): AccessProfile {
+  return {
+    id: Number(row.id),
+    profileKey: String(row.profile_key),
+    name: String(row.name),
+    description: String(row.description),
+    version: Number(row.version),
+    status: String(row.status),
+    permissionCount: Number(row.permission_count ?? 0)
+  };
+}
+
+function mapUserAccessProfile(row: Record<string, unknown>): UserAccessProfile {
+  return {
+    profileId: Number(row.profile_id),
+    profileKey: String(row.profile_key),
+    profileName: String(row.profile_name),
+    profileVersion: Number(row.profile_version),
+    assignedAt: String(row.assigned_at),
+    expiresAt: nullableString(row.expires_at),
+    assignedBy: String(row.assigned_by),
+    reason: String(row.reason),
+    correlationId: String(row.correlation_id)
   };
 }
 

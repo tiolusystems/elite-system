@@ -24,9 +24,12 @@ class Iam01AccessGovernanceContractTests(unittest.TestCase):
             "version integer not null",
             "security_access_profile_permissions",
             "security_user_access_profiles",
+            "security_access_profile_adoptions",
             "primary key (user_id, profile_id)",
             "alter table public.security_access_profiles enable row level security",
             "revoke all on table public.security_user_access_profiles from public, anon, authenticated",
+            "alter table public.security_access_profile_adoptions enable row level security",
+            "revoke all on table public.security_access_profile_adoptions from public, anon, authenticated",
         ):
             self.assertIn(required, self.migration)
 
@@ -50,9 +53,14 @@ class Iam01AccessGovernanceContractTests(unittest.TestCase):
 
     def test_effective_precedence_and_transition_are_database_rules(self) -> None:
         self.assertIn("if found then return v_override_allowed", self.migration)
-        self.assertIn("if v_has_profiles then", self.migration)
+        self.assertIn("if v_has_adopted_profiles then", self.migration)
+        self.assertIn("record_security_access_profile_adoption", self.migration)
+        self.assertIn("trg_security_access_profile_adoption", self.migration)
         self.assertIn("legacy resolution", self.migration)
         self.assertIn("individual deny did not override profile grant", self.smoke)
+        self.assertIn("removed last profile reopened legacy fallback", self.smoke)
+        self.assertIn("expired last profile reopened legacy fallback", self.smoke)
+        self.assertIn("never-adopted user lost legacy transition fallback", self.smoke)
         self.assertIn("seguranca.access_profile_assigned", self.smoke)
         self.assertNotIn("profile.version = (select max", self.migration)
         self.assertIn("uq_security_user_access_profiles_key", self.migration)
@@ -101,9 +109,16 @@ class Iam01AccessGovernanceContractTests(unittest.TestCase):
         self.assertIn("seguranca.human_identity_provisioned", self.migration)
         self.assertIn('["funcionario"]', self.migration)
         self.assertNotIn('["funcionario_elite"]', self.migration)
+        self.assertNotIn("order by person.id", self.migration)
+        self.assertIn("possible commercial person exists; choose p_pessoa_id explicitly", self.migration)
+        self.assertIn("public.normalize_catalog_term(alias_row.alias) = v_name_norm", self.migration)
         self.assertIn("link_security_user_commercial_person", self.migration)
         self.assertIn("security smoke admin received generic cadastros create permission", self.smoke)
         self.assertIn("private identity helper is exposed to an application role", self.smoke)
+        self.assertIn("automatic provisioning reused a homonym", self.smoke)
+        self.assertIn("automatic provisioning ignored an existing alias", self.smoke)
+        self.assertIn("explicit person selection did not link the chosen person", self.smoke)
+        self.assertIn("person linked to another user was accepted", self.smoke)
         self.assertIn("new human identity was not created and linked atomically", self.smoke)
 
     def test_ci_executes_iam_smoke(self) -> None:

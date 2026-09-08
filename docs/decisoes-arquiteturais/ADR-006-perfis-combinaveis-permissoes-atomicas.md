@@ -98,7 +98,9 @@ A migration aditiva `0147_iam01_access_governance.sql` materializa catalogo
 versionado, relacao explicita perfil-permissao, atribuicao muitos-para-muitos
 de contas humanas e RPCs administrativas auditadas. A resolucao efetiva usa
 override individual antes da uniao de perfis e preserva fallback legado apenas
-para contas sem atribuicao durante a transicao.
+para contas que nunca adotaram perfil durante a transicao. A primeira
+atribuicao registra uma adocao persistente e irreversivel; remover ou expirar o
+ultimo perfil passa a negar acesso em vez de reabrir `default_allowed`.
 
 A implementacao devera ser homologada com:
 
@@ -108,10 +110,13 @@ A implementacao devera ser homologada com:
 O convite de conta atribui um perfil de acesso inicial e conclui o vinculo com
 uma pessoa existente, quando selecionada, ou cria uma identidade humana
 minima pela RPC governada. A pessoa criada recebe apenas a classificacao
-interna `funcionario_elite`, sem inferir carteira, comissao ou papel de
-vendedor. Perfil de acesso, funcao organizacional e papel comercial continuam
-sendo eixos distintos; o vinculo manual permanece somente como reparo
-avancado para legados.
+cadastral `papeis_json = ["funcionario"]` e `tipo_comercial = NULL`, sem inferir
+carteira, comissao ou papel de vendedor. Quando utilizado em outros fluxos,
+`funcionario_elite` pertence ao eixo `tipo_comercial`, nao a `papeis_json`.
+Perfil de acesso, funcao organizacional e papel comercial continuam sendo
+eixos distintos; o vinculo manual permanece somente como reparo avancado para
+legados. Nome ou alias coincidente apenas identifica candidato: o onboarding
+automatico falha fechado e exige selecao explicita por `p_pessoa_id`.
 
 ## Rollback arquitetural
 

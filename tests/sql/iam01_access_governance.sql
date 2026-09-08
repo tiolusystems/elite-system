@@ -7,11 +7,16 @@ declare
   v_admin uuid := '00000000-0000-4000-8000-00000000a001';
   v_target uuid := '00000000-0000-4000-8000-00000000a002';
   v_target2 uuid := '00000000-0000-4000-8000-00000000a003';
+  v_expired_target uuid := '00000000-0000-4000-8000-00000000a004';
+  v_legacy_target uuid := '00000000-0000-4000-8000-00000000a005';
+  v_homonym_target uuid := '00000000-0000-4000-8000-00000000a006';
+  v_linked_target uuid := '00000000-0000-4000-8000-00000000a007';
   v_profile_id bigint;
   v_profile_v2_id bigint;
   v_action_key text;
   v_log_count bigint;
   v_person_id bigint;
+  v_candidate_person_id bigint;
 begin
   if (select count(*) from public.security_access_profiles) <> 10 then
     raise exception 'IAM-01A initial access profile catalog is incomplete';
@@ -22,14 +27,20 @@ begin
   if not exists (select 1 from public.security_access_profile_permissions) then
     raise exception 'IAM-01A profile permission catalog is empty';
   end if;
-  if not exists (
-    select 1 from pg_class relation
-    where relation.oid in ('public.security_access_profiles'::regclass, 'public.security_access_profile_permissions'::regclass, 'public.security_user_access_profiles'::regclass)
+  if (
+    select count(*) from pg_class relation
+    where relation.oid in (
+      'public.security_access_profiles'::regclass,
+      'public.security_access_profile_permissions'::regclass,
+      'public.security_user_access_profiles'::regclass,
+      'public.security_access_profile_adoptions'::regclass
+    )
       and relation.relrowsecurity
-  ) then
+  ) <> 4 then
     raise exception 'IAM-01A access tables must keep RLS enabled';
   end if;
-  if has_table_privilege('authenticated', 'public.security_access_profiles', 'select') then
+  if has_table_privilege('authenticated', 'public.security_access_profiles', 'select')
+     or has_table_privilege('authenticated', 'public.security_access_profile_adoptions', 'select') then
     raise exception 'IAM-01A access profile tables must not be directly readable';
   end if;
   if has_function_privilege('anon', 'public.assign_security_access_profile(uuid,bigint,text,text)', 'execute') then
@@ -67,11 +78,18 @@ begin
     where profile.profile_key = 'pcp_producao' and permission.action_key in ('estoque.mp.adjust', 'estoque.pi.adjust')
   ) then raise exception 'PCP profile contains general stock adjustment'; end if;
 
-  insert into auth.users(id) values (v_admin), (v_target), (v_target2) on conflict (id) do nothing;
+  insert into auth.users(id) values
+    (v_admin), (v_target), (v_target2), (v_expired_target),
+    (v_legacy_target), (v_homonym_target), (v_linked_target)
+  on conflict (id) do nothing;
   insert into public.user_profiles(id, display_name, role, status, is_system_actor)
   values (v_admin, 'IAM Test Admin', 'admin', 'active', false),
          (v_target, 'IAM Test Human', 'comercial', 'active', false),
-         (v_target2, 'IAM Provisioned Human', 'auditoria', 'active', false)
+         (v_target2, 'IAM Provisioned Human', 'auditoria', 'active', false),
+         (v_expired_target, 'IAM Expired Profile Human', 'comercial', 'active', false),
+         (v_legacy_target, 'IAM Legacy Human', 'comercial', 'active', false),
+         (v_homonym_target, 'IAM Homonym Human', 'auditoria', 'active', false),
+         (v_linked_target, 'IAM Linked Human', 'auditoria', 'active', false)
   on conflict (id) do nothing;
   insert into public.user_permission_overrides(user_id, action_key, allowed, updated_by)
   values (v_admin, 'security.manage_permissions', true, v_admin),
@@ -135,6 +153,37 @@ begin
     raise exception 'migrated profile v2 did not preserve permission';
   end if;
 
+  if not public.remove_security_access_profile(
+    v_target, v_profile_v2_id, 'Remocao do ultimo perfil para validar fail closed'
+  ) then
+    raise exception 'last profile removal did not succeed';
+  end if;
+  if not exists (
+    select 1 from public.security_access_profile_adoptions adoption
+    where adoption.user_id = v_target
+  ) then raise exception 'profile adoption marker was removed with the last profile'; end if;
+  perform set_config('request.jwt.claim.sub', v_target::text, true);
+  if public.can_current_user('cadastros.manage') then
+    raise exception 'removed last profile reopened legacy fallback';
+  end if;
+
+  perform set_config('request.jwt.claim.sub', v_admin::text, true);
+  if not public.assign_security_access_profile(
+    v_expired_target, v_profile_id, 'Perfil temporario para validar expiracao', 'iam:smoke:expiry'
+  ) then raise exception 'expiring profile assignment did not succeed'; end if;
+  update public.security_user_access_profiles
+     set expires_at = clock_timestamp() - interval '1 minute'
+   where user_id = v_expired_target and profile_id = v_profile_id;
+  perform set_config('request.jwt.claim.sub', v_expired_target::text, true);
+  if public.can_current_user('cadastros.manage') then
+    raise exception 'expired last profile reopened legacy fallback';
+  end if;
+
+  perform set_config('request.jwt.claim.sub', v_legacy_target::text, true);
+  if not public.can_current_user('cadastros.manage') then
+    raise exception 'never-adopted user lost legacy transition fallback';
+  end if;
+
   perform set_config('request.jwt.claim.sub', v_admin::text, true);
   if public.can_current_user('cadastros.pessoas.create') then
     raise exception 'security smoke admin received generic Cadastros create permission';
@@ -147,6 +196,62 @@ begin
      or has_function_privilege('anon', 'cadastros_internal.create_security_human_person(text,text)', 'execute') then
     raise exception 'private identity helper is exposed to an application role';
   end if;
+
+  insert into public.cad_pessoas_comerciais(
+    nome, nome_norm, tipo_comercial, papeis_json, status,
+    apelidos_json, grafias_incorretas_json, payload_origem_json,
+    created_by, updated_by
+  ) values (
+    'Pessoa Homonima IAM', 'PESSOA HOMONIMA IAM', null, '["funcionario"]'::jsonb, 'active',
+    '[]'::jsonb, '[]'::jsonb, '{"source":"iam-smoke-candidate"}'::jsonb,
+    v_admin, v_admin
+  ) returning id into v_candidate_person_id;
+  insert into public.cad_pessoa_aliases(pessoa_id, alias, alias_norm, tipo)
+  values (v_candidate_person_id, 'Alias Candidato IAM', 'alias candidato iam', 'apelido');
+
+  begin
+    perform public.provision_security_human_identity(
+      v_homonym_target, v_profile_id, null, 'Pessoa Homonima IAM',
+      'Tentativa automatica com pessoa homonima', 'iam:smoke:homonym'
+    );
+    raise exception 'automatic provisioning reused a homonym';
+  exception when others then
+    if sqlerrm <> 'possible commercial person exists; choose p_pessoa_id explicitly' then raise; end if;
+  end;
+  if exists (
+    select 1 from public.cad_pessoas_comerciais person
+    where person.user_profile_id = v_homonym_target
+  ) then raise exception 'rejected homonym was linked silently'; end if;
+
+  begin
+    perform public.provision_security_human_identity(
+      v_homonym_target, v_profile_id, null, 'Alias Candidato IAM',
+      'Tentativa automatica usando alias existente', 'iam:smoke:alias'
+    );
+    raise exception 'automatic provisioning ignored an existing alias';
+  exception when others then
+    if sqlerrm <> 'possible commercial person exists; choose p_pessoa_id explicitly' then raise; end if;
+  end;
+
+  v_person_id := public.provision_security_human_identity(
+    v_homonym_target, v_profile_id, v_candidate_person_id, null,
+    'Selecao explicita da pessoa candidata correta', 'iam:smoke:explicit-person'
+  );
+  if v_person_id <> v_candidate_person_id or not exists (
+    select 1 from public.cad_pessoas_comerciais person
+    where person.id = v_candidate_person_id and person.user_profile_id = v_homonym_target
+  ) then raise exception 'explicit person selection did not link the chosen person'; end if;
+
+  begin
+    perform public.provision_security_human_identity(
+      v_linked_target, v_profile_id, v_candidate_person_id, null,
+      'Tentativa de vincular pessoa ocupada a outra conta', 'iam:smoke:already-linked'
+    );
+    raise exception 'person linked to another user was accepted';
+  exception when others then
+    if sqlerrm <> 'commercial person is already linked to another user profile' then raise; end if;
+  end;
+
   v_person_id := public.provision_security_human_identity(
     v_target2, v_profile_id, null, 'IAM Provisioned Human',
     'Provisionamento completo de identidade IAM', 'iam:smoke:provision'

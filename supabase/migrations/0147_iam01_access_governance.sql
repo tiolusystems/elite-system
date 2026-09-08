@@ -54,12 +54,60 @@ alter table public.security_user_access_profiles
 create unique index if not exists uq_security_user_access_profiles_key
   on public.security_user_access_profiles(user_id, profile_key);
 
+create table if not exists public.security_access_profile_adoptions (
+  user_id uuid primary key references public.user_profiles(id) on delete cascade,
+  adopted_at timestamptz not null default clock_timestamp(),
+  adopted_by uuid not null references public.user_profiles(id) on delete restrict,
+  reason text not null,
+  correlation_id text not null,
+  constraint security_access_profile_adoptions_reason_check check (length(btrim(reason)) >= 10),
+  constraint security_access_profile_adoptions_correlation_check check (length(btrim(correlation_id)) >= 8)
+);
+
+insert into public.security_access_profile_adoptions(
+  user_id, adopted_at, adopted_by, reason, correlation_id
+)
+select distinct on (assignment.user_id)
+  assignment.user_id,
+  assignment.assigned_at,
+  assignment.assigned_by,
+  assignment.reason,
+  assignment.correlation_id
+from public.security_user_access_profiles assignment
+order by assignment.user_id, assignment.assigned_at, assignment.profile_id
+on conflict (user_id) do nothing;
+
+create or replace function public.record_security_access_profile_adoption()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.security_access_profile_adoptions(
+    user_id, adopted_at, adopted_by, reason, correlation_id
+  ) values (
+    new.user_id, new.assigned_at, new.assigned_by, new.reason, new.correlation_id
+  )
+  on conflict (user_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_security_access_profile_adoption on public.security_user_access_profiles;
+create trigger trg_security_access_profile_adoption
+after insert or update on public.security_user_access_profiles
+for each row execute function public.record_security_access_profile_adoption();
+
 alter table public.security_access_profiles enable row level security;
 alter table public.security_access_profile_permissions enable row level security;
 alter table public.security_user_access_profiles enable row level security;
+alter table public.security_access_profile_adoptions enable row level security;
 revoke all on table public.security_access_profiles from public, anon, authenticated;
 revoke all on table public.security_access_profile_permissions from public, anon, authenticated;
 revoke all on table public.security_user_access_profiles from public, anon, authenticated;
+revoke all on table public.security_access_profile_adoptions from public, anon, authenticated;
+revoke all on function public.record_security_access_profile_adoption() from public, anon, authenticated;
 
 insert into public.security_access_profiles(profile_key, name, description)
 values
@@ -158,8 +206,9 @@ as $$
   );
 $$;
 
--- During transition, users without an assignment retain the legacy resolution.
--- Once assigned, explicit profiles become the authorization source for that user.
+-- During transition, only users that never adopted access profiles retain the
+-- legacy resolution. Adoption is persistent, so profile removal or expiration
+-- fails closed instead of reopening legacy default-allow permissions.
 create or replace function public.can_current_user(p_action_key text)
 returns boolean
 language plpgsql
@@ -168,7 +217,7 @@ set search_path = public
 as $$
 declare
   v_actor uuid;
-  v_has_profiles boolean;
+  v_has_adopted_profiles boolean;
   v_override_allowed boolean;
   v_default_allowed boolean;
 begin
@@ -179,14 +228,16 @@ begin
      where profile.id = v_actor and profile.status = 'active' and not coalesce(profile.is_system_actor, false)
   ) then return false; end if;
 
-  select exists (select 1 from public.security_user_access_profiles assignment where assignment.user_id = v_actor
-    and (assignment.expires_at is null or assignment.expires_at > clock_timestamp())) into v_has_profiles;
+  select exists (
+    select 1 from public.security_access_profile_adoptions adoption
+    where adoption.user_id = v_actor
+  ) into v_has_adopted_profiles;
   select override_row.allowed into v_override_allowed
     from public.user_permission_overrides override_row
    where override_row.user_id = v_actor and override_row.action_key = trim(p_action_key);
   if found then return v_override_allowed; end if;
 
-  if v_has_profiles then
+  if v_has_adopted_profiles then
     return public.security_user_has_profile_permission(v_actor, trim(p_action_key));
   end if;
 
@@ -311,7 +362,6 @@ declare
   v_actor uuid := public.current_actor_id();
   v_name text := btrim(coalesce(p_display_name, ''));
   v_name_norm text;
-  v_existing_person bigint;
   v_person_id bigint;
   v_after jsonb;
 begin
@@ -322,36 +372,18 @@ begin
   perform public.validate_cad_pessoa_papeis_json('["funcionario"]'::jsonb);
   perform pg_advisory_xact_lock(hashtextextended('cad_pessoas_comerciais:create', 0));
 
-  select person.id
-    into v_existing_person
-    from public.cad_pessoas_comerciais person
-   where person.status = 'active'
-     and person.user_profile_id is null
-     and public.normalize_catalog_term(person.nome) = v_name_norm
-   order by person.id
-   limit 1
-   for update;
-  if v_existing_person is not null then
-    select to_jsonb(person) into v_after
-      from public.cad_pessoas_comerciais person
-     where person.id = v_existing_person;
-    perform public.log_audit_event(
-      'cadastros', 'cad_pessoas_comerciais', v_existing_person::text,
-      'cadastros.pessoa_comercial_reused_for_identity', 'security.manage_users', 'success',
-      v_after, v_after,
-      jsonb_build_object('alcada_usada', 'security.manage_users', 'axis', 'change_type', 'domain', 'cadastros', 'entity_type', 'cad_pessoas_comerciais'),
-      'database_rpc',
-      jsonb_build_object('source', 'cadastros_internal.create_security_human_person', 'correlation_id', p_correlation_id)
-    );
-    return v_existing_person;
-  end if;
   if exists (
     select 1
       from public.cad_pessoas_comerciais person
-     where person.status = 'active'
-       and public.normalize_catalog_term(person.nome) = v_name_norm
+     where public.normalize_catalog_term(person.nome) = v_name_norm
+        or exists (
+          select 1
+            from public.cad_pessoa_aliases alias_row
+           where alias_row.pessoa_id = person.id
+             and public.normalize_catalog_term(alias_row.alias) = v_name_norm
+        )
   ) then
-    raise exception 'active commercial person with this identity is already linked';
+    raise exception 'possible commercial person exists; choose p_pessoa_id explicitly';
   end if;
 
   insert into public.cad_pessoas_comerciais(
@@ -448,7 +480,7 @@ begin
   return query
     select action.action_key, action.module, action.description, action.default_allowed, override_row.allowed,
       case when override_row.allowed is not null then override_row.allowed
-           when exists (select 1 from public.security_user_access_profiles assignment where assignment.user_id = p_user_id and (assignment.expires_at is null or assignment.expires_at > clock_timestamp()))
+           when exists (select 1 from public.security_access_profile_adoptions adoption where adoption.user_id = p_user_id)
              then public.security_user_has_profile_permission(p_user_id, action.action_key)
            else action.default_allowed end,
       action.sort_order
@@ -472,4 +504,5 @@ grant execute on function public.provision_security_human_identity(uuid, bigint,
 
 comment on table public.security_access_profiles is 'Versioned canonical access profiles; profile assignment is independent from commercial role.';
 comment on table public.security_user_access_profiles is 'Audited many-to-many human account to access profile assignments.';
-comment on function public.can_current_user(text) is 'Central effective permission resolver: inactive deny, individual override, active profile union, legacy fallback only during transition.';
+comment on table public.security_access_profile_adoptions is 'Persistent marker that makes each human account transition from legacy fallback to governed access profiles irreversible.';
+comment on function public.can_current_user(text) is 'Central effective permission resolver: inactive deny, individual override, profile union after persistent adoption, legacy fallback only for never-adopted accounts.';

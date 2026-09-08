@@ -68,8 +68,9 @@ nao gera pagamento financeiro.
 
 ## Proxima tarefa
 
-Publicar a correcao validada do IAM-01A e usar o CI da branch como gate
-transversal. IAM-02 (sessoes e dispositivos) permanece fora deste escopo.
+Publicar a correcao IAM-01A depois da validacao descartavel aprovada e usar o
+CI remoto como gate. IAM-02 (sessoes e dispositivos) permanece fora deste
+escopo.
 
 ## IAM-01A - identidade e perfis de acesso
 
@@ -89,6 +90,15 @@ valor de funcao organizacional `funcionario_elite`. O perfil
 `security.identity.person.link`, ainda com `default_allowed = false`; nao recebeu
 `cadastros.pessoas.create`. A fronteira privada de Cadastros, RLS, ACL,
 default-deny e auditoria permanecem preservados.
+
+A correcao local dos P1 registra a primeira adocao de perfil em marcador
+persistente: remover ou expirar o ultimo perfil agora falha fechado, enquanto
+contas que nunca adotaram perfis preservam o fallback legado de transicao. O
+onboarding automatico deixou de reutilizar Pessoa por nome ou alias; qualquer
+candidato exige selecao explicita por `p_pessoa_id`. Os contratos Python
+dirigidos passaram em `11/11`, a suite completa passou em `867` testes com uma
+omissao prevista, e o replay limpo `0001 -> 0147`, o smoke Cadastros e o smoke
+IAM passaram no runtime descartavel `elite-validation-iam01-20260908b`.
 
 ## Atualizacao PRC-01 P1
 

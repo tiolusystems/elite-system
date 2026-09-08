@@ -53,6 +53,14 @@ begin
     where profile.profile_key = 'administrador_sistema'
       and permission.action_key in ('financeiro.commissions.adjust', 'pcp.op.create', 'estoque.mp.adjust')
   ) then raise exception 'system administrator profile contains operational domain grants'; end if;
+  if not exists (
+    select 1 from public.security_access_profile_permissions permission
+    join public.security_access_profiles profile on profile.id = permission.profile_id
+    where profile.profile_key = 'administrador_sistema'
+      and profile.version = 1
+      and permission.action_key = 'security.identity.person.link'
+      and permission.granted
+  ) then raise exception 'system administrator profile cannot link a governed human identity'; end if;
   if exists (
     select 1 from public.security_access_profile_permissions permission
     join public.security_access_profiles profile on profile.id = permission.profile_id
@@ -67,8 +75,20 @@ begin
   on conflict (id) do nothing;
   insert into public.user_permission_overrides(user_id, action_key, allowed, updated_by)
   values (v_admin, 'security.manage_permissions', true, v_admin),
-         (v_admin, 'security.manage_users', true, v_admin)
+         (v_admin, 'security.manage_users', true, v_admin),
+         (v_admin, 'security.identity.person.link', true, v_admin)
   on conflict (user_id, action_key) do update set allowed = true;
+  insert into public.security_user_access_profiles(
+    user_id, profile_id, profile_key, assigned_by, reason, correlation_id
+  )
+  select
+    v_admin, profile.id, profile.profile_key, v_admin,
+    'Perfil restritivo para validar menor privilegio IAM',
+    'iam:smoke:admin-restricted'
+  from public.security_access_profiles profile
+  where profile.profile_key = 'consulta_auditoria'
+    and profile.version = 1
+  on conflict (user_id, profile_key) do nothing;
 
   select profile.id into v_profile_id from public.security_access_profiles profile where profile.profile_key = 'comercial_vendedor' and profile.version = 1;
   select permission.action_key into v_action_key
@@ -134,7 +154,7 @@ begin
   if not exists (
     select 1 from public.cad_pessoas_comerciais person
      where person.id = v_person_id and person.user_profile_id = v_target2
-       and person.tipo_comercial is null and person.papeis_json @> '["funcionario_elite"]'::jsonb
+       and person.tipo_comercial is null and person.papeis_json @> '["funcionario"]'::jsonb
   ) then raise exception 'new human identity was not created and linked atomically'; end if;
   if (select count(*) from public.cad_pessoas_comerciais where user_profile_id = v_target2) <> 1 then
     raise exception 'new human identity was duplicated';

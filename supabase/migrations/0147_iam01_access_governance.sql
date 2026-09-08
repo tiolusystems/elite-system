@@ -85,6 +85,7 @@ insert into public.security_access_profile_permissions(profile_id, action_key)
 select profile.id, allowlist.action_key
   from (values
     ('administrador_sistema', 'security.manage_users'),
+    ('administrador_sistema', 'security.identity.person.link'),
     ('administrador_sistema', 'security.manage_permissions'),
     ('administrador_sistema', 'security.change_own_password'),
     ('administrador_sistema', 'audit.view'),
@@ -318,7 +319,7 @@ begin
   if v_name = '' then raise exception 'display name is required for new identity'; end if;
   v_name_norm := public.normalize_catalog_term(v_name);
   if v_name_norm is null then raise exception 'display name is not normalizable'; end if;
-  perform public.validate_cad_pessoa_papeis_json('["funcionario_elite"]'::jsonb);
+  perform public.validate_cad_pessoa_papeis_json('["funcionario"]'::jsonb);
   perform pg_advisory_xact_lock(hashtextextended('cad_pessoas_comerciais:create', 0));
 
   select person.id
@@ -358,7 +359,7 @@ begin
     apelidos_json, grafias_incorretas_json, payload_origem_json,
     created_by, updated_by
   ) values (
-    v_name, upper(v_name), null, '["funcionario_elite"]'::jsonb, 'active',
+    v_name, upper(v_name), null, '["funcionario"]'::jsonb, 'active',
     '[]'::jsonb, '[]'::jsonb,
     jsonb_build_object('source', 'provision_security_human_identity', 'correlation_id', p_correlation_id),
     v_actor, v_actor

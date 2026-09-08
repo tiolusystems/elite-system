@@ -68,8 +68,8 @@ nao gera pagamento financeiro.
 
 ## Proxima tarefa
 
-Homologar IAM-01A em runtime descartavel e planejar IAM-02 (sessoes e
-dispositivos). IAM-02 nao esta implementado nesta tarefa.
+Publicar a correcao validada do IAM-01A e usar o CI da branch como gate
+transversal. IAM-02 (sessoes e dispositivos) permanece fora deste escopo.
 
 ## IAM-01A - identidade e perfis de acesso
 
@@ -79,6 +79,16 @@ por conta humana e RPCs administrativas auditadas. O campo legado
 `user_profiles.role` permanece como fallback de transicao para contas sem
 atribuicao; contas novas recebem perfil de acesso inicial pelo fluxo de convite.
 Perfil de acesso, funcao organizacional e papel comercial continuam separados.
+
+O replay descartavel `0001` a `0147` concluiu as 146 migrations e os smokes de
+Pessoa/Cadastros e IAM passaram. A fixture administrativa recebeu o perfil
+restritivo `consulta_auditoria` v1 para impedir fallback legado. A pessoa criada
+mantem `tipo_comercial = NULL` e usa o papel cadastral `funcionario`, em vez do
+valor de funcao organizacional `funcionario_elite`. O perfil
+`administrador_sistema` agora inclui a permissao atomica
+`security.identity.person.link`, ainda com `default_allowed = false`; nao recebeu
+`cadastros.pessoas.create`. A fronteira privada de Cadastros, RLS, ACL,
+default-deny e auditoria permanecem preservados.
 
 ## Atualizacao PRC-01 P1
 

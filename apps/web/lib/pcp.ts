@@ -1058,6 +1058,10 @@ export async function getPcpOrderPrintData(orderId: number): Promise<PcpRecentOp
 
   try {
     const supabase = await createSupabaseServerClient();
+    const { data: canViewOrder, error: permissionError } = await supabase.rpc("can_current_user", {
+      p_action_key: "pcp.op.view"
+    });
+    if (permissionError || canViewOrder !== true) return null;
     const orderResponse = await supabase
       .from("pcp_ordens_producao")
       .select(

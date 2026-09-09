@@ -13,6 +13,10 @@ type RouteModuleAccess = {
   reason: string;
 };
 
+type RouteCapabilityAccess = {
+  allowed: boolean;
+};
+
 export async function GET(request: Request, context: { params: Promise<{ entity: string }> }) {
   const { entity } = await context.params;
   if (!isCorporateLookupEntity(entity)) {
@@ -33,6 +37,18 @@ export async function GET(request: Request, context: { params: Promise<{ entity:
       : null;
 
   if (guardedModule) {
+    const capabilityAccessResult = await supabase.rpc("get_current_route_capability_access", {
+      p_pathname: guardedModule.pathname
+    });
+    const capabilityAccess = Array.isArray(capabilityAccessResult.data)
+      ? (capabilityAccessResult.data[0] as RouteCapabilityAccess | undefined)
+      : undefined;
+    if (capabilityAccessResult.error || !capabilityAccess?.allowed) {
+      return NextResponse.json(
+        { message: `Você não possui acesso ao domínio ${guardedModule.label}.` },
+        { status: 403 }
+      );
+    }
     const moduleAccessResult = await supabase.rpc("get_current_route_module_access", {
       p_pathname: guardedModule.pathname
     });

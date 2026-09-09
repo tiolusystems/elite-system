@@ -71,7 +71,7 @@ function messageForResult(result: string | undefined) {
     password_mismatch: { kind: "warning", title: "Senhas diferentes", detail: "A confirmação precisa ser igual à nova senha." },
     weak_password: { kind: "warning", title: "Senha não aceita", detail: "Use uma senha com no mínimo 12 caracteres." },
     permission_denied: { kind: "warning", title: "Alteração não autorizada", detail: "Seu perfil não permite concluir esta operação." },
-    password_changed_audit_failed: { kind: "warning", title: "Alteração requer conferência", detail: "Avise o administrador antes de tentar novamente." },
+    password_changed_audit_pending: { kind: "warning", title: "Senha alterada", detail: "Sua senha já foi alterada. Avise o administrador para conferir o registro; não tente trocá-la novamente." },
     login_failed: { kind: "warning", title: "Não foi possível trocar a senha", detail: "Tente novamente em alguns instantes." }
   } as const;
   return messages[result as keyof typeof messages] ?? messages.login_failed;

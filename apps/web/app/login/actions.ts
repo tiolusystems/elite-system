@@ -98,6 +98,25 @@ export async function changeOwnPasswordAction(formData: FormData) {
     redirect("/login/recuperar-senha?result=recovery_expired");
   }
 
+  const { data: allowedToChangePassword, error: authorizationError } = await auditedRpc<boolean>(
+    supabase,
+    "can_current_user",
+    { p_action_key: "security.change_own_password" },
+    {
+      metadata: {
+        action_key: "security.change_own_password",
+        axis: "change_type",
+        domain: "seguranca",
+        entity: "auth.users",
+        entity_id: user.id,
+        failure_action: "seguranca.own_password_change_authorization_failed"
+      }
+    }
+  );
+  if (authorizationError || allowedToChangePassword !== true) {
+    redirect(changePasswordUrl("permission_denied", nextPath, mode));
+  }
+
   const { error: updateError } = await supabase.auth.updateUser({
     password,
     data: {
@@ -125,7 +144,7 @@ export async function changeOwnPasswordAction(formData: FormData) {
   });
 
   if (auditError) {
-    redirect(changePasswordUrl("password_changed_audit_failed", nextPath, mode));
+    redirect(changePasswordUrl("password_changed_audit_pending", nextPath, mode));
   }
 
   revalidatePath("/", "layout");

@@ -22,10 +22,11 @@ class AuthenticatedShellTransversalContractTests(unittest.TestCase):
         css = (ROOT / "apps" / "web" / "app" / "globals.css").read_text(encoding="utf-8")
         self.assertNotIn("authenticated-shell-content > .app-shell > .topbar", css)
 
-    def test_shell_keeps_unreleased_modules_visible_and_explained(self):
+    def test_shell_hides_modules_without_effective_capability(self):
         shell = (ROOT / "apps" / "web" / "app" / "authenticated-app-shell.tsx").read_text(encoding="utf-8")
-        self.assertIn("navigation-disabled", shell)
-        self.assertIn("Indisponivel", shell)
+        self.assertIn('navigationAccess?.[item.href] !== true', shell)
+        self.assertNotIn("navigation-disabled", shell)
+        self.assertNotIn("Indisponivel", shell)
 
 
 if __name__ == "__main__":

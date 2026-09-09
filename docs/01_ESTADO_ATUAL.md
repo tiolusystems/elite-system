@@ -100,6 +100,12 @@ dirigidos passaram em `11/11`, a suite completa passou em `867` testes com uma
 omissao prevista, e o replay limpo `0001 -> 0147`, o smoke Cadastros e o smoke
 IAM passaram no runtime descartavel `elite-validation-iam01-20260908b`.
 
+Durante a homologacao IAM-01A foi identificada exposicao ampla de leitura nos
+dominios PCP e Estoque. O hotfix 0148 fecha a navegacao, o acesso por URL direta,
+o autosservico de senha e as politicas RLS de PCP/Estoque. O replay descartavel
+`0001 -> 0148` e o smoke `iam01_fail_closed_navigation_password.sql` passaram;
+o staging ainda nao foi atualizado.
+
 ## Atualizacao PRC-01 P1
 
 A migration aditiva 0145 foi implementada localmente para endurecer origem system, hash do snapshot completo e idempot�ncia concorrente. Validacao runtime ainda pendente nesta tarefa; nenhum commit, push ou banco persistente foi alterado.

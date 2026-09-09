@@ -17,6 +17,12 @@ type RouteModuleAccess = {
   reason: string;
 };
 
+type RouteCapabilityAccess = {
+  module_key: string | null;
+  allowed: boolean;
+  reason: string;
+};
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
@@ -88,9 +94,25 @@ export async function proxy(request: NextRequest) {
   if (pathname === MODULE_GUARD_RECOVERY_ROUTE || pathname.startsWith(`${MODULE_GUARD_RECOVERY_ROUTE}/`)) {
     return response;
   }
-if (pathname.startsWith("/api/lookups/")) {
-  return response;
-}
+  if (pathname.startsWith("/api/lookups/")) {
+    return response;
+  }
+  const capabilityAccessResult = await supabase.rpc("get_current_route_capability_access", {
+    p_pathname: pathname
+  });
+  const capabilityAccess = Array.isArray(capabilityAccessResult.data)
+    ? (capabilityAccessResult.data[0] as RouteCapabilityAccess | undefined)
+    : undefined;
+
+  if (capabilityAccessResult.error || !capabilityAccess) {
+    return redirectToModuleUnavailable(request, null, "runtime_contract_unavailable");
+  }
+  if (!capabilityAccess.allowed) {
+    return redirectToModuleUnavailable(request, capabilityAccess.module_key, capabilityAccess.reason);
+  }
+  if (pathname === TEMP_PASSWORD_CHANGE_ROUTE) {
+    return response;
+  }
   const moduleAccessResult = await supabase.rpc("get_current_route_module_access", {
     p_pathname: pathname
   });

@@ -3,9 +3,9 @@ import { AuthenticatedAppShell } from "@/app/authenticated-app-shell";
 import { getAuthStatus } from "@/lib/auth";
 import { getBuildInfo } from "@/lib/build-info";
 import { getFinanceAccess } from "@/lib/finance";
-import { getModuleRuntimeDashboard } from "@/lib/modules";
 import { getPriceListAccess } from "@/lib/price-lists";
 import { getPricingAccess } from "@/lib/cost-pricing";
+import { getNavigationAccess } from "@/lib/navigation-access";
 import { getRuntimeStatus } from "@/lib/runtime";
 import "./globals.css";
 
@@ -21,15 +21,15 @@ export default async function RootLayout({
 }>) {
   const runtime = getRuntimeStatus();
   const auth = await getAuthStatus();
-  const [modules, financeAccess, priceListAccess, pricingAccess] = auth.isAuthenticated
-    ? await Promise.all([getModuleRuntimeDashboard(), getFinanceAccess(), getPriceListAccess(), getPricingAccess()])
+  const [financeAccess, priceListAccess, pricingAccess, navigationAccess] = auth.isAuthenticated
+    ? await Promise.all([getFinanceAccess(), getPriceListAccess(), getPricingAccess(), getNavigationAccess()])
     : [null, null, null, null];
   const build = getBuildInfo();
 
   return (
     <html lang="pt-BR">
       <body>
-        <AuthenticatedAppShell auth={auth} build={build} financeAccess={financeAccess} modules={modules} priceListAccess={priceListAccess} pricingAccess={pricingAccess} runtime={runtime}>
+        <AuthenticatedAppShell auth={auth} build={build} financeAccess={financeAccess} priceListAccess={priceListAccess} pricingAccess={pricingAccess} navigationAccess={navigationAccess} runtime={runtime}>
           {children}
         </AuthenticatedAppShell>
       </body>

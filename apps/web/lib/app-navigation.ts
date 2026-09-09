@@ -50,6 +50,11 @@ export const navigationGroups: NavigationGroup[] = [
 
 const navigationItems = navigationGroups.flatMap((group) => group.items);
 
+export const navigationCapabilityPaths = [
+  ...navigationItems.map((item) => item.href),
+  "/login/trocar-senha"
+] as const;
+
 export function navigationItemForPath(pathname: string): NavigationItem {
   return (
     navigationItems

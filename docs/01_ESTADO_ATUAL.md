@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-08-25
+Atualizado em: 2026-09-09
 
 ## Estado vigente em 2026-08-25
 
@@ -104,7 +104,18 @@ Durante a homologacao IAM-01A foi identificada exposicao ampla de leitura nos
 dominios PCP e Estoque. O hotfix 0148 fecha a navegacao, o acesso por URL direta,
 o autosservico de senha e as politicas RLS de PCP/Estoque. O replay descartavel
 `0001 -> 0148` e o smoke `iam01_fail_closed_navigation_password.sql` passaram;
-o staging ainda nao foi atualizado.
+o hotfix foi homologado em staging.
+
+## Home governada por capability
+
+A rota `/` separa a superficie comercial da operacional por
+`getNavigationAccess`. Quem nao possui nenhuma capability operacional recebe
+somente atalhos comerciais autorizados para pedidos, Kanban e, quando liberado,
+clientes; a home nao executa getters de PCP, Estoque, XML, Romaneio, Seguranca,
+Auditoria, modulos ou relatorios nesse caminho. A superficie operacional chama
+cada getter somente depois de confirmar a capability da rota correspondente.
+Os 11 contratos dirigidos, o lint e o build web passaram localmente. A proxima
+etapa e revisao do delta antes de qualquer commit, push ou deploy.
 
 ## Atualizacao PRC-01 P1
 

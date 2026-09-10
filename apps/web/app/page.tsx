@@ -184,6 +184,7 @@ function OperationalHome({ auth, navigationAccess, dashboard }: { auth: AuthStat
             {pcp ? <ModuleTile href="/producao" title="Producao" detail={`${valueOrDash(pcp.metrics.opsAbertas)} OP(s) aberta(s)`} width={maturityWidth("pcp")} /> : null}
             {romaneios ? <ModuleTile href="/romaneios" title="Romaneio" detail={`${valueOrDash(romaneios.metrics.romaneiosSeparacao)} em separacao`} width={maturityWidth("expedicao")} /> : null}
             {relatorios ? <ModuleTile href="/relatorios" title="Relatorios" detail={`${valueOrDash(relatorios.metrics.catalogados)} catalogados`} width={maturityWidth("relatorios")} /> : null}
+            {navigationAccess["/importacao-historica/mp"] ? <ModuleTile href="/importacao-historica/mp" title="Historico MP" detail="Conciliar aliases, lotes, frete e DIFAL" width={maturityWidth("auditoria")} /> : null}
             {seguranca ? <ModuleTile href="/seguranca" title="Seguranca" detail={`${valueOrDash(seguranca.metrics.activeProfiles)} perfil(is) ativo(s)`} width={maturityWidth("seguranca")} /> : null}
           </div></article>
           {seguranca ? <article className="panel"><div className="panel-header"><h2>Trilha de auditoria</h2><span className="pill">{auth.isAuthenticated ? "sessao ativa" : "sem sessao"}</span></div><ol className="audit-list">{AUDIT_STEPS.map((step) => <li key={step}>{step}</li>)}</ol></article> : null}

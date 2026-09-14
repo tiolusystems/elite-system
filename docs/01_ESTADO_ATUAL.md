@@ -117,6 +117,14 @@ cada getter somente depois de confirmar a capability da rota correspondente.
 Os 11 contratos dirigidos, o lint e o build web passaram localmente. A proxima
 etapa e revisao do delta antes de qualquer commit, push ou deploy.
 
+## Feedback operacional persistente
+
+Os resultados de gravacao dos Cadastros e catalogos tecnicos agora usam uma
+notificacao compartilhada fixa abaixo da topbar. Sucessos fecham apos alguns
+segundos; avisos e erros exigem fechamento manual. A URL e o contexto da ficha
+permanecem preservados, sem rolagem forcada. O contrato dirigido, lint e build
+web passaram; a proxima etapa e revisao do delta antes de qualquer publicacao.
+
 ## Atualizacao PRC-01 P1
 
 A migration aditiva 0145 foi implementada localmente para endurecer origem system, hash do snapshot completo e idempot�ncia concorrente. Validacao runtime ainda pendente nesta tarefa; nenhum commit, push ou banco persistente foi alterado.

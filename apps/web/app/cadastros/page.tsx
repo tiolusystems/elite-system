@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ClientesSection } from "@/app/cadastros/clientes-section";
 import { PessoasSection } from "@/app/cadastros/pessoas-section";
 import { VehiclesSection } from "@/app/cadastros/vehicles-section";
+import { OperationalFeedback } from "@/app/operational-feedback";
 import { searchCorporateLookup } from "@/lib/corporate-lookups";
 import { getMasterDataClientWorkspace, getMasterDataDashboard, getPersonCommissionWorkspace } from "@/lib/master-data";
 import { getRuntimeStatus } from "@/lib/runtime";
@@ -172,10 +173,7 @@ const [dashboard, clientWorkspace, globalResults, personCommissionWorkspace] = a
         ) : null}
 
         {formMessage ? (
-          <section className={`notice-panel ${formMessage.kind}`} role="status">
-            <strong>{formMessage.title}</strong>
-            <span>{formMessage.detail}</span>
-          </section>
+          <OperationalFeedback kind={formMessage.kind} title={formMessage.title} detail={formMessage.detail} />
         ) : null}
 
         {!activeGroup ? (

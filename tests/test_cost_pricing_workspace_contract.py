@@ -7,7 +7,9 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATION_MODULE = (ROOT / "apps/web/app/custos-precos/pricing-form-validation.ts").as_uri()
+ACTION_STATE_MODULE = (ROOT / "apps/web/app/custos-precos/pricing-action-state.ts").as_uri()
 FORMS = (ROOT / "apps/web/app/custos-precos/pricing-action-forms.tsx").read_text(encoding="utf-8")
+ACTION_STATE = (ROOT / "apps/web/app/custos-precos/pricing-action-state.ts").read_text(encoding="utf-8")
 ACTIONS = (ROOT / "apps/web/app/custos-precos/actions.ts").read_text(encoding="utf-8")
 PAGE = (ROOT / "apps/web/app/custos-precos/page.tsx").read_text(encoding="utf-8")
 LOADING = (ROOT / "apps/web/app/custos-precos/loading.tsx").read_text(encoding="utf-8")
@@ -101,6 +103,40 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn("dismissedServerErrorState.resultId === state.resultId", FORMS)
         self.assertIn('source_kind" value="substituicao_manual"', FORMS)
         self.assertNotIn('option value="fixture_validacao"', FORMS)
+
+    def test_initial_render_is_safe_before_first_action(self):
+        self.assertIn('fieldErrors: {},', ACTION_STATE)
+        self.assertIn('values: {},', ACTION_STATE)
+        self.assertIn('status: "idle"', ACTION_STATE)
+        self.assertIn('export function normalizePricingActionState(value: unknown)', ACTION_STATE)
+        self.assertIn('const [rawState, formAction, pending] = useActionState', FORMS)
+        self.assertIn('const state = normalizePricingActionState(rawState)', FORMS)
+        self.assertIn('Object.entries(state.fieldErrors ?? {})', FORMS)
+        self.assertIn('Object.entries(values ?? {})', FORMS)
+        self.assertIn('if (safeState.status === "idle" && !localMessage) return null;', FORMS)
+        self.assertIn('export function PricingPolicyForm()', FORMS)
+        self.assertIn('export function PricingScenarioForm(', FORMS)
+        self.assertIn('INITIAL_PRICING_ACTION_STATE, normalizePricingActionState, type PricingActionState } from "./pricing-action-state";', FORMS)
+        self.assertNotIn('INITIAL_PRICING_ACTION_STATE,', FORMS.split('} from "./actions";', 1)[0])
+
+    def test_state_normalization_handles_pre_action_nullish_fields(self):
+        script = textwrap.dedent(
+            f"""
+            import {{ INITIAL_PRICING_ACTION_STATE, normalizePricingActionState }} from "{ACTION_STATE_MODULE}";
+            console.log(JSON.stringify({{
+              initial: normalizePricingActionState(INITIAL_PRICING_ACTION_STATE),
+              empty: normalizePricingActionState(null),
+              partial: normalizePricingActionState({{ status: "idle", fieldErrors: null, values: null, message: null, resultId: null, occurrenceId: null }}),
+              error: normalizePricingActionState({{ status: "error", fieldErrors: {{ nome: "Obrigatorio" }}, values: {{ nome: "Teste" }}, message: "Falhou", resultId: "r1", occurrenceId: "o1" }})
+            }}));
+            """
+        )
+        result = execute_validation(script)
+        self.assertEqual(result["initial"], {"status": "idle", "message": "", "fieldErrors": {}, "values": {}, "resultId": "", "occurrenceId": None})
+        self.assertEqual(result["empty"], result["initial"])
+        self.assertEqual(result["partial"], result["initial"])
+        self.assertEqual(result["error"]["fieldErrors"], {"nome": "Obrigatorio"})
+        self.assertEqual(result["error"]["values"], {"nome": "Teste"})
 
     def test_unavailable_workspace_is_not_presented_as_an_empty_workspace(self):
         self.assertIn("if (!data) return", PAGE)

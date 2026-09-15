@@ -6,21 +6,9 @@ import { revalidatePath } from "next/cache";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { validateCalculation, validatePolicy, validateReview, validateScenario, type PricingFieldErrors, type PricingValidation } from "./pricing-form-validation";
+import type { PricingActionState } from "./pricing-action-state";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export type PricingActionState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  fieldErrors: PricingFieldErrors;
-  values: Record<string, string>;
-  resultId: string;
-  occurrenceId: string | null;
-};
-
-export const INITIAL_PRICING_ACTION_STATE: PricingActionState = {
-  status: "idle", message: "", fieldErrors: {}, values: {}, resultId: "", occurrenceId: null,
-};
 
 export async function createPricingPolicyAction(_previous: PricingActionState, formData: FormData): Promise<PricingActionState> {
   const validation = validatePolicy(formData);

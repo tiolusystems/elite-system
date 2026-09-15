@@ -4,11 +4,12 @@ import { cloneElement, useActionState, useEffect, useRef, useState, type FormEve
 import { useRouter } from "next/navigation";
 
 import {
-  calculatePricingScenarioAction, createPricingPolicyAction, createPricingScenarioAction, INITIAL_PRICING_ACTION_STATE,
-  reviewPricingCalculationAction, reviewPricingPolicyAction, type PricingActionState,
+  calculatePricingScenarioAction, createPricingPolicyAction, createPricingScenarioAction,
+  reviewPricingCalculationAction, reviewPricingPolicyAction,
 } from "./actions";
 import { PricingIdempotencyKeyInput } from "./pricing-idempotency-key-input";
 import { PRICING_COMPONENTS, percentageWarning, validateCalculation, validatePolicy, validateReview, validateScenario, type PricingFieldErrors, type PricingValidation } from "./pricing-form-validation";
+import { INITIAL_PRICING_ACTION_STATE, normalizePricingActionState, type PricingActionState } from "./pricing-action-state";
 
 type PricingAction = (previous: PricingActionState, formData: FormData) => Promise<PricingActionState>;
 type Validator = (formData: FormData) => PricingValidation<unknown>;
@@ -99,7 +100,8 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
   const formRef = useRef<HTMLFormElement>(null);
   const feedbackRef = useRef<HTMLElement>(null);
   const successRef = useRef(onSuccess);
-  const [state, formAction, pending] = useActionState(action, INITIAL_PRICING_ACTION_STATE);
+  const [rawState, formAction, pending] = useActionState(action, INITIAL_PRICING_ACTION_STATE);
+  const state = normalizePricingActionState(rawState);
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [clientValidation, setClientValidation] = useState<ClientValidationState>({ resultId: "", fieldErrors: {}, message: "" });
   const [dismissedServerErrorState, setDismissedServerErrorState] = useState<DismissedServerErrorState>({ resultId: "", fields: {} });
@@ -107,7 +109,7 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
   const clientErrors = clientValidation.resultId === state.resultId ? clientValidation.fieldErrors : {};
   const localMessage = clientValidation.resultId === state.resultId ? clientValidation.message : "";
   const dismissedServerErrors = dismissedServerErrorState.resultId === state.resultId ? dismissedServerErrorState.fields : {};
-  const serverErrors = Object.fromEntries(Object.entries(state.fieldErrors).filter(([name]) => !dismissedServerErrors[name]));
+  const serverErrors = Object.fromEntries(Object.entries(state.fieldErrors ?? {}).filter(([name]) => !dismissedServerErrors[name]));
   const errors = { ...serverErrors, ...clientErrors };
 
   useEffect(() => { successRef.current = onSuccess; }, [onSuccess]);
@@ -161,19 +163,20 @@ function focusProblem(form: HTMLFormElement | null, feedback: HTMLElement | null
   target?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-function restoreValues(form: HTMLFormElement | null, values: Record<string, string>) {
+function restoreValues(form: HTMLFormElement | null, values: Record<string, string> | null | undefined) {
   if (!form) return;
-  for (const [name, value] of Object.entries(values)) {
+  for (const [name, value] of Object.entries(values ?? {})) {
     const input = form.elements.namedItem(name);
     if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) input.value = value;
   }
 }
 
 function FormFeedback({ state, localMessage, feedbackRef }: { state: PricingActionState; localMessage: string; feedbackRef: RefObject<HTMLElement | null> }) {
-  const isError = state.status === "error" || Boolean(localMessage);
-  if (state.status === "idle" && !localMessage) return null;
+  const safeState = normalizePricingActionState(state);
+  const isError = safeState.status === "error" || Boolean(localMessage);
+  if (safeState.status === "idle" && !localMessage) return null;
   return <section ref={feedbackRef} tabIndex={-1} className={`pricing-feedback ${isError ? "error" : "success"}`} role={isError ? "alert" : "status"} aria-live={isError ? "assertive" : "polite"}>
-    <strong>{isError ? "Operacao nao concluida" : "Operacao concluida"}</strong><span>{localMessage || state.message}</span>{state.occurrenceId ? <small>Codigo de ocorrencia: {state.occurrenceId}</small> : null}
+    <strong>{isError ? "Operacao nao concluida" : "Operacao concluida"}</strong><span>{localMessage || safeState.message}</span>{safeState.occurrenceId ? <small>Codigo de ocorrencia: {safeState.occurrenceId}</small> : null}
   </section>;
 }
 

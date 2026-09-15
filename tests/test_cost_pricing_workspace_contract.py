@@ -8,8 +8,11 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATION_MODULE = (ROOT / "apps/web/app/custos-precos/pricing-form-validation.ts").as_uri()
 ACTION_STATE_MODULE = (ROOT / "apps/web/app/custos-precos/pricing-action-state.ts").as_uri()
+FORM_DOM_MODULE = (ROOT / "apps/web/app/custos-precos/pricing-form-dom.ts").as_uri()
 FORMS = (ROOT / "apps/web/app/custos-precos/pricing-action-forms.tsx").read_text(encoding="utf-8")
 ACTION_STATE = (ROOT / "apps/web/app/custos-precos/pricing-action-state.ts").read_text(encoding="utf-8")
+FORM_DOM = (ROOT / "apps/web/app/custos-precos/pricing-form-dom.ts").read_text(encoding="utf-8")
+PRICING_CSS = (ROOT / "apps/web/app/custos-precos/pricing.module.css").read_text(encoding="utf-8")
 ACTIONS = (ROOT / "apps/web/app/custos-precos/actions.ts").read_text(encoding="utf-8")
 PAGE = (ROOT / "apps/web/app/custos-precos/page.tsx").read_text(encoding="utf-8")
 LOADING = (ROOT / "apps/web/app/custos-precos/loading.tsx").read_text(encoding="utf-8")
@@ -89,8 +92,8 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn("role={isError ? \"alert\" : \"status\"}", FORMS)
         self.assertIn("aria-live={isError ? \"assertive\" : \"polite\"}", FORMS)
         self.assertIn("restoreValues(formRef.current, state.values)", FORMS)
-        self.assertIn("focusProblem(formRef.current, feedbackRef.current)", FORMS)
-        self.assertIn("disabled={pending}", FORMS)
+        self.assertIn("revealFeedback(feedbackRef.current)", FORMS)
+        self.assertIn("disabled={pending || !ready}", FORMS)
         self.assertIn("aria-invalid", FORMS)
         self.assertIn("aria-describedby", FORMS)
         self.assertIn("router.refresh()", FORMS)
@@ -103,6 +106,15 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn("dismissedServerErrorState.resultId === state.resultId", FORMS)
         self.assertIn('source_kind" value="substituicao_manual"', FORMS)
         self.assertNotIn('option value="fixture_validacao"', FORMS)
+
+    def test_css_module_controls_the_responsive_form_layout(self):
+        self.assertIn('import styles from "./pricing.module.css";', FORMS)
+        for class_name in ("pricingForm", "pricingInlineForm", "pricingComponents", "pricingWide", "pricingFeedback", "pricingFieldError", "pricingHelp", "pricingNotApplicable"):
+            self.assertIn(f"styles.{class_name}", FORMS)
+        self.assertIn(".pricing-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))", PRICING_CSS)
+        self.assertIn(".pricing-wide{grid-column:span 2}", PRICING_CSS)
+        self.assertIn("@media(max-width:900px){.pricing-form,.pricing-components{grid-template-columns:repeat(2,minmax(0,1fr))}", PRICING_CSS)
+        self.assertIn("@media(max-width:600px){.pricing-form,.pricing-components,.loading{grid-template-columns:1fr}", PRICING_CSS)
 
     def test_initial_render_is_safe_before_first_action(self):
         self.assertIn('fieldErrors: {},', ACTION_STATE)
@@ -137,6 +149,27 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertEqual(result["partial"], result["initial"])
         self.assertEqual(result["error"]["fieldErrors"], {"nome": "Obrigatorio"})
         self.assertEqual(result["error"]["values"], {"nome": "Teste"})
+
+    def test_first_render_reads_values_without_dom_globals(self):
+        script = textwrap.dedent(
+            f"""
+            import {{ readFormControlValue, writeFormControlValue }} from "{FORM_DOM_MODULE}";
+            const controls = {{ lucro_minimo: {{ value: "20" }}, markup: {{ value: "25" }}, juros_mensais: {{ value: "1,9" }}, materia_prima: {{ value: "12,5" }} }};
+            const form = {{ elements: {{ namedItem: (name) => controls[name] ?? null }} }};
+            writeFormControlValue(form, "markup", "30");
+            console.log(JSON.stringify({{
+              lucro: readFormControlValue(form, "lucro_minimo"), markup: readFormControlValue(form, "markup"), juros: readFormControlValue(form, "juros_mensais"), scenario: readFormControlValue(form, "materia_prima"), missing: readFormControlValue(null, "lucro_minimo")
+            }}));
+            """
+        )
+        result = execute_validation(script)
+        self.assertEqual(result, {"lucro": "20", "markup": "30", "juros": "1,9", "scenario": "12,5", "missing": ""})
+        self.assertNotIn("HTMLInputElement", FORM_DOM)
+        self.assertNotIn("HTMLSelectElement", FORM_DOM)
+        self.assertNotIn("instanceof", FORM_DOM)
+        self.assertNotIn("focusProblem", FORMS)
+        self.assertNotIn("querySelector<HTMLElement>(\"[aria-invalid='true']\")", FORMS)
+        self.assertIn("if (bounds.top >= 0 && bounds.bottom <= window.innerHeight) return;", FORMS)
 
     def test_unavailable_workspace_is_not_presented_as_an_empty_workspace(self):
         self.assertIn("if (!data) return", PAGE)

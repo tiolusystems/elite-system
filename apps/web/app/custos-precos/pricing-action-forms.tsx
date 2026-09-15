@@ -9,7 +9,9 @@ import {
 } from "./actions";
 import { PricingIdempotencyKeyInput } from "./pricing-idempotency-key-input";
 import { PRICING_COMPONENTS, percentageWarning, validateCalculation, validatePolicy, validateReview, validateScenario, type PricingFieldErrors, type PricingValidation } from "./pricing-form-validation";
+import { readFormControlValue, writeFormControlValue } from "./pricing-form-dom";
 import { INITIAL_PRICING_ACTION_STATE, normalizePricingActionState, type PricingActionState } from "./pricing-action-state";
+import styles from "./pricing.module.css";
 
 type PricingAction = (previous: PricingActionState, formData: FormData) => Promise<PricingActionState>;
 type Validator = (formData: FormData) => PricingValidation<unknown>;
@@ -28,9 +30,8 @@ export function PricingPolicyForm() {
   const form = usePricingForm(createPricingPolicyAction, validatePolicy, () => setMethod("margem_liquida"));
   const marginApplies = method === "margem_liquida";
 
-  return <form {...form.props} className="pricing-form">
+  return <form {...form.props} className={styles.pricingForm}>
     <PricingIdempotencyKeyInput value={form.requestKey} />
-    <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
     <Field label="Codigo" name="codigo" error={form.error("codigo")}><input name="codigo" placeholder="POL-MARGEM-01" required /></Field>
     <Field label="Nome" name="nome" error={form.error("nome")} wide><input name="nome" placeholder="Politica comercial padrao" required /></Field>
     <Field label="Metodo" name="metodo" error={form.error("metodo")}>
@@ -48,15 +49,15 @@ export function PricingPolicyForm() {
       <input name="juros_mensais" inputMode="decimal" placeholder="1,9" required />
     </Field>
     <Field label="Motivo" name="motivo" error={form.error("motivo")} wide><input name="motivo" minLength={10} required placeholder="Explique a finalidade desta versao" /></Field>
-    <Submit pending={form.pending} idle="Criar versao" pendingLabel="Criando..." />
+    <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
+    <Submit pending={form.pending} ready={form.ready} idle="Criar versao" pendingLabel="Criando..." />
   </form>;
 }
 
 export function PricingScenarioForm({ policies, presentations }: { policies: SelectOption[]; presentations: SelectOption[] }) {
   const form = usePricingForm(createPricingScenarioAction, validateScenario);
-  return <form {...form.props} className="pricing-form">
+  return <form {...form.props} className={styles.pricingForm}>
     <PricingIdempotencyKeyInput value={form.requestKey} />
-    <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
     <Field label="Politica aprovada" name="politica_versao_id" error={form.error("politica_versao_id")} wide><select name="politica_versao_id" required defaultValue=""><option value="">Selecione</option>{policies.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></Field>
     <Field label="Produto e apresentacao" name="produto_embalagem_id" error={form.error("produto_embalagem_id")} wide><select name="produto_embalagem_id" required defaultValue=""><option value="">Selecione</option>{presentations.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></Field>
     <Field label="Nome do cenario" name="nome" error={form.error("nome")} wide><input name="nome" required placeholder="Cenario base para homologacao" /></Field>
@@ -66,18 +67,19 @@ export function PricingScenarioForm({ policies, presentations }: { policies: Sel
     <Field label="Referencia" name="source_reference" error={form.error("source_reference")}><input name="source_reference" required placeholder="SIMULACAO-001" /></Field>
     <Field label="Data da fonte" name="source_effective_date" error={form.error("source_effective_date")}><input name="source_effective_date" type="date" required /></Field>
     <Field label="Justificativa da fonte" name="source_reason" error={form.error("source_reason")} wide><input name="source_reason" minLength={10} required /></Field>
-    <div className="pricing-components">{PRICING_COMPONENTS.map(([name, unit]) => <Field key={name} label={COST_LABELS[name]} name={name} error={form.error(name)} help={unit === "FRACAO" ? percentageWarning(form.value(name)) ?? "Percentual. Ex.: 2 representa 2%." : "R$/L. Aceita virgula ou ponto decimal."}><input name={name} inputMode="decimal" required /></Field>)}</div>
-    <Submit pending={form.pending} idle="Congelar cenario" pendingLabel="Congelando..." />
+    <div className={styles.pricingComponents}>{PRICING_COMPONENTS.map(([name, unit]) => <Field key={name} label={COST_LABELS[name]} name={name} error={form.error(name)} help={unit === "FRACAO" ? percentageWarning(form.value(name)) ?? "Percentual. Ex.: 2 representa 2%." : "R$/L. Aceita virgula ou ponto decimal."}><input name={name} inputMode="decimal" required /></Field>)}</div>
+    <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
+    <Submit pending={form.pending} ready={form.ready} idle="Congelar cenario" pendingLabel="Congelando..." />
   </form>;
 }
 
 export function PricingCalculationForm({ scenarioId }: { scenarioId: number }) {
   const form = usePricingForm(calculatePricingScenarioAction, validateCalculation);
-  return <form {...form.props} className="pricing-inline-form">
+  return <form {...form.props} className={styles.pricingInlineForm}>
     <PricingIdempotencyKeyInput value={form.requestKey} /><input type="hidden" name="cenario_id" value={scenarioId} />
-    <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
     <Field label="Motivo do calculo" name="motivo" error={form.error("motivo")}><input name="motivo" minLength={10} required defaultValue="Calculo governado para revisao" /></Field>
-    <Submit pending={form.pending} idle="Calcular memoria" pendingLabel="Calculando..." secondary />
+    <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
+    <Submit pending={form.pending} ready={form.ready} idle="Calcular memoria" pendingLabel="Calculando..." secondary />
   </form>;
 }
 
@@ -86,12 +88,12 @@ export function PricingReviewForm({ id, kind }: { id: number; kind: "policy" | "
   const validator: Validator = (data) => validateReview(data, kind === "policy" ? "versao_id" : "calculo_id");
   const form = usePricingForm(action, validator);
   const idName = kind === "policy" ? "versao_id" : "calculo_id";
-  return <form {...form.props} className="pricing-inline-form">
+  return <form {...form.props} className={styles.pricingInlineForm}>
     <PricingIdempotencyKeyInput value={form.requestKey} /><input type="hidden" name={idName} value={id} />
-    <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
     <Field label="Decisao" name="decisao" error={form.error("decisao")}><select name="decisao" defaultValue="APPROVED"><option value="APPROVED">Aprovar</option><option value="REJECTED">Rejeitar</option></select></Field>
     <Field label="Justificativa" name="justificativa" error={form.error("justificativa")}><input name="justificativa" minLength={10} required /></Field>
-    <Submit pending={form.pending} idle="Registrar decisao" pendingLabel="Registrando..." />
+    <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
+    <Submit pending={form.pending} ready={form.ready} idle="Registrar decisao" pendingLabel="Registrando..." />
   </form>;
 }
 
@@ -102,7 +104,8 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
   const successRef = useRef(onSuccess);
   const [rawState, formAction, pending] = useActionState(action, INITIAL_PRICING_ACTION_STATE);
   const state = normalizePricingActionState(rawState);
-  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
+  const [requestKey, setRequestKey] = useState("");
+  const [ready, setReady] = useState(false);
   const [clientValidation, setClientValidation] = useState<ClientValidationState>({ resultId: "", fieldErrors: {}, message: "" });
   const [dismissedServerErrorState, setDismissedServerErrorState] = useState<DismissedServerErrorState>({ resultId: "", fields: {} });
   const [, setInputRevision] = useState(0);
@@ -114,19 +117,27 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
 
   useEffect(() => { successRef.current = onSuccess; }, [onSuccess]);
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setRequestKey(globalThis.crypto.randomUUID());
+      setReady(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  useEffect(() => {
     if (state.status !== "error") return;
     restoreValues(formRef.current, state.values);
-    requestAnimationFrame(() => focusProblem(formRef.current, feedbackRef.current));
+    const frame = window.requestAnimationFrame(() => revealFeedback(feedbackRef.current));
+    return () => window.cancelAnimationFrame(frame);
   }, [state.resultId, state.status, state.values]);
   useEffect(() => {
     if (state.status !== "success") return;
-    const frame = requestAnimationFrame(() => {
+    const frame = window.requestAnimationFrame(() => {
       formRef.current?.reset();
-      setRequestKey(crypto.randomUUID());
+      setRequestKey(globalThis.crypto.randomUUID());
       successRef.current?.();
       router.refresh();
     });
-    return () => cancelAnimationFrame(frame);
+    return () => window.cancelAnimationFrame(frame);
   }, [router, state.resultId, state.status]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -134,11 +145,10 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
     if (!Object.keys(validation.fieldErrors).length) return;
     event.preventDefault();
     setClientValidation({ resultId: state.resultId, fieldErrors: validation.fieldErrors, message: "Revise os campos destacados antes de continuar." });
-    requestAnimationFrame(() => focusProblem(formRef.current, feedbackRef.current));
   }
 
   return {
-    state, requestKey, pending, feedbackRef, localMessage,
+    state, requestKey, pending, ready, feedbackRef, localMessage,
     props: { action: formAction, noValidate: true, onSubmit: submit, ref: formRef, onInput: (event: FormEvent<HTMLFormElement>) => {
       const name = (event.target as HTMLInputElement).name;
       setInputRevision((value) => value + 1);
@@ -151,23 +161,24 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
       });
     } },
     error: (name: string) => errors[name],
-    value: (name: string) => { const input = formRef.current?.elements.namedItem(name); return input instanceof HTMLInputElement ? input.value : ""; },
+    value: (name: string) => readFormControlValue(formRef.current, name),
     clear: (name: string) => setDismissedServerErrorState((current) => current.resultId === state.resultId ? { ...current, fields: { ...current.fields, [name]: true } } : { resultId: state.resultId, fields: { [name]: true } }),
-    clearValue: (name: string) => { const input = formRef.current?.elements.namedItem(name); if (input instanceof HTMLInputElement) input.value = ""; },
+    clearValue: (name: string) => writeFormControlValue(formRef.current, name, ""),
   };
 }
 
-function focusProblem(form: HTMLFormElement | null, feedback: HTMLElement | null) {
-  const target = form?.querySelector<HTMLElement>("[aria-invalid='true']") ?? feedback;
-  target?.focus({ preventScroll: true });
-  target?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+function revealFeedback(feedback: HTMLElement | null) {
+  if (!feedback) return;
+  const bounds = feedback.getBoundingClientRect();
+  if (bounds.top >= 0 && bounds.bottom <= window.innerHeight) return;
+  feedback.focus({ preventScroll: true });
+  feedback.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function restoreValues(form: HTMLFormElement | null, values: Record<string, string> | null | undefined) {
   if (!form) return;
   for (const [name, value] of Object.entries(values ?? {})) {
-    const input = form.elements.namedItem(name);
-    if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) input.value = value;
+    writeFormControlValue(form, name, value);
   }
 }
 
@@ -175,7 +186,7 @@ function FormFeedback({ state, localMessage, feedbackRef }: { state: PricingActi
   const safeState = normalizePricingActionState(state);
   const isError = safeState.status === "error" || Boolean(localMessage);
   if (safeState.status === "idle" && !localMessage) return null;
-  return <section ref={feedbackRef} tabIndex={-1} className={`pricing-feedback ${isError ? "error" : "success"}`} role={isError ? "alert" : "status"} aria-live={isError ? "assertive" : "polite"}>
+  return <section ref={feedbackRef} tabIndex={-1} className={`${styles.pricingFeedback} ${isError ? styles.error : styles.success}`} role={isError ? "alert" : "status"} aria-live={isError ? "assertive" : "polite"}>
     <strong>{isError ? "Operacao nao concluida" : "Operacao concluida"}</strong><span>{localMessage || safeState.message}</span>{safeState.occurrenceId ? <small>Codigo de ocorrencia: {safeState.occurrenceId}</small> : null}
   </section>;
 }
@@ -183,13 +194,13 @@ function FormFeedback({ state, localMessage, feedbackRef }: { state: PricingActi
 function Field({ label, name, error, help, wide = false, notApplicable = false, children }: { label: string; name: string; error?: string; help?: string | null; wide?: boolean; notApplicable?: boolean; children: ReactNode }) {
   const helpId = `${name}-help`; const errorId = `${name}-error`;
   const child = children as ReactElement<{ "aria-invalid"?: boolean; "aria-describedby"?: string }>;
-  return <label className={`${wide ? "pricing-wide" : ""} ${notApplicable ? "pricing-not-applicable" : ""}`}>{label}
+  return <label className={`${wide ? styles.pricingWide : ""} ${notApplicable ? styles.pricingNotApplicable : ""}`}>{label}
     {cloneElement(child, { "aria-invalid": Boolean(error), "aria-describedby": error ? errorId : help ? helpId : undefined })}
-    {help ? <small id={helpId} className="pricing-help">{help}</small> : null}
-    {error ? <small id={errorId} className="pricing-field-error">{error}</small> : null}
+    {help ? <small id={helpId} className={styles.pricingHelp}>{help}</small> : null}
+    {error ? <small id={errorId} className={styles.pricingFieldError}>{error}</small> : null}
   </label>;
 }
 
-function Submit({ pending, idle, pendingLabel, secondary = false }: { pending: boolean; idle: string; pendingLabel: string; secondary?: boolean }) {
-  return <button className={secondary ? "secondary-button" : "primary-button"} disabled={pending} aria-disabled={pending}>{pending ? pendingLabel : idle}</button>;
+function Submit({ pending, ready, idle, pendingLabel, secondary = false }: { pending: boolean; ready: boolean; idle: string; pendingLabel: string; secondary?: boolean }) {
+  return <button className={`${secondary ? "secondary-button" : "primary-button"} ${styles.pricingSubmit}`} disabled={pending || !ready} aria-disabled={pending || !ready}>{pending ? pendingLabel : idle}</button>;
 }

@@ -19,7 +19,7 @@ class Ux01bAuthenticatedShellContractTests(unittest.TestCase):
         text = LAYOUT.read_text(encoding="utf-8")
         self.assertIn("AuthenticatedAppShell", text)
         self.assertIn("getAuthStatus", text)
-        self.assertIn("getModuleRuntimeDashboard", text)
+        self.assertIn("getNavigationAccess", text)
 
     def test_shell_reuses_identity_and_session_actions(self) -> None:
         text = SHELL.read_text(encoding="utf-8")
@@ -56,10 +56,11 @@ class Ux01bAuthenticatedShellContractTests(unittest.TestCase):
         self.assertIn('"/auth/confirm"', text)
         self.assertIn("!auth.isAuthenticated", text)
 
-    def test_navigation_is_module_aware_and_marks_current_route(self) -> None:
+    def test_navigation_is_capability_aware_and_marks_current_route(self) -> None:
         shell = SHELL.read_text(encoding="utf-8")
         navigation = NAVIGATION.read_text(encoding="utf-8")
-        self.assertIn("module.available || module.isCore", shell)
+        self.assertIn("navigationAccess?.[item.href] !== true", shell)
+        self.assertIn("navigationCapabilityPaths", navigation)
         self.assertIn('aria-current={active ? "page" : undefined}', shell)
         self.assertIn("navigationItemForPath", navigation)
 

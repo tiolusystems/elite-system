@@ -6,6 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "supabase" / "migrations" / "0068_govern_products_packaging_per_liter.sql"
+HARDENING = ROOT / "supabase" / "migrations" / "0139_harden_packaging_read_helpers.sql"
 ADR = ROOT / "docs" / "decisoes-arquiteturais" / "ADR-013-base-unica-por-litro-custos-garantias-lote.md"
 DECISIONS = ROOT / "docs" / "historico" / "02_DECISOES_ATE_2026-07-28.md"
 MANUAL_INDEX = ROOT / "docs" / "manuais" / "README.md"
@@ -86,6 +87,22 @@ class ProductsPackagingPerLiterContractTests(unittest.TestCase):
         self.assertNotIn("grant execute on function public.", "\n".join(
             line for line in text.splitlines() if line.rstrip().endswith("to anon;")
         ))
+
+    def test_authenticated_views_do_not_expose_internal_read_helpers(self) -> None:
+        text = HARDENING.read_text(encoding="utf-8")
+        for helper in (
+            "current_cad_embalagem_versao_review_status(bigint)",
+            "is_cad_embalagem_componente_active(bigint)",
+        ):
+            self.assertIn(f"revoke all on function public.{helper}", text)
+        self.assertEqual(2, text.count("with (security_invoker = true)"))
+        self.assertIn("from public.cad_embalagem_versao_revisoes review", text)
+        self.assertIn("from public.cad_embalagem_componente_eventos event", text)
+        self.assertIn("grant select on public.cad_embalagem_configuracoes_atuais to authenticated", text)
+        self.assertIn("grant select on public.cad_embalagem_componentes_atuais to authenticated", text)
+        view_definitions = text.split("revoke all on function", 1)[0]
+        self.assertNotIn("public.current_cad_embalagem_versao_review_status(", view_definitions)
+        self.assertNotIn("public.is_cad_embalagem_componente_active(", view_definitions)
 
     def test_codes_are_normalized_and_package_unit_is_governed(self) -> None:
         text = MIGRATION.read_text(encoding="utf-8")

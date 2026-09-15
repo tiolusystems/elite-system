@@ -23,6 +23,7 @@ export const navigationGroups: NavigationGroup[] = [
       { href: "/cadastros", label: "Cadastros", moduleKey: "cadastros" },
       { href: "/pedidos", label: "Pedidos", moduleKey: "pedidos" },
       { href: "/pedidos/listas-precos", label: "Listas de precos", moduleKey: "pedidos" },
+      { href: "/custos-precos", label: "Custos e precos", moduleKey: "precificacao" },
       { href: "/kanban", label: "Kanban", moduleKey: "pedidos" }
     ]
   },
@@ -48,6 +49,11 @@ export const navigationGroups: NavigationGroup[] = [
 ];
 
 const navigationItems = navigationGroups.flatMap((group) => group.items);
+
+export const navigationCapabilityPaths = [
+  ...navigationItems.map((item) => item.href),
+  "/login/trocar-senha"
+] as const;
 
 export function navigationItemForPath(pathname: string): NavigationItem {
   return (

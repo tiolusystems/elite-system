@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { OperationalFeedback } from "@/app/operational-feedback";
 import { internalValueLabel } from "@/lib/labels-ptbr";
 
 type CatalogRoute = "overview" | "units" | "input-types" | "materials" | "packages" | "products" | "product-groups";
@@ -157,10 +158,7 @@ export function CatalogFeedback({ result }: { result: string | null }) {
   };
 
   return (
-    <div className={`notice-panel ${feedback.kind === "ok" ? "ok" : "warning"}`} role="status">
-      <strong>{feedback.title}</strong>
-      <span>{feedback.detail}</span>
-    </div>
+    <OperationalFeedback kind={feedback.kind} title={feedback.title} detail={feedback.detail} />
   );
 }
 

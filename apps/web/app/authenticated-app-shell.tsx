@@ -12,8 +12,9 @@ import { navigationGroups, navigationItemForPath } from "@/lib/app-navigation";
 import type { AuthStatus } from "@/lib/auth";
 import type { BuildInfo } from "@/lib/build-info";
 import type { FinanceAccess } from "@/lib/finance";
-import type { ModuleRuntimeDashboard } from "@/lib/modules";
 import type { PriceListAccess } from "@/lib/price-lists";
+import type { PricingAccess } from "@/lib/cost-pricing";
+import type { NavigationAccess } from "@/lib/navigation-access";
 import type { RuntimeStatus } from "@/lib/runtime";
 
 const PUBLIC_PREFIXES = ["/login", "/auth/confirm", "/health", "/api/health"];
@@ -22,20 +23,19 @@ type Props = {
   auth: AuthStatus;
   build: BuildInfo;
   financeAccess: FinanceAccess | null;
-  modules: ModuleRuntimeDashboard | null;
   priceListAccess: PriceListAccess | null;
+  pricingAccess: PricingAccess | null;
+  navigationAccess: NavigationAccess | null;
   runtime: RuntimeStatus;
   children: React.ReactNode;
 };
 
-export function AuthenticatedAppShell({ auth, build, financeAccess, modules, priceListAccess, runtime, children }: Props) {
+export function AuthenticatedAppShell({ auth, build, financeAccess, priceListAccess, pricingAccess, navigationAccess, runtime, children }: Props) {
   const pathname = usePathname();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const userMenuRef = useRef<HTMLDetailsElement>(null);
   const current = navigationItemForPath(pathname);
-  const enabledModules = new Set(
-    modules?.modules.filter((module) => module.available || module.isCore).map((module) => module.moduleKey) ?? ["core"]
-  );
+  const canChangeOwnPassword = navigationAccess?.["/login/trocar-senha"] === true;
 
   if (!auth.isAuthenticated || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     return children;
@@ -82,7 +82,7 @@ export function AuthenticatedAppShell({ auth, build, financeAccess, modules, pri
               <span>{role}</span>
             </span>
           </summary>
-          <UserMenu displayName={displayName} email={auth.email} role={role} />
+          <UserMenu displayName={displayName} email={auth.email} role={role} canChangeOwnPassword={canChangeOwnPassword} />
         </details>
       </header>
 
@@ -102,11 +102,12 @@ export function AuthenticatedAppShell({ auth, build, financeAccess, modules, pri
               <section className="navigation-group" key={group.label}>
                 <h2>{group.label}</h2>
                 {items.map((item) => {
+                  if (navigationAccess?.[item.href] !== true) return null;
                   if (item.href === "/pedidos/financeiro" && !financeAccess?.any) return null;
                   if (item.href === "/pedidos/listas-precos" && !priceListAccess?.view) return null;
+                  if (item.href === "/custos-precos" && !pricingAccess?.view) return null;
                   const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-                  const enabled = enabledModules.has(item.moduleKey);
-                  return enabled ? (
+                  return (
                     <Link
                       href={item.href}
                       aria-current={active ? "page" : undefined}
@@ -116,12 +117,6 @@ export function AuthenticatedAppShell({ auth, build, financeAccess, modules, pri
                       <span className="navigation-mark" aria-hidden="true" />
                       {item.label}
                     </Link>
-                  ) : (
-                    <span className="navigation-disabled" key={item.href} aria-disabled="true" title="Modulo ainda nao liberado neste ambiente">
-                      <span className="navigation-mark" aria-hidden="true" />
-                      <span>{item.label}</span>
-                      <small>Indisponivel</small>
-                    </span>
                   );
                 })}
               </section>
@@ -129,7 +124,7 @@ export function AuthenticatedAppShell({ auth, build, financeAccess, modules, pri
           })}
         </nav>
         <div className="mobile-user-panel">
-          <UserMenu displayName={displayName} email={auth.email} role={role} />
+          <UserMenu displayName={displayName} email={auth.email} role={role} canChangeOwnPassword={canChangeOwnPassword} />
         </div>
         <div className="shell-build-info">
           <span>Versao {build.version}</span>
@@ -159,7 +154,7 @@ export function AuthenticatedAppShell({ auth, build, financeAccess, modules, pri
   );
 }
 
-function UserMenu({ displayName, email, role }: { displayName: string; email: string | null; role: string }) {
+function UserMenu({ displayName, email, role, canChangeOwnPassword }: { displayName: string; email: string | null; role: string; canChangeOwnPassword: boolean }) {
   return (
     <div className="user-menu-panel">
       <div className="user-menu-identity">
@@ -168,6 +163,7 @@ function UserMenu({ displayName, email, role }: { displayName: string; email: st
         <span>{role}</span>
       </div>
       <Link href="/">Inicio</Link>
+      {canChangeOwnPassword ? <Link href="/login/trocar-senha?mode=authenticated">Minha senha</Link> : null}
       <form action={switchUserAction}><button type="submit">Trocar usuario</button></form>
       <form action={logoutAction}><button type="submit">Sair</button></form>
     </div>

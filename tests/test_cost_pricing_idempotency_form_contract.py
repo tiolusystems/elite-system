@@ -18,7 +18,11 @@ class CostPricingIdempotencyFormContract(unittest.TestCase):
 
         self.assertIn('"use client"', INPUT)
         self.assertIn('name="idempotency_key" value={value}', INPUT)
-        self.assertIn('useState(() => crypto.randomUUID())', FORMS)
+        self.assertIn('const [requestKey, setRequestKey] = useState("");', FORMS)
+        self.assertIn('setRequestKey(globalThis.crypto.randomUUID());', FORMS)
+        self.assertIn('setReady(true);', FORMS)
+        self.assertIn('disabled={pending || !ready}', FORMS)
+        self.assertNotIn('useState(() => crypto.randomUUID())', FORMS)
         self.assertIn('<PricingIdempotencyKeyInput value={form.requestKey} />', FORMS)
 
         for component in ("PricingPolicyForm", "PricingScenarioForm", "PricingCalculationForm", "PricingReviewForm"):

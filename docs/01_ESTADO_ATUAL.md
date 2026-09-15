@@ -155,11 +155,12 @@ depois, executar `ENG-01 Regression & Diagnostic Governance`.
 O workspace `/custos-precos` passou a validar entradas no formulario antes da
 RPC, converter percentuais humanos para fracao interna e manter feedback local
 por acao. Margem liquida e Markup agora sao mutuamente exclusivos na tela e na
-Server Action; erros preservam os valores preenchidos, focam a primeira falha
-e falhas desconhecidas exibem somente uma mensagem operacional e codigo de
-ocorrencia. A origem de validacao sintetica permanece exclusiva dos testes; a
-tela oferece apenas substituicao manual enquanto nao houver fonte canonica de
-sistema. Estados vazios, indisponibilidade da consulta e carregamento foram
-separados. Os 22 contratos PRC dirigidos, ESLint e o build web passaram. A
-proxima etapa e a homologacao integral de `/custos-precos`; em seguida,
-`ENG-01 Regression & Diagnostic Governance`.
+Server Action; erros preservam os valores preenchidos e permanecem junto ao
+botao da acao, sem mover automaticamente o cursor do operador. O formulario
+usa o CSS Module responsivo, e a leitura inicial de valores nao avalia globals
+do DOM durante SSR. A origem de validacao sintetica permanece exclusiva dos
+testes; a tela oferece apenas substituicao manual enquanto nao houver fonte
+canonica de sistema. Estados vazios, indisponibilidade da consulta e
+carregamento foram separados. Os contratos PRC dirigidos, ESLint e o build web
+passaram. A proxima etapa e a homologacao integral de `/custos-precos`; em
+seguida, `ENG-01 Regression & Diagnostic Governance`.

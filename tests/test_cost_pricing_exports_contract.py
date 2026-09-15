@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -111,7 +112,8 @@ if (!pdf.startsWith("%PDF-1.4")) throw new Error("invalid pdf artifact");
 
     def test_ui_exports_only_approved(self):
         source = (ROOT / "apps/web/app/custos-precos/page.tsx").read_text(encoding="utf-8")
-        self.assertIn('c.status==="APPROVED"', source)
+        self.assertRegex(source, r'const approvedCalculations = [a-z_]+\.filter\(\(([a-z_]+)\) => \1\.status === "APPROVED"\);')
+        self.assertIn("approvedCalculations.length ? approvedCalculations.map", source)
         self.assertIn("Baixar XLSX", source)
         self.assertIn("Baixar PDF", source)
 

@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 
@@ -29,6 +30,33 @@ class CostPricingIdempotencyFormContract(unittest.TestCase):
         self.assertIn('function ReviewForm', PAGE)
         self.assertIn('reviewPricingPolicyAction', PAGE)
         self.assertIn('reviewPricingCalculationAction', PAGE)
+
+    def test_uuid_guard_matches_standard_uuid_behavior(self):
+        match = re.search(r"const UUID = /([^/]+)/i;", ACTIONS)
+        self.assertIsNotNone(match)
+        uuid_guard = re.compile(match.group(1), re.IGNORECASE)
+
+        for value in (
+            "550e8400-e29b-41d4-a716-446655440000",
+            "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+            "00000000-0000-2000-8000-000000000000",
+            "6fa459ea-ee8a-3ca4-894e-db77e160355e",
+            "987fbc97-4bed-5078-9f07-9141ba07c9f3",
+        ):
+            with self.subTest(value=value):
+                self.assertIsNotNone(uuid_guard.fullmatch(value))
+
+        for value in (
+            "550e8400e29b41d4a716446655440000",
+            "550e8400-e29b-41d4-a716446655440000",
+            "550e8400-e29b-41d4-c716-446655440000",
+            "",
+        ):
+            with self.subTest(value=value):
+                self.assertIsNone(uuid_guard.fullmatch(value))
+
+        random_uuid_shape = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        self.assertIsNotNone(uuid_guard.fullmatch(random_uuid_shape))
 
     def test_actions_keep_the_uuid_fail_closed_guard(self):
         self.assertIn('UUID.test(String(args.p_key ?? ""))', ACTIONS)

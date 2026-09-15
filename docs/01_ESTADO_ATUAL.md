@@ -139,3 +139,13 @@ A migration aditiva 0145 foi implementada localmente para endurecer origem syste
 ### PRC-01: exportacao auditavel
 
 O workspace `/custos-precos` oferece XLSX e PDF apenas para calculos aprovados. Ambos sao gerados do snapshot `prc-calculation-v2` retornado pela superficie governada 0146; decisao e SHA-256 persistidos sao verificados antes da entrega.
+
+### PRC-01: validacao da chave de idempotencia
+
+Staging reproduziu `/custos-precos?result=invalid-request`: o guard em
+`apps/web/app/custos-precos/actions.ts` usava um formato UUID incorreto e
+rejeitava UUIDs padrao 8-4-4-4-12. A correcao restaura esse formato, preserva
+o fail-closed e possui teste comportamental para UUIDs validos e invalidos.
+O PR #15 estabilizou a chave client-side, mas nao corrigiu a causa raiz do
+guard. A proxima etapa e homologar a criacao de politica de precos em staging;
+depois, executar `ENG-01 Regression & Diagnostic Governance`.

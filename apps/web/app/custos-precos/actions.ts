@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { auditedRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const COMPONENTS = [
   ["materia_prima", "BRL_L"], ["embalagem", "BRL_L"], ["custo_pontuacao_vendedor", "BRL_L"],
   ["custo_pontuacao_revenda", "BRL_L"], ["premiacao_revenda", "BRL_L"], ["premio_producao", "BRL_L"],

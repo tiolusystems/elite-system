@@ -106,17 +106,43 @@ end $$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','13800000-0000-4000-8000-000000000001',true);
 do $$ declare v_margin bigint; v_markup bigint; v_bad bigint; v_scenario bigint; v_manual bigint; v_calc bigint; v_retry bigint; begin
-  create temporary table pg_temp.prc_ids(margin bigint,markup bigint,bad bigint,scenario bigint,manual bigint,calc bigint,markup_calc bigint,decision bigint,lists bigint,payments bigint) on commit drop;
+  create temporary table pg_temp.prc_ids(margin bigint,margin_v2 bigint,policy_id bigint,markup bigint,bad bigint,scenario bigint,manual bigint,calc bigint,markup_calc bigint,decision bigint,lists bigint,payments bigint) on commit drop;
   insert into pg_temp.prc_ids values(null,null,null,null,null,null,null,null,current_setting('prc.baseline_lists')::bigint,current_setting('prc.baseline_payments')::bigint);
-  v_margin:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000010','MARGEM-01','Margem padrao','margem_liquida',0.20,null,0.01,'Politica sintetica de margem liquida');
-  v_retry:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000010','MARGEM-01','Margem padrao','margem_liquida',0.20,null,0.01,'Politica sintetica de margem liquida'); if v_retry<>v_margin then raise exception 'retry de politica duplicou fato'; end if;
-  begin perform public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000010','MARGEM-01','Margem padrao','margem_liquida',0.25,null,0.01,'Politica sintetica de margem liquida'); raise exception 'retry divergente aceito'; exception when others then if sqlerrm='retry divergente aceito' or position('divergente' in sqlerrm)=0 then raise; end if; end;
-  v_markup:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000011','MARKUP-01','Markup padrao','markup',null,0.25,0.01,'Politica sintetica de markup comercial');
-  v_bad:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000012','MARGEM-INVALIDA','Margem invalida controlada','margem_liquida',0.80,null,0.01,'Politica para validar denominador invalido');
+  v_margin:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000010',null,'Margem padrao','margem_liquida',0.20,null,0.01,'Politica sintetica de margem liquida');
+  v_retry:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000010',null,'Margem padrao','margem_liquida',0.20,null,0.01,'Politica sintetica de margem liquida'); if v_retry<>v_margin then raise exception 'retry de politica duplicou fato'; end if;
+  begin perform public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000010',null,'Margem padrao','margem_liquida',0.25,null,0.01,'Politica sintetica de margem liquida'); raise exception 'retry divergente aceito'; exception when others then if sqlerrm='retry divergente aceito' or position('divergente' in sqlerrm)=0 then raise; end if; end;
+  v_markup:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000011',null,'Markup padrao','markup',null,0.25,0.01,'Politica sintetica de markup comercial');
+  v_bad:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000012',null,'Margem invalida controlada','margem_liquida',0.80,null,0.01,'Politica para validar denominador invalido');
   begin perform public.decidir_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000013',v_margin,'APPROVED','Autor nao pode aprovar a propria politica'); raise exception 'segregacao de politica falhou'; exception when others then if sqlerrm='segregacao de politica falhou' or position('criador' in sqlerrm)=0 then raise; end if; end;
   update pg_temp.prc_ids set margin=v_margin,markup=v_markup,bad=v_bad;
 end $$;
 
+reset role;
+do $$ declare v pg_temp.prc_ids%rowtype; v_codigo text; begin
+  select * into v from pg_temp.prc_ids;
+  select politica_id into v.policy_id from public.prc_politica_versoes where id=v.margin;
+  select codigo into v_codigo from public.prc_politicas where id=v.policy_id;
+  if v_codigo !~ '^POL-[0-9]{8}$' then raise exception 'codigo automatico de politica invalido'; end if;
+  update pg_temp.prc_ids set policy_id=v.policy_id;
+end $$;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','13800000-0000-4000-8000-000000000001',true);
+do $$ declare v pg_temp.prc_ids%rowtype; v_margin_v2 bigint; begin
+  select * into v from pg_temp.prc_ids;
+  v_margin_v2:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000014',v.policy_id,null,'margem_liquida',0.22,null,0.01,'Nova versao sintetica da mesma politica');
+  update pg_temp.prc_ids set margin_v2=v_margin_v2;
+end $$;
+
+reset role;
+do $$ declare v pg_temp.prc_ids%rowtype; begin
+  select * into v from pg_temp.prc_ids;
+  if (select politica_id from public.prc_politica_versoes where id=v.margin_v2)<>v.policy_id or (select versao from public.prc_politica_versoes where id=v.margin_v2)<>2 then raise exception 'nova versao nao reutilizou a politica existente'; end if;
+  if to_regprocedure('public.salvar_prc_politica_versao_idempotente(uuid,text,text,text,numeric,numeric,numeric,text)') is not null then raise exception 'sobrecarga legada por codigo permaneceu executavel'; end if;
+  if (select count(distinct codigo) from public.prc_politicas where id in (v.policy_id,(select politica_id from public.prc_politica_versoes where id=v.markup),(select politica_id from public.prc_politica_versoes where id=v.bad)))<>3 then raise exception 'codigos automaticos repetidos'; end if;
+end $$;
+
+set local role authenticated;
 select set_config('request.jwt.claim.sub','13800000-0000-4000-8000-000000000002',true);
 do $$ declare v pg_temp.prc_ids%rowtype; begin select * into v from pg_temp.prc_ids;
  perform public.decidir_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000020',v.margin,'APPROVED','Revisao independente da politica de margem');

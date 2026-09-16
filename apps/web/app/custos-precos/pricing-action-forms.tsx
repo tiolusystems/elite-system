@@ -25,26 +25,31 @@ const COST_LABELS: Record<string, string> = {
   frete: "Frete", comissao: "Comissao", risco: "Risco", marketing: "Marketing", tributacao: "Tributacao",
 };
 
-export function PricingPolicyForm() {
+export function PricingPolicyForm({ policies }: { policies: SelectOption[] }) {
   const [method, setMethod] = useState("margem_liquida");
-  const form = usePricingForm(createPricingPolicyAction, validatePolicy, () => setMethod("margem_liquida"));
+  const [policyId, setPolicyId] = useState("");
+  const form = usePricingForm(createPricingPolicyAction, validatePolicy, () => { setMethod("margem_liquida"); setPolicyId(""); });
   const marginApplies = method === "margem_liquida";
+  const isNewPolicy = policyId === "";
 
   return <form {...form.props} className={styles.pricingForm}>
     <PricingIdempotencyKeyInput value={form.requestKey} />
-    <Field label="Codigo" name="codigo" error={form.error("codigo")}><input name="codigo" placeholder="POL-MARGEM-01" required /></Field>
-    <Field label="Nome" name="nome" error={form.error("nome")} wide><input name="nome" placeholder="Politica comercial padrao" required /></Field>
+    <Field label="Politica" name="politica_id" error={form.error("politica_id")} wide help="Deixe como nova politica para o sistema emitir o proximo codigo.">
+      <select name="politica_id" value={policyId} onChange={(event) => { setPolicyId(event.target.value); form.clear("politica_id"); }}>
+        <option value="">Nova politica</option>{policies.map((policy) => <option key={policy.id} value={policy.id}>{policy.label}</option>)}
+      </select>
+    </Field>
+    {isNewPolicy ? <Field label="Nome" name="nome" error={form.error("nome")} wide><input name="nome" placeholder="Politica comercial padrao" required /></Field> : <div className={styles.pricingPolicyIdentity}><strong>Nova versao da politica selecionada</strong><span>Codigo e nome sao definidos pelo sistema.</span></div>}
     <Field label="Metodo" name="metodo" error={form.error("metodo")}>
       <select name="metodo" value={method} onChange={(event) => { const next = event.target.value; setMethod(next); form.clear("metodo"); if (next === "margem_liquida") form.clearValue("markup"); else form.clearValue("lucro_minimo"); }}>
         <option value="margem_liquida">Margem liquida</option><option value="markup">Markup</option>
       </select>
     </Field>
-    <Field label="Lucro minimo (%)" name="lucro_minimo" error={form.error("lucro_minimo")} help={marginApplies ? percentageWarning(form.value("lucro_minimo")) ?? "Informe o percentual desejado. Ex.: 20 representa 20%." : "Nao se aplica ao metodo Markup."} notApplicable={!marginApplies}>
-      <input name="lucro_minimo" inputMode="decimal" placeholder="20" disabled={!marginApplies} required={marginApplies} />
-    </Field>
-    <Field label="Markup (%)" name="markup" error={form.error("markup")} help={!marginApplies ? percentageWarning(form.value("markup")) ?? "Informe o percentual desejado. Ex.: 25 representa 25%." : "Nao se aplica ao metodo Margem liquida."} notApplicable={marginApplies}>
-      <input name="markup" inputMode="decimal" placeholder="25" disabled={marginApplies} required={!marginApplies} />
-    </Field>
+    {marginApplies ? <Field label="Lucro minimo (%)" name="lucro_minimo" error={form.error("lucro_minimo")} help={percentageWarning(form.value("lucro_minimo")) ?? "Informe o percentual desejado. Ex.: 20 ou 20%."}>
+      <input name="lucro_minimo" inputMode="decimal" placeholder="20" required />
+    </Field> : <Field label="Markup (%)" name="markup" error={form.error("markup")} help={percentageWarning(form.value("markup")) ?? "Informe o percentual desejado. Ex.: 25 ou 25%."}>
+      <input name="markup" inputMode="decimal" placeholder="25" required />
+    </Field>}
     <Field label="Juros ao mes (%)" name="juros_mensais" error={form.error("juros_mensais")} help={percentageWarning(form.value("juros_mensais")) ?? "Aceita virgula ou ponto decimal. Ex.: 1,9 representa 1,9%."}>
       <input name="juros_mensais" inputMode="decimal" placeholder="1,9" required />
     </Field>
@@ -191,10 +196,10 @@ function FormFeedback({ state, localMessage, feedbackRef }: { state: PricingActi
   </section>;
 }
 
-function Field({ label, name, error, help, wide = false, notApplicable = false, children }: { label: string; name: string; error?: string; help?: string | null; wide?: boolean; notApplicable?: boolean; children: ReactNode }) {
+function Field({ label, name, error, help, wide = false, children }: { label: string; name: string; error?: string; help?: string | null; wide?: boolean; children: ReactNode }) {
   const helpId = `${name}-help`; const errorId = `${name}-error`;
   const child = children as ReactElement<{ "aria-invalid"?: boolean; "aria-describedby"?: string }>;
-  return <label className={`${wide ? styles.pricingWide : ""} ${notApplicable ? styles.pricingNotApplicable : ""}`}>{label}
+  return <label className={wide ? styles.pricingWide : undefined}>{label}
     {cloneElement(child, { "aria-invalid": Boolean(error), "aria-describedby": error ? errorId : help ? helpId : undefined })}
     {help ? <small id={helpId} className={styles.pricingHelp}>{help}</small> : null}
     {error ? <small id={errorId} className={styles.pricingFieldError}>{error}</small> : null}

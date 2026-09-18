@@ -135,7 +135,11 @@ continuam bloqueados. O replay SQL descartável permanece pendente nesta tarefa.
 
 ## Atualizacao PRC-01 P1
 
-A migration aditiva 0145 foi implementada localmente para endurecer origem system, hash do snapshot completo e idempot�ncia concorrente. Validacao runtime ainda pendente nesta tarefa; nenhum commit, push ou banco persistente foi alterado.
+A migration aditiva 0145 endurece origem system, hash do snapshot completo e
+idempotencia concorrente. A migration 0150 passa a emitir o codigo da politica
+no banco e recebe a identidade da politica existente somente por ID; o replay
+descartavel `0001 -> 0150`, o smoke PRC e a prova de emissao concorrente
+confirmaram codigos unicos sem ampliar permissoes.
 ### PRC-01: exportacao auditavel
 
 O workspace `/custos-precos` oferece XLSX e PDF apenas para calculos aprovados. Ambos sao gerados do snapshot `prc-calculation-v2` retornado pela superficie governada 0146; decisao e SHA-256 persistidos sao verificados antes da entrega.
@@ -164,3 +168,22 @@ canonica de sistema. Estados vazios, indisponibilidade da consulta e
 carregamento foram separados. Os contratos PRC dirigidos, ESLint e o build web
 passaram. A proxima etapa e a homologacao integral de `/custos-precos`; em
 seguida, `ENG-01 Regression & Diagnostic Governance`.
+
+### PRC-UX-02: formulario de politica governada
+
+O formulario passou a selecionar a politica existente por ID e a mostrar
+`POL-######## - Nome` como identidade emitida pelo sistema. Para uma politica
+nova, apenas nome e parametros sao informados; para uma nova versao, o nome e
+o codigo permanecem congelados no banco. O layout do CSS Module usa tres,
+duas e uma colunas em desktop, tablet e mobile, respectivamente. Percentuais
+aceitam o sufixo opcional `%` sem mudar a conversao para fracao interna, e
+somente o campo aplicavel de Margem ou Markup e renderizado. Erros continuam
+locais sem mover foco para inputs; quando o feedback fica fora da viewport,
+o proprio painel recebe foco e rolagem, nunca um controle de entrada. A 0150
+mantem a assinatura N-1 como wrapper de compatibilidade que ignora o codigo
+informado pelo cliente, enquanto a aplicacao usa somente a RPC V2. A sequence
+`POL-00000001` a `POL-99999999` nao cicla, valida configuracao preexistente e
+falha de forma controlada na exaustao. Nomes de politica usam o limite uniforme
+de 3 a 120 caracteres. O replay descartavel `0001 -> 0150`, o upgrade
+`0149 -> 0150`, o smoke PRC e as provas de concorrencia de codigo e versao
+passaram; staging nao foi alterado.

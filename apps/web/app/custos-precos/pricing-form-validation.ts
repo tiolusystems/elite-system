@@ -13,6 +13,8 @@ export const PRICING_COMPONENTS = [
 
 const DECIMAL = /^\d+(?:[,.]\d+)?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const POLICY_NAME_MIN_LENGTH = 3;
+export const POLICY_NAME_MAX_LENGTH = 120;
 
 export function field(formData: FormData, name: string) {
   return String(formData.get(name) ?? "").trim();
@@ -26,21 +28,25 @@ export function parseHumanNumber(raw: string): number | null {
 }
 
 export function parsePercentage(raw: string): number | null {
-  const value = parseHumanNumber(raw);
+  const source = raw.trim();
+  const value = parseHumanNumber(source.endsWith("%") ? source.slice(0, -1).trim() : source);
   return value === null ? null : value / 100;
 }
 
 export function percentageWarning(raw: string) {
-  const value = parseHumanNumber(raw);
-  const display = raw.trim().replace(".", ",");
+  const source = raw.trim();
+  const rawNumber = source.endsWith("%") ? source.slice(0, -1).trim() : source;
+  const value = parseHumanNumber(rawNumber);
+  const display = rawNumber.replace(".", ",");
   return value !== null && value > 0 && value < 1 ? `${display} significa ${display}%. Para 20%, digite 20.` : null;
 }
 
 export function validatePolicy(formData: FormData): PricingValidation<{
-  p_codigo: string; p_nome: string; p_metodo: string; p_lucro_minimo: number | null; p_markup: number | null; p_juros_mensais: number; p_motivo: string;
+  p_politica_id: number | null; p_nome: string | null; p_metodo: string; p_lucro_minimo: number | null; p_markup: number | null; p_juros_mensais: number; p_motivo: string;
 }> {
   const errors: PricingFieldErrors = {};
-  const codigo = field(formData, "codigo");
+  const politicaIdRaw = field(formData, "politica_id");
+  const politicaId = politicaIdRaw ? positiveInteger(politicaIdRaw) : null;
   const nome = field(formData, "nome");
   const metodo = field(formData, "metodo");
   const motivo = field(formData, "motivo");
@@ -48,8 +54,10 @@ export function validatePolicy(formData: FormData): PricingValidation<{
   const lucro = parsePercentage(field(formData, "lucro_minimo"));
   const markup = parsePercentage(field(formData, "markup"));
 
-  if (!codigo) errors.codigo = "Informe o codigo da politica.";
-  if (!nome) errors.nome = "Informe o nome da politica.";
+  if (politicaIdRaw && !politicaId) errors.politica_id = "Selecione uma politica valida.";
+  if (!politicaId && (nome.length < POLICY_NAME_MIN_LENGTH || nome.length > POLICY_NAME_MAX_LENGTH)) {
+    errors.nome = "O nome da nova politica deve ter entre 3 e 120 caracteres.";
+  }
   if (metodo !== "margem_liquida" && metodo !== "markup") errors.metodo = "Selecione um metodo valido.";
   if (juros === null || juros < 0) errors.juros_mensais = "Informe um percentual numerico igual ou maior que zero.";
   if (motivo.length < 10) errors.motivo = "Explique a finalidade desta versao com pelo menos 10 caracteres.";
@@ -60,7 +68,7 @@ export function validatePolicy(formData: FormData): PricingValidation<{
   if (metodo === "markup" && (markup === null || markup < 0)) errors.markup = "Informe um markup numerico igual ou maior que zero.";
 
   return result(errors, {
-    p_codigo: codigo, p_nome: nome, p_metodo: metodo,
+    p_politica_id: politicaId, p_nome: politicaId ? null : nome, p_metodo: metodo,
     p_lucro_minimo: metodo === "margem_liquida" ? lucro : null,
     p_markup: metodo === "markup" ? markup : null,
     p_juros_mensais: juros ?? Number.NaN, p_motivo: motivo,

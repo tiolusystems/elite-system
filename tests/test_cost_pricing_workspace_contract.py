@@ -103,7 +103,8 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn("role={isError ? \"alert\" : \"status\"}", FORMS)
         self.assertIn("aria-live={isError ? \"assertive\" : \"polite\"}", FORMS)
         self.assertIn("restoreValues(formRef.current, state.values)", FORMS)
-        self.assertIn("revealFeedback(feedbackRef.current)", FORMS)
+        self.assertIn("revealPricingFeedback(feedbackRef.current, window.innerHeight)", FORMS)
+        self.assertIn("if (state.status !== \"error\" && !localMessage) return;", FORMS)
         self.assertIn("disabled={pending || !ready}", FORMS)
         self.assertIn("aria-invalid", FORMS)
         self.assertIn("aria-describedby", FORMS)
@@ -138,7 +139,8 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn('status: "idle"', ACTION_STATE)
         self.assertIn('export function normalizePricingActionState(value: unknown)', ACTION_STATE)
         self.assertIn('const [rawState, formAction, pending] = useActionState', FORMS)
-        self.assertIn('const state = normalizePricingActionState(rawState)', FORMS)
+        self.assertIn('const state = useMemo(() => normalizePricingActionState(rawState), [rawState]);', FORMS)
+        self.assertIn('useMemo', FORMS)
         self.assertIn('Object.entries(state.fieldErrors ?? {})', FORMS)
         self.assertIn('Object.entries(values ?? {})', FORMS)
         self.assertIn('if (safeState.status === "idle" && !localMessage) return null;', FORMS)
@@ -169,17 +171,29 @@ class CostPricingWorkspaceContract(unittest.TestCase):
     def test_first_render_reads_values_without_dom_globals(self):
         script = textwrap.dedent(
             f"""
-            import {{ readFormControlValue, writeFormControlValue }} from "{FORM_DOM_MODULE}";
+            import {{ readFormControlValue, revealPricingFeedback, writeFormControlValue }} from "{FORM_DOM_MODULE}";
             const controls = {{ lucro_minimo: {{ value: "20" }}, markup: {{ value: "25" }}, juros_mensais: {{ value: "1,9" }}, materia_prima: {{ value: "12,5" }} }};
             const form = {{ elements: {{ namedItem: (name) => controls[name] ?? null }} }};
+            const documentState = {{ activeElement: {{ tagName: "INPUT" }} }};
+            const feedback = {{
+              tagName: "SECTION", focused: false, scrolled: false,
+              getBoundingClientRect: () => ({{ top: 720, bottom: 780 }}),
+              focus: () => {{ documentState.activeElement = feedback; feedback.focused = true; }},
+              scrollIntoView: () => {{ feedback.scrolled = true; }},
+            }};
             writeFormControlValue(form, "markup", "30");
             console.log(JSON.stringify({{
-              lucro: readFormControlValue(form, "lucro_minimo"), markup: readFormControlValue(form, "markup"), juros: readFormControlValue(form, "juros_mensais"), scenario: readFormControlValue(form, "materia_prima"), missing: readFormControlValue(null, "lucro_minimo")
+              lucro: readFormControlValue(form, "lucro_minimo"), markup: readFormControlValue(form, "markup"), juros: readFormControlValue(form, "juros_mensais"), scenario: readFormControlValue(form, "materia_prima"), missing: readFormControlValue(null, "lucro_minimo"),
+              revealed: revealPricingFeedback(feedback, 600), feedbackFocused: feedback.focused, feedbackScrolled: feedback.scrolled, activeElement: documentState.activeElement.tagName
             }}));
             """
         )
         result = execute_validation(script)
-        self.assertEqual(result, {"lucro": "20", "markup": "30", "juros": "1,9", "scenario": "12,5", "missing": ""})
+        self.assertEqual({name: result[name] for name in ("lucro", "markup", "juros", "scenario", "missing")}, {"lucro": "20", "markup": "30", "juros": "1,9", "scenario": "12,5", "missing": ""})
+        self.assertTrue(result["revealed"])
+        self.assertTrue(result["feedbackFocused"])
+        self.assertTrue(result["feedbackScrolled"])
+        self.assertNotIn(result["activeElement"], {"INPUT", "SELECT", "TEXTAREA"})
         self.assertNotIn("HTMLInputElement", FORM_DOM)
         self.assertNotIn("HTMLSelectElement", FORM_DOM)
         self.assertNotIn("instanceof", FORM_DOM)
@@ -187,7 +201,9 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertNotIn("querySelector<HTMLElement>(\"[aria-invalid='true']\")", FORMS)
         self.assertNotIn("input.focus", FORMS)
         self.assertNotIn("document.activeElement", FORMS)
-        self.assertIn("if (bounds.top >= 0 && bounds.bottom <= window.innerHeight) return;", FORMS)
+        self.assertIn("export function revealPricingFeedback", FORM_DOM)
+        self.assertIn("feedback.focus({ preventScroll: true })", FORM_DOM)
+        self.assertIn('feedback.scrollIntoView({ behavior: "smooth", block: "nearest" })', FORM_DOM)
 
     def test_unavailable_workspace_is_not_presented_as_an_empty_workspace(self):
         self.assertIn("if (!data) return", PAGE)

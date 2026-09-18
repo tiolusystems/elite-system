@@ -1,6 +1,6 @@
 "use client";
 
-import { cloneElement, useActionState, useEffect, useRef, useState, type FormEvent, type ReactElement, type ReactNode, type RefObject } from "react";
+import { cloneElement, useActionState, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement, type ReactNode, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -9,7 +9,7 @@ import {
 } from "./actions";
 import { PricingIdempotencyKeyInput } from "./pricing-idempotency-key-input";
 import { PRICING_COMPONENTS, percentageWarning, validateCalculation, validatePolicy, validateReview, validateScenario, type PricingFieldErrors, type PricingValidation } from "./pricing-form-validation";
-import { readFormControlValue, writeFormControlValue } from "./pricing-form-dom";
+import { readFormControlValue, revealPricingFeedback, writeFormControlValue } from "./pricing-form-dom";
 import { INITIAL_PRICING_ACTION_STATE, normalizePricingActionState, type PricingActionState } from "./pricing-action-state";
 import styles from "./pricing.module.css";
 
@@ -39,7 +39,7 @@ export function PricingPolicyForm({ policies }: { policies: SelectOption[] }) {
         <option value="">Nova politica</option>{policies.map((policy) => <option key={policy.id} value={policy.id}>{policy.label}</option>)}
       </select>
     </Field>
-    {isNewPolicy ? <Field label="Nome" name="nome" error={form.error("nome")} wide><input name="nome" placeholder="Politica comercial padrao" required /></Field> : <div className={styles.pricingPolicyIdentity}><strong>Nova versao da politica selecionada</strong><span>Codigo e nome sao definidos pelo sistema.</span></div>}
+    {isNewPolicy ? <Field label="Nome" name="nome" error={form.error("nome")} wide><input name="nome" minLength={3} maxLength={120} placeholder="Politica comercial padrao" required /></Field> : <div className={styles.pricingPolicyIdentity}><strong>Nova versao da politica selecionada</strong><span>Codigo e nome sao definidos pelo sistema.</span></div>}
     <Field label="Metodo" name="metodo" error={form.error("metodo")}>
       <select name="metodo" value={method} onChange={(event) => { const next = event.target.value; setMethod(next); form.clear("metodo"); if (next === "margem_liquida") form.clearValue("markup"); else form.clearValue("lucro_minimo"); }}>
         <option value="margem_liquida">Margem liquida</option><option value="markup">Markup</option>
@@ -108,7 +108,7 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
   const feedbackRef = useRef<HTMLElement>(null);
   const successRef = useRef(onSuccess);
   const [rawState, formAction, pending] = useActionState(action, INITIAL_PRICING_ACTION_STATE);
-  const state = normalizePricingActionState(rawState);
+  const state = useMemo(() => normalizePricingActionState(rawState), [rawState]);
   const [requestKey, setRequestKey] = useState("");
   const [ready, setReady] = useState(false);
   const [clientValidation, setClientValidation] = useState<ClientValidationState>({ resultId: "", fieldErrors: {}, message: "" });
@@ -131,9 +131,12 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
   useEffect(() => {
     if (state.status !== "error") return;
     restoreValues(formRef.current, state.values);
-    const frame = window.requestAnimationFrame(() => revealFeedback(feedbackRef.current));
-    return () => window.cancelAnimationFrame(frame);
   }, [state.resultId, state.status, state.values]);
+  useEffect(() => {
+    if (state.status !== "error" && !localMessage) return;
+    const frame = window.requestAnimationFrame(() => revealPricingFeedback(feedbackRef.current, window.innerHeight));
+    return () => window.cancelAnimationFrame(frame);
+  }, [localMessage, state.resultId, state.status]);
   useEffect(() => {
     if (state.status !== "success") return;
     const frame = window.requestAnimationFrame(() => {
@@ -170,14 +173,6 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
     clear: (name: string) => setDismissedServerErrorState((current) => current.resultId === state.resultId ? { ...current, fields: { ...current.fields, [name]: true } } : { resultId: state.resultId, fields: { [name]: true } }),
     clearValue: (name: string) => writeFormControlValue(formRef.current, name, ""),
   };
-}
-
-function revealFeedback(feedback: HTMLElement | null) {
-  if (!feedback) return;
-  const bounds = feedback.getBoundingClientRect();
-  if (bounds.top >= 0 && bounds.bottom <= window.innerHeight) return;
-  feedback.focus({ preventScroll: true });
-  feedback.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function restoreValues(form: HTMLFormElement | null, values: Record<string, string> | null | undefined) {

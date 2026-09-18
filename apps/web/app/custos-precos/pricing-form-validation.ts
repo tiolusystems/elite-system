@@ -13,6 +13,8 @@ export const PRICING_COMPONENTS = [
 
 const DECIMAL = /^\d+(?:[,.]\d+)?$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const POLICY_NAME_MIN_LENGTH = 3;
+export const POLICY_NAME_MAX_LENGTH = 120;
 
 export function field(formData: FormData, name: string) {
   return String(formData.get(name) ?? "").trim();
@@ -53,7 +55,9 @@ export function validatePolicy(formData: FormData): PricingValidation<{
   const markup = parsePercentage(field(formData, "markup"));
 
   if (politicaIdRaw && !politicaId) errors.politica_id = "Selecione uma politica valida.";
-  if (!politicaId && !nome) errors.nome = "Informe o nome da nova politica.";
+  if (!politicaId && (nome.length < POLICY_NAME_MIN_LENGTH || nome.length > POLICY_NAME_MAX_LENGTH)) {
+    errors.nome = "O nome da nova politica deve ter entre 3 e 120 caracteres.";
+  }
   if (metodo !== "margem_liquida" && metodo !== "markup") errors.metodo = "Selecione um metodo valido.";
   if (juros === null || juros < 0) errors.juros_mensais = "Informe um percentual numerico igual ou maior que zero.";
   if (motivo.length < 10) errors.motivo = "Explique a finalidade desta versao com pelo menos 10 caracteres.";

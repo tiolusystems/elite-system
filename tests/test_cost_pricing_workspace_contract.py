@@ -37,8 +37,8 @@ class CostPricingWorkspaceContract(unittest.TestCase):
             f"""
             import {{ parsePercentage, percentageWarning, validatePolicy, validateScenario }} from "{VALIDATION_MODULE}";
             const form = (values) => {{ const data = new FormData(); for (const [key, value] of Object.entries(values)) data.append(key, value); return data; }};
-            const policy = (method, margin, markup, interest) => validatePolicy(form({{
-              codigo: "POL-01", nome: "Politica operacional", metodo: method, lucro_minimo: margin, markup,
+            const policy = (method, margin, markup, interest, politica_id = "") => validatePolicy(form({{
+              politica_id, codigo: "POL-FORGED", nome: "Politica operacional", metodo: method, lucro_minimo: margin, markup,
               juros_mensais: interest, motivo: "Justificativa operacional valida"
             }}));
             const scenario = validateScenario(form({{
@@ -50,11 +50,15 @@ class CostPricingWorkspaceContract(unittest.TestCase):
             console.log(JSON.stringify({{
               margin: policy("margem_liquida", "30", "25", "1,9").payload,
               markup: policy("markup", "30", "25", "1.9").payload,
+              marginWithSymbol: policy("margem_liquida", "30%", "", "1,9%").payload,
+              decimalWithSymbol: policy("markup", "", "30,5%", "1.9%").payload,
+              existing: policy("margem_liquida", "2%", "", "1%", "7").payload,
               scenario: scenario.payload,
               literalSmall: parsePercentage("0,2"),
               literalSmallWarning: percentageWarning("0,2"),
               invalidThousands: parsePercentage("1.234,56"),
               invalidMixed: parsePercentage("1,234.56"),
+              invalidPolicyId: policy("margem_liquida", "2", "", "1", "forged").fieldErrors,
               invalidMargin: policy("margem_liquida", "100", "", "1").fieldErrors,
                invalidMarginPayload: policy("margem_liquida", "100", "", "1").payload,
                invalidNegative: policy("markup", "", "-1", "1").fieldErrors,
@@ -74,6 +78,12 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertEqual(result["markup"]["p_markup"], 0.25)
         self.assertIsNone(result["markup"]["p_lucro_minimo"])
         self.assertEqual(result["markup"]["p_juros_mensais"], 0.019)
+        self.assertEqual(result["marginWithSymbol"]["p_lucro_minimo"], 0.3)
+        self.assertEqual(result["marginWithSymbol"]["p_juros_mensais"], 0.019)
+        self.assertEqual(result["decimalWithSymbol"]["p_markup"], 0.305)
+        self.assertEqual(result["decimalWithSymbol"]["p_juros_mensais"], 0.019)
+        self.assertEqual(result["existing"]["p_politica_id"], 7)
+        self.assertIsNone(result["existing"]["p_nome"])
         self.assertEqual(result["scenario"]["p_componentes"][7]["valor"], 0.02)
         self.assertEqual(result["scenario"]["p_componentes"][8]["valor"], 0.035)
         self.assertEqual(result["scenario"]["p_componentes"][9]["valor"], 0.01)
@@ -82,6 +92,7 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertEqual(result["literalSmallWarning"], "0,2 significa 0,2%. Para 20%, digite 20.")
         self.assertIsNone(result["invalidThousands"])
         self.assertIsNone(result["invalidMixed"])
+        self.assertIn("politica_id", result["invalidPolicyId"])
         self.assertIn("lucro_minimo", result["invalidMargin"])
         self.assertIsNone(result["invalidMarginPayload"])
         self.assertIn("markup", result["invalidNegative"])
@@ -92,7 +103,8 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn("role={isError ? \"alert\" : \"status\"}", FORMS)
         self.assertIn("aria-live={isError ? \"assertive\" : \"polite\"}", FORMS)
         self.assertIn("restoreValues(formRef.current, state.values)", FORMS)
-        self.assertIn("revealFeedback(feedbackRef.current)", FORMS)
+        self.assertIn("revealPricingFeedback(feedbackRef.current, window.innerHeight)", FORMS)
+        self.assertIn("if (state.status !== \"error\" && !localMessage) return;", FORMS)
         self.assertIn("disabled={pending || !ready}", FORMS)
         self.assertIn("aria-invalid", FORMS)
         self.assertIn("aria-describedby", FORMS)
@@ -109,12 +121,17 @@ class CostPricingWorkspaceContract(unittest.TestCase):
 
     def test_css_module_controls_the_responsive_form_layout(self):
         self.assertIn('import styles from "./pricing.module.css";', FORMS)
-        for class_name in ("pricingForm", "pricingInlineForm", "pricingComponents", "pricingWide", "pricingFeedback", "pricingFieldError", "pricingHelp", "pricingNotApplicable"):
+        for class_name in ("pricingForm", "pricingInlineForm", "pricingComponents", "pricingWide", "pricingFeedback", "pricingFieldError", "pricingHelp", "pricingPolicyIdentity", "pricingSubmit"):
             self.assertIn(f"styles.{class_name}", FORMS)
-        self.assertIn(".pricing-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))", PRICING_CSS)
-        self.assertIn(".pricing-wide{grid-column:span 2}", PRICING_CSS)
-        self.assertIn("@media(max-width:900px){.pricing-form,.pricing-components{grid-template-columns:repeat(2,minmax(0,1fr))}", PRICING_CSS)
-        self.assertIn("@media(max-width:600px){.pricing-form,.pricing-components,.loading{grid-template-columns:1fr}", PRICING_CSS)
+        self.assertIn(".pricingForm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))", PRICING_CSS)
+        self.assertIn(".pricingWide{grid-column:span 2}", PRICING_CSS)
+        self.assertIn(".pricingForm input,.pricingForm select", PRICING_CSS)
+        self.assertIn("width:100%", PRICING_CSS)
+        self.assertIn("@media(max-width:900px){.pricingForm,.pricingComponents{grid-template-columns:repeat(2,minmax(0,1fr))}", PRICING_CSS)
+        self.assertIn("@media(max-width:600px){.pricingForm,.pricingComponents,.loading{grid-template-columns:1fr}", PRICING_CSS)
+        self.assertNotIn(".pricing-form", PRICING_CSS)
+        self.assertNotIn("notApplicable=", FORMS)
+        self.assertNotIn('name="codigo"', FORMS)
 
     def test_initial_render_is_safe_before_first_action(self):
         self.assertIn('fieldErrors: {},', ACTION_STATE)
@@ -122,11 +139,12 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn('status: "idle"', ACTION_STATE)
         self.assertIn('export function normalizePricingActionState(value: unknown)', ACTION_STATE)
         self.assertIn('const [rawState, formAction, pending] = useActionState', FORMS)
-        self.assertIn('const state = normalizePricingActionState(rawState)', FORMS)
+        self.assertIn('const state = useMemo(() => normalizePricingActionState(rawState), [rawState]);', FORMS)
+        self.assertIn('useMemo', FORMS)
         self.assertIn('Object.entries(state.fieldErrors ?? {})', FORMS)
         self.assertIn('Object.entries(values ?? {})', FORMS)
         self.assertIn('if (safeState.status === "idle" && !localMessage) return null;', FORMS)
-        self.assertIn('export function PricingPolicyForm()', FORMS)
+        self.assertIn('export function PricingPolicyForm({ policies }', FORMS)
         self.assertIn('export function PricingScenarioForm(', FORMS)
         self.assertIn('INITIAL_PRICING_ACTION_STATE, normalizePricingActionState, type PricingActionState } from "./pricing-action-state";', FORMS)
         self.assertNotIn('INITIAL_PRICING_ACTION_STATE,', FORMS.split('} from "./actions";', 1)[0])
@@ -153,23 +171,39 @@ class CostPricingWorkspaceContract(unittest.TestCase):
     def test_first_render_reads_values_without_dom_globals(self):
         script = textwrap.dedent(
             f"""
-            import {{ readFormControlValue, writeFormControlValue }} from "{FORM_DOM_MODULE}";
+            import {{ readFormControlValue, revealPricingFeedback, writeFormControlValue }} from "{FORM_DOM_MODULE}";
             const controls = {{ lucro_minimo: {{ value: "20" }}, markup: {{ value: "25" }}, juros_mensais: {{ value: "1,9" }}, materia_prima: {{ value: "12,5" }} }};
             const form = {{ elements: {{ namedItem: (name) => controls[name] ?? null }} }};
+            const documentState = {{ activeElement: {{ tagName: "INPUT" }} }};
+            const feedback = {{
+              tagName: "SECTION", focused: false, scrolled: false,
+              getBoundingClientRect: () => ({{ top: 720, bottom: 780 }}),
+              focus: () => {{ documentState.activeElement = feedback; feedback.focused = true; }},
+              scrollIntoView: () => {{ feedback.scrolled = true; }},
+            }};
             writeFormControlValue(form, "markup", "30");
             console.log(JSON.stringify({{
-              lucro: readFormControlValue(form, "lucro_minimo"), markup: readFormControlValue(form, "markup"), juros: readFormControlValue(form, "juros_mensais"), scenario: readFormControlValue(form, "materia_prima"), missing: readFormControlValue(null, "lucro_minimo")
+              lucro: readFormControlValue(form, "lucro_minimo"), markup: readFormControlValue(form, "markup"), juros: readFormControlValue(form, "juros_mensais"), scenario: readFormControlValue(form, "materia_prima"), missing: readFormControlValue(null, "lucro_minimo"),
+              revealed: revealPricingFeedback(feedback, 600), feedbackFocused: feedback.focused, feedbackScrolled: feedback.scrolled, activeElement: documentState.activeElement.tagName
             }}));
             """
         )
         result = execute_validation(script)
-        self.assertEqual(result, {"lucro": "20", "markup": "30", "juros": "1,9", "scenario": "12,5", "missing": ""})
+        self.assertEqual({name: result[name] for name in ("lucro", "markup", "juros", "scenario", "missing")}, {"lucro": "20", "markup": "30", "juros": "1,9", "scenario": "12,5", "missing": ""})
+        self.assertTrue(result["revealed"])
+        self.assertTrue(result["feedbackFocused"])
+        self.assertTrue(result["feedbackScrolled"])
+        self.assertNotIn(result["activeElement"], {"INPUT", "SELECT", "TEXTAREA"})
         self.assertNotIn("HTMLInputElement", FORM_DOM)
         self.assertNotIn("HTMLSelectElement", FORM_DOM)
         self.assertNotIn("instanceof", FORM_DOM)
         self.assertNotIn("focusProblem", FORMS)
         self.assertNotIn("querySelector<HTMLElement>(\"[aria-invalid='true']\")", FORMS)
-        self.assertIn("if (bounds.top >= 0 && bounds.bottom <= window.innerHeight) return;", FORMS)
+        self.assertNotIn("input.focus", FORMS)
+        self.assertNotIn("document.activeElement", FORMS)
+        self.assertIn("export function revealPricingFeedback", FORM_DOM)
+        self.assertIn("feedback.focus({ preventScroll: true })", FORM_DOM)
+        self.assertIn('feedback.scrollIntoView({ behavior: "smooth", block: "nearest" })', FORM_DOM)
 
     def test_unavailable_workspace_is_not_presented_as_an_empty_workspace(self):
         self.assertIn("if (!data) return", PAGE)

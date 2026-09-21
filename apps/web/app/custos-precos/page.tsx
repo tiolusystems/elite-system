@@ -29,7 +29,7 @@ export default async function CostPricingPage() {
     <nav className={styles.tabs} aria-label="Areas da formacao"><a href="#custos">Custos e referencias</a><a href="#cenarios">Cenarios</a><a href="#memoria">Memoria de calculo</a><a href="#revisao">Revisao e aprovacao</a><a href="#dossie">Dossie</a></nav>
 
     <section className={styles.band} id="custos"><div className={styles.sectionHeading}><div><h2>Custos e referencias</h2><p>A politica define o metodo e o arredondamento. Cada cenario congela a origem de todos os componentes.</p></div><span>Proximo responsavel: gestor de precificacao</span></div>
-      {access.policy ? <PricingPolicyForm /> : <Permission />}
+      {access.policy ? <PricingPolicyForm policies={data.politicas.map((policy) => ({ id: policy.id, label: `${policy.codigo} - ${policy.nome}` }))} /> : <Permission />}
     </section>
 
     <section className={styles.band} id="cenarios"><div className={styles.sectionHeading}><div><h2>Cenarios</h2><p>Substituicoes manuais afetam somente o novo cenario e nunca sobrescrevem custo, formula ou estoque.</p></div><span>11 componentes obrigatorios</span></div>

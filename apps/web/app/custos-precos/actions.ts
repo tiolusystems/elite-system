@@ -14,7 +14,7 @@ export async function createPricingPolicyAction(_previous: PricingActionState, f
   const validation = validatePolicy(formData);
   const rejected = rejectedInput(formData, validation);
   if (rejected) return rejected;
-  return call("salvar_prc_politica_versao_idempotente", "precificacao.policy.manage", "prc_politica_versoes", {
+  return call("salvar_prc_politica_versao_v2_idempotente", "precificacao.policy.manage", "prc_politica_versoes", {
     p_key: key(formData), ...validation.payload!,
   }, "policy", values(formData));
 }

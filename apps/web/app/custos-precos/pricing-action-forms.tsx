@@ -1,6 +1,6 @@
 "use client";
 
-import { cloneElement, useActionState, useEffect, useRef, useState, type FormEvent, type ReactElement, type ReactNode, type RefObject } from "react";
+import { cloneElement, useActionState, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement, type ReactNode, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -9,7 +9,7 @@ import {
 } from "./actions";
 import { PricingIdempotencyKeyInput } from "./pricing-idempotency-key-input";
 import { PRICING_COMPONENTS, percentageWarning, validateCalculation, validatePolicy, validateReview, validateScenario, type PricingFieldErrors, type PricingValidation } from "./pricing-form-validation";
-import { readFormControlValue, writeFormControlValue } from "./pricing-form-dom";
+import { readFormControlValue, revealPricingFeedback, writeFormControlValue } from "./pricing-form-dom";
 import { INITIAL_PRICING_ACTION_STATE, normalizePricingActionState, type PricingActionState } from "./pricing-action-state";
 import styles from "./pricing.module.css";
 
@@ -25,26 +25,31 @@ const COST_LABELS: Record<string, string> = {
   frete: "Frete", comissao: "Comissao", risco: "Risco", marketing: "Marketing", tributacao: "Tributacao",
 };
 
-export function PricingPolicyForm() {
+export function PricingPolicyForm({ policies }: { policies: SelectOption[] }) {
   const [method, setMethod] = useState("margem_liquida");
-  const form = usePricingForm(createPricingPolicyAction, validatePolicy, () => setMethod("margem_liquida"));
+  const [policyId, setPolicyId] = useState("");
+  const form = usePricingForm(createPricingPolicyAction, validatePolicy, () => { setMethod("margem_liquida"); setPolicyId(""); });
   const marginApplies = method === "margem_liquida";
+  const isNewPolicy = policyId === "";
 
   return <form {...form.props} className={styles.pricingForm}>
     <PricingIdempotencyKeyInput value={form.requestKey} />
-    <Field label="Codigo" name="codigo" error={form.error("codigo")}><input name="codigo" placeholder="POL-MARGEM-01" required /></Field>
-    <Field label="Nome" name="nome" error={form.error("nome")} wide><input name="nome" placeholder="Politica comercial padrao" required /></Field>
+    <Field label="Politica" name="politica_id" error={form.error("politica_id")} wide help="Deixe como nova politica para o sistema emitir o proximo codigo.">
+      <select name="politica_id" value={policyId} onChange={(event) => { setPolicyId(event.target.value); form.clear("politica_id"); }}>
+        <option value="">Nova politica</option>{policies.map((policy) => <option key={policy.id} value={policy.id}>{policy.label}</option>)}
+      </select>
+    </Field>
+    {isNewPolicy ? <Field label="Nome" name="nome" error={form.error("nome")} wide><input name="nome" minLength={3} maxLength={120} placeholder="Politica comercial padrao" required /></Field> : <div className={styles.pricingPolicyIdentity}><strong>Nova versao da politica selecionada</strong><span>Codigo e nome sao definidos pelo sistema.</span></div>}
     <Field label="Metodo" name="metodo" error={form.error("metodo")}>
       <select name="metodo" value={method} onChange={(event) => { const next = event.target.value; setMethod(next); form.clear("metodo"); if (next === "margem_liquida") form.clearValue("markup"); else form.clearValue("lucro_minimo"); }}>
         <option value="margem_liquida">Margem liquida</option><option value="markup">Markup</option>
       </select>
     </Field>
-    <Field label="Lucro minimo (%)" name="lucro_minimo" error={form.error("lucro_minimo")} help={marginApplies ? percentageWarning(form.value("lucro_minimo")) ?? "Informe o percentual desejado. Ex.: 20 representa 20%." : "Nao se aplica ao metodo Markup."} notApplicable={!marginApplies}>
-      <input name="lucro_minimo" inputMode="decimal" placeholder="20" disabled={!marginApplies} required={marginApplies} />
-    </Field>
-    <Field label="Markup (%)" name="markup" error={form.error("markup")} help={!marginApplies ? percentageWarning(form.value("markup")) ?? "Informe o percentual desejado. Ex.: 25 representa 25%." : "Nao se aplica ao metodo Margem liquida."} notApplicable={marginApplies}>
-      <input name="markup" inputMode="decimal" placeholder="25" disabled={marginApplies} required={!marginApplies} />
-    </Field>
+    {marginApplies ? <Field label="Lucro minimo (%)" name="lucro_minimo" error={form.error("lucro_minimo")} help={percentageWarning(form.value("lucro_minimo")) ?? "Informe o percentual desejado. Ex.: 20 ou 20%."}>
+      <input name="lucro_minimo" inputMode="decimal" placeholder="20" required />
+    </Field> : <Field label="Markup (%)" name="markup" error={form.error("markup")} help={percentageWarning(form.value("markup")) ?? "Informe o percentual desejado. Ex.: 25 ou 25%."}>
+      <input name="markup" inputMode="decimal" placeholder="25" required />
+    </Field>}
     <Field label="Juros ao mes (%)" name="juros_mensais" error={form.error("juros_mensais")} help={percentageWarning(form.value("juros_mensais")) ?? "Aceita virgula ou ponto decimal. Ex.: 1,9 representa 1,9%."}>
       <input name="juros_mensais" inputMode="decimal" placeholder="1,9" required />
     </Field>
@@ -103,7 +108,7 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
   const feedbackRef = useRef<HTMLElement>(null);
   const successRef = useRef(onSuccess);
   const [rawState, formAction, pending] = useActionState(action, INITIAL_PRICING_ACTION_STATE);
-  const state = normalizePricingActionState(rawState);
+  const state = useMemo(() => normalizePricingActionState(rawState), [rawState]);
   const [requestKey, setRequestKey] = useState("");
   const [ready, setReady] = useState(false);
   const [clientValidation, setClientValidation] = useState<ClientValidationState>({ resultId: "", fieldErrors: {}, message: "" });
@@ -126,9 +131,12 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
   useEffect(() => {
     if (state.status !== "error") return;
     restoreValues(formRef.current, state.values);
-    const frame = window.requestAnimationFrame(() => revealFeedback(feedbackRef.current));
-    return () => window.cancelAnimationFrame(frame);
   }, [state.resultId, state.status, state.values]);
+  useEffect(() => {
+    if (state.status !== "error" && !localMessage) return;
+    const frame = window.requestAnimationFrame(() => revealPricingFeedback(feedbackRef.current, window.innerHeight));
+    return () => window.cancelAnimationFrame(frame);
+  }, [localMessage, state.resultId, state.status]);
   useEffect(() => {
     if (state.status !== "success") return;
     const frame = window.requestAnimationFrame(() => {
@@ -167,14 +175,6 @@ function usePricingForm(action: PricingAction, validator: Validator, onSuccess?:
   };
 }
 
-function revealFeedback(feedback: HTMLElement | null) {
-  if (!feedback) return;
-  const bounds = feedback.getBoundingClientRect();
-  if (bounds.top >= 0 && bounds.bottom <= window.innerHeight) return;
-  feedback.focus({ preventScroll: true });
-  feedback.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
 function restoreValues(form: HTMLFormElement | null, values: Record<string, string> | null | undefined) {
   if (!form) return;
   for (const [name, value] of Object.entries(values ?? {})) {
@@ -191,10 +191,10 @@ function FormFeedback({ state, localMessage, feedbackRef }: { state: PricingActi
   </section>;
 }
 
-function Field({ label, name, error, help, wide = false, notApplicable = false, children }: { label: string; name: string; error?: string; help?: string | null; wide?: boolean; notApplicable?: boolean; children: ReactNode }) {
+function Field({ label, name, error, help, wide = false, children }: { label: string; name: string; error?: string; help?: string | null; wide?: boolean; children: ReactNode }) {
   const helpId = `${name}-help`; const errorId = `${name}-error`;
   const child = children as ReactElement<{ "aria-invalid"?: boolean; "aria-describedby"?: string }>;
-  return <label className={`${wide ? styles.pricingWide : ""} ${notApplicable ? styles.pricingNotApplicable : ""}`}>{label}
+  return <label className={wide ? styles.pricingWide : undefined}>{label}
     {cloneElement(child, { "aria-invalid": Boolean(error), "aria-describedby": error ? errorId : help ? helpId : undefined })}
     {help ? <small id={helpId} className={styles.pricingHelp}>{help}</small> : null}
     {error ? <small id={errorId} className={styles.pricingFieldError}>{error}</small> : null}

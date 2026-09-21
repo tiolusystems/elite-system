@@ -180,10 +180,12 @@ aceitam o sufixo opcional `%` sem mudar a conversao para fracao interna, e
 somente o campo aplicavel de Margem ou Markup e renderizado. Erros continuam
 locais sem mover foco para inputs; quando o feedback fica fora da viewport,
 o proprio painel recebe foco e rolagem, nunca um controle de entrada. A 0150
-mantem a assinatura N-1 como wrapper de compatibilidade que ignora o codigo
-informado pelo cliente, enquanto a aplicacao usa somente a RPC V2. A sequence
+mantem a assinatura N-1 como wrapper de compatibilidade: um codigo existente
+seleciona a mesma politica e exige o nome correspondente; um codigo desconhecido
+nao define a identidade, que continua emitida pelo banco. A aplicacao usa somente
+a RPC V2. A sequence
 `POL-00000001` a `POL-99999999` nao cicla, valida configuracao preexistente e
 falha de forma controlada na exaustao. Nomes de politica usam o limite uniforme
 de 3 a 120 caracteres. O replay descartavel `0001 -> 0150`, o upgrade
-`0149 -> 0150`, o smoke PRC e as provas de concorrencia de codigo e versao
-passaram; staging nao foi alterado.
+`0149 -> 0150`, incluindo retry legado trans-migration, o smoke PRC e as provas
+de concorrencia de codigo e versao passaram; staging nao foi alterado.

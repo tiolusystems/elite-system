@@ -106,8 +106,8 @@ end $$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','13800000-0000-4000-8000-000000000001',true);
 do $$ declare v_margin bigint; v_markup bigint; v_bad bigint; v_legacy bigint; v_scenario bigint; v_manual bigint; v_calc bigint; v_retry bigint; begin
-  create temporary table pg_temp.prc_ids(margin bigint,margin_v2 bigint,policy_id bigint,legacy bigint,markup bigint,bad bigint,scenario bigint,manual bigint,calc bigint,markup_calc bigint,decision bigint,lists bigint,payments bigint) on commit drop;
-  insert into pg_temp.prc_ids values(null,null,null,null,null,null,null,null,null,null,null,current_setting('prc.baseline_lists')::bigint,current_setting('prc.baseline_payments')::bigint);
+  create temporary table pg_temp.prc_ids(margin bigint,margin_v2 bigint,policy_id bigint,legacy bigint,legacy_v2 bigint,legacy_policy_id bigint,legacy_codigo text,markup bigint,bad bigint,scenario bigint,manual bigint,calc bigint,markup_calc bigint,decision bigint,lists bigint,payments bigint) on commit drop;
+  insert into pg_temp.prc_ids(lists,payments) values(current_setting('prc.baseline_lists')::bigint,current_setting('prc.baseline_payments')::bigint);
   v_margin:=public.salvar_prc_politica_versao_v2_idempotente('13800000-0000-4000-8000-000000000010',null,'Margem padrao','margem_liquida',0.20,null,0.01,'Politica sintetica de margem liquida');
   v_retry:=public.salvar_prc_politica_versao_v2_idempotente('13800000-0000-4000-8000-000000000010',null,'Margem padrao','margem_liquida',0.20,null,0.01,'Politica sintetica de margem liquida'); if v_retry<>v_margin then raise exception 'retry de politica duplicou fato'; end if;
   begin perform public.salvar_prc_politica_versao_v2_idempotente('13800000-0000-4000-8000-000000000010',null,'Margem padrao','margem_liquida',0.25,null,0.01,'Politica sintetica de margem liquida'); raise exception 'retry divergente aceito'; exception when others then if sqlerrm='retry divergente aceito' or position('divergente' in sqlerrm)=0 then raise; end if; end;
@@ -115,6 +115,7 @@ do $$ declare v_margin bigint; v_markup bigint; v_bad bigint; v_legacy bigint; v
   v_bad:=public.salvar_prc_politica_versao_v2_idempotente('13800000-0000-4000-8000-000000000012',null,'Margem invalida controlada','margem_liquida',0.80,null,0.01,'Politica para validar denominador invalido');
   v_legacy:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000015','POL-FORGED','Compatibilidade N menos um','margem_liquida',0.20,null,0.01,'Compatibilidade para aplicacao N menos um');
   v_retry:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000015','POL-TENTATIVA-ALTERADA','Compatibilidade N menos um','margem_liquida',0.20,null,0.01,'Compatibilidade para aplicacao N menos um'); if v_retry<>v_legacy then raise exception 'retry legado duplicou fato'; end if;
+  begin perform public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000015','POL-TENTATIVA-ALTERADA','Compatibilidade materialmente divergente','margem_liquida',0.20,null,0.01,'Compatibilidade para aplicacao N menos um'); raise exception 'retry legado divergente aceito'; exception when others then if sqlerrm='retry legado divergente aceito' or position('divergente' in sqlerrm)=0 then raise; end if; end;
   begin perform public.salvar_prc_politica_versao_v2_idempotente('13800000-0000-4000-8000-000000000016',null,'','margem_liquida',0.20,null,0.01,'Nome vazio deve falhar no banco'); raise exception 'nome vazio aceito'; exception when others then if sqlerrm='nome vazio aceito' or position('entre 3 e 120' in sqlerrm)=0 then raise; end if; end;
   begin perform public.salvar_prc_politica_versao_v2_idempotente('13800000-0000-4000-8000-000000000017',null,'A','margem_liquida',0.20,null,0.01,'Nome de um caractere deve falhar'); raise exception 'nome de um caractere aceito'; exception when others then if sqlerrm='nome de um caractere aceito' or position('entre 3 e 120' in sqlerrm)=0 then raise; end if; end;
   begin perform public.salvar_prc_politica_versao_v2_idempotente('13800000-0000-4000-8000-000000000018',null,'AB','margem_liquida',0.20,null,0.01,'Nome de dois caracteres deve falhar'); raise exception 'nome de dois caracteres aceito'; exception when others then if sqlerrm='nome de dois caracteres aceito' or position('entre 3 e 120' in sqlerrm)=0 then raise; end if; end;
@@ -126,30 +127,34 @@ do $$ declare v_margin bigint; v_markup bigint; v_bad bigint; v_legacy bigint; v
 end $$;
 
 reset role;
-do $$ declare v pg_temp.prc_ids%rowtype; v_codigo text; v_legacy_codigo text; begin
+do $$ declare v pg_temp.prc_ids%rowtype; v_codigo text; v_legacy_codigo text; v_legacy_policy_id bigint; begin
   select * into v from pg_temp.prc_ids;
   select politica_id into v.policy_id from public.prc_politica_versoes where id=v.margin;
   select codigo into v_codigo from public.prc_politicas where id=v.policy_id;
   if v_codigo !~ '^POL-[0-9]{8}$' then raise exception 'codigo automatico de politica invalido'; end if;
-  select p.codigo into v_legacy_codigo from public.prc_politicas p join public.prc_politica_versoes pv on pv.politica_id=p.id where pv.id=v.legacy;
+  select p.id, p.codigo into v_legacy_policy_id, v_legacy_codigo from public.prc_politicas p join public.prc_politica_versoes pv on pv.politica_id=p.id where pv.id=v.legacy;
   if v_legacy_codigo in ('POL-FORGED','POL-TENTATIVA-ALTERADA') or v_legacy_codigo !~ '^POL-[0-9]{8}$' then raise exception 'codigo legado forjado controlou identidade'; end if;
-  update pg_temp.prc_ids set policy_id=v.policy_id;
+  update pg_temp.prc_ids set policy_id=v.policy_id, legacy_policy_id=v_legacy_policy_id, legacy_codigo=v_legacy_codigo;
 end $$;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','13800000-0000-4000-8000-000000000001',true);
-do $$ declare v pg_temp.prc_ids%rowtype; v_margin_v2 bigint; begin
+do $$ declare v pg_temp.prc_ids%rowtype; v_margin_v2 bigint; v_legacy_v2 bigint; begin
   select * into v from pg_temp.prc_ids;
   v_margin_v2:=public.salvar_prc_politica_versao_v2_idempotente('13800000-0000-4000-8000-000000000014',v.policy_id,null,'margem_liquida',0.22,null,0.01,'Nova versao sintetica da mesma politica');
-  update pg_temp.prc_ids set margin_v2=v_margin_v2;
+  v_legacy_v2:=public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000025',v.legacy_codigo,'Compatibilidade N menos um','margem_liquida',0.22,null,0.01,'Nova versao legada da mesma politica');
+  begin perform public.salvar_prc_politica_versao_idempotente('13800000-0000-4000-8000-000000000026',v.legacy_codigo,'Nome legado divergente','margem_liquida',0.22,null,0.01,'Nome divergente deve falhar'); raise exception 'nome legado divergente aceito'; exception when others then if sqlerrm='nome legado divergente aceito' or position('outro nome' in sqlerrm)=0 then raise; end if; end;
+  update pg_temp.prc_ids set margin_v2=v_margin_v2, legacy_v2=v_legacy_v2;
 end $$;
 
 reset role;
 do $$ declare v pg_temp.prc_ids%rowtype; begin
   select * into v from pg_temp.prc_ids;
   if (select politica_id from public.prc_politica_versoes where id=v.margin_v2)<>v.policy_id or (select versao from public.prc_politica_versoes where id=v.margin_v2)<>2 then raise exception 'nova versao nao reutilizou a politica existente'; end if;
+  if (select politica_id from public.prc_politica_versoes where id=v.legacy_v2)<>v.legacy_policy_id or (select versao from public.prc_politica_versoes where id=v.legacy_v2)<>2 then raise exception 'wrapper legado nao reutilizou a politica existente'; end if;
   if to_regprocedure('public.salvar_prc_politica_versao_idempotente(uuid,text,text,text,numeric,numeric,numeric,text)') is null then raise exception 'sobrecarga legada por codigo ausente'; end if;
   if to_regprocedure('public.salvar_prc_politica_versao_v2_idempotente(uuid,bigint,text,text,numeric,numeric,numeric,text)') is null then raise exception 'v2 de politica ausente'; end if;
+  if has_function_privilege('authenticated','public.prc_salvar_politica_versao_core(uuid,bigint,text,text,text,numeric,numeric,numeric,text,boolean)','EXECUTE') then raise exception 'nucleo privado de politica ficou executavel'; end if;
   if (select count(distinct codigo) from public.prc_politicas where id in (v.policy_id,(select politica_id from public.prc_politica_versoes where id=v.markup),(select politica_id from public.prc_politica_versoes where id=v.bad)))<>3 then raise exception 'codigos automaticos repetidos'; end if;
 end $$;
 

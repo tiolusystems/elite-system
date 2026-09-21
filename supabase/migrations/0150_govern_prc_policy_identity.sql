@@ -48,15 +48,20 @@ end $$;
 
 revoke all on sequence public.prc_politica_codigo_seq from public, anon, authenticated;
 
-create or replace function public.salvar_prc_politica_versao_v2_idempotente(
+-- Both public entrypoints delegate to this sole governed write boundary. It
+-- recognizes the N-1 payload hash before resolving policy identity so a
+-- request recorded before 0150 remains retryable after the rollout.
+create or replace function public.prc_salvar_politica_versao_core(
   p_key uuid,
   p_politica_id bigint,
+  p_codigo_legado text,
   p_nome text,
   p_metodo text,
   p_lucro_minimo numeric,
   p_markup numeric,
   p_juros_mensais numeric,
-  p_motivo text
+  p_motivo text,
+  p_legado boolean
 )
 returns bigint
 language plpgsql
@@ -67,7 +72,10 @@ declare
   v_ctx jsonb;
   v_actor uuid;
   v_payload jsonb;
-  v_existing bigint;
+  v_legacy_payload jsonb;
+  v_request public.prc_requisicoes%rowtype;
+  v_has_request boolean;
+  v_effective_politica_id bigint;
   v_policy public.prc_politicas%rowtype;
   v_version integer;
   v_doc jsonb;
@@ -83,9 +91,50 @@ begin
     jsonb_build_object('correlation_id', p_key::text)
   );
   v_actor := public.current_actor_id();
+  if p_legado then
+    v_legacy_payload := jsonb_build_object(
+      'codigo', upper(btrim(p_codigo_legado)),
+      'nome', btrim(p_nome),
+      'metodo', p_metodo,
+      'lucro_minimo', p_lucro_minimo,
+      'markup', p_markup,
+      'juros_mensais', p_juros_mensais,
+      'motivo', btrim(p_motivo)
+    );
+  end if;
+
+  perform public.prc_lock_idempotency_key(p_key);
+  select * into v_request
+    from public.prc_requisicoes
+   where idempotency_key = p_key;
+  v_has_request := found;
+
+  if v_has_request then
+    if v_request.actor_id is distinct from v_actor or v_request.request_type <> 'policy' then
+      raise exception 'chave de idempotencia reutilizada com requisicao divergente';
+    end if;
+    if p_legado and v_request.payload_sha256 = public.prc_sha256(v_legacy_payload) then
+      return v_request.result_id;
+    end if;
+  end if;
+
+  if p_legado then
+    select * into v_policy
+      from public.prc_politicas
+     where codigo = upper(btrim(p_codigo_legado));
+    if found then
+      if v_policy.nome <> btrim(p_nome) then
+        raise exception 'codigo de politica ja possui outro nome';
+      end if;
+      v_effective_politica_id := v_policy.id;
+    end if;
+  else
+    v_effective_politica_id := p_politica_id;
+  end if;
+
   v_payload := jsonb_build_object(
-    'politica_id', p_politica_id,
-    'nome', case when p_politica_id is null then btrim(p_nome) else null end,
+    'politica_id', v_effective_politica_id,
+    'nome', case when v_effective_politica_id is null then btrim(p_nome) else null end,
     'metodo', p_metodo,
     'lucro_minimo', p_lucro_minimo,
     'markup', p_markup,
@@ -93,10 +142,11 @@ begin
     'motivo', btrim(p_motivo)
   );
 
-  perform public.prc_lock_idempotency_key(p_key);
-  v_existing := public.prc_idempotent_result(p_key, 'policy', v_payload);
-  if v_existing is not null then
-    return v_existing;
+  if v_has_request then
+    if v_request.payload_sha256 = public.prc_sha256(v_payload) then
+      return v_request.result_id;
+    end if;
+    raise exception 'chave de idempotencia reutilizada com requisicao divergente';
   end if;
 
   if p_metodo not in ('margem_liquida', 'markup')
@@ -106,7 +156,7 @@ begin
     raise exception 'politica invalida';
   end if;
 
-  if p_politica_id is null then
+  if v_effective_politica_id is null then
     if length(btrim(coalesce(p_nome, ''))) not between 3 and 120 then
       raise exception 'nome da nova politica deve ter entre 3 e 120 caracteres';
     end if;
@@ -123,14 +173,16 @@ begin
     values(v_codigo, btrim(p_nome), v_actor)
     returning * into v_policy;
   else
-    if nullif(btrim(coalesce(p_nome, '')), '') is not null then
+    if not p_legado and nullif(btrim(coalesce(p_nome, '')), '') is not null then
       raise exception 'nome de politica existente e definido pelo sistema';
     end if;
-    select * into v_policy
-      from public.prc_politicas
-     where id = p_politica_id;
-    if not found then
-      raise exception 'politica inexistente';
+    if not p_legado then
+      select * into v_policy
+        from public.prc_politicas
+       where id = v_effective_politica_id;
+      if not found then
+        raise exception 'politica inexistente';
+      end if;
     end if;
   end if;
 
@@ -179,8 +231,27 @@ begin
   return v_id;
 end $$;
 
--- Compatibility entrypoint for N-1 callers. $2 is intentionally ignored:
--- only v2 may issue the policy code and define policy identity.
+create or replace function public.salvar_prc_politica_versao_v2_idempotente(
+  p_key uuid,
+  p_politica_id bigint,
+  p_nome text,
+  p_metodo text,
+  p_lucro_minimo numeric,
+  p_markup numeric,
+  p_juros_mensais numeric,
+  p_motivo text
+)
+returns bigint
+language sql
+security definer
+set search_path=public
+as $$
+  select public.prc_salvar_politica_versao_core($1, $2, null::text, $3, $4, $5, $6, $7, $8, false)
+$$;
+
+-- N-1 uses p_codigo to select an existing policy only. For a new policy the
+-- supplied value is excluded from the persisted identity and the database
+-- issues the next POL-######## code.
 create or replace function public.salvar_prc_politica_versao_idempotente(
   p_key uuid,
   p_codigo text,
@@ -193,15 +264,17 @@ create or replace function public.salvar_prc_politica_versao_idempotente(
 )
 returns bigint
 language sql
-security invoker
+security definer
 set search_path=public
 as $$
-  select public.salvar_prc_politica_versao_v2_idempotente($1, null::bigint, $3, $4, $5, $6, $7, $8)
+  select public.prc_salvar_politica_versao_core($1, null::bigint, $2, $3, $4, $5, $6, $7, $8, true)
 $$;
 
+revoke all on function public.prc_salvar_politica_versao_core(uuid,bigint,text,text,text,numeric,numeric,numeric,text,boolean) from public, anon, authenticated;
 revoke all on function public.salvar_prc_politica_versao_v2_idempotente(uuid,bigint,text,text,numeric,numeric,numeric,text) from public, anon, authenticated;
 grant execute on function public.salvar_prc_politica_versao_v2_idempotente(uuid,bigint,text,text,numeric,numeric,numeric,text) to authenticated;
 revoke all on function public.salvar_prc_politica_versao_idempotente(uuid,text,text,text,numeric,numeric,numeric,text) from public, anon, authenticated;
 grant execute on function public.salvar_prc_politica_versao_idempotente(uuid,text,text,text,numeric,numeric,numeric,text) to authenticated;
+comment on function public.prc_salvar_politica_versao_core(uuid,bigint,text,text,text,numeric,numeric,numeric,text,boolean) is 'Private governed PRC policy write boundary shared by V2 and the N-1 compatibility wrapper.';
 comment on function public.salvar_prc_politica_versao_v2_idempotente(uuid,bigint,text,text,numeric,numeric,numeric,text) is 'Governed PRC policy creation/versioning. Policy codes are issued atomically by the database.';
-comment on function public.salvar_prc_politica_versao_idempotente(uuid,text,text,text,numeric,numeric,numeric,text) is 'N-1 compatibility wrapper. Client supplied policy codes are ignored.';
+comment on function public.salvar_prc_politica_versao_idempotente(uuid,text,text,text,numeric,numeric,numeric,text) is 'N-1 compatibility wrapper. Existing policy codes select the policy; new policy codes are ignored.';

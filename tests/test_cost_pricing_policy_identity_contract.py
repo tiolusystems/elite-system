@@ -53,7 +53,7 @@ class CostPricingPolicyIdentityContract(unittest.TestCase):
         self.assertEqual(result["name3"]["p_nome"], "ABC")
         self.assertEqual(result["name120"]["p_nome"], "A" * 120)
 
-    def test_database_issues_bounded_codes_and_keeps_a_safe_legacy_wrapper(self):
+    def test_database_issues_bounded_codes_and_keeps_a_semantic_legacy_wrapper(self):
         self.assertIn("create sequence if not exists public.prc_politica_codigo_seq", MIGRATION)
         self.assertIn("maxvalue 99999999", MIGRATION)
         self.assertIn("no cycle", MIGRATION)
@@ -63,17 +63,27 @@ class CostPricingPolicyIdentityContract(unittest.TestCase):
         self.assertIn("public.salvar_prc_politica_versao_v2_idempotente", MIGRATION)
         self.assertIn("p_politica_id bigint", MIGRATION)
         self.assertIn("p_codigo text", MIGRATION)
-        self.assertIn("$1, null::bigint, $3, $4, $5, $6, $7, $8", MIGRATION)
+        self.assertIn("public.prc_salvar_politica_versao_core", MIGRATION)
+        self.assertIn("where codigo = upper(btrim(p_codigo_legado))", MIGRATION)
+        self.assertIn("codigo de politica ja possui outro nome", MIGRATION)
+        self.assertIn("v_effective_politica_id := v_policy.id", MIGRATION)
+        self.assertIn("p_legado and v_request.payload_sha256 = public.prc_sha256(v_legacy_payload)", MIGRATION)
+        self.assertIn("$1, null::bigint, $2, $3, $4, $5, $6, $7, $8, true", MIGRATION)
+        self.assertIn("revoke all on function public.prc_salvar_politica_versao_core", MIGRATION)
+        self.assertEqual(MIGRATION.count("v_ctx := public.begin_audited_rpc("), 1)
         self.assertIn("revoke all on sequence public.prc_politica_codigo_seq from public, anon, authenticated", MIGRATION)
         self.assertIn("codigos automaticos repetidos", SMOKE)
         self.assertIn("codigo legado forjado controlou identidade", SMOKE)
+        self.assertIn("wrapper legado nao reutilizou a politica existente", SMOKE)
+        self.assertIn("nome legado divergente aceito", SMOKE)
+        self.assertIn("retry legado divergente aceito", SMOKE)
         self.assertIn("sobrecarga legada por codigo ausente", SMOKE)
         self.assertIn('call("salvar_prc_politica_versao_v2_idempotente"', ACTIONS)
         self.assertNotIn('call("salvar_prc_politica_versao_idempotente"', ACTIONS)
 
     def test_existing_policy_versioning_and_idempotency_stay_serialized(self):
         self.assertIn("perform public.prc_lock_idempotency_key(p_key)", MIGRATION)
-        self.assertLess(MIGRATION.index("perform public.prc_lock_idempotency_key(p_key)"), MIGRATION.index("v_existing := public.prc_idempotent_result"))
+        self.assertLess(MIGRATION.index("perform public.prc_lock_idempotency_key(p_key)"), MIGRATION.index("from public.prc_requisicoes"))
         self.assertIn("perform pg_advisory_xact_lock(hashtextextended('prc-policy:' || v_policy.id::text, 0))", MIGRATION)
         self.assertIn("insert into public.prc_requisicoes", MIGRATION)
         self.assertIn("nova versao nao reutilizou a politica existente", SMOKE)

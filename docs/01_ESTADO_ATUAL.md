@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-09-09
+Atualizado em: 2026-09-21
 
 ## Estado vigente em 2026-08-25
 
@@ -189,3 +189,18 @@ falha de forma controlada na exaustao. Nomes de politica usam o limite uniforme
 de 3 a 120 caracteres. O replay descartavel `0001 -> 0150`, o upgrade
 `0149 -> 0150`, incluindo retry legado trans-migration, o smoke PRC e as provas
 de concorrencia de codigo e versao passaram; staging nao foi alterado.
+
+### PRC-02B: fundacao do motor de formulas versionado
+
+A migration 0151 implementa, de forma aditiva, identidades `FML-########`,
+versoes append-only, catalogo de 14 parametros tipados, AST JSON fechada,
+avaliador `numeric`, grades versionadas e lifecycle segregado. A fronteira e o
+database da organizacao; nao existe identificador de tenant paralelo.
+
+O PRC-01 permanece a unica fonte oficial. O motor novo executa somente em
+shadow mode, sem alterar calculos, snapshots, exportacoes ou publicacao
+comercial. Aprovacao, ativacao, substituicao e retirada sao fatos separados e
+auditados; nao existe promocao automatica. O smoke PRC-02 prova os golden
+masters Elite, um perfil alternativo, limites da AST, unidades, idempotencia,
+default-deny e helpers privados. A proxima etapa e revisao do delta e evidencia
+de replay/upgrade; staging permanece inalterado.

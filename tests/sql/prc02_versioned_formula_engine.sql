@@ -2,7 +2,7 @@
 begin;
 
 -- Golden master Elite: 30,60,90,120,150,180,210,240,270,300,330,360,390,420,450,480,510,540.
--- The alternative profile uses 28,56,84 and is deliberately sem risco and sem recomposicao comercial.
+-- The alternative profile uses only five declared parameters and 28,56,84 days.
 
 insert into auth.users(id,email) values
   ('15100000-0000-4000-8000-000000000001','prc02-manager@test.invalid'),
@@ -63,6 +63,9 @@ create function pg_temp.values_margin() returns jsonb language sql immutable as 
     'premiacao_revenda','1','premio_producao','1','frete','1','comissao','0.10','risco','0.02',
     'marketing','0.05','tributacao','0.10','lucro_minimo','0.20','juros_mensais','0.01')
 $$;
+create function pg_temp.values_alt() returns jsonb language sql immutable as $$
+  select jsonb_build_object('materia_prima','10','embalagem','2','frete','1','markup','0.20','juros_mensais','0.01')
+$$;
 
 do $security$
 begin
@@ -107,10 +110,14 @@ declare
   v_markup bigint;
   v_alt bigint;
   v_alt_shadow bigint;
+  v_alt_shadow_second bigint;
+  v_alt_result jsonb;
+  v_alt_sha text;
   v_rejected bigint;
   v_formula_id bigint;
   v_review bigint;
   v_shadow bigint;
+  v_margin_shadow bigint;
   v_shadow_retry bigint;
   v_result jsonb;
   v_cash numeric;
@@ -118,7 +125,9 @@ declare
   v_code1 text;
   v_code2 text;
   v_count bigint;
+  v_n integer;
   v_failed boolean;
+  v_hash_error text;
   v_margin_key uuid := '15100000-0000-4000-8000-000000000101';
   v_shadow_key uuid := '15100000-0000-4000-8000-000000000201';
   v_margin_params text[] := array['materia_prima','embalagem','custo_pontuacao_vendedor','custo_pontuacao_revenda','premiacao_revenda','premio_producao','frete','comissao','risco','marketing','tributacao','lucro_minimo','juros_mensais'];
@@ -171,6 +180,21 @@ begin
 
   perform set_config('request.jwt.claim.sub','15100000-0000-4000-8000-000000000002',true);
   perform public.alterar_prc_formula_lifecycle_idempotente('15100000-0000-4000-8000-000000000121',v_margin,'ACTIVE','Ativacao explicita do golden master Elite');
+  perform set_config('request.jwt.claim.sub','15100000-0000-4000-8000-000000000001',true);
+  v_margin_shadow:=public.executar_prc_formula_shadow_idempotente('15100000-0000-4000-8000-000000000204',v_margin,pg_temp.values_margin(),null,'Golden master margem com dezoito prazos');
+  select resultado_json into v_result from public.prc_formula_shadow_execucoes where id=v_margin_shadow;
+  v_cash:=17/(1-0.10-0.10-0.05-0.20);
+  if (v_result#>>'{cash,exact}')::numeric<>v_cash or jsonb_array_length(v_result->'terms')<>18 then
+    raise exception 'golden master Elite margem divergente';
+  end if;
+  for v_n in 1..18 loop
+    v_expected:=v_cash+v_cash*(((power(1.01::numeric,v_n)-1)+0.02)/(1-0.10-0.10-0.05));
+    if (v_result->'terms'->(v_n-1)->>'exact')::numeric<>v_expected
+       or (v_result->'terms'->(v_n-1)->>'days')::integer<>v_n*30 then
+      raise exception 'golden master margem prazo % divergente: got %, expected %',v_n,v_result->'terms'->(v_n-1)->>'exact',v_expected;
+    end if;
+  end loop;
+  perform set_config('request.jwt.claim.sub','15100000-0000-4000-8000-000000000002',true);
   perform public.alterar_prc_formula_lifecycle_idempotente('15100000-0000-4000-8000-000000000122',v_margin_v2,'ACTIVE','Ativacao atomica da segunda versao Elite');
   if precificacao_internal.prc_formula_estado_atual(v_margin)<>'SUPERSEDED' or precificacao_internal.prc_formula_estado_atual(v_margin_v2)<>'ACTIVE' then raise exception 'supersessao atomica falhou'; end if;
   perform public.alterar_prc_formula_lifecycle_idempotente('15100000-0000-4000-8000-000000000123',v_margin_v2,'WITHDRAWN','Retirada explicita da segunda versao Elite');
@@ -192,37 +216,73 @@ begin
   v_shadow_retry:=public.executar_prc_formula_shadow_idempotente(v_shadow_key,v_markup,pg_temp.values_margin()-'lucro_minimo'||jsonb_build_object('markup','0.20'),null,'Golden master Elite em shadow mode');
   if v_shadow<>v_shadow_retry then raise exception 'shadow retry nao foi idempotente'; end if;
   select resultado_json into v_result from public.prc_formula_shadow_execucoes where id=v_shadow;
+  if v_result->>'formula_sha256' is distinct from (select documento_sha256 from public.prc_formula_versoes where id=v_markup)
+     or v_result->>'term_grid_sha256' is distinct from (select documento_sha256 from public.prc_grade_prazo_versoes where id=v_grid)
+     or (v_result->>'term_grid_version_id')::bigint is distinct from v_grid then raise exception 'proveniencia de hashes Elite ausente'; end if;
   v_cash:=(v_result#>>'{cash,exact}')::numeric;
   v_expected:=17*1.20/(1-0.10-0.10-0.05);
   if v_cash<>v_expected or jsonb_array_length(v_result->'terms')<>18 then raise exception 'golden master Elite markup divergente'; end if;
-  if (v_result#>>'{terms,0,exact}')::numeric <> v_cash + v_cash*((power(1.01::numeric,1)-1)+0.02)/(1-0.10-0.10-0.05) then raise exception 'golden master Elite prazo divergente'; end if;
+  for v_n in 1..18 loop
+    v_expected:=v_cash+v_cash*(((power(1.01::numeric,v_n)-1)+0.02)/(1-0.10-0.10-0.05));
+    if (v_result->'terms'->(v_n-1)->>'exact')::numeric<>v_expected
+       or (v_result->'terms'->(v_n-1)->>'days')::integer<>v_n*30 then
+      raise exception 'golden master markup prazo % divergente',v_n;
+    end if;
+  end loop;
 
   v_alt_grid:=public.salvar_prc_grade_prazo_versao_idempotente('15100000-0000-4000-8000-000000000012',null,'Grade alternativa 28 dias',jsonb_build_array(jsonb_build_object('ordem',1,'prazo_dias',28,'fator_periodo','1'),jsonb_build_object('ordem',2,'prazo_dias',56,'fator_periodo','2'),jsonb_build_object('ordem',3,'prazo_dias',84,'fator_periodo','3')),'Perfil alternativo com tres prazos');
-  v_alt:=public.salvar_prc_formula_versao_idempotente('15100000-0000-4000-8000-000000000105',null,'Perfil alternativo sem risco',pg_temp.ast(pg_temp.o('div',pg_temp.cost_base(),pg_temp.o('sub',pg_temp.c('1','FRACTION'),pg_temp.p('lucro_minimo')))),pg_temp.ast(pg_temp.o('mul',pg_temp.v('cash_price'),pg_temp.o('pow',pg_temp.o('add',pg_temp.c('1','FRACTION'),pg_temp.p('juros_mensais')),pg_temp.v('term_period')))),array['materia_prima','embalagem','custo_pontuacao_vendedor','custo_pontuacao_revenda','premiacao_revenda','premio_producao','frete','lucro_minimo','juros_mensais'],v_alt_grid,2,'Perfil alternativo declarativo sem risco');
+  v_alt:=public.salvar_prc_formula_versao_idempotente('15100000-0000-4000-8000-000000000105',null,'Perfil alternativo sem risco',
+    pg_temp.ast(pg_temp.o('mul',pg_temp.o('add',pg_temp.o('add',pg_temp.p('materia_prima'),pg_temp.p('embalagem')),pg_temp.p('frete')),pg_temp.o('add',pg_temp.c('1','FRACTION'),pg_temp.p('markup')))),
+    pg_temp.ast(pg_temp.o('mul',pg_temp.v('cash_price'),pg_temp.o('pow',pg_temp.o('add',pg_temp.c('1','FRACTION'),pg_temp.p('juros_mensais')),pg_temp.v('term_period')))),
+    array['materia_prima','embalagem','frete','markup','juros_mensais'],v_alt_grid,2,'Perfil alternativo declarativo sem risco');
+  if (select documento_json->>'term_grid_sha256' from public.prc_formula_versoes where id=v_alt)
+     is distinct from (select documento_sha256 from public.prc_grade_prazo_versoes where id=v_alt_grid) then raise exception 'hash de grade ausente na formula'; end if;
   perform set_config('request.jwt.claim.sub','15100000-0000-4000-8000-000000000002',true);
   perform public.revisar_prc_formula_versao_idempotente('15100000-0000-4000-8000-000000000115',v_alt,'APPROVED','Revisao segregada do perfil alternativo');
   perform public.alterar_prc_formula_lifecycle_idempotente('15100000-0000-4000-8000-000000000125',v_alt,'ACTIVE','Ativacao explicita do perfil alternativo');
   perform set_config('request.jwt.claim.sub','15100000-0000-4000-8000-000000000001',true);
-  v_alt_shadow:=public.executar_prc_formula_shadow_idempotente('15100000-0000-4000-8000-000000000202',v_alt,pg_temp.values_margin()-array['comissao','risco','marketing','tributacao'],null,'Perfil alternativo avaliado sem risco comercial');
+  v_alt_shadow:=public.executar_prc_formula_shadow_idempotente('15100000-0000-4000-8000-000000000202',v_alt,pg_temp.values_alt(),null,'Perfil alternativo avaliado sem risco comercial');
   select resultado_json into v_result from public.prc_formula_shadow_execucoes where id=v_alt_shadow;
   if jsonb_array_length(v_result->'terms')<>3
-     or (v_result#>>'{cash,exact}')::numeric<>17/(1-0.20)
-     or (v_result#>>'{terms,0,exact}')::numeric<>(17/(1-0.20))*power(1.01::numeric,1) then
+     or (v_result#>>'{cash,exact}')::numeric<>(10+2+1)*(1+0.20)
+     or (v_result#>>'{terms,0,exact}')::numeric<>15.6*power(1.01::numeric,1)
+     or (v_result#>>'{terms,1,exact}')::numeric<>15.6*power(1.01::numeric,2)
+     or (v_result#>>'{terms,2,exact}')::numeric<>15.6*power(1.01::numeric,3)
+     or v_result->>'term_grid_sha256' is distinct from (select documento_sha256 from public.prc_grade_prazo_versoes where id=v_alt_grid)
+     or v_result->>'formula_sha256' is distinct from (select documento_sha256 from public.prc_formula_versoes where id=v_alt) then
     raise exception 'perfil alternativo divergente';
   end if;
-
+  v_alt_shadow_second:=public.executar_prc_formula_shadow_idempotente('15100000-0000-4000-8000-000000000203',v_alt,pg_temp.values_alt(),null,'Perfil alternativo avaliado sem risco comercial');
+  select resultado_json,resultado_sha256 into v_alt_result,v_alt_sha from public.prc_formula_shadow_execucoes where id=v_alt_shadow_second;
+  if v_alt_shadow=v_alt_shadow_second or v_alt_result is distinct from v_result
+     or v_alt_sha is distinct from (select resultado_sha256 from public.prc_formula_shadow_execucoes where id=v_alt_shadow) then
+    raise exception 'execucoes com chaves distintas nao foram deterministicas';
+  end if;
   v_failed:=false;
-  begin perform public.executar_prc_formula_shadow_idempotente(gen_random_uuid(),v_alt,pg_temp.values_margin()-array['comissao','risco','marketing','tributacao']||jsonb_build_object('lucro_minimo','1'),null,'Divisao por zero deve falhar fechado');
-  exception when others then v_failed:=position('divisao por zero' in sqlerrm)>0; end;
-  if not v_failed then raise exception 'divisao por zero nao falhou fechado'; end if;
+  begin perform public.executar_prc_formula_shadow_idempotente(gen_random_uuid(),v_alt,pg_temp.values_alt()||jsonb_build_object('risco','0.02'),null,'Parametro extra deve falhar fechado');
+  exception when others then v_failed:=position('exatamente' in sqlerrm)>0; end;
+  if not v_failed then raise exception 'valor extra foi aceito'; end if;
+  v_failed:=false;
+  begin perform public.executar_prc_formula_shadow_idempotente(gen_random_uuid(),v_alt,pg_temp.values_alt()-'frete',null,'Parametro ausente deve falhar fechado');
+  exception when others then v_failed:=position('exatamente' in sqlerrm)>0; end;
+  if not v_failed then raise exception 'valor ausente foi aceito'; end if;
+  v_failed:=false;
+  begin
+    alter table public.prc_grade_prazo_versoes disable trigger trg_prc_grade_prazo_versoes_append_only;
+    update public.prc_grade_prazo_versoes set documento_sha256=repeat('0',64) where id=v_alt_grid;
+    alter table public.prc_grade_prazo_versoes enable trigger trg_prc_grade_prazo_versoes_append_only;
+    perform public.executar_prc_formula_shadow_idempotente(gen_random_uuid(),v_alt,pg_temp.values_alt(),null,'Grade adulterada deve falhar fechado');
+  exception when others then v_hash_error:=sqlerrm; v_failed:=position('hash da grade divergente' in sqlerrm)>0; end;
+  if not v_failed then raise exception 'hash de grade divergente foi aceito: %',v_hash_error; end if;
+  v_failed:=false;
+  begin
+    alter table public.prc_formula_versoes disable trigger trg_prc_formula_versoes_append_only;
+    update public.prc_formula_versoes set documento_sha256=repeat('0',64) where id=v_alt;
+    alter table public.prc_formula_versoes enable trigger trg_prc_formula_versoes_append_only;
+    perform public.executar_prc_formula_shadow_idempotente(gen_random_uuid(),v_alt,pg_temp.values_alt(),null,'Formula adulterada deve falhar fechado');
+  exception when others then v_failed:=position('hash ou documento da formula divergente' in sqlerrm)>0; end;
+  if not v_failed then raise exception 'hash de formula divergente foi aceito'; end if;
 end $engine$;
-
--- The previous block intentionally reaches every governance gate before rollback.
--- Correct a typo guard in the alternative parameter list by requiring the catalog name.
--- This assertion remains outside the write path and documents the canonical token.
-do $$ begin
-  if not exists(select 1 from public.prc_formula_parametros where codigo='custo_pontuacao_vendedor') then raise exception 'catalogo canonico incompleto'; end if;
-end $$;
 
 reset role;
 

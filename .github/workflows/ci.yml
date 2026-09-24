@@ -176,10 +176,32 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_versioned_formula_engine.sql
-      - name: Verify PRC-02 0150 to 0151 upgrade contract
+      - name: Run PRC-02 AST safety smoke
         env:
           PGPASSWORD: postgres
-        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_versioned_formula_engine_upgrade.sql
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_ast_safety.sql
+      - name: Prove concurrent FML issuance in two sessions
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          db=(psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1)
+          "${db[@]}" -f tests/sql/prc02_formula_concurrency_setup.sql
+          "${db[@]}" -v worker=one -v request_key=15120000-0000-4000-8000-000000000021 -v formula_name='Formula concorrente um' -f tests/sql/prc02_formula_concurrency_worker.sql &
+          first=$!
+          "${db[@]}" -v worker=two -v request_key=15120000-0000-4000-8000-000000000022 -v formula_name='Formula concorrente dois' -f tests/sql/prc02_formula_concurrency_worker.sql &
+          second=$!
+          overlap=0
+          for attempt in {1..30}; do
+            active="$("${db[@]}" -Atc "select count(*) from pg_stat_activity where application_name='prc02_fml_concurrency' and state='active'")"
+            if (( active >= 2 )); then overlap=1; break; fi
+            sleep 0.1
+          done
+          wait "$first"
+          wait "$second"
+          test "$overlap" -eq 1
+          "${db[@]}" -f tests/sql/prc02_formula_concurrency_assert.sql
       - name: Run approved PRC snapshot export smoke
         env:
           PGPASSWORD: postgres
@@ -324,6 +346,27 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/iam01_fail_closed_navigation_password.sql
+      - name: Verify PRC-02 0150 to 0151 upgrade with PRC-01 facts
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          pending_dir="$RUNNER_TEMP/prc02-migration-0151"
+          mkdir -p "$pending_dir"
+          restore_migration() {
+            if test -f "$pending_dir/0151_prc02_versioned_formula_engine.sql"; then
+              mv "$pending_dir/0151_prc02_versioned_formula_engine.sql" supabase/migrations/
+            fi
+          }
+          trap restore_migration EXIT
+          mv supabase/migrations/0151_prc02_versioned_formula_engine.sql "$pending_dir/"
+          supabase db reset --local
+          psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_upgrade_before_0151.sql
+          restore_migration
+          supabase migration up --local
+          psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_versioned_formula_engine_upgrade.sql
+          trap - EXIT
       - name: Run commercial pricing units upgrade smoke
         shell: bash
         env:

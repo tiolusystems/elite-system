@@ -16,16 +16,16 @@ texto arbitrario fornecido pelo usuario.
 
 ## Decisao
 
-O dominio `precificacao` tera, em uma migration futura e aditiva, um motor
+O dominio `precificacao` possui, na migration aditiva 0151, um motor
 deterministico baseado em AST JSON declarativa. A definicao matematica, o
 catalogo semantico dos parametros, os valores usados em cada execucao e a grade
-de prazos serao fatos distintos e versionados.
+de prazos sao fatos distintos e versionados.
 
 O PRC-01 continua oficial. O motor novo nasce em shadow mode e apenas compara
 seus resultados com os calculos atuais. Nenhuma RPC, snapshot, exportacao ou
 tabela existente muda de significado nesta fase.
 
-## Modelo de dominio proposto
+## Modelo de dominio implementado
 
 | Entidade | Responsabilidade |
 |---|---|
@@ -41,8 +41,7 @@ tabela existente muda de significado nesta fase.
 | `prc_formula_shadow_execucoes` | avaliacao append-only do motor novo sem efeito oficial |
 | `prc_formula_promocao_evidencias` | fundacao para evidencia humana futura, sem promocao automatica |
 
-Os nomes sao o contrato proposto para a futura migration. A implementacao deve
-seguir os prefixos `prc_*`, a auditoria e o default-deny ja usados pelo dominio.
+As entidades seguem os prefixos `prc_*`, a auditoria e o default-deny do dominio.
 
 ## Identidade, versao e estado
 
@@ -52,10 +51,11 @@ seguir os prefixos `prc_*`, a auditoria e o default-deny ja usados pelo dominio.
 - cada versao registra autor, motivo, instante, documento canonico e SHA-256;
 - aprovacao exige ator diferente do autor;
 - revisao usa `PENDING`, `APPROVED` e `REJECTED`;
-- lifecycle operacional usa `ACTIVE`, `SUPERSEDED` e `WITHDRAWN`;
+- lifecycle do motor shadow usa `ACTIVE`, `SUPERSEDED` e `WITHDRAWN`;
 - somente versoes aprovadas podem ser ativadas e avaliadas em shadow mode;
 - ativar uma nova versao substitui atomicamente a versao ativa anterior;
 - versoes retiradas ou substituidas sao historicas e nao podem ser reativadas;
+- `ACTIVE` nao promove a formula ao calculo oficial; PRC-01 continua oficial;
 - uma execucao congela os IDs e hashes exatos da formula e da grade usadas.
 
 ## Separacao semantica
@@ -118,7 +118,10 @@ Exemplo reduzido:
 
 Chaves desconhecidas, operador desconhecido, no sem tipo, profundidade ou
 quantidade acima do limite e referencia nao declarada invalidam o documento.
-Os limites iniciais propostos sao 32 niveis e 512 nos por AST.
+Os limites implementados sao 32 niveis e 512 nos por AST.
+Cada token decimal canonico tem no maximo 64 caracteres e `pow` aceita
+expoente de magnitude ate 32. Exceder esses limites falha fechado antes do
+calculo, sem alterar os perfis Elite nem o exemplo alternativo.
 
 ## Tipos e unidades
 
@@ -181,7 +184,7 @@ equivalentes a:
 
 O primeiro JSON e a AST, o segundo e o contrato ou os valores tipados e o
 terceiro, quando aplicavel, contem somente as variaveis de prazo. As funcoes nao
-serao executaveis por `PUBLIC`, `anon` ou `authenticated`.
+sao executaveis por `PUBLIC`, `anon` ou `authenticated`.
 
 Antes da aprovacao, a validacao comprova estrutura, operadores, referencias,
 tipos, unidades, resultado e limites de complexidade. Na avaliacao, o motor
@@ -191,17 +194,20 @@ SQL dinamico nem chamada de funcao indicada pelo documento.
 ## Documento canonico e hash
 
 O documento `prc-formula-v1` contem identidade e versao, ASTs, contrato de
-parametros, grade exata, arredondamento, escala e versao do avaliador. Decimais
-sao strings normalizadas; arrays preservam ordem semantica; objetos sao `jsonb`.
+parametros, `term_grid_version_id` e `term_grid_sha256`, arredondamento, escala
+e versao do avaliador. Na execucao, os hashes persistidos da formula e da grade
+sao revalidados antes de produzir resultado; o documento shadow inclui os dois
+IDs e os dois hashes. Decimais sao strings normalizadas; arrays preservam
+ordem semantica; objetos sao `jsonb`.
 O SHA-256 usa o helper canonico do PRC sobre esse documento completo.
 
-Uma execucao congela tambem valores tipados, resultados exatos, resultados
-arredondados, ator e instante. Alterar uma formula futura nao altera esse
-snapshot nem qualquer exportacao historica.
+Uma execucao persiste valores tipados, resultados exatos e comerciais, ator e
+instante em fato append-only. Alterar uma formula futura nao altera esse fato
+nem qualquer exportacao historica do PRC-01.
 
 ## Golden master Elite
 
-O golden master sera composto por dois perfis aprovados, ambos com a grade Elite:
+O golden master usa dois perfis aprovados, ambos com a grade Elite:
 
 1. `elite_margem_liquida_v1`:
    `custo_base / (1 - comissao - tributacao - marketing - lucro_minimo)`.
@@ -229,13 +235,14 @@ por ponto flutuante.
 O mesmo avaliador deve aceitar outro perfil, sem mudanca de codigo:
 
 ```text
-formula_vista = custo_base / (1 - margem)
+formula_vista = (materia_prima + embalagem + frete) * (1 + markup)
 formula_prazo = cash_price * ((1 + juros_mensais) ^ term_period)
-grade = 28, 56, 84 dias
+parametros = materia_prima, embalagem, frete, markup, juros_mensais
+grade = 28, 56, 84 dias; fatores = 1, 2, 3
 ```
 
-Esse perfil nao declara risco, comissao, tributacao ou marketing na formula a
-prazo. Esses parametros nao sao exigidos na sua avaliacao.
+Esse perfil declara exatamente esses cinco parametros. Nao requer lucro_minimo,
+comissao, tributacao, marketing, risco, pontuacoes ou premiacoes.
 
 ## Aprovacao e auditoria
 
@@ -248,19 +255,19 @@ por superficie governada; tabelas e helpers privados permanecem sem grants para
 ## Compatibilidade e strangler
 
 - `prc_politicas`, calculos, snapshots, RPCs e exportacoes atuais permanecem;
-- a futura migration nao altera a semantica de `prc-calculation-v2`;
+- a migration 0151 nao altera a semantica de `prc-calculation-v2`;
 - a RPC atual continua produzindo o resultado oficial;
-- o motor novo recebe uma copia congelada das mesmas entradas e grava somente
-  comparacao shadow;
+- o motor novo recebe valores explicitos de entrada e grava somente resultado
+  shadow, sem alterar fatos oficiais;
 - divergencia shadow nao muda preco, decisao ou publicacao comercial;
 - a troca do motor oficial exige gate separado e decisao humana explicita.
 
 ## Shadow mode
 
-Cada execucao shadow referencia o calculo oficial, a versao da formula, a
-versao da grade e os hashes de entrada e saida. O registro inclui diferencas por
-intermediario, preco a vista e prazo. Erro no motor novo fica observavel, mas nao
-transforma seu resultado em fato oficial.
+Cada execucao shadow pode referenciar o calculo oficial e registra IDs e hashes
+da formula e da grade, hash de entrada, preco a vista, prazos e hash do resultado.
+A comparacao com o calculo oficial e um gate posterior; a 0151 nao grava um
+relatorio de diferencas. Erro no motor novo nao transforma seu resultado em fato oficial.
 
 O gate de paridade exige golden master Elite, perfil alternativo, repetibilidade,
 isolamento entre empresas, seguranca da AST, unidades, concorrencia,

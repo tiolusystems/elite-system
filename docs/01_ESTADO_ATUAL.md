@@ -199,8 +199,14 @@ database da organizacao; nao existe identificador de tenant paralelo.
 
 O PRC-01 permanece a unica fonte oficial. O motor novo executa somente em
 shadow mode, sem alterar calculos, snapshots, exportacoes ou publicacao
-comercial. Aprovacao, ativacao, substituicao e retirada sao fatos separados e
-auditados; nao existe promocao automatica. O smoke PRC-02 prova os golden
-masters Elite, um perfil alternativo, limites da AST, unidades, idempotencia,
-default-deny e helpers privados. A proxima etapa e revisao do delta e evidencia
-de replay/upgrade; staging permanece inalterado.
+comercial. `ACTIVE` ativa apenas o motor shadow. Aprovacao, substituicao e
+retirada sao fatos separados e auditados; nao existe promocao automatica.
+A formula congela ID e SHA-256 da grade; a execucao revalida os hashes da
+formula e da grade. O smoke cobre golden masters Elite e o perfil alternativo
+de cinco parametros, limites numericos e da AST, determinismo, default-deny e
+helpers privados. No runtime descartavel, replay 0001-0151, upgrade real
+0150-0151 com fatos PRC-01 previos, concorrencia FML em duas sessoes e
+regressoes PRC-01 passaram. O Python completo passou (915 testes, 1 skip).
+O lint local de banco retornou apenas diagnosticos historicos fora do PRC-02,
+mas terminou com erro de telemetria; nao foi classificado como PASS.
+Staging permanece inalterado.

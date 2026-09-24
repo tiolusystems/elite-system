@@ -9,6 +9,9 @@ MIGRATIONS = "\n".join(
     for path in sorted((ROOT / "supabase/migrations").glob("*.sql"))
 )
 RUNTIME_SMOKE = ROOT / "tests/sql/prc02_versioned_formula_engine.sql"
+AST_SMOKE = ROOT / "tests/sql/prc02_ast_safety.sql"
+UPGRADE_BEFORE = ROOT / "tests/sql/prc02_upgrade_before_0151.sql"
+UPGRADE_AFTER = ROOT / "tests/sql/prc02_versioned_formula_engine_upgrade.sql"
 CI = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8").lower()
 
 
@@ -149,7 +152,36 @@ class Prc02VersionedFormulaEngineContract(unittest.TestCase):
 
     def test_runtime_smoke_is_mandatory_in_database_contract(self):
         self.assertIn("tests/sql/prc02_versioned_formula_engine.sql", CI)
+        self.assertIn("tests/sql/prc02_ast_safety.sql", CI)
+        self.assertIn("tests/sql/prc02_formula_concurrency_worker.sql", CI)
+        self.assertIn("tests/sql/prc02_upgrade_before_0151.sql", CI)
         self.assertIn("tests/sql/prc02_versioned_formula_engine_upgrade.sql", CI)
+
+    def test_formula_and_shadow_bind_verified_grid_hash(self):
+        migration = self.migration()
+        self.assertIn("precificacao_internal.prc_grade_sha256", migration)
+        self.assertIn("'term_grid_sha256',v_grid_sha", migration)
+        self.assertIn("v_version.documento_sha256 is distinct from public.prc_sha256", migration)
+
+    def test_alternative_profile_has_exactly_five_inputs(self):
+        smoke = self.runtime_smoke()
+        self.assertIn("array['materia_prima','embalagem','frete','markup','juros_mensais']", smoke)
+        self.assertIn("pg_temp.values_alt()", smoke)
+        self.assertIn("(10+2+1)*(1+0.20)", smoke)
+
+    def test_behavioral_safety_and_real_upgrade_are_registered(self):
+        safety = AST_SMOKE.read_text(encoding="utf-8").lower()
+        for case in (
+            "unknown operator", "unknown kind", "unexpected key", "depth 33",
+            "513+ nodes", "missing parameter", "incompatible unit", "division by zero",
+            "negative fractional power", "zero to zero", "power exponent cap", "decimal token cap",
+        ):
+            self.assertIn(case, safety)
+        before = UPGRADE_BEFORE.read_text(encoding="utf-8").lower()
+        after = UPGRADE_AFTER.read_text(encoding="utf-8").lower()
+        self.assertIn("public.calcular_prc_cenario_idempotente", before)
+        self.assertIn("public.prc02_upgrade_probe", after)
+        self.assertIn("result_sha256", after)
 
 
 if __name__ == "__main__":

@@ -192,6 +192,7 @@ begin
     raise exception 'decimal deve ser string canonica';
   end if;
   v_text := p_value #>> '{}';
+  if length(v_text) > 64 then raise exception 'decimal excede tamanho maximo'; end if;
   if v_text !~ '^-?(0|[1-9][0-9]*)(\.[0-9]+)?$' then
     raise exception 'decimal canonico invalido';
   end if;
@@ -362,6 +363,7 @@ begin
     if v_right = 0 then raise exception 'divisao por zero'; end if;
     v_result := v_left / v_right;
   elsif v_op = 'pow' then
+    if abs(v_right) > 32 then raise exception 'expoente excede limite'; end if;
     if (v_left = 0 and v_right <= 0) or (v_left < 0 and v_right <> trunc(v_right)) then
       raise exception 'potencia fora do dominio numerico';
     end if;
@@ -407,6 +409,38 @@ as $$
    order by id desc
    limit 1
 $$;
+
+create or replace function precificacao_internal.prc_grade_sha256(p_grade_versao_id bigint)
+returns text language plpgsql stable set search_path=pg_catalog,public as $$
+declare
+  v_grade public.prc_grade_prazo_versoes%rowtype;
+  v_item jsonb;
+  v_count integer;
+begin
+  select * into v_grade from public.prc_grade_prazo_versoes where id=p_grade_versao_id;
+  if not found then raise exception 'grade inexistente'; end if;
+  if v_grade.documento_sha256 is distinct from public.prc_sha256(v_grade.documento_json) then
+    raise exception 'hash da grade divergente';
+  end if;
+  if v_grade.documento_json->>'schema' is distinct from 'prc-term-grid-v1'
+     or (v_grade.documento_json->>'grade_id')::bigint is distinct from v_grade.grade_id
+     or (v_grade.documento_json->>'versao')::integer is distinct from v_grade.versao
+     or jsonb_typeof(v_grade.documento_json->'items') is distinct from 'array' then
+    raise exception 'documento da grade divergente';
+  end if;
+  select count(*) into v_count from public.prc_grade_prazo_itens where grade_versao_id=p_grade_versao_id;
+  if v_count<>jsonb_array_length(v_grade.documento_json->'items') then raise exception 'itens da grade divergentes'; end if;
+  for v_item in select value from jsonb_array_elements(v_grade.documento_json->'items') loop
+    if not exists (
+      select 1 from public.prc_grade_prazo_itens i
+       where i.grade_versao_id=p_grade_versao_id
+         and i.ordem=(v_item->>'ordem')::integer
+         and i.prazo_dias=(v_item->>'prazo_dias')::integer
+         and i.fator_periodo=(v_item->>'fator_periodo')::numeric
+    ) then raise exception 'itens da grade divergentes'; end if;
+  end loop;
+  return v_grade.documento_sha256;
+end $$;
 
 create or replace function public.salvar_prc_grade_prazo_versao_idempotente(
   p_key uuid,
@@ -505,6 +539,7 @@ declare
   v_refs text[];
   v_params text[];
   v_doc jsonb;
+  v_grid_sha text;
   v_id bigint;
 begin
   v_ctx := public.begin_audited_rpc('precificacao.formula.manage','precificacao','prc_formula_versoes','change_type',jsonb_build_object('correlation_id',p_key::text));
@@ -516,7 +551,7 @@ begin
   if v_existing is not null then return v_existing; end if;
   if cardinality(v_params) < 1 or cardinality(v_params) > 64 then raise exception 'contrato de parametros invalido'; end if;
   if p_casas_decimais not between 0 and 8 or length(btrim(coalesce(p_motivo,''))) < 10 then raise exception 'configuracao de formula invalida'; end if;
-  if not exists(select 1 from public.prc_grade_prazo_versoes where id=p_grade_versao_id) then raise exception 'grade inexistente'; end if;
+  v_grid_sha := precificacao_internal.prc_grade_sha256(p_grade_versao_id);
   select jsonb_object_agg(p.codigo,p.unit_code order by p.codigo) into v_contract
     from public.prc_formula_parametros p where p.codigo=any(v_params);
   if (select count(*) from jsonb_object_keys(coalesce(v_contract,'{}'::jsonb))) <> cardinality(v_params) then raise exception 'parametro de formula inexistente'; end if;
@@ -547,7 +582,7 @@ begin
   end if;
   perform pg_advisory_xact_lock(hashtextextended('prc-formula:'||v_formula.id::text,0));
   select coalesce(max(versao),0)+1 into v_versao from public.prc_formula_versoes where formula_id=v_formula.id;
-  v_doc:=jsonb_build_object('schema','prc-formula-v1','evaluator','prc-formula-ast-v1','formula_id',v_formula.id,'codigo',v_formula.codigo,'nome',v_formula.nome,'versao',v_versao,'parameters',v_contract,'cash_formula',p_formula_vista_ast,'term_formula',p_formula_prazo_ast,'term_grid_version_id',p_grade_versao_id,'rounding','HALF_UP','decimal_places',p_casas_decimais);
+  v_doc:=jsonb_build_object('schema','prc-formula-v1','evaluator','prc-formula-ast-v1','formula_id',v_formula.id,'codigo',v_formula.codigo,'nome',v_formula.nome,'versao',v_versao,'parameters',v_contract,'cash_formula',p_formula_vista_ast,'term_formula',p_formula_prazo_ast,'term_grid_version_id',p_grade_versao_id,'term_grid_sha256',v_grid_sha,'rounding','HALF_UP','decimal_places',p_casas_decimais);
   insert into public.prc_formula_versoes(formula_id,versao,grade_versao_id,formula_vista_ast,formula_prazo_ast,arredondamento,casas_decimais,avaliador_versao,documento_json,documento_sha256,motivo,created_by)
   values(v_formula.id,v_versao,p_grade_versao_id,p_formula_vista_ast,p_formula_prazo_ast,'HALF_UP',p_casas_decimais,'prc-formula-ast-v1',v_doc,public.prc_sha256(v_doc),btrim(p_motivo),v_actor) returning id into v_id;
   insert into public.prc_formula_versao_parametros(formula_versao_id,parametro_id,ordem)
@@ -599,12 +634,21 @@ end $$;
 
 create or replace function public.executar_prc_formula_shadow_idempotente(p_key uuid,p_formula_versao_id bigint,p_valores jsonb,p_official_calculo_id bigint,p_motivo text)
 returns bigint language plpgsql security definer set search_path=public as $$
-declare v_ctx jsonb; v_actor uuid; v_payload jsonb; v_existing bigint; v_version public.prc_formula_versoes%rowtype; v_contract jsonb; v_expected text[]; v_actual text[]; v_cash numeric; v_terms jsonb:='[]'::jsonb; v_item public.prc_grade_prazo_itens%rowtype; v_term numeric; v_result jsonb; v_id bigint;
+declare v_ctx jsonb; v_actor uuid; v_payload jsonb; v_existing bigint; v_version public.prc_formula_versoes%rowtype; v_grid_sha text; v_contract jsonb; v_expected text[]; v_actual text[]; v_cash numeric; v_terms jsonb:='[]'::jsonb; v_item public.prc_grade_prazo_itens%rowtype; v_term numeric; v_result jsonb; v_id bigint;
 begin
   v_ctx:=public.begin_audited_rpc('precificacao.formula.manage','precificacao','prc_formula_shadow_execucoes','field_risk',jsonb_build_object('correlation_id',p_key::text)); v_actor:=public.current_actor_id();
-  v_payload:=jsonb_build_object('formula_versao_id',p_formula_versao_id,'valores',p_valores,'official_calculo_id',p_official_calculo_id,'motivo',btrim(p_motivo)); perform public.prc_lock_idempotency_key(p_key); v_existing:=public.prc_idempotent_result(p_key,'formula_shadow',v_payload); if v_existing is not null then return v_existing; end if;
+  v_payload:=jsonb_build_object('formula_versao_id',p_formula_versao_id,'valores',p_valores,'official_calculo_id',p_official_calculo_id,'motivo',btrim(p_motivo)); perform public.prc_lock_idempotency_key(p_key); v_existing:=public.prc_idempotent_result(p_key,'formula_shadow',v_payload);
   if jsonb_typeof(p_valores)<>'object' or length(btrim(coalesce(p_motivo,'')))<10 then raise exception 'entrada shadow invalida'; end if;
   select * into v_version from public.prc_formula_versoes where id=p_formula_versao_id; if not found then raise exception 'versao de formula inexistente'; end if;
+  v_grid_sha:=precificacao_internal.prc_grade_sha256(v_version.grade_versao_id);
+  if v_version.documento_sha256 is distinct from public.prc_sha256(v_version.documento_json)
+     or (v_version.documento_json->>'term_grid_version_id')::bigint is distinct from v_version.grade_versao_id
+     or v_version.documento_json->>'term_grid_sha256' is distinct from v_grid_sha
+     or v_version.documento_json->'cash_formula' is distinct from v_version.formula_vista_ast
+     or v_version.documento_json->'term_formula' is distinct from v_version.formula_prazo_ast then
+    raise exception 'hash ou documento da formula divergente';
+  end if;
+  if v_existing is not null then return v_existing; end if;
   if precificacao_internal.prc_formula_estado_atual(p_formula_versao_id)<>'ACTIVE' then raise exception 'somente formula ativa pode executar shadow'; end if;
   select jsonb_object_agg(p.codigo,p.unit_code order by p.codigo),array_agg(p.codigo order by p.codigo) into v_contract,v_expected from public.prc_formula_versao_parametros vp join public.prc_formula_parametros p on p.id=vp.parametro_id where vp.formula_versao_id=p_formula_versao_id;
   select array_agg(key order by key) into v_actual from jsonb_object_keys(p_valores) key;
@@ -616,7 +660,7 @@ begin
     v_term:=precificacao_internal.avaliar_prc_formula_ast(v_version.formula_prazo_ast,p_valores,jsonb_build_object('cash_price',v_cash::text,'spot_price',v_cash::text,'term_period',v_item.fator_periodo::text,'term_days',v_item.prazo_dias::text));
     v_terms:=v_terms||jsonb_build_array(jsonb_build_object('order',v_item.ordem,'days',v_item.prazo_dias,'period_factor',v_item.fator_periodo::text,'exact',v_term::text,'commercial',round(v_term,v_version.casas_decimais)::text));
   end loop;
-  v_result:=jsonb_build_object('schema','prc-formula-shadow-v1','formula_version_id',v_version.id,'formula_sha256',v_version.documento_sha256,'cash',jsonb_build_object('exact',v_cash::text,'commercial',round(v_cash,v_version.casas_decimais)::text),'terms',v_terms);
+  v_result:=jsonb_build_object('schema','prc-formula-shadow-v1','formula_version_id',v_version.id,'formula_sha256',v_version.documento_sha256,'term_grid_version_id',v_version.grade_versao_id,'term_grid_sha256',v_grid_sha,'cash',jsonb_build_object('exact',v_cash::text,'commercial',round(v_cash,v_version.casas_decimais)::text),'terms',v_terms);
   insert into public.prc_formula_shadow_execucoes(formula_versao_id,official_calculo_id,entradas_json,entradas_sha256,resultado_json,resultado_sha256,motivo,actor_id) values(p_formula_versao_id,p_official_calculo_id,p_valores,public.prc_sha256(p_valores),v_result,public.prc_sha256(v_result),btrim(p_motivo),v_actor) returning id into v_id;
   insert into public.prc_requisicoes values(p_key,'formula_shadow',v_actor,public.prc_sha256(v_payload),v_id,clock_timestamp());
   perform public.log_audited_rpc_change('precificacao','prc_formula_shadow_execucoes',v_id::text,'precificacao.formula_shadow_executada','precificacao.formula.manage',v_ctx,null,v_result,jsonb_build_object('motivo',btrim(p_motivo)),'database_rpc'); return v_id;

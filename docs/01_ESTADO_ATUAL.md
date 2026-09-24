@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-09-09
+Atualizado em: 2026-09-21
 
 ## Estado vigente em 2026-08-25
 
@@ -189,3 +189,24 @@ falha de forma controlada na exaustao. Nomes de politica usam o limite uniforme
 de 3 a 120 caracteres. O replay descartavel `0001 -> 0150`, o upgrade
 `0149 -> 0150`, incluindo retry legado trans-migration, o smoke PRC e as provas
 de concorrencia de codigo e versao passaram; staging nao foi alterado.
+
+### PRC-02B: fundacao do motor de formulas versionado
+
+A migration 0151 implementa, de forma aditiva, identidades `FML-########`,
+versoes append-only, catalogo de 14 parametros tipados, AST JSON fechada,
+avaliador `numeric`, grades versionadas e lifecycle segregado. A fronteira e o
+database da organizacao; nao existe identificador de tenant paralelo.
+
+O PRC-01 permanece a unica fonte oficial. O motor novo executa somente em
+shadow mode, sem alterar calculos, snapshots, exportacoes ou publicacao
+comercial. `ACTIVE` ativa apenas o motor shadow. Aprovacao, substituicao e
+retirada sao fatos separados e auditados; nao existe promocao automatica.
+A formula congela ID e SHA-256 da grade; a execucao revalida os hashes da
+formula e da grade. O smoke cobre golden masters Elite e o perfil alternativo
+de cinco parametros, limites numericos e da AST, determinismo, default-deny e
+helpers privados. No runtime descartavel, replay 0001-0151, upgrade real
+0150-0151 com fatos PRC-01 previos, concorrencia FML em duas sessoes e
+regressoes PRC-01 passaram. O Python completo passou (915 testes, 1 skip).
+O lint local de banco retornou apenas diagnosticos historicos fora do PRC-02,
+mas terminou com erro de telemetria; nao foi classificado como PASS.
+Staging permanece inalterado.

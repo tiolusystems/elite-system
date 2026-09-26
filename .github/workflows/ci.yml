@@ -390,20 +390,78 @@ jobs:
           PGPASSWORD: postgres
         run: |
           set -euo pipefail
-          pending_dir="$RUNNER_TEMP/prc02-migration-0151"
+          pending_dir="$RUNNER_TEMP/prc02-migrations-after-0150"
           mkdir -p "$pending_dir"
-          restore_migration() {
-            if test -f "$pending_dir/0151_prc02_versioned_formula_engine.sql"; then
-              mv "$pending_dir/0151_prc02_versioned_formula_engine.sql" supabase/migrations/
-            fi
+
+          if [[ -n "$(find "$pending_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+            echo "Migration parking directory is not empty: $pending_dir" >&2
+            exit 1
+          fi
+
+          restore_migrations() {
+            local migration destination
+            shopt -s nullglob
+            for migration in "$pending_dir"/*.sql; do
+              destination="supabase/migrations/$(basename "$migration")"
+              if [[ -e "$destination" ]]; then
+                echo "Refusing to overwrite migration during restore: $destination" >&2
+                return 1
+              fi
+              mv -- "$migration" "$destination"
+            done
           }
-          trap restore_migration EXIT
-          mv supabase/migrations/0151_prc02_versioned_formula_engine.sql "$pending_dir/"
+          trap restore_migrations EXIT
+
+          shopt -s nullglob
+          for migration in supabase/migrations/*.sql; do
+            filename="$(basename "$migration")"
+            version="${filename%%_*}"
+            if [[ ! "$version" =~ ^[0-9]+$ ]]; then
+              echo "Invalid migration version: $filename" >&2
+              exit 1
+            fi
+            if (( 10#$version > 150 )); then
+              mv -- "$migration" "$pending_dir/"
+            fi
+          done
+
           supabase db reset --local
+          psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF (SELECT max(version::integer) FROM supabase_migrations.schema_migrations) IS DISTINCT FROM 150 THEN
+              RAISE EXCEPTION 'expected migration ledger max 0150 before PRC-02 upgrade';
+            END IF;
+            IF to_regclass('public.prc_formula_versoes') IS NOT NULL THEN
+              RAISE EXCEPTION 'PRC-02 objects must be absent at the 0150 baseline';
+            END IF;
+          END
+          $$;
+          SQL
           psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_upgrade_before_0151.sql
-          restore_migration
+          mv -- "$pending_dir/0151_prc02_versioned_formula_engine.sql" supabase/migrations/
           supabase migration up --local
+          psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF (SELECT max(version::integer) FROM supabase_migrations.schema_migrations) IS DISTINCT FROM 151 THEN
+              RAISE EXCEPTION 'expected migration ledger max 0151 after PRC-02 upgrade';
+            END IF;
+            IF to_regclass('public.prc_formula_versoes') IS NULL THEN
+              RAISE EXCEPTION 'PRC-02 objects must exist after migration 0151';
+            END IF;
+            IF EXISTS (
+              SELECT 1
+              FROM supabase_migrations.schema_migrations
+              WHERE version::integer > 151
+            ) THEN
+              RAISE EXCEPTION 'migrations after 0151 must remain unapplied in this upgrade proof';
+            END IF;
+          END
+          $$;
+          SQL
           psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_versioned_formula_engine_upgrade.sql
+          restore_migrations
           trap - EXIT
       - name: Run commercial pricing units upgrade smoke
         shell: bash

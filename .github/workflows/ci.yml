@@ -180,6 +180,44 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_ast_safety.sql
+      - name: Run PRC-03 versioned valuation engine smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc03_versioned_valuation_engine.sql
+      - name: Prove concurrent PRC-03 lifecycle activation in two sessions
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          db=(psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1)
+          "${db[@]}" -f tests/sql/prc03_lifecycle_concurrency_setup.sql
+          run_pair() {
+            local target_kind="$1"
+            local first_version="$2"
+            local second_version="$3"
+            local first_key="$4"
+            local second_key="$5"
+            "${db[@]}" -v target_kind="$target_kind" -v version_id="$first_version" -v request_key="$first_key" -f tests/sql/prc03_lifecycle_concurrency_worker.sql &
+            first=$!
+            sleep 0.2
+            "${db[@]}" -v target_kind="$target_kind" -v version_id="$second_version" -v request_key="$second_key" -f tests/sql/prc03_lifecycle_concurrency_worker.sql &
+            second=$!
+            overlap=0
+            for attempt in {1..30}; do
+              active="$("${db[@]}" -Atc "select count(*) from pg_stat_activity where application_name='prc03_lifecycle_concurrency' and state='active'")"
+              if (( active >= 2 )); then overlap=1; break; fi
+              sleep 0.1
+            done
+            wait "$first"
+            wait "$second"
+            test "$overlap" -eq 1
+          }
+          read -r policy_one policy_two < <("${db[@]}" -Atc "select version_one_id,version_two_id from public.prc03_lifecycle_concurrency_probe where target_kind='policy'" | tr '|' ' ')
+          read -r reference_one reference_two < <("${db[@]}" -Atc "select version_one_id,version_two_id from public.prc03_lifecycle_concurrency_probe where target_kind='reference'" | tr '|' ' ')
+          run_pair policy "$policy_one" "$policy_two" 15230000-0000-4000-8000-000000000021 15230000-0000-4000-8000-000000000022
+          run_pair reference "$reference_one" "$reference_two" 15230000-0000-4000-8000-000000000023 15230000-0000-4000-8000-000000000024
+          "${db[@]}" -f tests/sql/prc03_lifecycle_concurrency_assert.sql
       - name: Prove concurrent FML issuance in two sessions
         shell: bash
         env:

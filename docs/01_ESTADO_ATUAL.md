@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-09-21
+Atualizado em: 2026-09-26
 
 ## Estado vigente em 2026-08-25
 
@@ -210,3 +210,15 @@ regressoes PRC-01 passaram. O Python completo passou (915 testes, 1 skip).
 O lint local de banco retornou apenas diagnosticos historicos fora do PRC-02,
 mas terminou com erro de telemetria; nao foi classificado como PASS.
 Staging permanece inalterado.
+
+### PRC-03B: motor versionado de valoracao
+
+A migration 0152 implementa politicas versionadas e snapshots de valoracao sem
+escrever em Estoque ou PCP. A linhagem FIFO persiste tambem camadas totalmente
+reservadas, com quantidade disponivel zero; checks da mesma linha mantem as
+quantidades coerentes. A selecao de ultima aquisicao usa ordenacao global por
+entrada, movimento e valor; transicoes de lifecycle serializam por identidade
+proprietaria; e a leitura governada revalida o hash do documento integral do
+snapshot. Em 2026-09-26, replay descartavel 0001-0152 (151/151), smoke PRC-03,
+upgrade real 0151-0152 com fingerprints PRC-01/02, contratos de seguranca e
+Python completo (926 testes, 1 skip) passaram. Staging permanece inalterado.

@@ -269,21 +269,35 @@ begin
 end;
 $$;
 
+create or replace function precificacao_internal.prc_valoracao_fator_unidade(
+  p_materia_prima_id bigint, p_unidade_origem text, p_unidade_base text, p_at timestamptz
+)
+returns numeric language sql stable security definer set search_path = public as $$
+  select case
+    when lower(btrim(p_unidade_origem)) = lower(btrim(p_unidade_base)) then 1::numeric
+    else (
+      select c.fator
+        from public.cad_conversoes_unidade_mp c
+       where c.materia_prima_id = p_materia_prima_id
+         and lower(btrim(c.unidade_origem)) = lower(btrim(p_unidade_origem))
+         and lower(btrim(c.unidade_destino)) = lower(btrim(p_unidade_base))
+         and c.review_status = 'approved'
+         and c.fator > 0
+         and (c.vigencia_inicio is null or c.vigencia_inicio <= p_at::date)
+         and (c.vigencia_fim is null or c.vigencia_fim >= p_at::date)
+       order by c.vigencia_inicio desc nulls last, c.id desc
+       limit 1
+    )
+  end;
+$$;
+
 create or replace function precificacao_internal.prc_valoracao_unidade_compativel(
   p_materia_prima_id bigint, p_unidade_origem text, p_unidade_base text, p_at timestamptz
 )
 returns boolean language sql stable security definer set search_path = public as $$
-  select lower(btrim(p_unidade_origem)) = lower(btrim(p_unidade_base))
-  or exists (
-    select 1
-      from public.cad_conversoes_unidade_mp c
-     where c.materia_prima_id = p_materia_prima_id
-       and lower(btrim(c.unidade_origem)) = lower(btrim(p_unidade_origem))
-       and lower(btrim(c.unidade_destino)) = lower(btrim(p_unidade_base))
-       and c.review_status = 'approved'
-       and (c.vigencia_inicio is null or c.vigencia_inicio <= p_at::date)
-       and (c.vigencia_fim is null or c.vigencia_fim >= p_at::date)
-  );
+  select precificacao_internal.prc_valoracao_fator_unidade(
+    p_materia_prima_id, p_unidade_origem, p_unidade_base, p_at
+  ) is not null;
 $$;
 
 create or replace function public.salvar_prc_valoracao_versao_idempotente(
@@ -512,6 +526,7 @@ declare
   v_consumed numeric; v_remaining numeric; v_reserved_take numeric; v_available numeric; v_total_qty numeric:=0;
   v_total_cost numeric:=0; v_currency text; v_line_order integer:=0; v_lines jsonb:='[]'::jsonb; v_latest jsonb;
   v_reference public.prc_valoracao_referencia_versoes%rowtype; v_reference_count integer; v_reference_sha text;
+  v_policy_decisao text; v_policy_estado text; v_conversion_factor numeric; v_normalized_unit_cost numeric;
   v_input jsonb; v_result jsonb; v_document jsonb; v_input_sha text; v_result_sha text; v_document_sha text; v_snapshot bigint; v_id bigint;
 begin
   v_ctx:=public.begin_audited_rpc('precificacao.valuation.execute','precificacao','prc_valoracao_snapshots','field_risk',jsonb_build_object('correlation_id',p_key::text));
@@ -522,9 +537,17 @@ begin
   select * into v_policy from public.prc_valoracao_versoes where id=p_valoracao_versao_id;
   if not found then raise exception 'versao de valoracao inexistente'; end if;
   v_policy_sha:=precificacao_internal.prc_valoracao_versao_sha256(v_policy.id);
-  if (select decisao from public.prc_valoracao_revisoes where valoracao_versao_id=v_policy.id order by created_at desc,id desc limit 1)<>'APPROVED'
-     or (select estado from public.prc_valoracao_lifecycle_eventos where valoracao_versao_id=v_policy.id order by created_at desc,id desc limit 1)<>'ACTIVE' then
-    raise exception 'politica de valoracao nao esta aprovada e ativa';
+  select decisao into v_policy_decisao
+    from public.prc_valoracao_revisoes
+   where valoracao_versao_id=v_policy.id
+   order by created_at desc,id desc limit 1;
+  select estado into v_policy_estado
+    from public.prc_valoracao_lifecycle_eventos
+   where valoracao_versao_id=v_policy.id
+   order by created_at desc,id desc limit 1;
+  if v_policy_decisao is distinct from 'APPROVED'
+     or v_policy_estado is distinct from 'ACTIVE' then
+    raise exception 'politica de valoracao deve estar aprovada e ativa';
   end if;
   select unidade_base_estoque into v_base_unit from public.cad_materias_primas where id=p_materia_prima_id and status='active';
   if v_base_unit is null then raise exception 'materia-prima ativa ou unidade base inexistente'; end if;
@@ -550,8 +573,22 @@ begin
        and rv.vigencia_inicio<=v_eval and (rv.vigencia_fim is null or rv.vigencia_fim>=v_eval)
        and precificacao_internal.prc_valoracao_unidade_compativel(p_materia_prima_id,rv.unidade_base,v_base_unit,v_eval);
     v_reference_sha:=precificacao_internal.prc_valoracao_referencia_sha256(v_reference.id);
-    v_currency:=v_reference.moeda; v_total_qty:=1; v_total_cost:=v_reference.valor_unitario;
-    v_lines:=jsonb_build_array(jsonb_build_object('source','manual_reference','reference_version_id',v_reference.id,'reference_sha256',v_reference_sha,'quantity','1','unit_cost',v_reference.valor_unitario::text,'currency',v_reference.moeda));
+    v_conversion_factor:=precificacao_internal.prc_valoracao_fator_unidade(
+      p_materia_prima_id,v_reference.unidade_base,v_base_unit,v_eval
+    );
+    if v_conversion_factor is null or v_conversion_factor<=0 then
+      raise exception 'unidade da referencia incompativel';
+    end if;
+    v_normalized_unit_cost:=v_reference.valor_unitario/v_conversion_factor;
+    v_currency:=v_reference.moeda; v_total_qty:=1; v_total_cost:=v_normalized_unit_cost;
+    v_lines:=jsonb_build_array(jsonb_build_object(
+      'source','manual_reference','reference_version_id',v_reference.id,
+      'reference_sha256',v_reference_sha,'source_unit',v_reference.unidade_base,
+      'source_unit_value',v_reference.valor_unitario::text,
+      'conversion_factor',v_conversion_factor::text,'base_unit',v_base_unit,
+      'normalized_unit_cost',v_normalized_unit_cost::text,'quantity','1',
+      'unit_cost',v_normalized_unit_cost::text,'currency',v_reference.moeda
+    ));
   else
     for v_lot in
       select s.* from public.est_lotes_mp_saldos s

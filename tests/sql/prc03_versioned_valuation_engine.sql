@@ -27,6 +27,9 @@ begin
   end if;
   if has_schema_privilege('authenticated','precificacao_internal','usage')
      or has_function_privilege('authenticated','precificacao_internal.prc_valoracao_versao_sha256(bigint)','execute')
+     or has_function_privilege('public','precificacao_internal.prc_valoracao_fator_unidade(bigint,text,text,timestamptz)','execute')
+     or has_function_privilege('anon','precificacao_internal.prc_valoracao_fator_unidade(bigint,text,text,timestamptz)','execute')
+     or has_function_privilege('authenticated','precificacao_internal.prc_valoracao_fator_unidade(bigint,text,text,timestamptz)','execute')
      or has_table_privilege('authenticated','public.prc_valoracao_snapshots','select')
      or has_table_privilege('authenticated','public.prc_valoracao_versoes','insert') then
     raise exception 'RLS/default-deny/helper privado PRC-03 falhou';
@@ -81,6 +84,13 @@ select pg_temp.add_layer(pg_temp.mp('PRC03-LATEST-GLOBAL'),'PRC03-LG-A',10,10,'B
 select pg_temp.add_layer(pg_temp.mp('PRC03-LATEST-GLOBAL'),'PRC03-LG-B',10,20,'BRL',null,'kg',transaction_timestamp()-interval '2 days',transaction_timestamp()-interval '2 days');
 select pg_temp.add_layer(pg_temp.mp('PRC03-LATEST-GLOBAL'),'PRC03-LG-A',10,30,'BRL',null,'kg',transaction_timestamp()-interval '1 day',transaction_timestamp()-interval '3 days');
 
+insert into public.cad_conversoes_unidade_mp(
+  materia_prima_id,unidade_origem,unidade_destino,fator,review_status,origem_dados,created_by
+) values (
+  pg_temp.mp('PRC03-WEIGHTED'),'t','kg',1000,'approved','sistema',
+  '15200000-0000-4000-8000-000000000001'
+);
+
 -- A real consumption allocates cost through the existing 0077 FIFO trigger.
 insert into public.est_movimentos_mp(lote_mp_id,materia_prima_id,tipo_movimento,quantidade,origem_modulo,origem_tabela,origem_id,created_by)
 select l.id,l.materia_prima_id,'consumo_op',-2,'pcp','prc03_smoke','consumo-r1','15200000-0000-4000-8000-000000000001'
@@ -118,6 +128,13 @@ begin
   perform set_config('request.jwt.claim.sub','15200000-0000-4000-8000-000000000002',true);
   perform public.revisar_prc_valoracao_versao_idempotente('15200000-0000-4000-8000-000000000013',v_weighted,'APPROVED','Revisao segregada da politica ponderada');
   perform set_config('request.jwt.claim.sub','15200000-0000-4000-8000-000000000001',true);
+  v_failed:=false;
+  begin
+    perform public.executar_prc_valoracao_idempotente('15200000-0000-4000-8000-000000000040',v_weighted,pg_temp.mp('PRC03-WEIGHTED'),'Politica aprovada sem lifecycle deve bloquear');
+  exception when others then
+    v_failed:=position('deve estar aprovada e ativa' in sqlerrm)>0;
+  end;
+  if not v_failed then raise exception 'politica APPROVED sem ACTIVE foi executada'; end if;
   perform public.alterar_prc_valoracao_lifecycle_idempotente('15200000-0000-4000-8000-000000000014',v_weighted,'ACTIVE','Ativar politica ponderada aprovada');
   select count(*) into v_before_stock from public.est_movimentos_mp;
   v_snapshot:=public.executar_prc_valoracao_idempotente('15200000-0000-4000-8000-000000000015',v_weighted,pg_temp.mp('PRC03-WEIGHTED'),'Valoracao ponderada com duas camadas');
@@ -194,6 +211,13 @@ begin
   perform public.revisar_prc_valoracao_versao_idempotente('15200000-0000-4000-8000-000000000029',v_manual,'APPROVED','Revisao segregada da politica manual');
   perform set_config('request.jwt.claim.sub','15200000-0000-4000-8000-000000000001',true);
   perform public.alterar_prc_valoracao_lifecycle_idempotente('15200000-0000-4000-8000-000000000030',v_manual,'ACTIVE','Ativar politica manual aprovada');
+  v_failed:=false;
+  begin
+    perform public.salvar_prc_valoracao_referencia_versao_idempotente('15200000-0000-4000-8000-000000000041',null,pg_temp.mp('PRC03-WEIGHTED'),'MARKET','BRL','g',5000,current_date,transaction_timestamp()-interval '1 day',null,'Pesquisa sem conversao','DOC-PRC03-SEM-CONVERSAO','Referencia sem conversao aprovada deve bloquear');
+  exception when others then
+    v_failed:=position('unidade da referencia incompativel' in sqlerrm)>0;
+  end;
+  if not v_failed then raise exception 'referencia em unidade sem conversao aprovada foi aceita'; end if;
   v_ref:=public.salvar_prc_valoracao_referencia_versao_idempotente('15200000-0000-4000-8000-000000000031',null,pg_temp.mp('PRC03-WEIGHTED'),'MARKET','BRL','kg',17,current_date,transaction_timestamp()-interval '1 day',null,'Pesquisa de mercado','DOC-PRC03','Criar referencia manual versionada');
   v_failed:=false; begin perform public.executar_prc_valoracao_idempotente('15200000-0000-4000-8000-000000000032',v_manual,pg_temp.mp('PRC03-WEIGHTED'),'Referencia pending deve bloquear'); exception when others then v_failed:=position('unica' in sqlerrm)>0; end;
   if not v_failed then raise exception 'referencia pending foi aceita'; end if;
@@ -202,10 +226,35 @@ begin
   perform set_config('request.jwt.claim.sub','15200000-0000-4000-8000-000000000001',true);
   perform public.alterar_prc_valoracao_referencia_lifecycle_idempotente('15200000-0000-4000-8000-000000000034',v_ref,'ACTIVE','Ativar referencia manual aprovada');
   v_snapshot:=public.executar_prc_valoracao_idempotente('15200000-0000-4000-8000-000000000035',v_manual,pg_temp.mp('PRC03-WEIGHTED'),'Usar uma referencia manual aprovada');
-  if (select custo_unitario_exato from public.prc_valoracao_snapshots where id=v_snapshot)<>17 then raise exception 'manual approved nao foi utilizada'; end if;
+  if (select custo_unitario_exato from public.prc_valoracao_snapshots where id=v_snapshot)<>17
+     or (select (documento_json #>> '{result,layers,0,conversion_factor}')::numeric from public.prc_valoracao_snapshots where id=v_snapshot)<>1
+     or (select (documento_json #>> '{result,layers,0,normalized_unit_cost}')::numeric from public.prc_valoracao_snapshots where id=v_snapshot)<>17 then
+    raise exception 'referencia manual na mesma unidade nao preservou o custo';
+  end if;
   v_read:=public.consultar_prc_valoracao_snapshot(v_snapshot);
   if v_read->>'documento_sha256' is distinct from (select documento_sha256 from public.prc_valoracao_snapshots where id=v_snapshot) then
     raise exception 'leitura governada nao devolveu snapshot integro';
+  end if;
+  perform public.alterar_prc_valoracao_referencia_lifecycle_idempotente('15200000-0000-4000-8000-000000000042',v_ref,'WITHDRAWN','Retirar referencia na unidade base antes da conversao');
+  v_ref:=public.salvar_prc_valoracao_referencia_versao_idempotente('15200000-0000-4000-8000-000000000043',null,pg_temp.mp('PRC03-WEIGHTED'),'MARKET','BRL','t',5000,current_date,transaction_timestamp()-interval '1 day',null,'Pesquisa por tonelada','DOC-PRC03-T','Criar referencia manual por tonelada');
+  perform set_config('request.jwt.claim.sub','15200000-0000-4000-8000-000000000002',true);
+  perform public.revisar_prc_valoracao_referencia_idempotente('15200000-0000-4000-8000-000000000044',v_ref,'APPROVED','Revisao segregada da referencia por tonelada');
+  perform set_config('request.jwt.claim.sub','15200000-0000-4000-8000-000000000001',true);
+  perform public.alterar_prc_valoracao_referencia_lifecycle_idempotente('15200000-0000-4000-8000-000000000045',v_ref,'ACTIVE','Ativar referencia manual por tonelada');
+  v_snapshot:=public.executar_prc_valoracao_idempotente('15200000-0000-4000-8000-000000000046',v_manual,pg_temp.mp('PRC03-WEIGHTED'),'Normalizar referencia de tonelada para quilograma');
+  if (select custo_unitario_exato from public.prc_valoracao_snapshots where id=v_snapshot)<>5
+     or (select documento_json #>> '{result,layers,0,source_unit}' from public.prc_valoracao_snapshots where id=v_snapshot)<>'t'
+     or (select documento_json #>> '{result,layers,0,source_unit_value}' from public.prc_valoracao_snapshots where id=v_snapshot)<>'5000'
+     or (select (documento_json #>> '{result,layers,0,conversion_factor}')::numeric from public.prc_valoracao_snapshots where id=v_snapshot)<>1000
+     or (select documento_json #>> '{result,layers,0,base_unit}' from public.prc_valoracao_snapshots where id=v_snapshot)<>'kg'
+     or (select (documento_json #>> '{result,layers,0,normalized_unit_cost}')::numeric from public.prc_valoracao_snapshots where id=v_snapshot)<>5
+     or (select documento_sha256 from public.prc_valoracao_snapshots where id=v_snapshot)
+        is distinct from (select public.prc_sha256(documento_json) from public.prc_valoracao_snapshots where id=v_snapshot) then
+    raise exception 'referencia manual convertida nao preservou lineage ou custo normalizado';
+  end if;
+  v_read:=public.consultar_prc_valoracao_snapshot(v_snapshot);
+  if v_read->>'documento_sha256' is distinct from (select documento_sha256 from public.prc_valoracao_snapshots where id=v_snapshot) then
+    raise exception 'leitura governada nao validou referencia manual convertida';
   end if;
   v_failed:=false; begin update public.prc_valoracao_snapshots set result_sha256='0' where id=v_snapshot; exception when others then v_failed:=position('append-only' in sqlerrm)>0; end;
   if not v_failed then raise exception 'snapshot permitiu update'; end if;

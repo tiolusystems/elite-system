@@ -89,6 +89,15 @@ class Prc03ValuationEngineContract(unittest.TestCase):
         self.assertIn("disable trigger trg_prc_valoracao_snapshots_append_only", smoke)
         self.assertIn("adulteracao de metadado do snapshot nao falhou fechado", smoke)
 
+    def test_execution_requires_explicit_approved_and_active_policy(self):
+        sql = self.migration_sql()
+        self.assertIn("v_policy_decisao is distinct from 'approved'", sql)
+        self.assertIn("v_policy_estado is distinct from 'active'", sql)
+        self.assertIn("politica de valoracao deve estar aprovada e ativa", sql)
+        smoke = RUNTIME_SMOKE.read_text(encoding="utf-8").lower()
+        self.assertIn("politica approved sem active foi executada", smoke)
+        self.assertIn("politica aprovada sem lifecycle deve bloquear", smoke)
+
     def test_approved_manual_reference_and_segregation(self):
         self.assert_contract(
             "approved_manual_reference", "prc_valoracao_referencias",
@@ -100,6 +109,24 @@ class Prc03ValuationEngineContract(unittest.TestCase):
             "unidade_base_estoque", "cad_conversoes_unidade_mp",
             "moeda", "mixed_currency", "unidade da camada incompativel",
         )
+        sql = self.migration_sql()
+        self.assertIn("prc_valoracao_fator_unidade", sql)
+        self.assertIn("order by c.vigencia_inicio desc nulls last, c.id desc", sql)
+        self.assertIn("v_normalized_unit_cost:=v_reference.valor_unitario/v_conversion_factor", sql)
+        smoke = RUNTIME_SMOKE.read_text(encoding="utf-8").lower()
+        for term in (
+            "referencia em unidade sem conversao aprovada foi aceita",
+            "referencia manual na mesma unidade nao preservou o custo",
+            "referencia manual convertida nao preservou lineage ou custo normalizado",
+            "conversion_factor",
+            "normalized_unit_cost",
+        ):
+            self.assertIn(term, smoke)
+
+    def test_conversion_helper_stays_private(self):
+        smoke = RUNTIME_SMOKE.read_text(encoding="utf-8").lower()
+        self.assertIn("precificacao_internal.prc_valoracao_fator_unidade", smoke)
+        self.assertIn("revoke all on all functions in schema precificacao_internal", self.migration_sql())
 
     def test_pricing_cannot_write_stock_or_pcp(self):
         self.assert_contract(

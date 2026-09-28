@@ -221,4 +221,15 @@ entrada, movimento e valor; transicoes de lifecycle serializam por identidade
 proprietaria; e a leitura governada revalida o hash do documento integral do
 snapshot. Em 2026-09-26, replay descartavel 0001-0152 (151/151), smoke PRC-03,
 upgrade real 0151-0152 com fingerprints PRC-01/02, contratos de seguranca e
-Python completo (926 testes, 1 skip) passaram. Staging permanece inalterado.
+Python completo (926 testes, 1 skip) passaram.
+
+Em 2026-09-28, a migration 0152 foi aplicada em elite-system-staging e o ledger
+terminou em `0152 prc03_versioned_valuation_engine`; o staging permaneceu
+ACTIVE_HEALTHY. O smoke runtime descartavel passou com o marcador
+`PG_PRC03_VERSIONED_VALUATION_ENGINE_OK`. WEIGHTED_AVAILABLE_BALANCE,
+LATEST_ELIGIBLE_ACQUISITION, APPROVED_MANUAL_REFERENCE, reserva FIFO,
+normalizacao de unidade e o gate de politica aprovada e ativa passaram. Tambem
+passaram os fechamentos fail-closed para moeda mista e lote vencido, a deteccao
+de adulteracao do hash, RLS/default-deny, privacidade dos helpers e append-only.
+PRC-01 foi preservado, PRC-02 permaneceu em shadow mode, nenhuma fixture ficou
+persistida e producao nao foi tocada.

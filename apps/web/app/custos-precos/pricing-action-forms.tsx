@@ -25,6 +25,15 @@ const COST_LABELS: Record<string, string> = {
   frete: "Frete", comissao: "Comissao", risco: "Risco", marketing: "Marketing", tributacao: "Tributacao",
 };
 
+const SCENARIO_COMPONENT_GROUPS = [
+  { title: "Custos diretos", fields: ["materia_prima", "embalagem", "frete"] },
+  { title: "Comercial e canais", fields: ["comissao", "custo_pontuacao_vendedor", "custo_pontuacao_revenda", "premiacao_revenda"] },
+  { title: "Operacao e risco", fields: ["premio_producao", "risco", "marketing"] },
+  { title: "Fiscal", fields: ["tributacao"] },
+] as const;
+
+const PRICING_COMPONENT_BY_NAME = new Map(PRICING_COMPONENTS);
+
 export function PricingPolicyForm({ policies }: { policies: SelectOption[] }) {
   const [method, setMethod] = useState("margem_liquida");
   const [policyId, setPolicyId] = useState("");
@@ -63,16 +72,20 @@ export function PricingScenarioForm({ policies, presentations }: { policies: Sel
   const form = usePricingForm(createPricingScenarioAction, validateScenario);
   return <form {...form.props} className={styles.pricingForm}>
     <PricingIdempotencyKeyInput value={form.requestKey} />
-    <Field label="Politica aprovada" name="politica_versao_id" error={form.error("politica_versao_id")} wide><select name="politica_versao_id" required defaultValue=""><option value="">Selecione</option>{policies.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></Field>
-    <Field label="Produto e apresentacao" name="produto_embalagem_id" error={form.error("produto_embalagem_id")} wide><select name="produto_embalagem_id" required defaultValue=""><option value="">Selecione</option>{presentations.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></Field>
-    <Field label="Nome do cenario" name="nome" error={form.error("nome")} wide><input name="nome" required placeholder="Cenario base para homologacao" /></Field>
-    <Field label="Motivo" name="motivo" error={form.error("motivo")} wide><input name="motivo" minLength={10} required /></Field>
-    <input type="hidden" name="source_kind" value="substituicao_manual" />
-    <Field label="Origem" name="source_kind" error={form.error("source_kind")} help="A origem de sistema ainda nao esta disponivel."><input value="Substituicao manual" readOnly /></Field>
-    <Field label="Referencia" name="source_reference" error={form.error("source_reference")}><input name="source_reference" required placeholder="SIMULACAO-001" /></Field>
-    <Field label="Data da fonte" name="source_effective_date" error={form.error("source_effective_date")}><input name="source_effective_date" type="date" required /></Field>
-    <Field label="Justificativa da fonte" name="source_reason" error={form.error("source_reason")} wide><input name="source_reason" minLength={10} required /></Field>
-    <div className={styles.pricingComponents}>{PRICING_COMPONENTS.map(([name, unit]) => <Field key={name} label={COST_LABELS[name]} name={name} error={form.error(name)} help={unit === "FRACAO" ? percentageWarning(form.value(name)) ?? "Percentual. Ex.: 2 representa 2%." : "R$/L. Aceita virgula ou ponto decimal."}><input name={name} inputMode="decimal" required /></Field>)}</div>
+    <fieldset className={styles.scenarioContext}><legend>Contexto do cenario</legend><div>
+      <Field label="Politica aprovada" name="politica_versao_id" error={form.error("politica_versao_id")} wide><select name="politica_versao_id" required defaultValue=""><option value="">Selecione</option>{policies.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></Field>
+      <Field label="Produto e apresentacao" name="produto_embalagem_id" error={form.error("produto_embalagem_id")} wide><select name="produto_embalagem_id" required defaultValue=""><option value="">Selecione</option>{presentations.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></Field>
+      <Field label="Nome do cenario" name="nome" error={form.error("nome")} wide><input name="nome" required placeholder="Cenario base para homologacao" /></Field>
+      <Field label="Motivo" name="motivo" error={form.error("motivo")} wide><input name="motivo" minLength={10} required /></Field>
+    </div></fieldset>
+    <fieldset className={styles.scenarioSource}><legend>Origem da base de custo</legend><p>A composicao automatica governada ainda nao esta disponivel. Esta etapa registra a substituicao manual com rastreabilidade.</p><div>
+      <input type="hidden" name="source_kind" value="substituicao_manual" />
+      <Field label="Origem" name="source_kind" error={form.error("source_kind")}><input value="Substituicao manual" readOnly /></Field>
+      <Field label="Referencia" name="source_reference" error={form.error("source_reference")}><input name="source_reference" required placeholder="SIMULACAO-001" /></Field>
+      <Field label="Data da fonte" name="source_effective_date" error={form.error("source_effective_date")}><input name="source_effective_date" type="date" required /></Field>
+      <Field label="Justificativa da fonte" name="source_reason" error={form.error("source_reason")} wide><input name="source_reason" minLength={10} required /></Field>
+    </div></fieldset>
+    <fieldset className={styles.scenarioComponents}><legend>Componentes comerciais</legend>{SCENARIO_COMPONENT_GROUPS.map((group) => <section className={styles.componentGroup} key={group.title}><h3>{group.title}</h3><div>{group.fields.map((name) => { const unit = PRICING_COMPONENT_BY_NAME.get(name)!; return <Field key={name} label={COST_LABELS[name]} name={name} error={form.error(name)} help={unit === "FRACAO" ? percentageWarning(form.value(name)) ?? "Percentual. Ex.: 2 representa 2%." : "R$/L. Aceita virgula ou ponto decimal."}><input name={name} inputMode="decimal" required /></Field>; })}</div></section>)}</fieldset>
     <FormFeedback state={form.state} localMessage={form.localMessage} feedbackRef={form.feedbackRef} />
     <Submit pending={form.pending} ready={form.ready} idle="Congelar cenario" pendingLabel="Congelando..." />
   </form>;

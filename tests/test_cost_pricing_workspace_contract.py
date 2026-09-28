@@ -121,7 +121,7 @@ class CostPricingWorkspaceContract(unittest.TestCase):
 
     def test_css_module_controls_the_responsive_form_layout(self):
         self.assertIn('import styles from "./pricing.module.css";', FORMS)
-        for class_name in ("pricingForm", "pricingInlineForm", "pricingComponents", "pricingWide", "pricingFeedback", "pricingFieldError", "pricingHelp", "pricingPolicyIdentity", "pricingSubmit"):
+        for class_name in ("pricingForm", "pricingInlineForm", "scenarioComponents", "componentGroup", "pricingWide", "pricingFeedback", "pricingFieldError", "pricingHelp", "pricingPolicyIdentity", "pricingSubmit"):
             self.assertIn(f"styles.{class_name}", FORMS)
         self.assertIn(".pricingForm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))", PRICING_CSS)
         self.assertIn(".pricingWide{grid-column:span 2}", PRICING_CSS)
@@ -211,6 +211,27 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn('aria-live="assertive"', PAGE)
         self.assertIn('aria-busy="true"', LOADING)
         self.assertIn("Carregando a memoria de custos e precos.", LOADING)
+
+    def test_guided_workspace_preserves_governed_forms_and_truthful_cost_state(self):
+        for stage in ("Produto e base de custo", "Politica comercial", "Cenario", "Precos e prazos", "Revisao e dossie"):
+            self.assertIn(stage, PAGE)
+        self.assertIn("Custo tecnico automatico ainda nao calculado", PAGE)
+        self.assertIn("substituicao manual governada", PAGE)
+        self.assertIn("buildWorkflow(data", PAGE)
+        self.assertIn('aria-current={stage.current ? "step" : undefined}', PAGE)
+        self.assertIn("PricingPolicyForm policies=", PAGE)
+        self.assertIn("PricingScenarioForm policies=", PAGE)
+        self.assertIn("PricingCalculationForm scenarioId=", PAGE)
+        self.assertIn("PricingReviewForm id=", PAGE)
+        self.assertIn("Historico e documentos", PAGE)
+        self.assertIn("SCENARIO_COMPONENT_GROUPS", FORMS)
+        for group in ("Custos diretos", "Comercial e canais", "Operacao e risco", "Fiscal"):
+            self.assertIn(group, FORMS)
+        for field in ("materia_prima", "embalagem", "frete", "comissao", "custo_pontuacao_vendedor", "custo_pontuacao_revenda", "premiacao_revenda", "premio_producao", "risco", "marketing", "tributacao"):
+            self.assertIn(field, FORMS)
+        self.assertIn(".workspaceLayout{display:grid;grid-template-columns:220px minmax(0,1fr) 180px", PRICING_CSS)
+        self.assertIn("@media(max-width:900px){.workspaceStatus", PRICING_CSS)
+        self.assertIn("@media(max-width:600px){.workspaceStatus", PRICING_CSS)
 
 
 if __name__ == "__main__":

@@ -180,6 +180,44 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_ast_safety.sql
+      - name: Run PRC-03 versioned valuation engine smoke
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc03_versioned_valuation_engine.sql
+      - name: Prove concurrent PRC-03 lifecycle activation in two sessions
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          db=(psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1)
+          "${db[@]}" -f tests/sql/prc03_lifecycle_concurrency_setup.sql
+          run_pair() {
+            local target_kind="$1"
+            local first_version="$2"
+            local second_version="$3"
+            local first_key="$4"
+            local second_key="$5"
+            "${db[@]}" -v target_kind="$target_kind" -v version_id="$first_version" -v request_key="$first_key" -f tests/sql/prc03_lifecycle_concurrency_worker.sql &
+            first=$!
+            sleep 0.2
+            "${db[@]}" -v target_kind="$target_kind" -v version_id="$second_version" -v request_key="$second_key" -f tests/sql/prc03_lifecycle_concurrency_worker.sql &
+            second=$!
+            overlap=0
+            for attempt in {1..30}; do
+              active="$("${db[@]}" -Atc "select count(*) from pg_stat_activity where application_name='prc03_lifecycle_concurrency' and state='active'")"
+              if (( active >= 2 )); then overlap=1; break; fi
+              sleep 0.1
+            done
+            wait "$first"
+            wait "$second"
+            test "$overlap" -eq 1
+          }
+          read -r policy_one policy_two < <("${db[@]}" -Atc "select version_one_id,version_two_id from public.prc03_lifecycle_concurrency_probe where target_kind='policy'" | tr '|' ' ')
+          read -r reference_one reference_two < <("${db[@]}" -Atc "select version_one_id,version_two_id from public.prc03_lifecycle_concurrency_probe where target_kind='reference'" | tr '|' ' ')
+          run_pair policy "$policy_one" "$policy_two" 15230000-0000-4000-8000-000000000021 15230000-0000-4000-8000-000000000022
+          run_pair reference "$reference_one" "$reference_two" 15230000-0000-4000-8000-000000000023 15230000-0000-4000-8000-000000000024
+          "${db[@]}" -f tests/sql/prc03_lifecycle_concurrency_assert.sql
       - name: Prove concurrent FML issuance in two sessions
         shell: bash
         env:
@@ -352,20 +390,78 @@ jobs:
           PGPASSWORD: postgres
         run: |
           set -euo pipefail
-          pending_dir="$RUNNER_TEMP/prc02-migration-0151"
+          pending_dir="$RUNNER_TEMP/prc02-migrations-after-0150"
           mkdir -p "$pending_dir"
-          restore_migration() {
-            if test -f "$pending_dir/0151_prc02_versioned_formula_engine.sql"; then
-              mv "$pending_dir/0151_prc02_versioned_formula_engine.sql" supabase/migrations/
-            fi
+
+          if [[ -n "$(find "$pending_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+            echo "Migration parking directory is not empty: $pending_dir" >&2
+            exit 1
+          fi
+
+          restore_migrations() {
+            local migration destination
+            shopt -s nullglob
+            for migration in "$pending_dir"/*.sql; do
+              destination="supabase/migrations/$(basename "$migration")"
+              if [[ -e "$destination" ]]; then
+                echo "Refusing to overwrite migration during restore: $destination" >&2
+                return 1
+              fi
+              mv -- "$migration" "$destination"
+            done
           }
-          trap restore_migration EXIT
-          mv supabase/migrations/0151_prc02_versioned_formula_engine.sql "$pending_dir/"
+          trap restore_migrations EXIT
+
+          shopt -s nullglob
+          for migration in supabase/migrations/*.sql; do
+            filename="$(basename "$migration")"
+            version="${filename%%_*}"
+            if [[ ! "$version" =~ ^[0-9]+$ ]]; then
+              echo "Invalid migration version: $filename" >&2
+              exit 1
+            fi
+            if (( 10#$version > 150 )); then
+              mv -- "$migration" "$pending_dir/"
+            fi
+          done
+
           supabase db reset --local
+          psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF (SELECT max(version::integer) FROM supabase_migrations.schema_migrations) IS DISTINCT FROM 150 THEN
+              RAISE EXCEPTION 'expected migration ledger max 0150 before PRC-02 upgrade';
+            END IF;
+            IF to_regclass('public.prc_formula_versoes') IS NOT NULL THEN
+              RAISE EXCEPTION 'PRC-02 objects must be absent at the 0150 baseline';
+            END IF;
+          END
+          $$;
+          SQL
           psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_upgrade_before_0151.sql
-          restore_migration
+          mv -- "$pending_dir/0151_prc02_versioned_formula_engine.sql" supabase/migrations/
           supabase migration up --local
+          psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF (SELECT max(version::integer) FROM supabase_migrations.schema_migrations) IS DISTINCT FROM 151 THEN
+              RAISE EXCEPTION 'expected migration ledger max 0151 after PRC-02 upgrade';
+            END IF;
+            IF to_regclass('public.prc_formula_versoes') IS NULL THEN
+              RAISE EXCEPTION 'PRC-02 objects must exist after migration 0151';
+            END IF;
+            IF EXISTS (
+              SELECT 1
+              FROM supabase_migrations.schema_migrations
+              WHERE version::integer > 151
+            ) THEN
+              RAISE EXCEPTION 'migrations after 0151 must remain unapplied in this upgrade proof';
+            END IF;
+          END
+          $$;
+          SQL
           psql -h 127.0.0.1 -p "$ELITE_DB_PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -f tests/sql/prc02_versioned_formula_engine_upgrade.sql
+          restore_migrations
           trap - EXIT
       - name: Run commercial pricing units upgrade smoke
         shell: bash

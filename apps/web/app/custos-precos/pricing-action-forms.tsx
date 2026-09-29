@@ -41,7 +41,7 @@ export function PricingPolicyForm({ policies }: { policies: SelectOption[] }) {
   const marginApplies = method === "margem_liquida";
   const isNewPolicy = policyId === "";
 
-  return <form {...form.props} className={styles.pricingForm}>
+  return <form {...form.props} className={`${styles.pricingForm} ${styles.pricingPolicyForm}`}>
     <PricingIdempotencyKeyInput value={form.requestKey} />
     <Field label="Politica" name="politica_id" error={form.error("politica_id")} wide help="Deixe como nova politica para o sistema emitir o proximo codigo.">
       <select name="politica_id" value={policyId} onChange={(event) => { setPolicyId(event.target.value); form.clear("politica_id"); }}>

@@ -121,14 +121,33 @@ class CostPricingWorkspaceContract(unittest.TestCase):
 
     def test_css_module_controls_the_responsive_form_layout(self):
         self.assertIn('import styles from "./pricing.module.css";', FORMS)
-        for class_name in ("pricingForm", "pricingInlineForm", "scenarioComponents", "componentGroup", "pricingWide", "pricingFeedback", "pricingFieldError", "pricingHelp", "pricingPolicyIdentity", "pricingSubmit"):
+        for class_name in ("pricingForm", "pricingPolicyForm", "pricingInlineForm", "scenarioComponents", "componentGroup", "pricingWide", "pricingFeedback", "pricingFieldError", "pricingHelp", "pricingPolicyIdentity", "pricingSubmit"):
             self.assertIn(f"styles.{class_name}", FORMS)
-        self.assertIn(".pricingForm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))", PRICING_CSS)
+        self.assertIn(".pricingForm{grid-template-columns:repeat(3,minmax(0,1fr))", PRICING_CSS)
+        self.assertIn(".pricingPolicyForm{grid-template-columns:repeat(2,minmax(0,1fr))", PRICING_CSS)
         self.assertIn(".pricingWide{grid-column:span 2}", PRICING_CSS)
         self.assertIn(".pricingForm input,.pricingForm select", PRICING_CSS)
         self.assertIn("width:100%", PRICING_CSS)
-        self.assertIn("@media(max-width:900px){.pricingForm,.pricingComponents{grid-template-columns:repeat(2,minmax(0,1fr))}", PRICING_CSS)
-        self.assertIn("@media(max-width:600px){.pricingForm,.pricingComponents,.loading{grid-template-columns:1fr}", PRICING_CSS)
+        self.assertIn(".workspaceLayout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,320px)", PRICING_CSS)
+        self.assertIn(".workflowStepper{overflow-x:auto", PRICING_CSS)
+        self.assertIn(
+            '@media(max-width:1179px){.workspace{max-width:1120px}.workspaceLayout{grid-template-columns:minmax(0,1fr);grid-template-areas:"context" "stage"}.workspaceContext{position:static;',
+            PRICING_CSS,
+        )
+        self.assertIn(
+            '.pricingForm,.scenarioContext>div,.scenarioSource>div,.componentGroup>div{grid-template-columns:repeat(2,minmax(0,1fr))}',
+            PRICING_CSS,
+        )
+        self.assertIn(
+            '.costBaseState,.pricingForm,.pricingPolicyForm,.pricingInlineForm,.scenarioContext>div,.scenarioSource>div,.componentGroup>div,.priceKpis{grid-template-columns:1fr}',
+            PRICING_CSS,
+        )
+        self.assertIn(".pricingSubmit{width:100%;justify-self:stretch}", PRICING_CSS)
+        self.assertIn(".terms{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))", PRICING_CSS)
+        self.assertIn(".terms{grid-template-columns:repeat(3,minmax(0,1fr))}", PRICING_CSS)
+        self.assertIn(".terms{grid-template-columns:repeat(2,minmax(0,1fr))}", PRICING_CSS)
+        self.assertNotIn(".workflowRail", PRICING_CSS)
+        self.assertNotIn("grid-template-columns:220px minmax(0,1fr) 180px", PRICING_CSS)
         self.assertNotIn(".pricing-form", PRICING_CSS)
         self.assertNotIn("notApplicable=", FORMS)
         self.assertNotIn('name="codigo"', FORMS)
@@ -212,26 +231,41 @@ class CostPricingWorkspaceContract(unittest.TestCase):
         self.assertIn('aria-busy="true"', LOADING)
         self.assertIn("Carregando a memoria de custos e precos.", LOADING)
 
-    def test_guided_workspace_preserves_governed_forms_and_truthful_cost_state(self):
+    def test_focused_workspace_preserves_governed_forms_and_truthful_cost_state(self):
         for stage in ("Produto e base de custo", "Politica comercial", "Cenario", "Precos e prazos", "Revisao e dossie"):
             self.assertIn(stage, PAGE)
         self.assertIn("Custo tecnico automatico ainda nao calculado", PAGE)
         self.assertIn("substituicao manual governada", PAGE)
         self.assertIn("buildWorkflow(data", PAGE)
-        self.assertIn('aria-current={stage.current ? "step" : undefined}', PAGE)
+        self.assertIn('type SearchParams = { etapa?: string | string[] }', PAGE)
+        self.assertIn("normalizeStage(params.etapa, workflow.current.id)", PAGE)
+        self.assertIn('function normalizeStage(value: SearchParams["etapa"], fallback: WorkflowStageId)', PAGE)
+        self.assertIn('const stageContent = selectedStage === "base-custo"', PAGE)
+        self.assertEqual(PAGE.count("const stageContent = selectedStage ==="), 1)
+        self.assertEqual(PAGE.count("{stageContent}"), 1)
+        self.assertNotIn("styles.workflowStage", PAGE)
+        self.assertIn('href={`/custos-precos?etapa=${stage.id}`}', PAGE)
+        self.assertIn('aria-current={stage.id === selectedStage ? "step" : undefined}', PAGE)
+        self.assertIn('const currentId: WorkflowStageId = pendingReviews ? "revisao-dossie"', PAGE)
+        self.assertIn('"Revisor de precificacao"', PAGE)
+        self.assertIn('description: "Consulte as apresentacoes e a fonte de custo permitida para o cenario."', PAGE)
+        self.assertIn('className={styles.stageDescription}', PAGE)
+        self.assertIn('"Revisao ainda bloqueada"', PAGE)
         self.assertIn("PricingPolicyForm policies=", PAGE)
         self.assertIn("PricingScenarioForm policies=", PAGE)
         self.assertIn("PricingCalculationForm scenarioId=", PAGE)
         self.assertIn("PricingReviewForm id=", PAGE)
         self.assertIn("Historico e documentos", PAGE)
+        self.assertIn("approvedCalculations.length ? approvedCalculations.map", PAGE)
         self.assertIn("SCENARIO_COMPONENT_GROUPS", FORMS)
         for group in ("Custos diretos", "Comercial e canais", "Operacao e risco", "Fiscal"):
             self.assertIn(group, FORMS)
         for field in ("materia_prima", "embalagem", "frete", "comissao", "custo_pontuacao_vendedor", "custo_pontuacao_revenda", "premiacao_revenda", "premio_producao", "risco", "marketing", "tributacao"):
             self.assertIn(field, FORMS)
-        self.assertIn(".workspaceLayout{display:grid;grid-template-columns:220px minmax(0,1fr) 180px", PRICING_CSS)
-        self.assertIn("@media(max-width:900px){.workspaceStatus", PRICING_CSS)
-        self.assertIn("@media(max-width:600px){.workspaceStatus", PRICING_CSS)
+        self.assertNotIn("workflowRail", PAGE)
+        self.assertNotIn("workspaceStatus", PAGE)
+        for action in ("createPricingPolicyAction", "createPricingScenarioAction", "calculatePricingScenarioAction", "reviewPricingPolicyAction", "reviewPricingCalculationAction"):
+            self.assertIn(action, FORMS)
 
 
 if __name__ == "__main__":

@@ -202,6 +202,17 @@ finalidade comercial sem alterar campos, payloads, actions ou RPCs. Esta
 entrega permanece somente local, sem staging, deploy ou mudanca de regra de
 negocio.
 
+### PRC-UX-04: workspace focado por etapa
+
+O workspace local de `/custos-precos` passou a apresentar uma etapa operacional
+por vez, selecionada por `?etapa=`, com navegacao horizontal e contexto do
+processo separado do conteudo em uso. Revisoes pendentes agora tem prioridade
+como gargalo atual e indicam o revisor de precificacao como responsavel. Os
+formularios, payloads, actions, RPCs, exportacoes aprovadas e a substituicao
+manual governada foram preservados. Os contratos dirigidos de workspace e
+exportacao, ESLint, build web e `git diff --check` passaram localmente. A
+proxima etapa e a revisao do delta UX antes de qualquer publicacao.
+
 ### PRC-02B: fundacao do motor de formulas versionado
 
 A migration 0151 implementa, de forma aditiva, identidades `FML-########`,

@@ -190,6 +190,29 @@ de 3 a 120 caracteres. O replay descartavel `0001 -> 0150`, o upgrade
 `0149 -> 0150`, incluindo retry legado trans-migration, o smoke PRC e as provas
 de concorrencia de codigo e versao passaram; staging nao foi alterado.
 
+### PRC-UX-03: workspace guiado de precificacao
+
+A implementacao local reorganiza `/custos-precos` em cinco etapas: produto e
+base de custo, politica comercial, cenario, precos e prazos, revisao e dossie.
+O estado de progresso usa somente politicas, cenarios, calculos e revisoes ja
+carregados pela superficie governada. A tela deixa explicito que a composicao
+tecnica automatica ainda nao esta disponivel e que os cenarios atuais usam
+substituicao manual governada. Os componentes do cenario foram agrupados por
+finalidade comercial sem alterar campos, payloads, actions ou RPCs. Esta
+entrega permanece somente local, sem staging, deploy ou mudanca de regra de
+negocio.
+
+### PRC-UX-04: workspace focado por etapa
+
+O workspace local de `/custos-precos` passou a apresentar uma etapa operacional
+por vez, selecionada por `?etapa=`, com navegacao horizontal e contexto do
+processo separado do conteudo em uso. Revisoes pendentes agora tem prioridade
+como gargalo atual e indicam o revisor de precificacao como responsavel. Os
+formularios, payloads, actions, RPCs, exportacoes aprovadas e a substituicao
+manual governada foram preservados. Os contratos dirigidos de workspace e
+exportacao, ESLint, build web e `git diff --check` passaram localmente. A
+proxima etapa e a revisao do delta UX antes de qualquer publicacao.
+
 ### PRC-02B: fundacao do motor de formulas versionado
 
 A migration 0151 implementa, de forma aditiva, identidades `FML-########`,

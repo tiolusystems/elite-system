@@ -2,11 +2,22 @@ import { redirect } from "next/navigation";
 
 import { PricingCalculationForm, PricingPolicyForm, PricingReviewForm, PricingScenarioForm } from "./pricing-action-forms";
 import { getPricingAccess, getPricingWorkspace, type PricingWorkspace } from "@/lib/cost-pricing";
+import {
+  GovernedWorkflowStepper,
+  OperationalContextPanel,
+  OperationalPageHeader,
+  OperationalStageHeader,
+  OperationalWorkspace,
+  OperationalWorkspaceBody,
+  OperationalWorkspaceLayout,
+  OperationalWorkspaceSurface,
+  type GovernedWorkflowStep,
+} from "../workspace-components";
 import styles from "./pricing.module.css";
 
 type SearchParams = { etapa?: string | string[] };
 type WorkflowStageId = "base-custo" | "politica" | "cenario" | "precos-prazos" | "revisao-dossie";
-type StageState = "complete" | "available" | "waiting" | "blocked" | "quiet";
+type WorkflowStage = Omit<GovernedWorkflowStep<WorkflowStageId>, "href"> & { description: string };
 
 const WORKFLOW_STAGE_IDS: WorkflowStageId[] = ["base-custo", "politica", "cenario", "precos-prazos", "revisao-dossie"];
 
@@ -17,10 +28,10 @@ export default async function CostPricingPage({ searchParams }: { searchParams?:
 
   const workspace = await getPricingWorkspace();
   const data = workspace.data;
-  if (!data) return <main className={styles.workspace}>
-    <WorkspaceHeader facts={{ policies: 0, scenarios: 0, calculations: 0 }} />
+  if (!data) return <OperationalWorkspace>
+    <OperationalPageHeader eyebrow="Precificacao" title="Formacao de custos e precos" description="Organize a base de custo, a politica comercial e a memoria de calculo em um fluxo objetivo." facts={[{ id: "policies", label: "Politicas", value: 0 }, { id: "scenarios", label: "Cenarios", value: 0 }, { id: "calculations", label: "Calculos", value: 0 }]} />
     <section className={styles.unavailable} aria-live="assertive"><div className="notice-panel warning" role="alert"><strong>Consulta indisponivel</strong><span>{workspace.error ?? "Nao foi possivel carregar a formacao de custos e precos."}</span></div></section>
-  </main>;
+  </OperationalWorkspace>;
 
   const approvedVersions = data.politicas.flatMap((policy) => policy.versoes.map((version) => ({ ...version, policy }))).filter((version) => version.status === "APPROVED");
   const calculations = data.cenarios.flatMap((scenario) => scenario.calculos.map((calculation) => ({ ...calculation, scenario })));
@@ -37,17 +48,17 @@ export default async function CostPricingPage({ searchParams }: { searchParams?:
         : selectedStage === "precos-prazos" ? <PricesStage access={access.calculate} scenarios={data.cenarios} calculations={calculations} />
           : <ReviewStage access={access} pendingPolicyVersions={pendingPolicyVersions} pendingCalculations={pendingCalculations} calculations={calculations} approvedCalculations={approvedCalculations} />;
 
-  return <main className={styles.workspace}>
-    <WorkspaceHeader facts={{ policies: data.politicas.length, scenarios: data.cenarios.length, calculations: calculations.length }} />
-    <WorkflowStepper stages={workflow.stages} selectedStage={selectedStage} currentStage={workflow.current.id} />
-    <div className={styles.workspaceLayout}>
-      <section className={styles.activeStage} aria-labelledby={`${selectedStage}-title`}>
-        <StageHeading stage={selectedStageInfo} number={String(WORKFLOW_STAGE_IDS.indexOf(selectedStage) + 1)} />
-        <div className={styles.stageBody}>{stageContent}</div>
-      </section>
-      <WorkflowContext current={workflow.current} selectedStage={selectedStageInfo} />
-    </div>
-  </main>;
+  return <OperationalWorkspace>
+    <OperationalPageHeader eyebrow="Precificacao" title="Formacao de custos e precos" description="Organize a base de custo, a politica comercial e a memoria de calculo em um fluxo objetivo." facts={[{ id: "policies", label: "Politicas", value: data.politicas.length }, { id: "scenarios", label: "Cenarios", value: data.cenarios.length }, { id: "calculations", label: "Calculos", value: calculations.length }]} />
+    <GovernedWorkflowStepper ariaLabel="Etapas da formacao de custos e precos" steps={workflow.stages.map((stage) => ({ ...stage, href: `/custos-precos?etapa=${stage.id}` }))} selectedId={selectedStage} currentId={workflow.current.id} />
+    <OperationalWorkspaceLayout>
+      <OperationalWorkspaceSurface labelledBy={`${selectedStage}-title`}>
+        <OperationalStageHeader id={`${selectedStage}-title`} number={String(WORKFLOW_STAGE_IDS.indexOf(selectedStage) + 1)} eyebrow="Etapa selecionada" title={selectedStageInfo.title} description={selectedStageInfo.description} status={selectedStageInfo.label} state={selectedStageInfo.state} />
+        <OperationalWorkspaceBody>{stageContent}</OperationalWorkspaceBody>
+      </OperationalWorkspaceSurface>
+      <OperationalContextPanel ariaLabel="Contexto da etapa" rows={[{ id: "current-stage", label: "Etapa atual do processo", value: workflow.current.title }, { id: "next-action", label: "Proxima acao", value: workflow.current.detail }, { id: "responsible", label: "Responsavel", value: workflow.current.owner }, { id: "situation", label: "Situacao", value: workflow.current.label }]} note={selectedStageInfo.id !== workflow.current.id ? <>Voce esta consultando: {selectedStageInfo.title}.</> : "Fluxo governado."} />
+    </OperationalWorkspaceLayout>
+  </OperationalWorkspace>;
 }
 
 function CostBaseStage({ presentations }: { presentations: number }) {
@@ -86,12 +97,12 @@ function ReviewStage({ access, pendingPolicyVersions, pendingCalculations, calcu
 
 function buildWorkflow(data: PricingWorkspace, approvedVersions: number, calculations: number, approvedCalculations: number, pendingReviews: number) {
   const currentId: WorkflowStageId = pendingReviews ? "revisao-dossie" : !approvedVersions ? "politica" : !data.cenarios.length ? "cenario" : !calculations ? "precos-prazos" : "revisao-dossie";
-  const stages: Array<{ id: WorkflowStageId; title: string; description: string; label: string; state: StageState }> = [
+  const stages: readonly WorkflowStage[] = [
     { id: "base-custo", title: "Produto e base de custo", description: "Consulte as apresentacoes e a fonte de custo permitida para o cenario.", label: data.apresentacoes.length ? "Disponivel" : "Bloqueada", state: data.apresentacoes.length ? "available" : "blocked" },
     { id: "politica", title: "Politica comercial", description: "Crie ou versione uma politica governada antes de usa-la em cenarios.", label: approvedVersions ? "Concluida" : data.politicas.length ? "Em aprovacao" : "Disponivel", state: approvedVersions ? "complete" : data.politicas.length ? "waiting" : "available" },
     { id: "cenario", title: "Cenario", description: "Congele a base manual governada e os componentes comerciais do produto.", label: data.cenarios.length ? "Concluida" : approvedVersions ? "Pronta" : "Bloqueada", state: data.cenarios.length ? "complete" : approvedVersions ? "available" : "blocked" },
     { id: "precos-prazos", title: "Precos e prazos", description: "Calcule e consulte o preco a vista, indicadores e prazos comerciais.", label: calculations ? "Concluida" : data.cenarios.length ? "Pronta" : "Bloqueada", state: calculations ? "complete" : data.cenarios.length ? "available" : "blocked" },
-    { id: "revisao-dossie", title: "Revisao e dossie", description: "Decida pendencias e consulte o historico com documentos aprovados.", label: pendingReviews ? "Em aprovacao" : approvedCalculations ? "Sem pendencias" : "Bloqueada", state: pendingReviews ? "waiting" : approvedCalculations ? "quiet" : "blocked" },
+    { id: "revisao-dossie", title: "Revisao e dossie", description: "Decida pendencias e consulte o historico com documentos aprovados.", label: pendingReviews ? "Em aprovacao" : approvedCalculations ? "Sem pendencias" : "Bloqueada", state: pendingReviews ? "waiting" : approvedCalculations ? "neutral" : "blocked" },
   ];
   const current = stages.find((stage) => stage.id === currentId)!;
   const detail = currentId === "revisao-dossie" && pendingReviews ? "Registre a decisao de aprovacao ou rejeicao pendente." : currentId === "politica" ? "Crie ou aprove uma politica comercial para seguir." : currentId === "cenario" ? "Congele um cenario com a base de custo governada." : currentId === "precos-prazos" ? "Calcule a memoria para obter precos e prazos." : "Acompanhe o dossie e os documentos aprovados.";
@@ -102,10 +113,6 @@ function normalizeStage(value: SearchParams["etapa"], fallback: WorkflowStageId)
   return typeof value === "string" && WORKFLOW_STAGE_IDS.includes(value as WorkflowStageId) ? value as WorkflowStageId : fallback;
 }
 
-function WorkspaceHeader({ facts }: { facts: { policies: number; scenarios: number; calculations: number } }) { return <header className={styles.heading}><div><span className="eyebrow">Precificacao</span><h1>Formacao de custos e precos</h1><p>Organize a base de custo, a politica comercial e a memoria de calculo em um fluxo objetivo.</p></div><dl className={styles.headerFacts}><div><dt>Politicas</dt><dd>{facts.policies}</dd></div><div><dt>Cenarios</dt><dd>{facts.scenarios}</dd></div><div><dt>Calculos</dt><dd>{facts.calculations}</dd></div></dl></header>; }
-function WorkflowStepper({ stages, selectedStage, currentStage }: { stages: Array<{ id: WorkflowStageId; title: string; label: string; state: StageState }>; selectedStage: WorkflowStageId; currentStage: WorkflowStageId }) { return <nav className={styles.workflowStepper} aria-label="Etapas da formacao de custos e precos"><ol>{stages.map((stage, index) => <li key={stage.id} data-state={stage.state}><a href={`/custos-precos?etapa=${stage.id}`} aria-current={stage.id === selectedStage ? "step" : undefined}><span className={styles.stepNumber}>{index + 1}</span><span><strong>{stage.title}</strong><small>{stage.label}</small>{stage.id === currentStage && stage.id !== selectedStage ? <em>Etapa atual do processo</em> : null}</span></a></li>)}</ol></nav>; }
-function WorkflowContext({ current, selectedStage }: { current: { id: WorkflowStageId; title: string; label: string; detail: string; owner: string }; selectedStage: { id: WorkflowStageId; title: string; label: string } }) { return <aside className={styles.workspaceContext} aria-label="Contexto da etapa"><div><span>Etapa atual do processo</span><strong>{current.title}</strong></div><div><span>Proxima acao</span><strong>{current.detail}</strong></div><div><span>Responsavel</span><strong>{current.owner}</strong></div><div><span>Situacao</span><strong>{current.label}</strong></div>{selectedStage.id !== current.id ? <small>Voce esta consultando: {selectedStage.title}.</small> : <small>Fluxo governado.</small>}</aside>; }
-function StageHeading({ stage, number }: { stage: { id: WorkflowStageId; title: string; description: string; label: string }; number: string }) { return <div className={styles.stageHeading}><div className={styles.stageTitle}><span>{number}</span><div><p className="eyebrow">Etapa selecionada</p><h2 id={`${stage.id}-title`}>{stage.title}</h2><p className={styles.stageDescription}>{stage.description}</p></div></div><span className="status-chip">{stage.label}</span></div>; }
 function Permission() { return <div className="permission-state"><strong>Acao indisponivel</strong><span>Sua conta pode consultar, mas nao possui a alcada desta etapa.</span></div>; }
 function Empty({ title, text }: { title: string; text: string }) { return <div className={styles.emptyState}><strong>{title}</strong><span>{text}</span></div>; }
 function label(value: string) { return value === "margem_liquida" ? "Margem liquida" : "Markup"; }

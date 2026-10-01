@@ -37,6 +37,19 @@
   --green-accent: #1f8f5f;
   --amber-accent: #b7791f;
   --red-accent: #c24141;
+  --operational-workspace-max-width: 1520px;
+  --operational-workspace-text: #17211c;
+  --operational-workspace-muted: #526158;
+  --operational-workspace-border: #d7e0da;
+  --operational-workspace-surface: #ffffff;
+  --operational-workspace-surface-muted: #f8fbf9;
+  --operational-workspace-surface-hover: #f1f6f2;
+  --operational-workspace-surface-selected: #eaf4ed;
+  --operational-workspace-accent: #1f7146;
+  --operational-workspace-accent-strong: #1e7a4b;
+  --operational-workspace-accent-muted: #e4f2e8;
+  --operational-workspace-shadow: 0 8px 24px rgba(25, 56, 38, .05);
+  --operational-workspace-shadow-subtle: 0 6px 18px rgba(25, 56, 38, .04);
 }
 
 * {
@@ -5749,6 +5762,81 @@ h1 {
 .page-header p { margin: 0; max-width: 820px; }
 .page-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 
+
+
+.operational-workspace { max-width: var(--operational-workspace-max-width); margin: 0 auto; padding: 28px 32px 64px; color: var(--operational-workspace-text); }
+.operational-page-header { display: flex; justify-content: space-between; gap: 32px; align-items: flex-start; padding: 0 0 22px; }
+.operational-page-header-copy { min-width: 0; }
+.operational-page-header h1 { margin: 4px 0 8px; font-size: clamp(1.875rem, 2.5vw, 2.25rem); line-height: 1.12; letter-spacing: 0; }
+.operational-page-header p { max-width: 680px; margin: 0; color: var(--operational-workspace-muted); font-size: .98rem; line-height: 1.5; }
+.operational-page-facts { display: flex; gap: 10px; margin: 0; }
+.operational-page-facts div { min-width: 82px; padding: 10px 12px; border: 1px solid var(--operational-workspace-border); border-radius: 8px; background: var(--operational-workspace-surface); }
+.operational-page-facts dt { font-size: .75rem; color: var(--operational-workspace-muted); }
+.operational-page-facts dd { margin: 3px 0 0; font-size: 1.15rem; font-weight: 700; }
+.operational-page-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.governed-workflow-stepper { overflow-x: auto; border: 1px solid var(--operational-workspace-border); border-radius: 8px; background: var(--operational-workspace-surface); }
+.governed-workflow-stepper ol { display: flex; width: max-content; min-width: 100%; margin: 0; padding: 6px; list-style: none; }
+.governed-workflow-stepper li { flex: 1 0 152px; min-width: 0; }
+.governed-workflow-stepper a { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 9px; min-height: 70px; padding: 10px; border-radius: 6px; color: var(--operational-workspace-text); text-decoration: none; }
+.governed-workflow-stepper a:hover { background: var(--operational-workspace-surface-hover); }
+.governed-workflow-stepper a:focus-visible { outline: 3px solid var(--operational-workspace-accent-strong); outline-offset: 2px; }
+.governed-workflow-stepper a[aria-current="page"] { background: var(--operational-workspace-surface-selected); box-shadow: inset 0 0 0 1px var(--operational-workspace-accent); }
+.governed-workflow-stepper li[data-state="waiting"] .governed-workflow-stepper-number { background: var(--operational-workspace-accent); color: var(--operational-workspace-surface); }
+.governed-workflow-stepper li[data-state="complete"] .governed-workflow-stepper-number { background: var(--operational-workspace-accent-muted); border-color: var(--operational-workspace-accent); color: var(--operational-workspace-accent); }
+.governed-workflow-stepper li[data-state="blocked"] .governed-workflow-stepper-number { color: var(--operational-workspace-muted); }
+.governed-workflow-stepper-number { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--operational-workspace-border); border-radius: 50%; font-size: .78rem; font-weight: 700; }
+.governed-workflow-stepper strong, .governed-workflow-stepper small, .governed-workflow-stepper-current { display: block; }
+.governed-workflow-stepper strong { font-size: .88rem; line-height: 1.25; }
+.governed-workflow-stepper small { margin-top: 3px; color: var(--operational-workspace-muted); font-size: .75rem; }
+.governed-workflow-stepper-current { margin-top: 4px; color: var(--operational-workspace-accent); font-size: .7rem; font-weight: 700; }
+.governed-workflow-stepper-current-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.operational-workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); grid-template-areas: "stage context"; gap: 24px; align-items: start; padding-top: 24px; }
+.operational-workspace-surface { grid-area: stage; min-width: 0; padding: 26px 28px; border: 1px solid var(--operational-workspace-border); border-radius: 8px; background: var(--operational-workspace-surface); box-shadow: var(--operational-workspace-shadow); }
+.operational-stage-header { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; padding-bottom: 20px; border-bottom: 1px solid var(--operational-workspace-border); }
+.operational-stage-title { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.operational-stage-title > span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--operational-workspace-accent-muted); color: var(--operational-workspace-accent); font-size: .84rem; font-weight: 700; }
+.operational-stage-title h2 { margin: 2px 0 0; font-size: 1.55rem; line-height: 1.2; }
+.operational-stage-title .eyebrow { margin: 0; }
+.operational-stage-description { max-width: 620px; margin: 7px 0 0; color: var(--operational-workspace-muted); font-size: .9rem; line-height: 1.45; }
+.operational-workspace-body { padding-top: 22px; }
+.operational-context-panel { grid-area: context; position: sticky; top: 18px; display: grid; gap: 14px; padding: 20px; border: 1px solid var(--operational-workspace-border); border-radius: 8px; background: var(--operational-workspace-surface-muted); box-shadow: var(--operational-workspace-shadow-subtle); }
+.operational-context-panel dl { display: grid; gap: 14px; margin: 0; }
+.operational-context-panel dl div { display: grid; gap: 4px; }
+.operational-context-panel dt { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--operational-workspace-muted); }
+.operational-context-panel dd { margin: 0; font-size: .92rem; font-weight: 700; line-height: 1.45; color: var(--operational-workspace-text); }
+.operational-context-panel small { padding-top: 10px; border-top: 1px solid var(--operational-workspace-border); color: var(--operational-workspace-muted); font-size: .78rem; line-height: 1.4; }
+
+@media (max-width: 1179px) {
+  .operational-workspace { max-width: 1120px; }
+  .operational-workspace-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "context" "stage"; }
+  .operational-context-panel { position: static; }
+  .operational-context-panel dl { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .operational-context-panel small { grid-column: 1 / -1; }
+}
+
+@media (max-width: 900px) {
+  .operational-workspace { padding: 24px 20px 52px; }
+  .operational-page-header { gap: 20px; }
+  .operational-page-facts { gap: 8px; }
+  .operational-page-facts div { min-width: 70px; }
+  .operational-workspace-surface { padding: 22px; }
+  .operational-context-panel dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .operational-workspace { padding: 20px 14px 44px; }
+  .operational-page-header, .operational-stage-header { display: grid; gap: 12px; }
+  .operational-page-facts { width: 100%; }
+  .operational-page-facts div { flex: 1; min-width: 0; }
+  .operational-page-actions { width: 100%; justify-content: stretch; }
+  .operational-page-actions > * { flex: 1 1 auto; text-align: center; }
+  .governed-workflow-stepper { margin: 0 -2px; }
+  .operational-workspace-layout { gap: 16px; padding-top: 16px; }
+  .operational-workspace-surface { padding: 18px; }
+  .operational-stage-title h2 { font-size: 1.35rem; }
+  .operational-context-panel { padding: 16px; }
+  .operational-context-panel dl { grid-template-columns: 1fr; }
+}
 
 /* UX-SYS-01 Fase 2: canonical workflow guide for multi-step operational domains. */
 .workflow-guide {

@@ -213,6 +213,17 @@ manual governada foram preservados. Os contratos dirigidos de workspace e
 exportacao, ESLint, build web e `git diff --check` passaram localmente. A
 proxima etapa e a revisao do delta UX antes de qualquer publicacao.
 
+### UX-SYS-02: fundacao compartilhada de layout
+
+A fundacao compartilhada recebeu o shell operacional reutilizavel de cabecalho,
+fatos, stepper governado, superficie principal, painel contextual e heading de
+etapa. `/custos-precos` continua como referencia dourada e passou a consumir
+essa fundacao sem alterar regras, actions, RPCs ou comportamento de etapas.
+Os estilos especificos de precificacao permanecem locais; nenhum outro modulo
+foi migrado. Os contratos dirigidos, lint, build e `git diff --check` foram
+executados localmente. A proxima tarefa e selecionar um unico modulo piloto
+depois da revisao arquitetural.
+
 ### PRC-02B: fundacao do motor de formulas versionado
 
 A migration 0151 implementa, de forma aditiva, identidades `FML-########`,

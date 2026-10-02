@@ -23,8 +23,12 @@ class ReleaseGovernanceContract(unittest.TestCase):
         self.assertLess(PROFILE.index("PR para staging"), PROFILE.index("PR de release staging -> main"))
 
     def test_current_state_identifies_the_governance_transition(self):
-        self.assertIn("`ENG-ENV-01` esta em execucao", CURRENT_STATE)
-        self.assertIn("banco de producao ainda nao identificado", CURRENT_STATE)
+        self.assertIn("`ENG-ENV-01` estabelece", CURRENT_STATE)
+        self.assertIn("elite-system-production", CURRENT_STATE)
+        self.assertIn("oncssgiocivoknwwcuuz", CURRENT_STATE)
+        self.assertIn("ledger de\n  migrations vazio", CURRENT_STATE)
+        self.assertIn("pipeline governado de\n  migracao e release", CURRENT_STATE)
+        self.assertIn("pipeline governado de release de producao", ADR)
 
 
 if __name__ == "__main__":

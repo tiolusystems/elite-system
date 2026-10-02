@@ -4,20 +4,23 @@ Atualizado em: 2026-10-02
 
 ## Tarefa em execucao
 
-- `ENG-ENV-01` esta em execucao para codificar a topologia canonica de release;
-- `staging` e a branch permanente de integracao e homologacao, em
-  `383b5569a3bf35c1f7dc3fe1d5041b244698875b` antes desta PR;
-- `main` e a branch permanente de producao, em
-  `0c675f826e7d2a2bbe2034210262f6ae441fd9d3`;
+- `ENG-ENV-01` estabelece a topologia canonica de release;
+- `staging` e a branch permanente de integracao e homologacao;
+- `main` e a branch permanente de producao;
 - ambas exigem PR, `python-tests`, `web-contract`, `database-contract`,
   enforcement para administradores e negam force push e exclusao;
-- staging canonico: Vercel `elite-system-staging`, Supabase
-  `elite-system-staging` / `igwweatzuxmeayibyuge`, ledger de migration `0152`;
-- producao: Vercel `elite-system`; banco de producao ainda nao identificado;
+- staging canonico: o deploy Vercel `elite-system-staging` foi comprovado em
+  `elite-system-staging.vercel.app`; o Supabase `elite-system-staging` /
+  `igwweatzuxmeayibyuge` esta no ledger de migration `0152`;
+- producao: Vercel `elite-system`; o Supabase `elite-system-production` /
+  `oncssgiocivoknwwcuuz` existe, esta `ACTIVE_HEALTHY` e possui ledger de
+  migrations vazio; ele nao esta ativado nem conectado a uma release de producao;
+- nenhuma migration de producao e autorizada antes do pipeline governado de
+  migracao e release existir e ser validado.
 
 ## Proxima tarefa
 
-Provar o deploy Vercel canonico automatico a partir de `staging`.
+Estabelecer o pipeline governado de migracao e release para staging e producao.
 
 ## Historico de implementacao por modulo
 

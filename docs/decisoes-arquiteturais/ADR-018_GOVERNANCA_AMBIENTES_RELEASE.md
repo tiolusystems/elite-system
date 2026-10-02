@@ -18,8 +18,10 @@ projeto Vercel `elite-system-staging`, usa o projeto Supabase
 nao e permitido.
 
 `main` e a branch permanente de producao. Ela alimenta o projeto Vercel
-`elite-system`. O banco de producao deve ser identificado explicitamente antes
-de qualquer ativacao. Push direto nao e permitido.
+`elite-system`. O banco de producao esta explicitamente estabelecido como
+Supabase `elite-system-production`, ref `oncssgiocivoknwwcuuz`. Ele foi
+provisionado vazio e permanece nao inicializado para migrations do Elite
+System. Push direto nao e permitido.
 
 Branches `feature/*` sao temporarias, partem de `staging`, retornam a `staging`
 por PR e sao removidas apos integracao bem-sucedida quando for seguro.
@@ -50,6 +52,6 @@ expand-migrate-contract.
 
 ## Seguranca de producao
 
-O banco de producao ainda nao esta identificado. Nenhum deploy de banco de
-producao e autorizado ate que esse target seja explicitamente estabelecido e
-validado.
+O provisionamento do target de producao nao constitui ativacao de producao.
+Nenhuma migration, conexao da aplicacao ou release de producao pode ocorrer ate
+que o pipeline governado de release de producao seja estabelecido e validado.

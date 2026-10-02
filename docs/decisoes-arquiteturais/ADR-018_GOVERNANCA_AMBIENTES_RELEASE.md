@@ -50,6 +50,16 @@ Validacao destrutiva usa somente bancos descartaveis. Quando a compatibilidade
 entre ordem de deploy importar, usar a estrategia aditiva
 expand-migrate-contract.
 
+A release de banco de staging segue `CI -> dry-run -> governed db push ->
+ledger verification`. A release de banco de producao segue `release main ->
+CI -> GitHub production environment approval -> dry-run -> governed db push ->
+ledger verification`.
+
+O deploy automatico de banco permanece desabilitado ate que as credenciais
+sejam instaladas e a execucao verify-only seja aprovada. Provisionar um projeto
+nao autoriza migration. A migration de producao nunca usa seed, reset ou repair
+como fluxo normal de release.
+
 ## Seguranca de producao
 
 O provisionamento do target de producao nao constitui ativacao de producao.

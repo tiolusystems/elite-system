@@ -28,6 +28,7 @@ O mapa detalhado continua sendo
 
 | Assunto | Modulo dono | Ponto inicial |
 |---|---|---|
+| ambientes, release e promocao | core / engenharia transversal | `docs/decisoes-arquiteturais/ADR-018_GOVERNANCA_AMBIENTES_RELEASE.md` |
 | fechamento operacional e tolerancia a erro | transversal, sem novo modulo | `docs/validacoes/OPS_GATE_01_MATRIZ.md` |
 | login, usuario, permissao, MFA | `seguranca` | `apps/web/app/seguranca`, `apps/web/app/login` |
 | progresso, dependencias e implantacao | `core` | `/modulos`; `docs/implantacao/00_MAPA_IMPLANTACAO_MODULOS.md` |

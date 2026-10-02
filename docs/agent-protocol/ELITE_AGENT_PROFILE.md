@@ -36,9 +36,12 @@ de alterar o contrato.
 implementacao local
 > validacao dirigida proporcional
 > revisao GPT quando material
-> commit
-> push
-> PR, merge ou deploy somente com autorizacao explicita
+> feature commit
+> PR para staging
+> deploy canonico de staging
+> homologacao humana quando exigida
+> PR de release staging -> main
+> deploy de producao somente com autorizacao explicita
 ```
 
 Nao declarar execucao, teste, commit, push, CI ou deploy sem evidencia

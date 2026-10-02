@@ -1,26 +1,29 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-09-26
-
-## Estado vigente em 2026-08-25
-
-- repositorio: `tiolusystems/elite-system`;
-- base: `main` no merge `fb17622956b8b8ceb37ddf17d389d18d6097eb4b`;
-- checkout local isolado: detached em `main@fb17622956b8b8ceb37ddf17d389d18d6097eb4b`;
-- a PR cumulativa ORD-01 `#8` foi integrada a `main`;
-- producao real, PWA e bancos persistentes permanecem inalterados por esta
-  tarefa;
-- os checkouts operacionais anteriores permanecem preservados.
+Atualizado em: 2026-10-02
 
 ## Tarefa em execucao
 
-`PRC-01 - fundacao ISO de formacao de custos e precos`.
+- `ENG-ENV-01` esta em execucao para codificar a topologia canonica de release;
+- `staging` e a branch permanente de integracao e homologacao, em
+  `383b5569a3bf35c1f7dc3fe1d5041b244698875b` antes desta PR;
+- `main` e a branch permanente de producao, em
+  `0c675f826e7d2a2bbe2034210262f6ae441fd9d3`;
+- ambas exigem PR, `python-tests`, `web-contract`, `database-contract`,
+  enforcement para administradores e negam force push e exclusao;
+- staging canonico: Vercel `elite-system-staging`, Supabase
+  `elite-system-staging` / `igwweatzuxmeayibyuge`, ledger de migration `0152`;
+- producao: Vercel `elite-system`; banco de producao ainda nao identificado;
 
-Fundacao local em implementacao pela migration aditiva `0138`. O novo dominio
-`precificacao` possui politica versionada, cenario com fontes congeladas,
-memoria de calculo para margem/markup e 18 prazos, revisao segregada e dossie.
-Nao publica lista comercial, nao movimenta estoque, nao altera formula PCP e
-nao gera pagamento financeiro.
+## Proxima tarefa
+
+Provar o deploy Vercel canonico automatico a partir de `staging`.
+
+## Historico de implementacao por modulo
+
+As secoes seguintes preservam fatos de implementacao e validacao por modulo.
+Elas incluem o registro historico "Estado vigente em 2026-08-25", que nao
+substitui o estado global acima.
 
 ## Validacao vigente
 
@@ -66,7 +69,7 @@ nao gera pagamento financeiro.
 - nenhum deploy, migration remota ou alteracao de banco persistente integra a
   implementacao local do workspace XLSX.
 
-## Proxima tarefa
+## Proxima tarefa registrada no estado anterior
 
 Publicar a correcao IAM-01A depois da validacao descartavel aprovada e usar o
 CI remoto como gate. IAM-02 (sessoes e dispositivos) permanece fora deste

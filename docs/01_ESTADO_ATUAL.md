@@ -4,7 +4,8 @@ Atualizado em: 2026-10-02
 
 ## Tarefa em execucao
 
-- `ENG-ENV-01` estabelece a topologia canonica de release;
+- `ENG-ENV-01` estabelece a topologia canonica e normalizou a linhagem Git:
+  `main` e ancestral de `staging`;
 - `staging` e a branch permanente de integracao e homologacao;
 - `main` e a branch permanente de producao;
 - ambas exigem PR, `python-tests`, `web-contract`, `database-contract`,
@@ -17,10 +18,13 @@ Atualizado em: 2026-10-02
   migrations vazio; ele nao esta ativado nem conectado a uma release de producao;
 - nenhuma migration de producao e autorizada antes do pipeline governado de
   migracao e release existir e ser validado.
+- o pipeline governado de release de banco esta sendo instalado; deploy remoto
+  automatico permanece desabilitado e as credenciais ainda nao foram instaladas.
 
 ## Proxima tarefa
 
-Estabelecer o pipeline governado de migracao e release para staging e producao.
+Instalar credenciais e executar verify-only governado antes de qualquer
+migracao remota.
 
 ## Historico de implementacao por modulo
 

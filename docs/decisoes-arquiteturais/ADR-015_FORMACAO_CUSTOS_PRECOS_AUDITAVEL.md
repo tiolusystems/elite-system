@@ -67,3 +67,24 @@ A migration aditiva 0145 bloqueia fontes system sem adapter can�nico, preserva
 ## Exportacao do snapshot aprovado em 0146
 
 A exportacao XLSX/PDF usa exclusivamente `consultar_prc_snapshot_aprovado(bigint)`. A superficie governada exige decisao `APPROVED` e recalcula o SHA-256 do `intermediarios_json` persistido antes de devolve-lo. Calculos pendentes, rejeitados ou com hash divergente permanecem bloqueados; a aplicacao nao consulta diretamente as tabelas PRC nem recalcula precos.
+
+## Relacao com o ADR-016
+
+Este ADR permanece como contrato do PRC-01 legado compativel. Continuam
+vigentes e historicamente imutaveis:
+
+- o dominio proprietario `precificacao` e suas fronteiras;
+- as politicas, cenarios, calculos, aprovacoes, snapshots e exportacoes atuais;
+- os 11 componentes, os metodos margem liquida e markup e as 18 parcelas usados
+  pelos calculos PRC-01 existentes;
+- append-only, auditoria, segregacao, idempotencia, fail-closed e ausencia de
+  efeitos comerciais ou financeiros.
+
+O ADR-016 generaliza apenas a capacidade futura de definir formulas, parametros
+tipados e grades de prazos. O modelo novo sera aditivo e operara primeiro em
+shadow mode. Ate um gate posterior de paridade e uma decisao explicita, a
+formula descrita neste ADR continua sendo a unica fonte do resultado oficial.
+
+O ADR-016 nao reinterpreta snapshots antigos, nao altera exports aprovados e nao
+transforma os 11 componentes ou os 18 prazos da Elite em regra universal para
+outras empresas.

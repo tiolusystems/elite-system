@@ -13,6 +13,38 @@ type PageHeaderProps = {
   actions?: ReactNode;
 };
 
+export type WorkspaceFact = {
+  readonly id: string;
+  readonly label: string;
+  readonly value: ReactNode;
+};
+
+export type GovernedWorkflowState =
+  | "complete"
+  | "available"
+  | "waiting"
+  | "blocked"
+  | "neutral";
+
+export type GovernedWorkflowStep<TId extends string> = {
+  readonly id: TId;
+  readonly href: string;
+  readonly title: string;
+  readonly label: string;
+  readonly state: GovernedWorkflowState;
+};
+
+type GovernedWorkflowStepperProps<TId extends string> = {
+  readonly steps: readonly GovernedWorkflowStep<TId>[];
+  readonly selectedId: NoInfer<TId>;
+  readonly currentId: NoInfer<TId>;
+  readonly ariaLabel: string;
+};
+
+type OperationalWorkspaceProps = PageWorkspaceProps & {
+  as?: "main" | "div";
+};
+
 export type DomainNavigationItem = {
   key: string;
   href: string;
@@ -71,6 +103,160 @@ export function PageHeader({ eyebrow, title, description, actions }: PageHeaderP
         <p className="muted">{description}</p>
       </div>
       {actions ? <div className="page-actions">{actions}</div> : null}
+    </header>
+  );
+}
+
+export function OperationalWorkspace({
+  children,
+  className = "",
+  as = "main",
+}: OperationalWorkspaceProps) {
+  const classNames = `operational-workspace ${className}`.trim();
+
+  if (as === "div") {
+    return <div className={classNames}>{children}</div>;
+  }
+
+  return <main className={classNames}>{children}</main>;
+}
+
+export function OperationalPageHeader({
+  eyebrow,
+  title,
+  description,
+  facts = [],
+  actions,
+}: PageHeaderProps & { facts?: readonly WorkspaceFact[] }) {
+  return (
+    <header className="operational-page-header">
+      <div className="operational-page-header-copy">
+        {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+      {facts.length ? (
+        <dl className="operational-page-facts">
+          {facts.map((fact) => (
+            <div key={fact.id}>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {actions ? <div className="operational-page-actions">{actions}</div> : null}
+    </header>
+  );
+}
+
+export function GovernedWorkflowStepper<const TId extends string>({
+  steps,
+  selectedId,
+  currentId,
+  ariaLabel,
+}: GovernedWorkflowStepperProps<TId>) {
+  return (
+    <nav className="governed-workflow-stepper" aria-label={ariaLabel}>
+      <ol>
+        {steps.map((step, index) => {
+          const isSelected = step.id === selectedId;
+          const isCurrent = step.id === currentId;
+
+          return (
+            <li key={step.id} data-state={step.state} data-current={isCurrent || undefined}>
+              <Link href={step.href} aria-current={isSelected ? "page" : undefined}>
+                <span className="governed-workflow-stepper-number">{index + 1}</span>
+                <span>
+                  <strong>{step.title}</strong>
+                  <small>{step.label}</small>
+                  {isCurrent ? (
+                    <span className={isSelected ? "governed-workflow-stepper-current-sr" : "governed-workflow-stepper-current"}>
+                      Etapa atual do processo
+                    </span>
+                  ) : null}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+export function OperationalWorkspaceLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="operational-workspace-layout">
+      {children}
+    </div>
+  );
+}
+
+export function OperationalWorkspaceSurface({ children, labelledBy }: { children: ReactNode; labelledBy: string }) {
+  return (
+    <section className="operational-workspace-surface" aria-labelledby={labelledBy}>
+      {children}
+    </section>
+  );
+}
+
+export function OperationalWorkspaceBody({ children }: { children: ReactNode }) {
+  return <div className="operational-workspace-body">{children}</div>;
+}
+
+export function OperationalContextPanel({
+  rows,
+  note,
+  ariaLabel,
+}: {
+  rows: readonly WorkspaceFact[];
+  note?: ReactNode;
+  ariaLabel: string;
+}) {
+  return (
+    <aside className="operational-context-panel" aria-label={ariaLabel}>
+      <dl>
+        {rows.map((row) => (
+          <div key={row.id}>
+            <dt>{row.label}</dt>
+            <dd>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {note != null ? <small>{note}</small> : null}
+    </aside>
+  );
+}
+
+export function OperationalStageHeader({
+  id,
+  number,
+  eyebrow,
+  title,
+  description,
+  status,
+  state,
+}: {
+  id: string;
+  number: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  status: string;
+  state: GovernedWorkflowState;
+}) {
+  return (
+    <header className="operational-stage-header" data-state={state}>
+      <div className="operational-stage-title">
+        <span>{number}</span>
+        <div>
+          <p className="eyebrow">{eyebrow}</p>
+          <h2 id={id}>{title}</h2>
+          <p className="operational-stage-description">{description}</p>
+        </div>
+      </div>
+      <span className="status-chip">{status}</span>
     </header>
   );
 }

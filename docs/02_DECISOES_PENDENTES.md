@@ -1,6 +1,6 @@
 # Elite System - decisoes pendentes
 
-Atualizado em: 2026-07-28
+Atualizado em: 2026-09-21
 
 ## Regra
 

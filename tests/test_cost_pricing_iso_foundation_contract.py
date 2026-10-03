@@ -37,11 +37,10 @@ class CostPricingIsoFoundationContract(unittest.TestCase):
             self.assertIn(phrase,MIGRATION+SMOKE)
 
     def test_ui_uses_business_language_and_audited_boundary(self):
-        for phrase in ('Custos e referencias','Cenarios','Memoria de calculo','Revisao e aprovacao','Dossie','responsavel','blocked_reason'):
-            if phrase=='blocked_reason':
-                self.assertIn('reason',MIGRATION)
-            else:
-                self.assertIn(phrase,PAGE)
+        for phrase in ('Produto e base de custo','Politica comercial','Cenario','Precos e prazos','Revisao e dossie','Historico e documentos','Responsavel'):
+            self.assertIn(phrase,PAGE)
+        self.assertIn('Custo tecnico automatico ainda nao calculado',PAGE)
+        self.assertIn('reason',MIGRATION)
         self.assertIn('auditedRpc',ACTIONS)
         self.assertNotIn('.from(',ACTIONS)
         self.assertNotIn('Publicar',PAGE)

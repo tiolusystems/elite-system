@@ -12,6 +12,18 @@ Para trabalho coordenado entre GPT e Codex, consulte:
 Esses documentos complementam este contrato; nao duplicam nem substituem as
 regras vigentes do repositorio.
 
+## Canonical release topology
+
+- Branches normais de desenvolvimento partem de `staging`.
+- PRs ordinarias devem ter `staging` como destino.
+- `main` e exclusivamente a branch de producao.
+- A promocao de `staging` para `main` ocorre por uma PR de release.
+- Preview de deploy nao e ambiente canonico de staging nem de producao.
+- Nenhuma tarefa e "deployed" somente porque o build ou Vercel esta `READY`.
+  Verificar commit, CI, target, URL canonica e ledger de migration aplicavel.
+- Push direto para `staging` e `main` e proibido.
+- Nunca resolver drift de ambiente com reset de banco operacional.
+
 ## Orientacao minima
 
 1. Comece por `docs/00_MAPA_EXECUTIVO.md`.

@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-10-02
+Atualizado em: 2026-10-03
 
 ## Tarefa em execucao
 
@@ -18,13 +18,16 @@ Atualizado em: 2026-10-02
   migrations vazio; ele nao esta ativado nem conectado a uma release de producao;
 - nenhuma migration de producao e autorizada antes do pipeline governado de
   migracao e release existir e ser validado.
-- o pipeline governado de release de banco esta sendo instalado; deploy remoto
-  automatico permanece desabilitado e as credenciais ainda nao foram instaladas.
+- o primeiro `verify-staging` falhou fechado antes de conectar ao banco porque
+  o PAT com escopo reduzido nao tinha `api_gateway_keys_read`; nenhuma migration
+  foi aplicada. O transporte canonico foi simplificado para URL direta de banco
+  pelo session pooler, sem Management API PAT; o deploy remoto automatico
+  permanece desabilitado.
 
 ## Proxima tarefa
 
-Instalar credenciais e executar verify-only governado antes de qualquer
-migracao remota.
+Configurar o host do session pooler e executar verify-only governado antes de
+qualquer migracao remota.
 
 ## Historico de implementacao por modulo
 

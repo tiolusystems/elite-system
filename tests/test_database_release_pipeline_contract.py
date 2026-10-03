@@ -28,8 +28,20 @@ class DatabaseReleasePipelineContract(unittest.TestCase):
             for dependency in ("python-tests", "web-contract", "database-contract"):
                 self.assertIn(f"- {dependency}", job)
             self.assertIn("version: 2.109.0", job)
-            self.assertIn("supabase db push --dry-run", job)
-            self.assertLess(job.index("supabase db push --dry-run"), job.index("run: supabase db push\n"))
+            self.assertIn("SUPABASE_DB_PASSWORD", job)
+            self.assertIn("SUPABASE_PROJECT_ID", job)
+            self.assertIn("SUPABASE_POOLER_HOST", job)
+            self.assertIn("Prepare direct database connection", job)
+            self.assertIn("urllib.parse.quote", job)
+            self.assertIn("safe=\"\"", job)
+            self.assertIn("::add-mask::$db_url", job)
+            self.assertIn("sslmode=require", job)
+            self.assertIn("supabase db push --db-url \"$SUPABASE_DB_URL\" --dry-run", job)
+            self.assertIn("supabase migration list --db-url \"$SUPABASE_DB_URL\"", job)
+            self.assertLess(
+                job.index("supabase db push --db-url \"$SUPABASE_DB_URL\" --dry-run"),
+                job.index("run: supabase db push --db-url \"$SUPABASE_DB_URL\"\n"),
+            )
             self.assertIn("cancel-in-progress: false", job)
 
         self.assertIn("environment: elite-system-staging", staging)
@@ -41,6 +53,8 @@ class DatabaseReleasePipelineContract(unittest.TestCase):
         self.assertNotIn("refs/heads/staging", production)
 
     def test_remote_release_jobs_forbid_unsafe_operations(self):
+        self.assertNotIn("supabase link", WORKFLOW)
+        self.assertNotIn("SUPABASE_ACCESS_TOKEN", WORKFLOW)
         self.assertNotIn("--include-seed", WORKFLOW)
         self.assertNotIn("db reset --linked", WORKFLOW)
         self.assertNotIn("migration repair", WORKFLOW)

@@ -55,6 +55,13 @@ ledger verification`. A release de banco de producao segue `release main ->
 CI -> GitHub production environment approval -> dry-run -> governed db push ->
 ledger verification`.
 
+A autenticacao de release de banco usa conexao PostgreSQL direta pelo session
+pooler do Supabase. A migration nao exige acesso a Management API: o CI recebe
+somente credenciais de banco com escopo de ambiente, gera a URL de conexao de
+forma efemera, codifica a senha para URL, mascara a URL completa e exige TLS.
+Nenhum PAT faz parte da arquitetura canonica de migrations. Credenciais de
+producao permanecem isoladas das credenciais de staging.
+
 O deploy automatico de banco permanece desabilitado ate que as credenciais
 sejam instaladas e a execucao verify-only seja aprovada. Provisionar um projeto
 nao autoriza migration. A migration de producao nunca usa seed, reset ou repair

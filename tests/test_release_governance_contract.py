@@ -16,10 +16,18 @@ class ReleaseGovernanceContract(unittest.TestCase):
         self.assertIn("`main` e a branch permanente de producao", ADR)
         self.assertIn("feature/* -> PR -> staging -> homologation -> release PR -> main", ADR)
         self.assertIn("Vercel `READY` nao e equivalente a deploy canonico.", ADR)
+        self.assertIn("## Staged production release", ADR)
+        self.assertIn("deployment Vercel com `target=production`", ADR)
+        self.assertIn("nao uma versao publicada no dominio canonico", ADR)
+        self.assertIn("`Auto-assign Custom Production Domains` permanece desabilitado", ADR)
+        self.assertIn("promocao explicita do exato\ndeployment validado", ADR)
+        self.assertIn("compatibilidade de\nbanco, ledger de migration, CI, smoke, SHA de release", ADR)
 
     def test_agent_contract_requires_the_canonical_path(self):
         self.assertIn("PRs ordinarias devem ter `staging` como destino.", AGENTS)
         self.assertIn("Preview de deploy nao e ambiente canonico", AGENTS)
+        self.assertIn("essa geracao nao publica trafego de producao", AGENTS)
+        self.assertIn("Agentes nunca executam `vercel promote` sem autorizacao humana explicita", AGENTS)
         self.assertLess(PROFILE.index("PR para staging"), PROFILE.index("PR de release staging -> main"))
 
     def test_current_state_identifies_the_governance_transition(self):
@@ -27,7 +35,10 @@ class ReleaseGovernanceContract(unittest.TestCase):
         self.assertIn("elite-system-production", CURRENT_STATE)
         self.assertIn("oncssgiocivoknwwcuuz", CURRENT_STATE)
         self.assertIn("ledger de\n  migrations vazio", CURRENT_STATE)
-        self.assertIn("pipeline governado de\n  migracao e release", CURRENT_STATE)
+        self.assertIn("a PR #30 promoveu staging validado para `main`", CURRENT_STATE)
+        self.assertIn("Production Domains desabilitado", CURRENT_STATE)
+        self.assertIn("deployment staged mais\n  promocao explicita", CURRENT_STATE)
+        self.assertIn("readiness verify-only do banco de producao", CURRENT_STATE)
         self.assertIn("pipeline governado de release de producao", ADR)
 
 

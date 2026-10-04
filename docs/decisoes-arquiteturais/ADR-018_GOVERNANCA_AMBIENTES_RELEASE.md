@@ -29,6 +29,33 @@ por PR e sao removidas apos integracao bem-sucedida quando for seguro.
 Deploys preview sao evidencia temporaria de engenharia. Nunca constituem
 staging ou producao canonicos.
 
+## Staged production release
+
+`main` e a branch de release de producao. Um merge para `main` pode criar um
+deployment Vercel com `target=production`; esse deployment e um artefato
+imutavel candidato a release, nao uma versao publicada no dominio canonico.
+Nem `target=production` nem Vercel `READY` significam que o trafego canonico
+foi alterado.
+
+`Auto-assign Custom Production Domains` permanece desabilitado. O dominio
+canonico de producao somente pode mudar por promocao explicita do exato
+deployment validado. Antes dessa promocao, devem existir compatibilidade de
+banco, ledger de migration, CI, smoke, SHA de release e identidade do
+deployment validados. Rollback muda o roteamento para um deployment antes
+validado; ele nao reescreve historico Git nem historico de banco.
+
+Preview/staged deployment, deployment com `target=production` e trafego
+canonico de producao sao estados distintos. A sequencia canonica e:
+
+```text
+feature/* -> PR -> staging -> homologation -> release PR -> main
+-> Vercel staged production deployment
+-> governed production database release
+-> smoke / release identity
+-> explicit Promote
+-> canonical production traffic
+```
+
 ## Evidencia de release
 
 Uma release ou deploy so esta completa quando existem todas as evidencias

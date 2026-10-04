@@ -18,6 +18,13 @@ regras vigentes do repositorio.
 - PRs ordinarias devem ter `staging` como destino.
 - `main` e exclusivamente a branch de producao.
 - A promocao de `staging` para `main` ocorre por uma PR de release.
+- Um merge ou push em `main` pode gerar um deployment Vercel de producao em
+  estado staged; essa geracao nao publica trafego de producao.
+- Nunca inferir publicacao pelo `target=production` ou por Vercel `READY`.
+  O trafego do dominio canonico muda somente apos promocao explicita do
+  artefato validado.
+- Agentes nunca executam `vercel promote` sem autorizacao humana explicita de
+  release de producao.
 - Preview de deploy nao e ambiente canonico de staging nem de producao.
 - Nenhuma tarefa e "deployed" somente porque o build ou Vercel esta `READY`.
   Verificar commit, CI, target, URL canonica e ledger de migration aplicavel.

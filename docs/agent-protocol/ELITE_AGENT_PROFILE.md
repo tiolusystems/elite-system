@@ -44,6 +44,10 @@ implementacao local
 > deploy de producao somente com autorizacao explicita
 ```
 
+Nessa regra, deploy de producao significa mudar o trafego canonico por
+promocao explicita. Um build staged criado automaticamente a partir de `main`
+e somente evidencia e artefato de release; ele nao autoriza publicacao.
+
 Nao declarar execucao, teste, commit, push, CI ou deploy sem evidencia
 observavel. Preservar o menor delta completo e correto; nao completar lacunas
 com inferencia de regra de negocio.

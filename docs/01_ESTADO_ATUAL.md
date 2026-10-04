@@ -1,11 +1,11 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-10-03
+Atualizado em: 2026-10-04
 
 ## Tarefa em execucao
 
 - `ENG-ENV-01` estabelece a topologia canonica e normalizou a linhagem Git:
-  `main` e ancestral de `staging`;
+  `staging` e ancestral de `main`;
 - `staging` e a branch permanente de integracao e homologacao;
 - `main` e a branch permanente de producao;
 - ambas exigem PR, `python-tests`, `web-contract`, `database-contract`,
@@ -16,8 +16,14 @@ Atualizado em: 2026-10-03
 - producao: Vercel `elite-system`; o Supabase `elite-system-production` /
   `oncssgiocivoknwwcuuz` existe, esta `ACTIVE_HEALTHY` e possui ledger de
   migrations vazio; ele nao esta ativado nem conectado a uma release de producao;
-- nenhuma migration de producao e autorizada antes do pipeline governado de
-  migracao e release existir e ser validado.
+- a PR #30 promoveu staging validado para `main` e gerou um deployment Vercel
+  com `target=production`; o banco de producao nao foi alterado e o trafego foi
+  restaurado para o deployment validado anterior;
+- a investigacao confirmou Production Branch=`main` e Auto-assign Custom
+  Production Domains desabilitado: o modelo canonico e deployment staged mais
+  promocao explicita, e nao publicacao automatica pelo build;
+- a base de producao permanece nao inicializada e o deploy automatico de banco
+  permanece desabilitado ate que o pipeline governado seja validado.
 - o primeiro `verify-staging` falhou fechado antes de conectar ao banco porque
   o PAT com escopo reduzido nao tinha `api_gateway_keys_read`; nenhuma migration
   foi aplicada. O transporte canonico foi simplificado para URL direta de banco
@@ -26,8 +32,8 @@ Atualizado em: 2026-10-03
 
 ## Proxima tarefa
 
-Configurar o host do session pooler e executar verify-only governado antes de
-qualquer migracao remota.
+Executar a readiness verify-only do banco de producao antes de qualquer
+promocao ou migracao remota.
 
 ## Historico de implementacao por modulo
 

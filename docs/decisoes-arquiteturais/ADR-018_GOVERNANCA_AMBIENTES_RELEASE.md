@@ -78,16 +78,23 @@ entre ordem de deploy importar, usar a estrategia aditiva
 expand-migrate-contract.
 
 A release de banco de staging segue `CI -> dry-run -> governed db push ->
-ledger verification`. A release de banco de producao segue `release main ->
-CI -> GitHub production environment approval -> dry-run -> governed db push ->
-ledger verification`.
+ledger verification`. A release de banco de producao e manual e possui dois
+gates distintos: `verify-production` executa somente a verificacao de
+configuracao, leitura do ledger e dry-run, sem aprovacao humana e sem escrita;
+`apply-production` repete essas verificacoes no mesmo run, aguarda aprovacao
+explicita no ambiente `elite-system-production-approval`, revalida o banco,
+executa o `db push` e registra o ledger posterior. Push normal para `main`
+nunca aplica migrations de producao.
 
 A autenticacao de release de banco usa conexao PostgreSQL direta pelo session
 pooler do Supabase. A migration nao exige acesso a Management API: o CI recebe
 somente credenciais de banco com escopo de ambiente, gera a URL de conexao de
 forma efemera, codifica a senha para URL, mascara a URL completa e exige TLS.
 Nenhum PAT faz parte da arquitetura canonica de migrations. Credenciais de
-producao permanecem isoladas das credenciais de staging.
+producao permanecem isoladas das credenciais de staging. As credenciais de
+banco de producao ficam somente em `elite-system-production`. O ambiente
+`elite-system-production-approval` contem apenas o gate humano, sem
+credenciais ou variaveis de banco.
 
 O deploy automatico de banco permanece desabilitado ate que as credenciais
 sejam instaladas e a execucao verify-only seja aprovada. Provisionar um projeto

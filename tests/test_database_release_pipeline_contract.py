@@ -14,6 +14,18 @@ class DatabaseReleasePipelineContract(unittest.TestCase):
         end = len(WORKFLOW) if next_job is None else start + 1 + next_job.start()
         return WORKFLOW[start:end]
 
+    def test_ci_push_trigger_is_limited_to_canonical_branches(self):
+        triggers = WORKFLOW[WORKFLOW.index("on:\n") : WORKFLOW.index("\njobs:\n")]
+
+        self.assertIn(
+            "  push:\n    branches:\n      - staging\n      - main\n",
+            triggers,
+        )
+        self.assertIn("  pull_request:\n", triggers)
+        self.assertIn("  workflow_dispatch:\n", triggers)
+        self.assertNotIn("- ci/", triggers)
+        self.assertNotIn("- feature/", triggers)
+
     def test_manual_modes_and_deployment_jobs_are_governed(self):
         for action in (
             "none",

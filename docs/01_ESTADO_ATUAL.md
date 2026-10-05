@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-10-04
+Atualizado em: 2026-10-05
 
 ## Tarefa em execucao
 
@@ -22,8 +22,15 @@ Atualizado em: 2026-10-04
 - a investigacao confirmou Production Branch=`main` e Auto-assign Custom
   Production Domains desabilitado: o modelo canonico e deployment staged mais
   promocao explicita, e nao publicacao automatica pelo build;
-- a base de producao permanece nao inicializada e o deploy automatico de banco
-  permanece desabilitado ate que o pipeline governado seja validado.
+- a base de producao permanece nao inicializada, com ledger `0`; o deploy
+  automatico de banco permanece desabilitado;
+- o ambiente dormente `elite-system-production-approval` foi criado com
+  aprovacao humana e sem credenciais ou variaveis de banco; o reviewer
+  transitorio em `elite-system-production` permanece enquanto o novo workflow
+  nao chega a `main`;
+- o host do pooler de producao permanece sem resolucao tecnica. Nao sao
+  permitidas novas tentativas de conexao ate a separacao de gates chegar a
+  `main` e ser homologada.
 - o primeiro `verify-staging` falhou fechado antes de conectar ao banco porque
   o PAT com escopo reduzido nao tinha `api_gateway_keys_read`; nenhuma migration
   foi aplicada. O transporte canonico foi simplificado para URL direta de banco
@@ -32,8 +39,10 @@ Atualizado em: 2026-10-04
 
 ## Proxima tarefa
 
-Executar a readiness verify-only do banco de producao antes de qualquer
-promocao ou migracao remota.
+Validar em staging a separacao entre verificacao read-only e aplicacao de
+migrations de producao. A readiness verify-only do banco de producao permanece
+bloqueada ate esse workflow chegar a `main`, antes de qualquer nova tentativa
+de conexao remota.
 
 ## Historico de implementacao por modulo
 

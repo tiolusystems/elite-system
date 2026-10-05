@@ -578,22 +578,20 @@ jobs:
           (github.event_name == 'workflow_dispatch' && inputs.database_action == 'apply-staging')
         run: supabase migration list --db-url "$SUPABASE_DB_URL"
 
-  deploy-database-production:
+  verify-database-production:
     needs:
       - python-tests
       - web-contract
       - database-contract
     if: >
-      (github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-      vars.ELITE_PRODUCTION_DB_DEPLOY_ENABLED == 'true') ||
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
-      (inputs.database_action == 'verify-production' || inputs.database_action == 'apply-production'))
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      (inputs.database_action == 'verify-production' || inputs.database_action == 'apply-production')
     runs-on: ubuntu-latest
     environment: elite-system-production
     permissions:
       contents: read
     concurrency:
-      group: elite-system-database-production
+      group: elite-system-database-production-verify
       cancel-in-progress: false
     env:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -626,17 +624,72 @@ jobs:
           db_url="postgresql://postgres.${SUPABASE_PROJECT_ID}:${encoded_password}@${SUPABASE_POOLER_HOST}:5432/postgres?sslmode=require"
           echo "::add-mask::$db_url"
           echo "SUPABASE_DB_URL=$db_url" >> "$GITHUB_ENV"
-      - name: Dry-run production migrations
-        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
       - name: Verify production migration ledger
         run: supabase migration list --db-url "$SUPABASE_DB_URL"
+      - name: Dry-run production migrations
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
+
+  approve-database-production-apply:
+    needs: verify-database-production
+    if: >
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      inputs.database_action == 'apply-production'
+    runs-on: ubuntu-latest
+    environment: elite-system-production-approval
+    permissions:
+      contents: read
+    steps:
+      - name: Acknowledge production database apply approval
+        run: echo "Production database apply approved"
+
+  apply-database-production:
+    needs: approve-database-production-apply
+    if: >
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+      inputs.database_action == 'apply-production'
+    runs-on: ubuntu-latest
+    environment: elite-system-production
+    permissions:
+      contents: read
+    concurrency:
+      group: elite-system-database-production-apply
+      cancel-in-progress: false
+    env:
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+      SUPABASE_POOLER_HOST: ${{ vars.SUPABASE_POOLER_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+      - name: Validate remote database configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_PASSWORD:-}" || { echo "SUPABASE_DB_PASSWORD is required" >&2; exit 1; }
+          test -n "${SUPABASE_PROJECT_ID:-}" || { echo "SUPABASE_PROJECT_ID is required" >&2; exit 1; }
+          test -n "${SUPABASE_POOLER_HOST:-}" || { echo "SUPABASE_POOLER_HOST is required" >&2; exit 1; }
+          [[ "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9]+$ ]] || { echo "SUPABASE_PROJECT_ID must be lowercase alphanumeric" >&2; exit 1; }
+          [[ "$SUPABASE_POOLER_HOST" == *.pooler.supabase.com ]] || { echo "SUPABASE_POOLER_HOST must be a Supabase pooler host" >&2; exit 1; }
+      - name: Prepare direct database connection
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_PASSWORD:-}" || { echo "SUPABASE_DB_PASSWORD is required" >&2; exit 1; }
+          test -n "${SUPABASE_PROJECT_ID:-}" || { echo "SUPABASE_PROJECT_ID is required" >&2; exit 1; }
+          test -n "${SUPABASE_POOLER_HOST:-}" || { echo "SUPABASE_POOLER_HOST is required" >&2; exit 1; }
+          [[ "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9]+$ ]] || { echo "SUPABASE_PROJECT_ID must be lowercase alphanumeric" >&2; exit 1; }
+          [[ "$SUPABASE_POOLER_HOST" == *.pooler.supabase.com ]] || { echo "SUPABASE_POOLER_HOST must be a Supabase pooler host" >&2; exit 1; }
+          encoded_password="$(python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["SUPABASE_DB_PASSWORD"], safe=""))')"
+          db_url="postgresql://postgres.${SUPABASE_PROJECT_ID}:${encoded_password}@${SUPABASE_POOLER_HOST}:5432/postgres?sslmode=require"
+          echo "::add-mask::$db_url"
+          echo "SUPABASE_DB_URL=$db_url" >> "$GITHUB_ENV"
+      - name: Verify production migration ledger before apply
+        run: supabase migration list --db-url "$SUPABASE_DB_URL"
+      - name: Dry-run production migrations before apply
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
       - name: Apply production migrations
-        if: >
-          (github.event_name == 'push' && vars.ELITE_PRODUCTION_DB_DEPLOY_ENABLED == 'true') ||
-          (github.event_name == 'workflow_dispatch' && inputs.database_action == 'apply-production')
         run: supabase db push --db-url "$SUPABASE_DB_URL"
       - name: Verify production migration ledger after apply
-        if: >
-          (github.event_name == 'push' && vars.ELITE_PRODUCTION_DB_DEPLOY_ENABLED == 'true') ||
-          (github.event_name == 'workflow_dispatch' && inputs.database_action == 'apply-production')
         run: supabase migration list --db-url "$SUPABASE_DB_URL"

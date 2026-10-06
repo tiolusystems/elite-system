@@ -34,11 +34,15 @@ class ReleaseGovernanceContract(unittest.TestCase):
         self.assertIn("`ENG-ENV-01` estabelece", CURRENT_STATE)
         self.assertIn("elite-system-production", CURRENT_STATE)
         self.assertIn("oncssgiocivoknwwcuuz", CURRENT_STATE)
-        self.assertIn("ledger de\n  migrations vazio", CURRENT_STATE)
-        self.assertIn("a PR #30 promoveu staging validado para `main`", CURRENT_STATE)
+        self.assertIn("foi inicializado com 151\n  migrations", CURRENT_STATE)
+        self.assertIn("ledger mais recente a `0152`", CURRENT_STATE)
+        self.assertIn("dpl_CzQhTtzoNtGeQdpHwL8gJYM91DSh", CURRENT_STATE)
+        self.assertIn("nenhuma promocao Vercel ocorreu", CURRENT_STATE)
+        self.assertIn("nao ha usuario humano\n  em producao", CURRENT_STATE)
+        self.assertIn("DEC-004 esta autorizada", CURRENT_STATE)
         self.assertIn("Production Domains desabilitado", CURRENT_STATE)
         self.assertIn("deployment staged mais\n  promocao explicita", CURRENT_STATE)
-        self.assertIn("readiness verify-only do banco de producao", CURRENT_STATE)
+        self.assertIn("configuracao Auth de producao", CURRENT_STATE)
         self.assertIn("pipeline governado de release de producao", ADR)
 
 

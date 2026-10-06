@@ -1,6 +1,6 @@
 # Elite System - estado atual
 
-Atualizado em: 2026-10-05
+Atualizado em: 2026-10-06
 
 ## Tarefa em execucao
 
@@ -13,24 +13,26 @@ Atualizado em: 2026-10-05
 - staging canonico: o deploy Vercel `elite-system-staging` foi comprovado em
   `elite-system-staging.vercel.app`; o Supabase `elite-system-staging` /
   `igwweatzuxmeayibyuge` esta no ledger de migration `0152`;
-- producao: Vercel `elite-system`; o Supabase `elite-system-production` /
-  `oncssgiocivoknwwcuuz` existe, esta `ACTIVE_HEALTHY` e possui ledger de
-  migrations vazio; ele nao esta ativado nem conectado a uma release de producao;
-- a PR #30 promoveu staging validado para `main` e gerou um deployment Vercel
-  com `target=production`; o banco de producao nao foi alterado e o trafego foi
-  restaurado para o deployment validado anterior;
+- producao: o Supabase `elite-system-production` /
+  `oncssgiocivoknwwcuuz` esta `ACTIVE_HEALTHY`, foi inicializado com 151
+  migrations e tem como ledger mais recente a `0152`;
+- o artefato de producao configurado e
+  `dpl_CzQhTtzoNtGeQdpHwL8gJYM91DSh`, no SHA
+  `a268e6b7982209c163565b93efc97d91fb1ea9da`, e foi verificado contra o
+  Supabase de producao;
+- o trafego publico canonico continua no deployment legado
+  `dpl_7PH8aiu8Y82yoXV6u7WpZaxSvjzL`, SHA
+  `32d8f9d26821650cd907c9cf914b42759170ca2f`; nenhuma promocao Vercel ocorreu;
 - a investigacao confirmou Production Branch=`main` e Auto-assign Custom
   Production Domains desabilitado: o modelo canonico e deployment staged mais
   promocao explicita, e nao publicacao automatica pelo build;
-- a base de producao permanece nao inicializada, com ledger `0`; o deploy
-  automatico de banco permanece desabilitado;
-- o ambiente dormente `elite-system-production-approval` foi criado com
-  aprovacao humana e sem credenciais ou variaveis de banco; o reviewer
-  transitorio em `elite-system-production` permanece enquanto o novo workflow
-  nao chega a `main`;
-- o host do pooler de producao permanece sem resolucao tecnica. Nao sao
-  permitidas novas tentativas de conexao ate a separacao de gates chegar a
-  `main` e ser homologada.
+- o deploy automatico de banco permanece desabilitado e nao ha usuario humano
+  em producao;
+- DEC-004 esta autorizada, mas ainda nao foi aplicada remotamente: a primeira
+  inicializacao de administrador continua bloqueada ate a configuracao Auth de
+  producao e o e-mail transacional estarem prontos;
+- o ambiente `elite-system-production-approval` permanece como gate humano de
+  escrita sem credenciais ou variaveis de banco.
 - o primeiro `verify-staging` falhou fechado antes de conectar ao banco porque
   o PAT com escopo reduzido nao tinha `api_gateway_keys_read`; nenhuma migration
   foi aplicada. O transporte canonico foi simplificado para URL direta de banco
@@ -39,10 +41,10 @@ Atualizado em: 2026-10-05
 
 ## Proxima tarefa
 
-Validar em staging a separacao entre verificacao read-only e aplicacao de
-migrations de producao. A readiness verify-only do banco de producao permanece
-bloqueada ate esse workflow chegar a `main`, antes de qualquer nova tentativa
-de conexao remota.
+Aplicar e verificar remotamente a configuracao Auth de producao decidida em
+DEC-004, depois de prover SMTP transacional e protecao contra abuso. Nenhuma
+invitacao humana ou bootstrap do primeiro administrador e permitida antes
+desse fechamento.
 
 ## Historico de implementacao por modulo
 
